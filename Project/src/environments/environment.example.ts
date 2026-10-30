@@ -6,3 +6,4 @@ export const environment = {
   enableAppleAuth: false,
   googleClientId: 'prod-google-client-id.apps.googleusercontent.com',
 };
+

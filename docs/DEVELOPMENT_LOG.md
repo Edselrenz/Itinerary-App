@@ -253,5 +253,23 @@ This log records chronological development sessions, detailing objectives, execu
   - `npm --prefix Project run build`: Succeeded with 0 errors.
   - `python -m pytest backend/tests`: Passed 100%.
 - **Next Steps**:
-  - Commit and push untracked file deletions to `origin/main`.
+  - Pushed commits `eb0837d` and `5674313` cleanly to `origin/main`.
+
+---
+
+## Session 11: Fix GitHub Actions CI Node.js Version for Angular 22
+- **Date & Time**: 2026-10-30 14:57:00 (Local)
+- **Objective**: Fix GitHub Actions deployment failure (`Build Ionic Angular frontend` exited with code 3).
+- **Root Cause Analysis**:
+  - The CI workflow `.github/workflows/deploy.yml` used `actions/setup-node@v4` with `node-version: 20` (installing Node v20.20.2).
+  - Angular CLI in `Project/package.json` is `@angular/cli@22.2.4` and `@angular/core@22.2.3`, which strictly enforces a minimum Node.js version of `v22.22.3`, `v24.15.0`, or `v26.0.0`.
+  - The developer's local environment uses Node `v24.19.0`, which compiles cleanly.
+- **Changes Applied**:
+  - Updated `.github/workflows/deploy.yml`: bumped `node-version` from `20` to `24`.
+- **Verification**:
+  - Local Angular build verified: `v24.19.0` compiles `Project/www` in ~12 seconds with 0 errors.
+  - Backend tests verified: 2/2 tests pass in 5.84s.
+- **Next Steps**:
+  - Commit and push to `origin/main` to trigger the GitHub Pages workflow run.
+
 

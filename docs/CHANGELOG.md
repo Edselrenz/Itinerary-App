@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [0.4.5-alpha] - 2026-10-30
+### Fixed
+- **GitHub Actions CI Node.js Version for Angular 22**:
+  - Upgraded `.github/workflows/deploy.yml` runner Node.js version from `20` to `24`.
+  - Satisfies `@angular/cli@22.2.4` requirement (`>= v22.22.3 || >= v24.15.0`) and eliminates exit code 3 during GitHub Pages automated deployment.
+
+---
+
 ## [0.4.4-alpha] - 2026-10-30
 ### Fixed
 - **Untrack Gitignored Files from Index**:
