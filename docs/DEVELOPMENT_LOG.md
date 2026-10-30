@@ -1,0 +1,165 @@
+# Development Log: Nueva Ecija Travel Itinerary
+
+This log records chronological development sessions, detailing objectives, executed commands, code changes, encountered errors, troubleshooting steps, and verified test results.
+
+---
+
+## Session 1: Initial Discovery & Specification Analysis
+- **Date & Time**: 2026-10-30 10:11:41 (Local)
+- **Objective**: Analyze the existing files in `CaseStudy/`, understand the product blueprint, step-by-step engineering guide, and inspect the Figma design file.
+- **Tasks Performed**:
+  - Explored root directory: discovered `Project/`, `nueva_ecija_travel_itinerary_build_guide.pdf`, `nueva_ecija_travel_itinerary_mvp_plan.docx`, and `Travel Itinerary App.fig`.
+  - Analyzed PDF guide (20 pages): identified the 11 sequential milestones, 7 database entities, 16 canonical categories, and the 24-point acceptance checklist.
+  - Inspected Word document blueprint: extracted technology stack, zero-cost architecture rules, and security boundaries.
+  - Extracted binary canvas and string data from `Travel Itinerary App.fig`: discovered 40+ high-res image assets, UI frames for Flow 1 (Welcome, Login, Signup, Guest Mode) and Flow 2 (Home, Tell us travel details, Your Itinerary with Bongabon Day 1 stops, Custom Itinerary builder, and Map UI).
+  - Identified critical discrepancies between Figma designs and MVP specifications:
+    - Figma showed public transit directions ("By Bus: Departure Cabanatuan..."), whereas the Blueprint explicitly deferred live transit to avoid hallucinated schedules and mandated external Google Maps URL redirection.
+    - Apple Sign-In was drawn in Figma, but Blueprint required feature-flagging (`enableAppleAuth = false`) due to Apple's US\$99/year developer fee.
+- **Files Inspected**:
+  - `nueva_ecija_travel_itinerary_build_guide.pdf`
+  - `nueva_ecija_travel_itinerary_mvp_plan.docx`
+  - `Travel Itinerary App.fig`
+  - `Project/package.json`
+- **Results**: Complete baseline established for development.
+
+---
+
+## Session 2: Backend Architecture & Steps 0–2 Implementation
+- **Date & Time**: 2026-10-30 10:23:41 (Local)
+- **Objective**: Review `setup_steps_0_to_2.py`, refactor for the existing monorepo layout, add missing Figma-featured venues, execute scaffolding, and verify with tests.
+- **Tasks Performed**:
+  - Reviewed `setup_steps_0_to_2.py` (1,568 lines). Identified 5 critical issues:
+    1. Directory target was hardcoded to `./nueva-ecija-travel`, which collided with existing `./Project`.
+    2. Leftover dead code `OUT_DIR = "/working_dir/..."`.
+    3. Missing Figma-featured destinations (Bongabon Day 1 stops like Rohi Paperflower Cafe, Museo de Bongabon, La Casa Prime Cabins, Thornes Samgyupsal House; Pantabangan stops like George Point and Highland Bali Villas).
+    4. Fragile query parsing for categories in FastAPI (`categories: list[str]` did not handle comma-separated strings).
+    5. Missing `server_default=sa.func.now()` in Alembic migration timestamps.
+  - Refactored `setup_steps_0_to_2.py` with `BASE_DIR = "."` and all 5 enhancements.
+  - Executed `python setup_steps_0_to_2.py`: successfully generated `backend/` and `scripts/`.
+  - Installed missing Python packages: `alembic`, `pydantic-settings`, `pytest`, `httpx`, `pwdlib[argon2]`, `pyjwt`, `python-dotenv`, `psycopg[binary]`.
+- **Encountered Issues & Troubleshooting**:
+  - *Issue 1*: `pytest backend/tests/test_foundation.py` failed with `ModuleNotFoundError: No module named 'app'`.
+    - *Resolution*: Added `BACKEND_DIR` to `sys.path` in `test_foundation.py`.
+  - *Issue 2*: `ModuleNotFoundError: No module named 'psycopg'`.
+    - *Resolution*: Installed `psycopg[binary]` (Psycopg 3.3.6) via pip to support SQLAlchemy's `postgresql+psycopg` dialect.
+- **Verification**:
+  - Executed: `python -m pytest backend/tests/test_foundation.py -v`
+  - Result: **1 passed in 3.41s [100%]**
+    - `GET /api/v1/health` verified (200 OK, province scope "Nueva Ecija").
+    - Seeding 12 municipalities and 17 curated places verified as idempotent.
+    - Comma-separated category filtering verified.
+    - Out-of-province POI rejection verified.
+
+---
+
+## Session 3: Authentication & Ionic App Shell (Step 3)
+- **Date & Time**: 2026-10-30 10:41:53 (Local)
+- **Objective**: Implement Milestone 3 (Argon2id authentication, JWT tokens, Google OAuth verification, Guest storage, and the Figma-aligned 4-tab shell).
+- **Backend Implementation**:
+  - Created `backend/app/schemas/auth.py` (Pydantic v2 schemas).
+  - Created `backend/app/services/auth_service.py` (Argon2id hashing, short-lived 30m access tokens, 7d refresh tokens, case-insensitive normalization, server-side Google OAuth validation, `get_current_user` dependency).
+  - Created `backend/app/api/v1/auth.py` (`/register`, `/login`, `/refresh`, `/me`, `/oauth/google`, `/oauth/apple` returning 501).
+  - Mounted `auth_router` in `backend/app/main.py`.
+  - Installed `google-auth` and `email-validator` via pip.
+  - Created and ran `backend/tests/test_auth.py`.
+  - Verification: `pytest backend/tests/ -v` passed **100% (2/2 test suites passing)**.
+- **Frontend Implementation**:
+  - Installed `@ionic/storage-angular`, `leaflet`, `leaflet.markercluster` and type definitions in `Project/`.
+  - Configured `environment.ts` and `environment.prod.ts` with API base URL and `enableAppleAuth: false`.
+  - Implemented `Project/src/app/core/models/auth.models.ts`.
+  - Implemented `Project/src/app/core/services/guest-storage.service.ts` using `@ionic/storage-angular` with key `ne_guest_itineraries_v1`.
+  - Implemented `Project/src/app/core/services/auth.service.ts` with token management and reactive `currentUser$`.
+  - Implemented `Project/src/app/core/interceptors/auth.interceptor.ts` with token injection and graceful offline handling.
+  - Implemented Figma-styled pages:
+    - `WelcomePage` (`/welcome`): *"Trip mo, trip ko"* hero with `Log in`, `Sign up`, and `Continue as Guest`.
+    - `LoginPage` (`/login`): Form, password toggle, Google button, truthfully disabled Apple button.
+    - `SignupPage` (`/signup`): Name, username, email, password strength, matching-passwords validator.
+    - `4-Tab Shell` (`tabs.routes.ts`): Home, Map, History (placeholder), and Profile (user profile / guest status).
+  - Updated `theme/variables.scss` and `global.scss` with Inter font, Travel Azure Blue (`#2563eb`), and Leaflet CSS imports.
+- **Encountered Issues & Troubleshooting**:
+  - *Issue*: `npm run build` failed with `Could not resolve "@ionic/angular/standalone"`.
+    - *Cause*: In Ionic 9 standalone mode, standalone components are exported directly from `@ionic/angular` rather than the legacy `@ionic/angular/standalone` subpath.
+    - *Resolution*: Replaced all `@ionic/angular/standalone` imports with `@ionic/angular` across all `.ts` files.
+- **Verification**:
+  - Executed: `npm run build` in `Project/`
+  - Result: **Application bundle generation complete [0 errors]**. Generated production bundle in `Project/www`.
+  - Executed: `npm run typecheck:e2e` in `Project/`
+  - Result: **0 TypeScript errors**.
+  - Executed: `python -m pytest backend/tests/ -v`
+  - Result: **2 passed in 5.48s [100%]**.
+
+---
+
+## Session 4: Comprehensive Continuous Documentation Initialization
+- **Date & Time**: 2026-10-30 11:04:00 (Local)
+- **Objective**: Establish the master `/docs` continuous development documentation system, capturing complete architectural, database, API, testing, and operational records.
+- **Tasks Performed**:
+  - Initialized dedicated `/docs` directory.
+  - Authored all required technical specifications, diagrams, ADRs, and operational guides.
+- **Next Planned Session**:
+  - Milestone 4: Implement Home Tab & Debounced Search (`GET /api/v1/places`, Popular Destinations carousel, Saved Itineraries sync).
+
+---
+
+## Session 5: Figma Layout Realignment & Anti-Generic Frontend Polish
+- **Date & Time**: 2026-10-30 11:51:00 (Local)
+- **Objective**: Use `/anti-generic-frontend-design` to compare the frontend (`Project/`) against the Figma design (`Travel Itinerary App.fig`), eliminate generic AI UI patterns, extract authentic Figma assets, and refactor the screens to match the Figma layout with production precision.
+- **Tasks Performed**:
+  - Parsed `Travel Itinerary App.fig` and decompressed binary canvas (`decompressed_canvas.bin`).
+  - Extracted 44 high-resolution imagery assets from the Figma archive into `Project/src/assets/images/`.
+  - Mapped raw byte hashes to authentic component names:
+    - `welcome_hero_buildings.png` (City buildings illustration from Welcome screen)
+    - `guest_illustration.png` (Two-traveler illustration from "Explore as a guest" frame)
+    - `google_logo.png` (Official multi-colored Google logo for OAuth CTA)
+    - 9 Destination venue cards: `minalungao.png`, `tagpuan_gapan.png`, `pantabangan_lake.png`, `george_point.png`, `highland_bali.png`, `farm_villaronte.png`, `casa_batik.png`, `pavillion_farm.png`, `la_casa_prime.png`.
+  - **Welcome Page Realignment (`welcome.page.*`)**:
+    - Replaced the generic airplane icon badge with the authentic `welcome_hero_buildings.png` hero illustration.
+    - Set the Figma copy: Headline *"Trip mo, trip ko"* and subtitle *"Get personalized itineraries, easy commutes, and nearby essentials across Nueva Ecija."*
+    - Styled primary "Log in", outline "Sign up", and clear "Continue as Guest" buttons.
+    - Implemented the Figma *"Explore as a guest"* modal sheet containing `guest_illustration.png`, informative copy, and clear action triggers.
+  - **Login Page Realignment (`login.page.*`)**:
+    - Integrated authentic `google_logo.png` inside the Google OAuth button.
+    - Preserved honest pilot disclaimer on Apple Sign-In button per zero-cost rules.
+    - Polished input box borders and focus rings using Figma color tokens.
+  - **Home Page Realignment (`home.page.*`)**:
+    - Replaced generic header with Figma Flow 2 header: *"Where are you going next?"* and profile shortcut.
+    - Added pill-shaped search bar with leading search icon and exact placeholder: *"Search destination (e.g. Cabanatuan, Gapan, etc.)"*.
+    - Connected search input to a real-time reactive filtering engine across destinations, municipalities, and tags with empty-state handling.
+    - Implemented the adventure hero card: *"Your next adventure is waiting. Plan your trip, explore new places, make better memories."*
+    - Realigned Suggested Itinerary and Custom Itinerary planner cards matching Figma Flow 2 typography, badges, and icon treatments.
+    - Implemented the **Popular Destinations** horizontal scroll carousel using real extracted images and municipality pills.
+    - Implemented a Destination Detail Modal Sheet featuring full image cover, tags, description, and external *"Open in Google Maps"* button.
+  - **Configuration & Build Fixes**:
+    - Resolved `@ionic/angular/standalone` in `Project/src/main.ts` by importing from `@ionic/angular`.
+    - Updated `anyComponentStyle` budget in `Project/angular.json` to 10kB warning / 16kB error.
+- **Testing & Verification**:
+  - `npm --prefix Project run build`: **Succeeded with exit code 0 (0 errors, 0 warnings)**.
+  - `python -m pytest backend/tests`: **2 passed in 16.93s [100%]** (`test_auth.py`, `test_foundation.py`).
+- **Next Recommended Steps**:
+  - Milestone 4: Backend places API (`GET /api/v1/places`) and live sync between frontend home search and database venues.
+
+---
+
+## Session 6: Welcome Screen Precise Layout Realignment
+- **Date & Time**: 2026-10-30 12:16:00 (Local)
+- **Objective**: Refactor the Welcome screen (`welcome.page.*`) to strictly match the user's reference mockup:
+  1. Brand row: Airplane SVG + *"Trip mo, trip ko"* centered on one line.
+  2. Subheadline: *"Your next adventure is waiting."* in bold black.
+  3. Subtitle: *"Get personalize iternaries, easy commutes, and nearby essentials."*
+  4. Actions group:
+     - *"Log in"*: Full pill button with solid vibrant blue fill (`#0084ff`).
+     - *"Sign up"*: Full pill button with solid vibrant blue fill (`#0084ff`).
+     - Divider: `line or line` centered with subtle borders.
+     - *"Continue as Guest"*: Full pill button with white background, `#0084ff` border, and solid blue person icon.
+  5. Building background: City skyline graphic (`welcome_hero_buildings.png`) anchored directly at the bottom of the viewport beneath the actions.
+- **Tasks Performed**:
+  - Re-implemented `welcome.page.html` with the specified sequence and inline Clarity airplane SVG tilted 45 degrees.
+  - Re-implemented `welcome.page.scss` using full 9999px pill radii, `#0084ff` color tokens, and bottom-anchored buildings wrapper.
+  - Updated `welcome.page.ts` icon registrations (`person`, `closeOutline`, `arrowForwardOutline`).
+  - Resolved residual `@ionic/angular/standalone` imports across `tabs.page.ts`, `history.page.ts`, and `map.page.ts` to `@ionic/angular`.
+- **Testing & Verification**:
+  - `npm --prefix Project run build`: **Exit code 0 (0 errors, 0 warnings)**.
+  - `python -m pytest backend/tests`: **2 passed in 9.57s [100%]**.
+- **Next Recommended Steps**:
+  - Milestone 4: Backend places API integration (`GET /api/v1/places`) and live search synchronization on the Home tab.
+

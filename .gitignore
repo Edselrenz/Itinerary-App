@@ -1,0 +1,44 @@
+# Environment & secrets
+.env
+*.env
+*.pem
+*.key
+client_secret*.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node / Ionic / Capacitor
+Project/node_modules/
+Project/www/
+Project/.angular/
+Project/android/app/build/
+Project/ios/App/Pods/
+mobile/node_modules/
+mobile/www/
+mobile/.angular/
+mobile/android/app/build/
+mobile/ios/App/Pods/
+
+# Data dumps & database backups
+data/raw/*
+!data/raw/.gitkeep
+*.sql.gz
+*.dump
+*.db
+*.sqlite3
+
+# Scratch & temporary investigation files
+scratch/
+*.bin
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store

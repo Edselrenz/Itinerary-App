@@ -1,0 +1,98 @@
+# Changelog
+
+All notable changes to the Nueva Ecija Travel Itinerary project are documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+---
+
+## [0.4.1-alpha] - 2026-10-30
+### Changed
+- **Welcome Screen Layout Realignment**:
+  - Re-anchored city buildings graphic (`welcome_hero_buildings.png`) to the bottom of the screen.
+  - Implemented header row with inline Clarity airplane SVG + *"Trip mo, trip ko"* title.
+  - Added subheadline *"Your next adventure is waiting."* and subtitle *"Get personalize iternaries, easy commutes, and nearby essentials."*
+  - Converted *"Log in"* and *"Sign up"* into solid blue pill buttons (`#0084ff`).
+  - Added centered `line or line` divider.
+  - Converted *"Continue as Guest"* into an outline pill button with solid blue person icon.
+- **Ionic 9 Standalone Cleanup**:
+  - Replaced lingering `@ionic/angular/standalone` imports in `tabs.page.ts`, `history.page.ts`, and `map.page.ts` with standard `@ionic/angular`.
+
+---
+
+## [0.4.0-alpha] - 2026-10-30
+### Added
+- **Figma Visual Realignment & Extracted Assets**:
+  - Extracted 44 high-resolution imagery assets from `Travel Itinerary App.fig` into `Project/src/assets/images/`.
+  - Mapped assets for `welcome_hero_buildings.png`, `guest_illustration.png`, `google_logo.png`, and 9 venue destination cards (`minalungao.png`, `tagpuan_gapan.png`, `pantabangan_lake.png`, `george_point.png`, `highland_bali.png`, `farm_villaronte.png`, `casa_batik.png`, `pavillion_farm.png`, `la_casa_prime.png`).
+  - Implemented interactive *"Explore as a guest"* modal sheet in `WelcomePage` with Figma illustrations and localized messaging.
+  - Implemented authentic Google OAuth branded button with multi-colored logo `google_logo.png` in `LoginPage`.
+  - Implemented Figma Flow 2 Home layout:
+    - *"Where are you going next?"* header and profile shortcut.
+    - Pill-shaped destination search bar with real-time reactive filtering across destination names, municipalities, and tags.
+    - Adventure hero card with motivational travel copy.
+    - Suggested & Custom planner entry cards with Figma badge and icon treatments.
+    - Horizontal scroll carousel for **Popular Destinations** with snap alignment, real photography, and municipality pills.
+    - Destination Detail Modal sheet with image hero, category badge, municipality, description, tags, and zero-cost *"Open in Google Maps"* external URL action.
+
+### Changed
+- Refactored `welcome.page.html` and `.scss` to replace generic placeholder icon with Figma hero illustration.
+- Updated `Project/src/main.ts` import from `@ionic/angular/standalone` to `@ionic/angular`.
+- Adjusted component SCSS budgets in `Project/angular.json` to 10kB warning / 16kB error to accommodate rich responsive styling.
+
+---
+
+## [0.3.0-alpha] - 2026-10-30
+### Added
+- **Argon2id Authentication Backend**:
+  - `backend/app/schemas/auth.py`: Pydantic v2 schemas for registration, login, refresh tokens, Google OAuth, and profiles.
+  - `backend/app/services/auth_service.py`: Password hashing with `pwdlib[argon2]`, 30-minute access JWTs, 7-day refresh JWTs, and Google ID token verification.
+  - `backend/app/api/v1/auth.py`: REST endpoints `/register`, `/login`, `/refresh`, `/me`, `/oauth/google`, and `/oauth/apple`.
+  - `backend/tests/test_auth.py`: Automated tests covering registration, duplicate collisions, wrong credentials, and bearer auth.
+- **Mobile Client State & Services**:
+  - `Project/src/app/core/services/guest-storage.service.ts`: Local storage driver using `@ionic/storage-angular` (`ne_guest_itineraries_v1`).
+  - `Project/src/app/core/services/auth.service.ts`: Session management with reactive `currentUser$` and token storage.
+  - `Project/src/app/core/interceptors/auth.interceptor.ts`: Token injection and host-offline graceful handling.
+- **Figma-Aligned Screens**:
+  - `WelcomePage` (`/welcome`): *"Trip mo, trip ko"* hero with `Log in`, `Sign up`, and `Continue as Guest`.
+  - `LoginPage` (`/login`): Form, password toggle, Remember Me, Google button, truthfully disabled Apple button.
+  - `SignupPage` (`/signup`): Name fields, username validation, email, password strength, matching-password confirmation validator.
+  - `TabsPage` (4-tab shell): Home, Map, History placeholder (*"Planned for a later release"*), and Profile (account status / guest notice).
+  - Design tokens in `theme/variables.scss` and `global.scss` with Inter typography and Travel Azure Blue (`#2563eb`).
+
+### Changed
+- Refactored Ionic component imports across all pages from `@ionic/angular/standalone` to `@ionic/angular` for Ionic 9 compatibility.
+- Adjusted Angular component style budgets in `angular.json` to 6kB warning / 12kB error.
+
+### Security
+- Implemented Argon2id password hashing with high memory cost.
+- Implemented case-insensitive normalization for usernames and emails to prevent identity impersonation.
+- Gated Apple Sign-In behind `501 Not Implemented` and disabled UI state due to US\$99/year developer program requirement.
+
+---
+
+## [0.2.0-alpha] - 2026-10-30
+### Added
+- **Offline POI Pipeline & Seeding**:
+  - `scripts/import_osm.py`: Overpass JSON importer with 16 canonical category mappings, bounding box check (`15.15 <= lat <= 16.15`, `120.70 <= lng <= 121.40`), and nearest municipality resolver.
+  - `scripts/seed_featured_places.py`: Seeding script for 12 municipalities and 17 curated destinations (including Bongabon Day 1 stops and Pantabangan resorts).
+  - `backend/app/api/v1/places.py`: REST endpoints for `/municipalities`, `/places`, and `/places/{id}` with comma-separated category filtering.
+  - `backend/tests/test_foundation.py`: Automated test suite for health check, seeding idempotency, category filtering, and out-of-province POI rejection.
+
+### Fixed
+- Fixed category filtering in `places.py` to support comma-separated category strings (`?categories=cafe,restaurant`).
+- Added fuzzy name normalization in `import_osm.py` to match "Muñoz" / "Munoz" / "Science City of Muñoz".
+- Added `server_default=sa.func.now()` to timestamp columns in Alembic migration `0001_initial_nueva_ecija_schema.py`.
+
+---
+
+## [0.1.0-alpha] - 2026-10-30
+### Added
+- **Monorepo Foundation & Relational Schema**:
+  - `.gitignore` and `.env.example` at repository root.
+  - `backend/app/core/config.py`: Pydantic Settings loaded from `.env`.
+  - `backend/app/core/database.py`: SQLAlchemy 2.0 engine, declarative base, and session dependency.
+  - `backend/app/models/entities.py`: 7 core ORM models (`User`, `AuthIdentity`, `Municipality`, `Place`, `Itinerary`, `ItineraryDay`, `ItineraryItem`) with portable `JsonType` and `Uuid`.
+  - `backend/alembic/`: Initial database migration `0001_initial_schema`.
+  - `backend/app/main.py`: FastAPI application with CORS and `/health` route.
+

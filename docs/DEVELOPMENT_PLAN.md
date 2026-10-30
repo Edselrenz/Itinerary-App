@@ -1,0 +1,77 @@
+# Development Plan: Nueva Ecija Travel Itinerary
+
+This plan tracks the 11 sequential milestones defined in the **End-to-End Engineering Implementation Manual**.
+
+---
+
+## Milestone Status Overview
+
+| Step | Milestone Name | Primary Focus | Verification Gate | Status |
+| :---: | :--- | :--- | :--- | :---: |
+| **0** | **Monorepo & Scope Freeze** | Monorepo layout, `.gitignore`, `.env.example`, dependency locking. | Clean tree, zero hardcoded secrets. | **COMPLETED** |
+| **1** | **PostgreSQL & FastAPI Core** | 7 SQLAlchemy 2.0 ORM models, Alembic migration, health check. | `GET /api/v1/health` returns 200 OK. | **COMPLETED** |
+| **2** | **OSM POI Pipeline & Seeding** | Overpass importer, bounding box check, 17 curated featured places. | Idempotent seed produces 0 duplicate rows. | **COMPLETED** |
+| **3** | **Auth & Ionic App Shell** | Argon2id auth, JWT, Google OAuth verify, Guest storage, 4-tab shell. | Pytest 100% pass; Angular build succeeds. | **COMPLETED** |
+| **4** | **Home Tab & Debounced Search** | 300ms RxJS search, popular destinations carousel, saved cards. | Local database search, 0 Nominatim calls. | **NEXT** |
+| **5** | **Leaflet Map & 16 Filters** | Bounded Leaflet map, category filters, marker cluster, bottom sheet. | Responsive map, external directions handoff. | **PENDING** |
+| **6** | **Custom Itinerary Builder** | Multi-day custom creator, stop reordering, honest budget math. | BOLA ownership checks, duplicate guards. | **PENDING** |
+| **7** | **Suggested Itinerary Engine** | Deterministic Haversine clustering, preference scoring, diversity. | Transparent assumptions, no hallucinated venues. | **PENDING** |
+| **8** | **Overview, Day View & Sync** | Timeline view, stop detail cards, reactive cross-tab persistence. | Home cards sync immediately after edit. | **PENDING** |
+| **9** | **Pilot Security & Tunneling** | Rate limiting (SlowAPI), offline interceptor, backup/restore drills. | Cross-device LAN testing, isolated DB port. | **PENDING** |
+| **10** | **QA & Pilot Acceptance** | Full automated verification matrix, 24-point acceptance checklist. | 100% pass across all 24 acceptance criteria. | **PENDING** |
+
+---
+
+## Detailed Task Breakdown
+
+### Milestone 0: Monorepo & Scope Freeze
+- [x] Configure repository root `.gitignore` protecting secrets, virtual environments, node artifacts, and dumps.
+- [x] Create `.env.example` with documented environment variable template.
+- [x] Establish backend dependency pins in `backend/requirements.txt`.
+- [x] Align directory layout containing `Project/`, `backend/`, and `scripts/`.
+
+### Milestone 1: PostgreSQL, SQLAlchemy Models & FastAPI Foundation
+- [x] Implement database session manager in `backend/app/core/database.py`.
+- [x] Implement settings loader in `backend/app/core/config.py`.
+- [x] Implement 7 core SQLAlchemy 2.0 entities in `backend/app/models/entities.py`:
+  - `User`, `AuthIdentity`, `Municipality`, `Place`, `Itinerary`, `ItineraryDay`, `ItineraryItem`.
+- [x] Generate initial Alembic migration (`0001_initial_nueva_ecija_schema.py`).
+- [x] Implement FastAPI main entrypoint with CORS and `GET /api/v1/health` in `backend/app/main.py`.
+
+### Milestone 2: POI Ingestion & Curated Seeding Pipeline
+- [x] Implement canonical 16-category mapping in `scripts/import_osm.py`.
+- [x] Enforce Nueva Ecija bounding box filter (`15.15 <= lat <= 16.15`, `120.70 <= lng <= 121.40`).
+- [x] Implement fuzzy municipality resolver for "Muñoz" / "Science City of Muñoz".
+- [x] Implement `scripts/seed_featured_places.py` with 12 municipalities and 17 curated destinations (including Bongabon Day 1 stops and Pantabangan resorts).
+- [x] Implement `GET /api/v1/municipalities` and `GET /api/v1/places` endpoints with comma-separated category support in `backend/app/api/v1/places.py`.
+- [x] Verify with automated test suite `backend/tests/test_foundation.py`.
+
+### Milestone 3: Authentication & Ionic Angular Shell
+- [x] Implement Argon2id password hashing and short-lived JWT token service in `backend/app/services/auth_service.py`.
+- [x] Implement REST endpoints in `backend/app/api/v1/auth.py` (`/register`, `/login`, `/refresh`, `/me`, `/oauth/google`, `/oauth/apple`).
+- [x] Verify with automated test suite `backend/tests/test_auth.py` (case-insensitive uniqueness, 401 generic error, 501 Apple gate).
+- [x] Install `@ionic/storage-angular`, `leaflet`, `leaflet.markercluster` in `Project/`.
+- [x] Configure `environment.ts` and `environment.prod.ts`.
+- [x] Implement `GuestStorageService` with `ne_guest_itineraries_v1`.
+- [x] Implement `AuthService` with reactive `currentUser$` and token management.
+- [x] Implement `authInterceptor` with graceful offline interceptor for laptop-sleep resilience.
+- [x] Build Welcome Page (`welcome.page`) matching Figma hero and buttons.
+- [x] Build Login Page (`login.page`) with validation, password toggle, and disabled Apple button.
+- [x] Build Signup Page (`signup.page`) with cross-field password matching validator.
+- [x] Build 4-Tab Shell (`tabs.routes.ts`) for Home, Map, History (placeholder), and Profile (account status / guest notice).
+- [x] Fix Angular Ionic 9 import resolution (`@ionic/angular`) and verify clean `npm run build`.
+
+### Milestone 4: Home Tab & Local Place Search (Next)
+- [ ] Implement Place service (`place.service.ts`) in Angular client.
+- [ ] Connect Home tab search bar to `GET /api/v1/places` using 300ms RxJS debounce.
+- [ ] Build Popular Destinations horizontal carousel / grid with verified imagery and category tags.
+- [ ] Build Saved Itineraries card list fetching from API (logged-in) or `GuestStorageService` (guests).
+
+### Milestones 5–10: (Pending Milestone 4 completion)
+- [ ] Step 5: Leaflet map integration with 16 category filter pills and POI bottom sheet.
+- [ ] Step 6: Custom Itinerary builder with BOLA-checked backend endpoints and stop reordering.
+- [ ] Step 7: Deterministic Haversine clustering recommendation engine.
+- [ ] Step 8: Multi-day timeline overview, stop cards, and cross-tab reactive persistence.
+- [ ] Step 9: Rate limiting (SlowAPI), offline error recovery banners, and backup drills.
+- [ ] Step 10: Complete 24-point acceptance checklist verification.
+

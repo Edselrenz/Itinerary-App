@@ -1,0 +1,72 @@
+// Ionic variables and Figma Design System Tokens for Nueva Ecija Travel Itinerary
+
+:root {
+  --ion-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+
+  /** Primary — Travel Azure Blue **/
+  --ion-color-primary: #2563eb;
+  --ion-color-primary-rgb: 37, 99, 235;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #1d4ed8;
+  --ion-color-primary-tint: #3b82f6;
+
+  /** Secondary — Deep Slate **/
+  --ion-color-secondary: #0f172a;
+  --ion-color-secondary-rgb: 15, 23, 42;
+  --ion-color-secondary-contrast: #ffffff;
+  --ion-color-secondary-contrast-rgb: 255, 255, 255;
+  --ion-color-secondary-shade: #020617;
+  --ion-color-secondary-tint: #1e293b;
+
+  /** Tertiary — Scenic Teal **/
+  --ion-color-tertiary: #0d9488;
+  --ion-color-tertiary-rgb: 13, 148, 136;
+  --ion-color-tertiary-contrast: #ffffff;
+  --ion-color-tertiary-contrast-rgb: 255, 255, 255;
+  --ion-color-tertiary-shade: #0f766e;
+  --ion-color-tertiary-tint: #14b8a6;
+
+  /** Success **/
+  --ion-color-success: #16a34a;
+  --ion-color-success-rgb: 22, 163, 74;
+  --ion-color-success-contrast: #ffffff;
+  --ion-color-success-contrast-rgb: 255, 255, 255;
+  --ion-color-success-shade: #15803d;
+  --ion-color-success-tint: #22c55e;
+
+  /** Warning **/
+  --ion-color-warning: #f59e0b;
+  --ion-color-warning-rgb: 245, 158, 11;
+  --ion-color-warning-contrast: #000000;
+  --ion-color-warning-contrast-rgb: 0, 0, 0;
+  --ion-color-warning-shade: #d97706;
+  --ion-color-warning-tint: #fbbf24;
+
+  /** Danger **/
+  --ion-color-danger: #dc2626;
+  --ion-color-danger-rgb: 220, 38, 38;
+  --ion-color-danger-contrast: #ffffff;
+  --ion-color-danger-contrast-rgb: 255, 255, 255;
+  --ion-color-danger-shade: #b91c1c;
+  --ion-color-danger-tint: #ef4444;
+
+  /** Light / Surface **/
+  --ion-color-light: #f8fafc;
+  --ion-color-light-rgb: 248, 250, 252;
+  --ion-color-light-contrast: #0f172a;
+  --ion-color-light-contrast-rgb: 15, 23, 42;
+  --ion-color-light-shade: #e2e8f0;
+  --ion-color-light-tint: #ffffff;
+
+  /** Dark **/
+  --ion-color-dark: #0f172a;
+  --ion-color-dark-rgb: 15, 23, 42;
+  --ion-color-dark-contrast: #ffffff;
+  --ion-color-dark-contrast-rgb: 255, 255, 255;
+  --ion-color-dark-shade: #020617;
+  --ion-color-dark-tint: #1e293b;
+
+  --ion-background-color: #f8fafc;
+  --ion-text-color: #0f172a;
+}
