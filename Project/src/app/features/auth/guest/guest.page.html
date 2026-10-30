@@ -1,0 +1,40 @@
+<ion-content class="guest-page-content" [fullscreen]="true">
+  <div class="guest-screen-container">
+    <!-- Top Hero Photo with floating back button -->
+    <div class="hero-image-section">
+      <button type="button" class="floating-back-btn" (click)="goBack()" aria-label="Go back to welcome">
+        <ion-icon name="arrow-back"></ion-icon>
+      </button>
+      <img
+        src="assets/images/guest_hiker_hero.png"
+        alt="Traveler exploring Nueva Ecija mountains"
+        class="hero-hiker-img"
+      />
+    </div>
+
+    <!-- Bottom Action Card -->
+    <div class="guest-content-section">
+      <div class="content-wrapper">
+        <h1 class="guest-title">Explore as a guest</h1>
+        <p class="guest-subtitle">
+          You can browse destinations,<br />
+          view sample itineraries, and explore<br />
+          features. Your data won't be save
+        </p>
+
+        <div class="actions-group">
+          <!-- Continue as Guest -->
+          <ion-button expand="block" class="primary-pill-btn" (click)="continueAsGuest()">
+            Continue as Guest
+          </ion-button>
+
+          <!-- Create an Account -->
+          <button type="button" class="outline-pill-btn" (click)="createAccount()">
+            Create an Account
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</ion-content>
+

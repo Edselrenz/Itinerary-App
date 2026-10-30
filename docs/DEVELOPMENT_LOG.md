@@ -186,3 +186,26 @@ This log records chronological development sessions, detailing objectives, execu
   - Connect GitHub remote origin and push `main` branch.
   - Enable GitHub Actions as Pages deployment source in repository settings.
 
+---
+
+## Session 8: Dedicated "Explore as a Guest" Page Implementation
+- **Date & Time**: 2026-10-30 13:27:00 (Local)
+- **Objective**: Replace the popup modal on "Continue as Guest" with a dedicated full-page view (`/guest`) matching the user's reference mockup.
+- **Tasks Performed**:
+  - Extracted and cleaned mountain hiker photography asset (`guest_hiker_hero.png`) directly from the design mockup.
+  - Created standalone component `Project/src/app/features/auth/guest/guest.page.*`:
+    - Top 48vh: Full-bleed mountain hiker photography with floating, semi-transparent frosted back button (`←`) linked to `/welcome`.
+    - Bottom half: White card with bold black title *"Explore as a guest"*, localized explanatory copy, and full pill buttons.
+    - Solid blue pill button (`#0084ff`): *"Continue as Guest"*, invoking `AuthService.continueAsGuest()` and routing to `/tabs/home`.
+    - Outline blue pill button: *"Create an Account"*, routing to `/signup`.
+  - Added route `{ path: 'guest', loadComponent: ... }` to `Project/src/app/app.routes.ts`.
+  - Refactored `welcome.page.html`, `.scss`, and `.ts`:
+    - Removed `<ion-modal>` and modal states.
+    - Configured "Continue as Guest" button to navigate directly to `/guest`.
+- **Testing & Verification**:
+  - `npm --prefix Project run build`: **Exit code 0 (0 errors, 0 warnings; lazy chunk `guest-page` generated)**.
+  - `python -m pytest backend/tests`: **2 passed in 5.64s [100%]**.
+- **Next Recommended Steps**:
+  - Push latest commits to remote GitHub repository.
+  - Proceed to Milestone 4: Backend places search integration (`GET /api/v1/places`).
+

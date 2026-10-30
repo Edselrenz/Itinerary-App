@@ -45,9 +45,14 @@ This document serves as the primary handoff reference for developers and coding 
   - Subtitle: *"Get personalize iternaries, easy commutes, and nearby essentials."*
   - *"Log in"* & *"Sign up"* solid blue pill buttons (`#0084ff`).
   - Centered `line or line` divider.
-  - *"Continue as Guest"* outline pill button with blue person icon.
+  - *"Continue as Guest"* outline pill button with blue person icon navigating to `/guest`.
   - City buildings illustration (`welcome_hero_buildings.png`) anchored at the bottom edge.
-  - Interactive *"Explore as a guest"* modal sheet preserved.
+- [x] **Dedicated Guest Page (`/guest`)**:
+  - Full-bleed mountain hiker photography (`guest_hiker_hero.png`) with floating back button (`←`).
+  - Heading: *"Explore as a guest"*.
+  - Subtitle: *"You can browse destinations, view sample itineraries, and explore features. Your data won't be save"*.
+  - Solid blue pill button: *"Continue as Guest"* (activates guest session & enters `/tabs/home`).
+  - Outline blue pill button: *"Create an Account"* (navigates to `/signup`).
 - [x] **Figma-Aligned Login Screen (`/login`)**: Full form, password visibility toggle, Remember Me, authentic Google logo button (`google_logo.png`), disabled Apple button.
 - [x] **Figma-Aligned Signup Screen (`/signup`)**: Name fields, username, email, password strength, and cross-field matching-passwords confirmation validator.
 - [x] **Figma Flow 2 Home Page (`/tabs/home`)**:

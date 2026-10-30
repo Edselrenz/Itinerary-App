@@ -5,35 +5,20 @@ import {
   IonButton,
   IonContent,
   IonIcon,
-  IonModal,
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
-import {
-  arrowForwardOutline,
-  closeOutline,
-  person,
-} from 'ionicons/icons';
-import { AuthService } from '../../../core/services/auth.service';
+import { person } from 'ionicons/icons';
 
 @Component({
   selector: 'app-welcome',
   templateUrl: './welcome.page.html',
   styleUrls: ['./welcome.page.scss'],
   standalone: true,
-  imports: [CommonModule, IonContent, IonButton, IonIcon, IonModal],
+  imports: [CommonModule, IonContent, IonButton, IonIcon],
 })
 export class WelcomePage {
-  public isGuestModalOpen = false;
-
-  constructor(
-    private router: Router,
-    private authService: AuthService
-  ) {
-    addIcons({
-      person,
-      closeOutline,
-      arrowForwardOutline,
-    });
+  constructor(private router: Router) {
+    addIcons({ person });
   }
 
   public goToLogin(): void {
@@ -44,17 +29,7 @@ export class WelcomePage {
     this.router.navigate(['/signup']);
   }
 
-  public openGuestModal(): void {
-    this.isGuestModalOpen = true;
-  }
-
-  public closeGuestModal(): void {
-    this.isGuestModalOpen = false;
-  }
-
-  public async continueAsGuest(): Promise<void> {
-    this.isGuestModalOpen = false;
-    await this.authService.continueAsGuest();
-    this.router.navigate(['/tabs/home']);
+  public goToGuest(): void {
+    this.router.navigate(['/guest']);
   }
 }

@@ -17,6 +17,11 @@ export const routes: Routes = [
       import('./features/auth/signup/signup.page').then((m) => m.SignupPage),
   },
   {
+    path: 'guest',
+    loadComponent: () =>
+      import('./features/auth/guest/guest.page').then((m) => m.GuestPage),
+  },
+  {
     path: 'tabs',
     loadChildren: () => import('./tabs/tabs.routes').then((m) => m.routes),
   },

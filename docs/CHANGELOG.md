@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [0.4.2-alpha] - 2026-10-30
+### Added
+- **Dedicated Guest Onboarding Page (`/guest`)**:
+  - Implemented standalone `GuestPage` (`Project/src/app/features/auth/guest/`) replacing the previous modal sheet popup.
+  - Full-bleed mountain hiker hero photo (`assets/images/guest_hiker_hero.png`) with floating semi-transparent back button.
+  - Exact layout with bold title *"Explore as a guest"*, copy, solid blue pill button *"Continue as Guest"*, and outline pill button *"Create an Account"*.
+  - Configured route `/guest` in `app.routes.ts`.
+
+### Changed
+- Refactored `welcome.page.*` to remove popup modal and navigate cleanly to `/guest`.
+
+---
+
 ## [0.4.1-alpha] - 2026-10-30
 ### Changed
 - **Welcome Screen Layout Realignment**:

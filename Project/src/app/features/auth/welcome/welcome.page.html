@@ -43,7 +43,7 @@
         </div>
 
         <!-- Continue as Guest -->
-        <button type="button" class="guest-pill-btn" (click)="openGuestModal()">
+        <button type="button" class="guest-pill-btn" (click)="goToGuest()">
           <ion-icon name="person" class="guest-icon"></ion-icon>
           <span>Continue as Guest</span>
         </button>
@@ -60,49 +60,4 @@
       />
     </div>
   </div>
-
-  <!-- Guest Onboarding Modal -->
-  <ion-modal
-    [isOpen]="isGuestModalOpen"
-    (didDismiss)="closeGuestModal()"
-    class="guest-modal"
-    [initialBreakpoint]="0.7"
-    [breakpoints]="[0, 0.7, 0.9]"
-  >
-    <ng-template>
-      <div class="guest-modal-content">
-        <div class="modal-handle-bar"></div>
-        <div class="modal-header">
-          <span class="modal-badge">Guest Mode</span>
-          <button type="button" class="close-icon-btn" (click)="closeGuestModal()">
-            <ion-icon name="close-outline"></ion-icon>
-          </button>
-        </div>
-
-        <div class="modal-body">
-          <div class="guest-illustration-box">
-            <img
-              src="assets/images/guest_illustration.png"
-              alt="Explore as a guest illustration"
-              class="guest-modal-img"
-            />
-          </div>
-          <h2 class="modal-title">Explore as a guest</h2>
-          <p class="modal-desc">
-            You can browse destinations, view sample itineraries, and explore features. Your itineraries remain saved locally on this device and can be transferred upon creating an account.
-          </p>
-        </div>
-
-        <div class="modal-actions">
-          <ion-button expand="block" class="modal-primary-btn" (click)="continueAsGuest()">
-            Explore as a guest
-            <ion-icon name="arrow-forward-outline" slot="end"></ion-icon>
-          </ion-button>
-          <ion-button expand="block" fill="clear" class="cancel-btn" (click)="closeGuestModal()">
-            Cancel
-          </ion-button>
-        </div>
-      </div>
-    </ng-template>
-  </ion-modal>
 </ion-content>

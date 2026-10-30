@@ -1,0 +1,135 @@
+.guest-page-content {
+  --background: #ffffff;
+}
+
+.guest-screen-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  background: #ffffff;
+  box-sizing: border-box;
+}
+
+.hero-image-section {
+  position: relative;
+  width: 100%;
+  height: 48vh;
+  min-height: 280px;
+  max-height: 400px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+
+.hero-hiker-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 15%;
+  display: block;
+}
+
+.floating-back-btn {
+  position: absolute;
+  top: calc(1rem + env(safe-area-inset-top, 0px));
+  left: 1.25rem;
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(8px);
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #000000;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:active {
+    background: rgba(255, 255, 255, 0.75);
+  }
+
+  ion-icon {
+    font-size: 1.4rem;
+  }
+}
+
+.guest-content-section {
+  flex: 1;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2.25rem 1.75rem 2.5rem;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.content-wrapper {
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.guest-title {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #000000;
+  margin: 0 0 1rem;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
+.guest-subtitle {
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: #334155;
+  margin: 0 0 2.25rem;
+  max-width: 320px;
+}
+
+.actions-group {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.primary-pill-btn {
+  --background: #0084ff;
+  --background-hover: #0073e6;
+  --background-activated: #0060bf;
+  --color: #ffffff;
+  --border-radius: 9999px;
+  font-size: 1.02rem;
+  font-weight: 700;
+  height: 48px;
+  margin: 0;
+  --box-shadow: none;
+}
+
+.outline-pill-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 48px;
+  background: #ffffff;
+  border: 1.5px solid #0084ff;
+  border-radius: 9999px;
+  color: #0084ff;
+  font-size: 1.02rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: background 0.15s;
+
+  &:active {
+    background: #f0f7ff;
+  }
+}
+
