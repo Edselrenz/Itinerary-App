@@ -73,6 +73,7 @@ This document serves as the primary handoff reference for developers and coding 
   - Profile tab (`/tabs/profile`) with verified account status or guest mode notice and logout action.
 - [x] **Figma Theme Tokens**: Configured Inter font, Travel Azure Blue (`#2563eb`), and Leaflet CSS.
 - [x] **Production Build**: Verified with `npm run build` (0 errors, 0 warnings).
+- [x] **Live GitHub Pages Deployment**: Fully deployed and verified live at [https://edselrenz.github.io/Itinerary-App/](https://edselrenz.github.io/Itinerary-App/) (HTTP 200 OK).
 
 ---
 

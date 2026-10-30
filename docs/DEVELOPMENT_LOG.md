@@ -270,6 +270,24 @@ This log records chronological development sessions, detailing objectives, execu
   - Local Angular build verified: `v24.19.0` compiles `Project/www` in ~12 seconds with 0 errors.
   - Backend tests verified: 2/2 tests pass in 5.84s.
 - **Next Steps**:
-  - Commit and push to `origin/main` to trigger the GitHub Pages workflow run.
+  - Pushed commits `d8942cf` and `a5109df` to `origin/main`.
+
+---
+
+## Session 12: GitHub Pages Deployment Activation & Verification
+- **Date & Time**: 2026-10-30 15:22:00 (Local)
+- **Objective**: Activate and verify the live deployment of the Ionic Angular client to GitHub Pages.
+- **Actions Taken**:
+  - User configured repository Pages source to **GitHub Actions**.
+  - Pushed commit `a5109df` to trigger the deployment workflow.
+  - Deployment run `#41019411934` completed with `conclusion: success` in 34 seconds.
+- **Verification**:
+  - Automated deployment status checked: State `success`.
+  - HTTP probe `curl -sI https://edselrenz.github.io/Itinerary-App/`: Returned `HTTP/1.1 200 OK`.
+  - HTML inspection verified `<app-root>`, `<base href="./">`, and Ionic bundle scripts served.
+- **Live URL**: `https://edselrenz.github.io/Itinerary-App/`
+- **Next Steps**:
+  - Proceed with Milestone 4 (Home Tab & Local Place Search).
+
 
 
