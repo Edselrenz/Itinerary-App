@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [0.4.8-alpha] - 2026-10-31
+### Added
+- **Fullscreen Interactive Loading / Splash Screen**:
+  - Implemented the Figma-aligned loading screen with twilight cityscape imagery and *"Trip mo, trip ko"* branding.
+  - Added support for auto-dismissal (2.8s after frontend readiness), click/tap to dismiss, and swipe gestures.
+  - Implemented smooth cubic-bezier scale and opacity transition to seamlessly reveal the underlying view.
+
+---
+
 ## [0.4.7-alpha] - 2026-10-30
 ### Added & Changed
 - **High-Resolution Asset Upgrade**:

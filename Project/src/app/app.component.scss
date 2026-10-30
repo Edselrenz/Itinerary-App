@@ -1,0 +1,160 @@
+.app-splash-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  overflow: hidden;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: pan-y;
+  background-color: #0c1527;
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+
+  &.fade-out {
+    opacity: 0;
+    transform: scale(1.03);
+    pointer-events: none;
+  }
+}
+
+.splash-background {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+.splash-bg-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center bottom;
+  display: block;
+}
+
+.splash-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(10, 18, 38, 0.45) 0%,
+    rgba(10, 18, 38, 0.15) 35%,
+    rgba(10, 18, 38, 0.4) 100%
+  );
+  pointer-events: none;
+}
+
+.splash-content-container {
+  position: relative;
+  z-index: 2;
+  margin-top: 18vh;
+  padding: 0 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  animation: splashFadeIn 0.8s ease-out forwards;
+}
+
+.splash-brand-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.splash-airplane-icon {
+  width: 34px;
+  height: 34px;
+  color: #ffffff;
+  transform: rotate(45deg);
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.4));
+  flex-shrink: 0;
+}
+
+.splash-brand-title {
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.025em;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+}
+
+.splash-tagline {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #ffffff;
+  line-height: 1.45;
+  margin: 0;
+  letter-spacing: -0.01em;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  opacity: 0.95;
+  max-width: 320px;
+}
+
+.splash-footer-hint {
+  position: relative;
+  z-index: 2;
+  margin-bottom: calc(env(safe-area-inset-bottom, 20px) + 24px);
+  animation: splashPulse 2.5s infinite ease-in-out;
+}
+
+.hint-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 0.45rem 1rem;
+  border-radius: 9999px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.pulse-ring {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #38bdf8;
+  box-shadow: 0 0 8px #38bdf8;
+}
+
+.hint-text {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  letter-spacing: 0.02em;
+}
+
+@keyframes splashFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes splashPulse {
+  0%, 100% {
+    opacity: 0.85;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+

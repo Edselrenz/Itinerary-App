@@ -43,6 +43,11 @@ This document serves as the primary handoff reference for developers and coding 
 - [x] **Guest Mode Storage**: `@ionic/storage-angular` configured under key `ne_guest_itineraries_v1`.
 - [x] **Authentication Service**: Reactive `currentUser$` session state, JWT storage, login, register, and guest toggle.
 - [x] **HTTP Interceptor**: Automatic `Bearer` token injection and offline host error trapping.
+- [x] **Fullscreen Interactive Loading / Splash Screen**:
+  - Full-bleed illuminated cityscape background (`loading_screen.jpg`) with subtle gradient scrim.
+  - Airplane branding + *"Trip mo, trip ko"* headline + *"Plan your trip, explore new places, make better memories."* slogan.
+  - Multi-trigger dismissal: Auto-dismissal (2.8s after frontend load), click/tap to dismiss, and touch swipe gestures.
+  - Smooth 500ms fade/scale transition into the active view.
 - [x] **Figma-Aligned Welcome Screen (`/welcome`)**: Refactored to exact user specification:
   - Header row: Airplane SVG + *"Trip mo, trip ko"*.
   - Subheadline: *"Your next adventure is waiting."*

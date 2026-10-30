@@ -332,7 +332,32 @@ This log records chronological development sessions, detailing objectives, execu
   - `npm run build`: Exit code 0, 0 compiler warnings, bundle generated in 7.15s.
   - `python -m pytest backend/tests`: 2 passed in 3.14s [100%].
 - **Next Steps**:
-  - Commit and push to `origin/main` to refresh live GitHub Pages assets.
+  - Pushed commit `8009ed2` to `origin/main`.
+
+---
+
+## Session 15: Fullscreen Interactive Loading Screen (Splash)
+- **Date & Time**: 2026-10-31 07:38:00 (Local)
+- **Objective**: Implement the application loading/splash screen matching the Figma mockup (`media_1793403213643_6569680e.jpg`), with interactive click/swipe dismissal and automatic fade-out upon frontend loading.
+- **Key Features Implemented**:
+  - **Full-Bleed Visual**: Illuminated twilight city skyline backdrop (`loading_screen.jpg`) with subtle gradient scrim.
+  - **Brand Header & Slogan**: 45-degree tilted airplane icon + bold *"Trip mo, trip ko"* title, paired with the exact slogan *"Plan your trip, explore new places, make better memories."*.
+  - **Interactive Multi-Mode Dismissal**:
+    - *Auto-Dismiss*: Automatically transitions away after 2.8s once the underlying frontend bundle and routes have initialized.
+    - *Click / Tap*: Instantly initiates smooth exit transition upon user click.
+    - *Swipe*: Tracks touch start/end coordinates; gestures exceeding 25px trigger instant dismissal.
+  - **Fluid Animation**: 500ms smooth cubic-bezier scale and opacity fade-out revealing the active route.
+- **Files Created/Modified**:
+  - `Project/src/app/app.component.ts`: Added state management, timer lifecycle, touch listeners, and cleanup.
+  - `Project/src/app/app.component.html`: Integrated full-screen splash overlay before the router outlet.
+  - `Project/src/app/app.component.scss`: Implemented backdrop, typography, pulse hint, and fade-out animations.
+  - `Project/src/assets/images/loading_screen.jpg`: Added high-resolution background asset.
+- **Verification**:
+  - `npm run build`: Exit code 0, 0 compiler warnings, bundle generated in 16.82s.
+  - `python -m pytest backend/tests`: 2 passed in 6.54s [100%].
+- **Next Steps**:
+  - Commit and push to `origin/main` to deploy the loading screen to GitHub Pages.
+
 
 
 
