@@ -35,7 +35,11 @@ This document serves as the primary handoff reference for developers and coding 
   - `seed_featured_places.py`: Seeds 12 municipalities and 17 curated destinations (including all Bongabon Day 1 stops and Pantabangan resorts).
 
 ### Mobile Client (`Project/`)
-- [x] **Environment Configuration**: Set up for local API (`http://127.0.0.1:8000/api/v1`), OSM raster tiles, and `enableAppleAuth: false`.
+- [x] **Environment Configuration & Gitignore Integrity**:
+  - Untracked `Project/src/environments/environment.prod.ts`, `Project/figma_strings.txt`, and Python bytecode `__pycache__` from Git index while preserving local development files intact.
+  - Added `Project/src/environments/environment.example.ts` as fallback template for CI.
+  - Updated `.github/workflows/deploy.yml` to automatically initialize `environment.prod.ts` from example before building.
+  - Configured local API (`http://127.0.0.1:8000/api/v1`), OSM raster tiles, and `enableAppleAuth: false`.
 - [x] **Guest Mode Storage**: `@ionic/storage-angular` configured under key `ne_guest_itineraries_v1`.
 - [x] **Authentication Service**: Reactive `currentUser$` session state, JWT storage, login, register, and guest toggle.
 - [x] **HTTP Interceptor**: Automatic `Bearer` token injection and offline host error trapping.
