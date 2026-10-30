@@ -163,3 +163,26 @@ This log records chronological development sessions, detailing objectives, execu
 - **Next Recommended Steps**:
   - Milestone 4: Backend places API integration (`GET /api/v1/places`) and live search synchronization on the Home tab.
 
+---
+
+## Session 7: Git Repository Initialization & GitHub Pages Deployment Pipeline
+- **Date & Time**: 2026-10-30 12:56:00 (Local)
+- **Objective**: Prepare repository for remote GitHub hosting and automate deployment via GitHub Pages so the application can be loaded and tested on real mobile phones and devices.
+- **Tasks Performed**:
+  - Authored `.github/workflows/deploy.yml`:
+    - Checks out codebase on push to `main`.
+    - Sets up Node.js 20 with npm caching.
+    - Runs `npm ci` and `npm run build -- --base-href ./`.
+    - Generates `.nojekyll` and `404.html` SPA routing fallbacks in `Project/www`.
+    - Uploads pages artifact and deploys directly via `actions/deploy-pages@v4`.
+  - Updated `.gitignore` to exclude `.env`, `*.db`, `*.sqlite3`, `scratch/`, and temporary binaries.
+  - Cleaned up nested starter git link (`Project/.git`) to ensure all 181 mobile and backend files are tracked in the monorepo root.
+  - Initialized git on branch `main` and executed initial commit (`4b80f2b`).
+  - Identified Wi-Fi IPv4 address (`192.168.1.180`) for local network device preview.
+- **Verification**:
+  - `git status`: Working tree clean on `main`.
+  - `npm --prefix Project run build -- --base-href ./`: Built cleanly into `Project/www`.
+- **Next Steps**:
+  - Connect GitHub remote origin and push `main` branch.
+  - Enable GitHub Actions as Pages deployment source in repository settings.
+
