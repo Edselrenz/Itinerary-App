@@ -1,0 +1,280 @@
+.welcome-content {
+  --background: #ffffff;
+}
+
+.welcome-screen-wrapper {
+  position: relative;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: #ffffff;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+.welcome-container {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 3rem 1.75rem 1rem;
+  max-width: 380px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* 1. Airplane SVG - Trip mo, trip ko */
+.brand-row {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+}
+
+.airplane-svg {
+  width: 36px;
+  height: 36px;
+  color: #0084ff;
+  flex-shrink: 0;
+}
+
+.brand-title {
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: #000000;
+  margin: 0;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+}
+
+/* 2. Your next adventure is waiting */
+.hero-headline {
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: #000000;
+  margin: 0 0 0.85rem;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+}
+
+/* 3. Get personalized itineraries, easy commutes, and nearby essentials */
+.hero-subtitle {
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: #334155;
+  margin: 0 0 2.25rem;
+  max-width: 320px;
+}
+
+/* 4. Action buttons & divider */
+.actions-group {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.primary-pill-btn {
+  --background: #0084ff;
+  --background-hover: #0073e6;
+  --background-activated: #0060bf;
+  --color: #ffffff;
+  --border-radius: 9999px;
+  font-size: 1.02rem;
+  font-weight: 700;
+  height: 48px;
+  margin: 0;
+  --box-shadow: none;
+}
+
+.divider-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin: 0.2rem 0;
+}
+
+.divider-line {
+  flex: 1;
+  height: 1px;
+  background-color: #cbd5e1;
+}
+
+.divider-text {
+  font-size: 0.95rem;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.guest-pill-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  height: 48px;
+  background: #ffffff;
+  border: 1.5px solid #0084ff;
+  border-radius: 9999px;
+  color: #0084ff;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: background 0.15s, border-color 0.15s;
+
+  &:active {
+    background: #f0f7ff;
+  }
+}
+
+.guest-icon {
+  font-size: 1.15rem;
+  color: #0084ff;
+}
+
+/* 5. Building background anchored at bottom */
+.bottom-buildings-wrap {
+  position: relative;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 1;
+  margin-top: 1rem;
+  line-height: 0;
+}
+
+.bottom-buildings-img {
+  width: 100%;
+  max-width: 480px;
+  height: auto;
+  object-fit: cover;
+  object-position: bottom center;
+  display: block;
+}
+
+/* Guest Modal Styles */
+.guest-modal {
+  --border-radius: 24px 24px 0 0;
+}
+
+.guest-modal-content {
+  padding: 0.75rem 1.5rem 2rem;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #ffffff;
+  box-sizing: border-box;
+}
+
+.modal-handle-bar {
+  width: 40px;
+  height: 4px;
+  border-radius: 9999px;
+  background: #cbd5e1;
+  margin: 0 auto 0.75rem;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.modal-badge {
+  background: #eff6ff;
+  color: #0084ff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.3rem 0.65rem;
+  border-radius: 9999px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.close-icon-btn {
+  background: #f1f5f9;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  cursor: pointer;
+
+  ion-icon {
+    font-size: 1.25rem;
+  }
+}
+
+.modal-body {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.guest-illustration-box {
+  width: 100%;
+  max-width: 220px;
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.guest-modal-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.modal-title {
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 0.5rem;
+  letter-spacing: -0.02em;
+}
+
+.modal-desc {
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: #64748b;
+  margin: 0;
+  max-width: 340px;
+}
+
+.modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: auto;
+}
+
+.modal-primary-btn {
+  --background: #0084ff;
+  --background-hover: #0073e6;
+  --border-radius: 14px;
+  font-weight: 700;
+  height: 50px;
+  font-size: 1rem;
+}
+
+.cancel-btn {
+  --color: #64748b;
+  font-weight: 600;
+  font-size: 0.9rem;
+}

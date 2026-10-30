@@ -52,6 +52,8 @@ yarn-error.log
 !.vscode/extensions.json
 .history/*
 
+/.agents
+/.VSCodeCounter
 
 # Miscellaneous
 /.angular
@@ -68,9 +70,3 @@ testem.log
 # System files
 .DS_Store
 Thumbs.db
-
-# Playwright
-/test-results/
-/playwright-report/
-/blob-report/
-/playwright/.cache/
