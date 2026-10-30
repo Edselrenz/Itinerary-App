@@ -5,10 +5,8 @@ import { Router, RouterLink } from '@angular/router';
 import {
   IonButton,
   IonContent,
-  IonHeader,
   IonIcon,
   IonModal,
-  IonToolbar,
   ToastController,
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
@@ -50,8 +48,6 @@ export interface DestinationItem {
     CommonModule,
     FormsModule,
     RouterLink,
-    IonHeader,
-    IonToolbar,
     IonContent,
     IonButton,
     IonIcon,
@@ -144,6 +140,26 @@ export class HomePage implements OnInit {
       description: 'Sprawling eco-tourism estate in the Onion Capital with open lawns, fresh mountain breezes, and native dining.',
       tags: ['Mountain View', 'Onion Capital', 'Eco Camp'],
       searchQuery: 'Pavillion Farm Bongabon Nueva Ecija',
+    },
+    {
+      id: 'lake_farm_marre',
+      name: 'Lake Farm de La Marre',
+      municipality: 'San Jose City',
+      category: 'Farm & Lake Resort',
+      image: 'assets/images/lake_farm_marre.png',
+      description: 'Tranquil countryside lakefront farm estate with boating, peaceful nature retreats, and farm-to-table culinary dining.',
+      tags: ['Lakeside Retreat', 'Nature Farm', 'Boating'],
+      searchQuery: 'Lake Farm de La Marre San Jose City Nueva Ecija',
+    },
+    {
+      id: 'la_casa_prime',
+      name: 'La Casa Prime Cabins',
+      municipality: 'Pantabangan',
+      category: 'Cabins & Glamping',
+      image: 'assets/images/la_casa_prime.png',
+      description: 'Serene mountain cabin sanctuary with overlooking views of Pantabangan Lake and modern glamping amenities.',
+      tags: ['Mountain Cabins', 'Lake View', 'Glamping'],
+      searchQuery: 'La Casa Prime Cabins Pantabangan Nueva Ecija',
     },
   ];
 

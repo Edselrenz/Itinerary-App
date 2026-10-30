@@ -307,7 +307,33 @@ This log records chronological development sessions, detailing objectives, execu
   - `npm run build`: Exit code 0, 0 compiler warnings, 0 errors.
   - `python -m pytest backend/tests`: 2 passed in 8.55s [100%].
 - **Next Steps**:
-  - Commit and push to `origin/main` to update the live GitHub Pages site.
+  - Pushed commit `5e157b0` to `origin/main`.
+
+---
+
+## Session 14: Unzip and Replace Blurry Photos with High-Resolution Assets
+- **Date & Time**: 2026-10-30 16:10:00 (Local)
+- **Objective**: Unzip high-resolution image packages (`Log_in_pics` and `Popular_Destinations`) into `Project/src/assets/images/` and replace all low-res / blurry photos across the application.
+- **Images Replaced & Extracted**:
+  - `Project/src/assets/images/minalungao.png`: Replaced with 480x640 high-res `Minalungao National Park.png`.
+  - `Project/src/assets/images/tagpuan_gapan.png`: Replaced with 1200x1500 high-res `Tagpuan sa Lumang Gapan.png`.
+  - `Project/src/assets/images/george_point.png`: Replaced with 864x1184 high-res `George Point.webp`.
+  - `Project/src/assets/images/pantabangan_lake.png`: Replaced with 2400x1600 high-res `Pantabangan Lake.jpg.webp`.
+  - `Project/src/assets/images/highland_bali.png`: Replaced with 1366x768 high-res `Highland Bali Villas Resort and Spa.webp`.
+  - `Project/src/assets/images/farm_villaronte.png`: Replaced with 640x480 high-res `Farm Villaronte.jpg`.
+  - `Project/src/assets/images/casa_batik.png`: Replaced with 458x670 high-res `Casa Batik.jpg`.
+  - `Project/src/assets/images/pavillion_farm.png`: Replaced with 675x1200 high-res `D_ Pavilion Farm and Resort.jpg`.
+  - `Project/src/assets/images/la_casa_prime.png`: Replaced with 1536x2048 high-res `Lasa Casa Prime Cabins.jpg`.
+  - `Project/src/assets/images/welcome_hero_buildings.png`: Replaced with 668x374 high-res `Welcome screen.png`.
+  - `Project/src/assets/images/guest_hiker_hero.png`: Replaced with 736x1311 high-res `Guess mode.jpg`.
+  - Added new destination `Lake Farm de La Marre` (`lake_farm_marre.png`) to destination catalog in `home.page.ts`.
+  - Archived complete source folders under `Project/src/assets/images/login_pics/` and `popular_destinations/`.
+- **Verification**:
+  - `npm run build`: Exit code 0, 0 compiler warnings, bundle generated in 7.15s.
+  - `python -m pytest backend/tests`: 2 passed in 3.14s [100%].
+- **Next Steps**:
+  - Commit and push to `origin/main` to refresh live GitHub Pages assets.
+
 
 
 

@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [0.4.7-alpha] - 2026-10-30
+### Added & Changed
+- **High-Resolution Asset Upgrade**:
+  - Unzipped and extracted `Log_in_pics` and `Popular_Destinations` asset archives into `Project/src/assets/images/`.
+  - Replaced all blurry/low-resolution images across Welcome screen, Guest screen, and Home tab popular destination cards with high-definition assets.
+  - Added *Lake Farm de La Marre* and *La Casa Prime Cabins* to the curated destination list.
+
+---
+
 ## [0.4.6-alpha] - 2026-10-30
 ### Added & Changed
 - **Home Tab & Navigation Bar Figma Alignment**:
