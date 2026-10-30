@@ -5,11 +5,52 @@
 # --- Secrets & Environment Configurations ---
 .env
 *.env
+.env.*
+!.env.example
 .env.local
 .env.*.local
+
+# Angular Environment Overrides (Matches root or nested under Project/)
+**/src/environments/environment.prod.ts
+**/src/environments/environment.local.ts
+**/src/environments/environment.*.secret.ts
+!**/src/environments/environment.example.ts
+
+# Cloud, Firebase & OAuth Service Accounts
+client_secret*.json
+*service-account*.json
+*credentials*.json
+**/google-services.json
+**/GoogleService-Info.plist
+
+# Cryptographic Keys & Certificates
 *.pem
 *.key
-client_secret*.json
+*.crt
+*.pfx
+*.p8
+id_rsa*
+id_ed25519*
+
+# --- Mobile Builds & Signing (Capacitor / Android / iOS) ---
+.capacitor/
+android/app/build/
+android/.gradle/
+android/captures/
+**/local.properties
+**/key.properties
+*.keystore
+*.jks
+ios/App/Pods/
+ios/App/build/
+*.p12
+*.cer
+*.mobileprovision
+*.apk
+*.aab
+*.ipa
+platforms/
+plugins/
 
 # --- Python & Testing Artifacts ---
 __pycache__/
@@ -21,18 +62,21 @@ env/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.coverage
 *.coverage
 htmlcov/
 .nox/
 
-# --- Databases & Local State ---
+# --- Databases, Docker & Local State ---
 *.db
 *.sqlite
 *.sqlite3
-data/raw/*
-!data/raw/.gitkeep
+*.sql
 *.sql.gz
 *.dump
+data/raw/*
+!data/raw/.gitkeep
+docker-compose.override.yml
 
 # --- Node / Ionic / Angular Dependencies & Build Outputs ---
 node_modules/
@@ -44,12 +88,6 @@ out-tsc/
 bazel-out/
 .ionic/
 .nx/cache/
-
-# --- Mobile Builds (Capacitor / Android / iOS) ---
-android/app/build/
-ios/App/Pods/
-platforms/
-plugins/
 
 # --- Scratch, Binaries & Temporary Investigation Files ---
 scratch/
