@@ -209,3 +209,29 @@ This log records chronological development sessions, detailing objectives, execu
   - Push latest commits to remote GitHub repository.
   - Proceed to Milestone 4: Backend places search integration (`GET /api/v1/places`).
 
+---
+
+## Session 9: Gitignore Conflict Resolution & Monorepo Cleanup
+- **Date & Time**: 2026-10-30 14:14:00 (Local)
+- **Objective**: Resolve gitignore conflicts, establish a comprehensive monorepo `.gitignore`, remove accidentally tracked secrets (`.env`), Python cache, scratch scripts, and root-level duplicate project files.
+- **Root Cause Analysis**:
+  - A remote git merge conflict had overwritten the root `.gitignore` with the Angular starter `.gitignore` from `Project/`, which stripped the monorepo rules for `.env`, Python artifacts, SQLite databases, and scratch files.
+  - An accidental commit had duplicated the Angular workspace files at root (`src/`, `e2e/`, `package.json`, `angular.json`, etc.) alongside `Project/`.
+- **Tasks Performed**:
+  - Re-wrote root `.gitignore` with a robust, layered architecture covering:
+    - Environment & secrets (`.env`, `*.env`, `*.pem`, `*.key`, `client_secret*.json`).
+    - Python (`__pycache__/`, `*.py[cod]`, `.venv/`, `venv/`, `.pytest_cache/`, `.mypy_cache/`).
+    - Databases (`*.db`, `*.sqlite`, `*.sqlite3`, `data/raw/*`).
+    - Node & Angular dependencies (`node_modules/`, `www/`, `dist/`, `.angular/`, `.ionic/`).
+    - Mobile builds (`android/app/build/`, `ios/App/Pods/`).
+    - Temporary, scratch & binary files (`scratch/`, `*.bin`, `figma_strings.txt`, `*.log`, `.agents/`).
+  - Aligned `Project/.gitignore` to complement root rules without path conflicts.
+  - Untracked `.env`, `scratch/`, `backend/**/__pycache__`, and `*.bin` from Git cache (`git rm --cached`).
+  - Removed root duplicate files (`src/`, `e2e/`, `package.json`, etc.) while keeping the true source intact in `Project/`.
+- **Testing & Verification**:
+  - `npm --prefix Project run build`: **Exit code 0 (0 errors, 0 warnings; output www)**.
+  - `python -m pytest backend/tests`: **2 passed in 5.64s [100%]**.
+  - `git status`: Clean working tree with correct staged deletions and ignores.
+- **Next Steps**:
+  - Commit gitignore resolution and push cleanly to `main`.
+

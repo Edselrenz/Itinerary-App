@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [0.4.3-alpha] - 2026-10-30
+### Fixed
+- **Gitignore Conflicts & Monorepo Hierarchy**:
+  - Re-established comprehensive root `.gitignore` protecting secrets (`.env`), Python cache (`__pycache__`), SQLite databases (`*.db`, `*.sqlite3`), scratch files, and mobile build outputs.
+  - Aligned `Project/.gitignore` with root rules.
+  - Untracked `.env`, `scratch/`, `__pycache__`, and `*.bin` from Git tracking.
+  - Cleaned up redundant root-level duplicate files (`src/`, `package.json`, `angular.json`, etc.) that were accidentally committed during an earlier merge, ensuring `Project/` remains the single canonical source of truth for the Ionic client.
+
+---
+
 ## [0.4.2-alpha] - 2026-10-30
 ### Added
 - **Dedicated Guest Onboarding Page (`/guest`)**:
