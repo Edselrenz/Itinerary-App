@@ -235,3 +235,23 @@ This log records chronological development sessions, detailing objectives, execu
 - **Next Steps**:
   - Commit gitignore resolution and push cleanly to `main`.
 
+---
+
+## Session 10: Untracking Gitignored Files & CI Safeguard
+- **Date & Time**: 2026-10-30 14:31:00 (Local)
+- **Objective**: Untrack any remaining files matching `.gitignore` rules that were still tracked in GitHub (`git ls-files -i -c --exclude-standard`).
+- **Files Untracked from Git (Kept on Disk)**:
+  - `Project/src/environments/environment.prod.ts` (Angular environment secret override).
+  - `Project/figma_strings.txt` (large text dump).
+  - `scripts/__pycache__/import_osm.cpython-314.pyc` (Python bytecode).
+  - `scripts/__pycache__/seed_featured_places.cpython-314.pyc` (Python bytecode).
+- **CI Safeguard Implemented**:
+  - Added `Project/src/environments/environment.example.ts` (whitelisted example template).
+  - Updated `.github/workflows/deploy.yml` with automated fallback copy step so GitHub Actions builds `Project/www` successfully even when `environment.prod.ts` is untracked.
+- **Verification**:
+  - `git ls-files -i -c --exclude-standard`: Returned **0 files** (no gitignored files are tracked).
+  - `npm --prefix Project run build`: Succeeded with 0 errors.
+  - `python -m pytest backend/tests`: Passed 100%.
+- **Next Steps**:
+  - Commit and push untracked file deletions to `origin/main`.
+

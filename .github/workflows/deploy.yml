@@ -36,6 +36,13 @@ jobs:
         working-directory: Project
         run: npm ci
 
+      - name: Ensure environment configuration exists
+        working-directory: Project
+        run: |
+          if [ ! -f src/environments/environment.prod.ts ]; then
+            cp src/environments/environment.example.ts src/environments/environment.prod.ts || cp src/environments/environment.ts src/environments/environment.prod.ts
+          fi
+
       - name: Build Ionic Angular frontend
         working-directory: Project
         run: npm run build -- --base-href ./

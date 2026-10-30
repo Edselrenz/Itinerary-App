@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [0.4.4-alpha] - 2026-10-30
+### Fixed
+- **Untrack Gitignored Files from Index**:
+  - Untracked `Project/src/environments/environment.prod.ts`, `Project/figma_strings.txt`, and `scripts/__pycache__/*.pyc` from Git index while preserving local files on disk.
+  - Added `Project/src/environments/environment.example.ts` as an untracked environment fallback template.
+  - Updated GitHub Actions workflow `.github/workflows/deploy.yml` to automatically initialize `environment.prod.ts` from `environment.example.ts` or `environment.ts` during CI runs.
+
+---
+
 ## [0.4.3-alpha] - 2026-10-30
 ### Fixed
 - **Gitignore Conflicts & Monorepo Hierarchy**:
