@@ -9,6 +9,7 @@ import {
   IonIcon,
   IonModal,
   IonToolbar,
+  ToastController,
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import {
@@ -21,6 +22,7 @@ import {
   locationOutline,
   mapOutline,
   navigateOutline,
+  notifications,
   openOutline,
   personCircleOutline,
   searchOutline,
@@ -147,9 +149,11 @@ export class HomePage implements OnInit {
 
   constructor(
     private guestStorage: GuestStorageService,
-    private router: Router
+    private router: Router,
+    private toastController: ToastController
   ) {
     addIcons({
+      notifications,
       personCircleOutline,
       informationCircle,
       sparkles,
@@ -170,6 +174,20 @@ export class HomePage implements OnInit {
     this.guestStorage.isGuestMode$.subscribe((mode) => {
       this.isGuestMode = mode;
     });
+  }
+
+  public async onNotificationClick(): Promise<void> {
+    const toast = await this.toastController.create({
+      message: "You're all caught up! No active travel alerts in Nueva Ecija.",
+      duration: 2500,
+      position: 'top',
+      color: 'dark',
+    });
+    await toast.present();
+  }
+
+  public onSeeAll(): void {
+    this.router.navigate(['/tabs/map']);
   }
 
   public get filteredDestinations(): DestinationItem[] {

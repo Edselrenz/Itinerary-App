@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [0.4.6-alpha] - 2026-10-30
+### Added & Changed
+- **Home Tab & Navigation Bar Figma Alignment**:
+  - Re-architected Home tab layout: bold 2-line header, blue notification bell, search box with right-aligned icon.
+  - Implemented 2-column side-by-side planner cards: Midnight Navy *Suggested Itinerary* and Sky-Blue-bordered *Custom Itinerary*.
+  - Simplified *Popular Destinations* into a clean horizontal track with 120px photo tiles, bold titles, and municipality subtitles.
+  - Updated bottom tab bar to icon-only navigation with 4 electric blue icons (`#0084ff`).
+  - Preserved destination detail modal sheet, search filtering, and external Google Maps routing.
+
+---
+
 ## [0.4.5-alpha] - 2026-10-30
 ### Fixed
 - **GitHub Actions CI Node.js Version for Angular 22**:

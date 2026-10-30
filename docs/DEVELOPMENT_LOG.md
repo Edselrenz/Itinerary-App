@@ -287,7 +287,28 @@ This log records chronological development sessions, detailing objectives, execu
   - HTML inspection verified `<app-root>`, `<base href="./">`, and Ionic bundle scripts served.
 - **Live URL**: `https://edselrenz.github.io/Itinerary-App/`
 - **Next Steps**:
-  - Proceed with Milestone 4 (Home Tab & Local Place Search).
+  - Implemented exact Figma/mockup design for Home tab and navigation bar (Session 13).
+
+---
+
+## Session 13: Home Tab & Tab Bar Visual Alignment to Figma Mockup
+- **Date & Time**: 2026-10-30 15:52:00 (Local)
+- **Objective**: Refactor the Home tab (`/tabs/home`) and bottom tab bar (`/tabs`) to match the user-provided screenshot pixel-for-pixel using the `anti-generic-frontend-design` skill.
+- **Key Visual Changes**:
+  - **Header**: Converted to clean bold two-line typography: *"Where are you / going next?"* with an electric blue notification bell icon (`#0084ff`), removing unnecessary badge clutter.
+  - **Search Container**: Styled as a rounded rectangle (12px radius) with placeholder *"Search destination (e.g. Cabanatuan, Gapan, etc."* and right-aligned magnifying glass icon.
+  - **2-Column Planner Cards**:
+    - *Suggested Itinerary*: Deep midnight navy gradient (`#091338` to `#03081e`), electric blue sparkles icon, white bold heading, and muted subtitle.
+    - *Custom Itinerary*: Crisp white card with 1.5px sky-blue outline (`#38bdf8`), cyan/blue document+clock icon, dark bold heading, and dark gray subtitle.
+  - **Popular Destinations**: Minimalist horizontal scrolling track with 120px rounded square photo thumbnails, bold venue titles, and municipality subtitles; linked to "See all".
+  - **Icon-Only Bottom Tab Bar**: Replaced labeled tabs with 4 evenly spaced, solid blue icons (`home`, `location-sharp`, `time-outline`, `person-circle-outline`) in `#0084ff` over a pure white bar.
+  - **Preserved Interactivity**: Kept destination search filtering, tap-to-open bottom sheet modal with full details, external Google Maps navigation, and route planning.
+- **Verification**:
+  - `npm run build`: Exit code 0, 0 compiler warnings, 0 errors.
+  - `python -m pytest backend/tests`: 2 passed in 8.55s [100%].
+- **Next Steps**:
+  - Commit and push to `origin/main` to update the live GitHub Pages site.
+
 
 
 

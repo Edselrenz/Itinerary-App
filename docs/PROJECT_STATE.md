@@ -59,18 +59,17 @@ This document serves as the primary handoff reference for developers and coding 
   - Outline blue pill button: *"Create an Account"* (navigates to `/signup`).
 - [x] **Figma-Aligned Login Screen (`/login`)**: Full form, password visibility toggle, Remember Me, authentic Google logo button (`google_logo.png`), disabled Apple button.
 - [x] **Figma-Aligned Signup Screen (`/signup`)**: Name fields, username, email, password strength, and cross-field matching-passwords confirmation validator.
-- [x] **Figma Flow 2 Home Page (`/tabs/home`)**:
-  - Header with *"Where are you going next?"* and profile shortcut.
-  - Destination search pill input with real-time reactive filtering across names, municipalities, and tags.
-  - Adventure hero card (*"Your next adventure is waiting"*).
-  - Suggested & Custom Itinerary planner cards matching Figma badges and routing.
-  - **Popular Destinations** horizontal scroll carousel with 8 authentic venue image cards and municipality pills.
+- [x] **Figma-Aligned Home Page (`/tabs/home`)**:
+  - Top header with bold 2-line title (*"Where are you / going next?"*) and electric blue notification bell.
+  - Destination search bar with 12px rounded borders, placeholder, and trailing magnifying glass icon.
+  - Side-by-side 2-column action cards:
+    - *Suggested Itinerary* (Midnight Navy gradient, electric blue sparkles, white title).
+    - *Custom Itinerary* (White card with 1.5px sky-blue outline, cyan document+clock icon, dark title).
+  - **Popular Destinations** horizontal scroll carousel with 120px photo tiles, venue titles, and municipality names.
   - Destination Detail Modal sheet with full image hero, tags, description, and external *"Open in Google Maps"* button.
 - [x] **4-Tab Navigation Shell (`/tabs`)**:
-  - Home tab (`/tabs/home`).
-  - Map tab shell (`/tabs/map`).
-  - History tab placeholder (`/tabs/history`).
-  - Profile tab (`/tabs/profile`) with verified account status or guest mode notice and logout action.
+  - Icon-only tab bar with 4 solid blue icons (`home`, `location-sharp`, `time-outline`, `person-circle-outline`) in `#0084ff`.
+  - Seamless navigation to Home (`/tabs/home`), Map (`/tabs/map`), History (`/tabs/history`), and Profile (`/tabs/profile`).
 - [x] **Figma Theme Tokens**: Configured Inter font, Travel Azure Blue (`#2563eb`), and Leaflet CSS.
 - [x] **Production Build**: Verified with `npm run build` (0 errors, 0 warnings).
 - [x] **Live GitHub Pages Deployment**: Fully deployed and verified live at [https://edselrenz.github.io/Itinerary-App/](https://edselrenz.github.io/Itinerary-App/) (HTTP 200 OK).

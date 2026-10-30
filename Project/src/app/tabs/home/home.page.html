@@ -1,141 +1,117 @@
-<ion-header class="ion-no-border">
-  <ion-toolbar class="home-toolbar">
-    <div class="header-top">
-      <div class="header-titles">
-        <span class="greeting-badge">Mabuhay!</span>
-        <h1 class="greeting-title">Where are you going next?</h1>
-      </div>
-      <ion-button fill="clear" class="profile-avatar-btn" routerLink="/tabs/profile">
-        <ion-icon name="person-circle-outline"></ion-icon>
-      </ion-button>
-    </div>
-  </ion-toolbar>
-</ion-header>
-
 <ion-content class="home-content" [fullscreen]="true">
-  <div class="home-container">
-    @if (isGuestMode) {
-      <div class="guest-banner">
-        <div class="banner-text">
-          <ion-icon name="information-circle"></ion-icon>
-          <span>Guest Mode: Itineraries are saved locally on this device.</span>
-        </div>
-        <a routerLink="/signup" class="banner-action">Sign up</a>
-      </div>
-    }
+  <div class="home-layout">
+    <!-- Top Header: Title & Notification Bell -->
+    <header class="home-header">
+      <h1 class="header-title">
+        Where are you<br />
+        going next?
+      </h1>
+      <button
+        type="button"
+        class="bell-icon-btn"
+        (click)="onNotificationClick()"
+        aria-label="Travel notifications"
+      >
+        <ion-icon name="notifications"></ion-icon>
+      </button>
+    </header>
 
-    <!-- Search bar matching Figma Flow 2 -->
-    <div class="search-box-wrap">
-      <div class="search-input-pill">
-        <ion-icon name="search-outline" class="search-leading-icon"></ion-icon>
-        <input
-          type="text"
-          [(ngModel)]="searchTerm"
-          placeholder="Search destination (e.g. Cabanatuan, Gapan, etc.)"
-          class="destination-search-input"
-          aria-label="Search destination"
-        />
-        @if (searchTerm) {
-          <button type="button" class="clear-search-btn" (click)="clearSearch()">
-            <ion-icon name="close-circle"></ion-icon>
-          </button>
-        }
+    <!-- Search Bar with trailing search icon matching Figma -->
+    <div class="search-container">
+      <input
+        type="text"
+        [(ngModel)]="searchTerm"
+        placeholder="Search destination (e.g. Cabanatuan, Gapan, etc."
+        class="search-input"
+        aria-label="Search destination"
+      />
+      @if (searchTerm) {
+        <button type="button" class="clear-btn" (click)="clearSearch()" aria-label="Clear search">
+          <ion-icon name="close-circle"></ion-icon>
+        </button>
+      } @else {
+        <ion-icon name="search-outline" class="search-icon"></ion-icon>
+      }
+    </div>
+
+    <!-- Suggested & Custom Planner Entry Cards (2-column grid) -->
+    <div class="planner-cards-grid">
+      <!-- Suggested Itinerary (Dark Navy Gradient) -->
+      <div
+        class="action-card suggested-card"
+        routerLink="/tabs/map"
+        [queryParams]="{ mode: 'suggested' }"
+        role="button"
+        tabindex="0"
+      >
+        <div class="card-icon-wrap">
+          <svg class="sparkles-svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2l2.4 5.6L20 10l-5.6 2.4L12 18l-2.4-5.6L4 10l5.6-2.4L12 2z"/>
+            <path d="M18 16l1.2 2.8L22 20l-2.8 1.2L18 24l-1.2-2.8L14 20l2.8-1.2L18 16z"/>
+            <path d="M6 3l.8 1.8L8.6 5.6l-1.8.8L6 8.2l-.8-1.8L3.4 5.6l1.8-.8L6 3z"/>
+          </svg>
+        </div>
+        <h3 class="card-heading">
+          Suggested<br />
+          Itinerary
+        </h3>
+        <p class="card-copy">
+          Let us plan your trip based on your preferences.
+        </p>
+      </div>
+
+      <!-- Custom Itinerary (White with Sky-Blue outline) -->
+      <div
+        class="action-card custom-card"
+        routerLink="/tabs/map"
+        [queryParams]="{ mode: 'custom' }"
+        role="button"
+        tabindex="0"
+      >
+        <div class="card-icon-wrap">
+          <svg class="custom-plan-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <circle cx="12" cy="14" r="3.5"></circle>
+            <polyline points="12 12.5 12 14 13.5 14"></polyline>
+          </svg>
+        </div>
+        <h3 class="card-heading">
+          Custom<br />
+          Itinerary
+        </h3>
+        <p class="card-copy">
+          Pick your own places and we will organize the best route for you.
+        </p>
       </div>
     </div>
 
-    <!-- Adventure Hero Banner -->
-    <div class="hero-banner">
-      <div class="hero-accent-tag">Nueva Ecija Travel Companion</div>
-      <h2 class="hero-quote">Your next adventure is waiting.</h2>
-      <p class="hero-tagline">Plan your trip, explore new places, make better memories.</p>
-    </div>
-
-    <!-- Suggested & Custom Planner Entry Cards (Figma Flow 2) -->
-    <div class="entry-cards-grid">
-      <div class="planner-card suggested-card" routerLink="/tabs/map" [queryParams]="{ mode: 'suggested' }">
-        <div class="planner-card-header">
-          <div class="card-icon-wrap suggested-icon">
-            <ion-icon name="sparkles"></ion-icon>
-          </div>
-          <span class="planner-badge">Smart Auto</span>
-        </div>
-        <div class="card-body">
-          <h3 class="planner-title">Suggested Itinerary</h3>
-          <p class="planner-desc">Let us plan your trip based on your preferences and daily budget.</p>
-        </div>
-        <div class="card-action-row">
-          <span class="card-action-text">Plan Trip</span>
-          <ion-icon name="arrow-forward" class="card-action-arrow"></ion-icon>
-        </div>
-      </div>
-
-      <div class="planner-card custom-card" routerLink="/tabs/map" [queryParams]="{ mode: 'custom' }">
-        <div class="planner-card-header">
-          <div class="card-icon-wrap custom-icon">
-            <ion-icon name="map-outline"></ion-icon>
-          </div>
-          <span class="planner-badge">Custom</span>
-        </div>
-        <div class="card-body">
-          <h3 class="planner-title">Custom Itinerary</h3>
-          <p class="planner-desc">Pick your own places and we will organize the best route for you.</p>
-        </div>
-        <div class="card-action-row">
-          <span class="card-action-text">Build Route</span>
-          <ion-icon name="arrow-forward" class="card-action-arrow"></ion-icon>
-        </div>
-      </div>
-    </div>
-
-    <!-- Popular Destinations Section (Figma Flow 2) -->
-    <div class="section-container">
-      <div class="section-header">
-        <div class="section-title-wrap">
-          <h2 class="section-title">Popular Destinations</h2>
-          <span class="section-counter">{{ filteredDestinations.length }} places</span>
-        </div>
-        @if (searchTerm) {
-          <button type="button" class="section-action-btn" (click)="clearSearch()">
-            Reset Filter
-          </button>
-        } @else {
-          <span class="section-action-text">Nueva Ecija</span>
-        }
+    <!-- Popular Destinations Section -->
+    <section class="popular-section">
+      <div class="section-top-row">
+        <h2 class="section-heading">Popular Destinations</h2>
+        <button type="button" class="see-all-link" (click)="onSeeAll()">See all</button>
       </div>
 
       @if (filteredDestinations.length > 0) {
-        <div class="destination-scroll-carousel">
+        <div class="destinations-track">
           @for (item of filteredDestinations; track item.id) {
-            <div class="destination-card" (click)="openDestinationDetail(item)">
-              <div class="destination-img-box">
-                <img [src]="item.image" [alt]="item.name" class="destination-img" loading="lazy" />
-                <div class="destination-tag-badge">{{ item.category }}</div>
+            <div class="dest-card" (click)="openDestinationDetail(item)" role="button" tabindex="0">
+              <div class="dest-image-wrapper">
+                <img [src]="item.image" [alt]="item.name" class="dest-img" loading="lazy" />
               </div>
-              <div class="destination-info">
-                <div class="destination-muni-pill">
-                  <ion-icon name="location-outline"></ion-icon>
-                  <span>{{ item.municipality }}</span>
-                </div>
-                <h3 class="destination-name">{{ item.name }}</h3>
-                <p class="destination-excerpt">{{ item.description }}</p>
-                <div class="destination-footer">
-                  <span class="view-detail-link">View details & map &rarr;</span>
-                </div>
-              </div>
+              <h4 class="dest-title">{{ item.name }}</h4>
+              <p class="dest-municipality">{{ item.municipality }}</p>
             </div>
           }
         </div>
       } @else {
-        <div class="empty-search-state">
-          <ion-icon name="search-outline"></ion-icon>
-          <h3>No destinations found</h3>
-          <p>We couldn't find any places matching "{{ searchTerm }}".</p>
-          <ion-button fill="outline" size="small" (click)="clearSearch()">
-            Clear Search
-          </ion-button>
+        <div class="empty-state">
+          <p>No destinations found for "{{ searchTerm }}".</p>
+          <button type="button" class="reset-filter-btn" (click)="clearSearch()">Reset Filter</button>
         </div>
       }
-    </div>
+    </section>
   </div>
 
   <!-- Destination Detail Modal Sheet -->
