@@ -1,44 +1,72 @@
-# Environment & secrets
-.env
-*.env
-*.pem
-*.key
-client_secret*.json
+# Specifies intentionally untracked files to ignore when using Git
+# http://git-scm.com/docs/gitignore
 
-# Python
-__pycache__/
-*.py[cod]
-.venv/
-venv/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
+*~
+*.sw[mnpcod]
+.tmp
+*.tmp
+*.tmp.*
+UserInterfaceState.xcuserstate
+$RECYCLE.BIN/
 
-# Node / Ionic / Capacitor
-Project/node_modules/
-Project/www/
-Project/.angular/
-Project/android/app/build/
-Project/ios/App/Pods/
-mobile/node_modules/
-mobile/www/
-mobile/.angular/
-mobile/android/app/build/
-mobile/ios/App/Pods/
+*.log
+log.txt
 
-# Data dumps & database backups
-data/raw/*
-!data/raw/.gitkeep
-*.sql.gz
-*.dump
-*.db
-*.sqlite3
 
-# Scratch & temporary investigation files
-scratch/
-*.bin
+/.sourcemaps
+/.versions
+/coverage
 
-# OS
-Thumbs.db
-Desktop.ini
+# Ionic
+/.ionic
+/www
+/platforms
+/plugins
+
+# Compiled output
+/dist
+/tmp
+/out-tsc
+/bazel-out
+
+# Node
+/node_modules
+npm-debug.log
+yarn-error.log
+
+# IDEs and editors
+.idea/
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.history/*
+
+/.agents
+/.VSCodeCounter
+
+# Miscellaneous
+/.angular
+/.angular/cache
+.sass-cache/
+/.nx
+/.nx/cache
+/connect.lock
+/coverage
+/libpeerconnection.log
+testem.log
+/typings
+
+# System files
 .DS_Store
+Thumbs.db
