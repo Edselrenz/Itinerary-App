@@ -1,16 +1,126 @@
-<ion-header class="ion-no-border">
-  <ion-toolbar>
-    <ion-title>Explore Map</ion-title>
-  </ion-toolbar>
-</ion-header>
-
-<ion-content [fullscreen]="true" class="map-content">
-  <div class="map-shell">
-    <div class="map-placeholder">
-      <ion-icon name="map-outline"></ion-icon>
-      <h3>Nueva Ecija Interactive Map</h3>
-      <p>Leaflet map with 16 category filters, POI pins, and bottom sheet details (Step 5).</p>
+<ion-content [fullscreen]="true" class="map-page-content" [scrollY]="false">
+  <div class="map-wrapper">
+    <!-- Top Floating Filter Pills Bar -->
+    <div class="map-filter-bar">
+      <div class="filter-scroll-track">
+        @for (item of categoryFilters; track (item.key ?? 'all')) {
+          <button
+            type="button"
+            class="filter-pill"
+            [class.active]="selectedCategory === item.key"
+            (click)="selectCategory(item.key)"
+          >
+            <ion-icon [name]="item.icon"></ion-icon>
+            <span>{{ item.label }}</span>
+          </button>
+        }
+      </div>
     </div>
+
+    <!-- Leaflet Map Canvas -->
+    <div id="leaflet-map" class="map-canvas"></div>
+
+    <!-- Floating Top-Right / Bottom-Right Controls -->
+    <div class="map-floating-controls">
+      <button
+        type="button"
+        class="floating-btn recenter-btn"
+        (click)="recenterMap()"
+        title="Recenter to Nueva Ecija"
+        aria-label="Recenter map"
+      >
+        <ion-icon name="locate-outline"></ion-icon>
+      </button>
+
+      <div class="poi-counter-pill" *ngIf="!isLoading && places.length > 0">
+        <span>{{ places.length }} destinations</span>
+      </div>
+
+      <div class="loading-pill" *ngIf="isLoading">
+        <ion-spinner name="crescent"></ion-spinner>
+        <span>Loading places...</span>
+      </div>
+    </div>
+
+    <!-- Interactive POI Bottom Sheet -->
+    @if (selectedPlace) {
+      <div class="bottom-sheet-backdrop" (click)="closeBottomSheet()"></div>
+      <div class="poi-bottom-sheet" (click)="$event.stopPropagation()">
+        <button
+          type="button"
+          class="sheet-close-btn"
+          (click)="closeBottomSheet()"
+          aria-label="Close details"
+        >
+          <ion-icon name="close-outline"></ion-icon>
+        </button>
+
+        <!-- Sheet Hero Image -->
+        <div class="sheet-photo-wrap">
+          <img
+            [src]="getPlaceImageUrl(selectedPlace)"
+            [alt]="selectedPlace.name"
+            class="sheet-hero-img"
+            loading="lazy"
+          />
+          <span class="sheet-category-badge">
+            {{ formatCategory(selectedPlace.category) }}
+          </span>
+        </div>
+
+        <!-- Sheet Body -->
+        <div class="sheet-content-scroll">
+          <div class="sheet-header">
+            <h2 class="sheet-title">{{ selectedPlace.name }}</h2>
+            <div class="sheet-meta-row">
+              <span class="meta-item">
+                <ion-icon name="location-outline"></ion-icon>
+                {{ selectedPlace.municipality_name ?? 'Nueva Ecija' }}
+              </span>
+              <span class="meta-item meta-price">
+                <ion-icon name="cash-outline"></ion-icon>
+                {{ formatCost(selectedPlace) }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Opening Hours (if listed) -->
+          <div class="sheet-info-pill" *ngIf="selectedPlace.opening_hours">
+            <ion-icon name="time-outline"></ion-icon>
+            <span>{{ selectedPlace.opening_hours }}</span>
+          </div>
+
+          <!-- Description -->
+          <p class="sheet-description" *ngIf="selectedPlace.description">
+            {{ selectedPlace.description }}
+          </p>
+
+          <!-- Address -->
+          <p class="sheet-address" *ngIf="selectedPlace.address_text">
+            {{ selectedPlace.address_text }}
+          </p>
+
+          <!-- Tags -->
+          <div class="sheet-tags-wrap" *ngIf="selectedPlace.tags && selectedPlace.tags.length > 0">
+            @for (tag of selectedPlace.tags; track tag) {
+              <span class="sheet-tag">{{ tag }}</span>
+            }
+          </div>
+
+          <!-- Actions -->
+          <div class="sheet-actions">
+            <a
+              [href]="getDirectionsUrl(selectedPlace)"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="action-btn-directions"
+            >
+              <ion-icon name="navigate-outline"></ion-icon>
+              <span>Get Directions (Google Maps)</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    }
   </div>
 </ion-content>
-

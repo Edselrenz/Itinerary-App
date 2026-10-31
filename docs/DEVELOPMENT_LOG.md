@@ -537,3 +537,50 @@ This log records chronological development sessions, detailing objectives, execu
   - Commit and push to `origin/main` to update the GitHub Pages live deployment.
   - Proceed to Milestone 5: Leaflet Map implementation with 16 category filter pills and POI bottom sheet.
 
+---
+
+## Session 22: Milestone 5 — Interactive Leaflet Map, 16 Category Filters & POI Bottom Sheet
+- **Date & Time**: 2026-10-31 10:20:00 (Local)
+- **Objective**: Implement Milestone 5: Build the interactive Leaflet map in `Project/src/app/tabs/map/`, bounded to Nueva Ecija `[15.58, 121.00]`, featuring 16 canonical category filter pills, POI marker clustering with custom vector pin icons, an interactive bottom sheet for venue details, and Ionic tab lifecycle resize handling.
+- **Key Implementation Details**:
+  - **Leaflet Map Initialization & Provincial Constraints (`map.page.ts`)**:
+    - Centered on Nueva Ecija `[15.58, 121.00]` with default zoom 10 (minZoom: 9, maxZoom: 18).
+    - Enforced boundary constraints `[[15.05, 120.55], [16.25, 121.55]]` with `maxBoundsViscosity: 0.8`.
+    - Integrated OpenStreetMap raster tiles with mandatory legal attribution.
+    - Added bottom-right zoom controls and a floating Recenter button (`locate-outline`).
+    - Handled Ionic tab navigation resize lifecycle via `ionViewDidEnter()` calling `this.map?.invalidateSize()` with a 150ms timeout.
+    - Platform-guarded with `isPlatformBrowser(this.platformId)` and comprehensive `ngOnDestroy` cleanup.
+  - **16 Canonical Category Filter Pills Track (`map.page.html` & `map.page.scss`)**:
+    - Built horizontal scrolling pill track featuring "All Places" plus the 16 canonical backend categories (`tourist_attraction`, `nature_park`, `resort_swimming`, `hotel_accommodation`, `restaurant`, `cafe`, `church_religious`, `museum_cultural`, `shopping_market`, `transport_terminal`, `convenience_store`, `hospital_clinic`, `pharmacy`, `bank_atm`, `fuel_station`, `public_facility`).
+    - Reactive query dispatching to `PlaceService.searchPlaces({ categories: [selected] })` with graceful fallback to `getFeaturedPlaces()`.
+    - Styled with frosted-glass backdrop blur (`backdrop-filter: blur(10px)`), `#0084ff` active state, and smooth scaling.
+  - **Marker Clustering & Custom Vector Pins**:
+    - Integrated `leaflet.markercluster` (`L.markerClusterGroup`) for smooth pin grouping.
+    - Created lightweight CSS vector pins with teardrop shape (`transform: rotate(-45deg)`), white inner dot, and distinct gradient for featured venues (`pin-featured`).
+    - Eliminated broken Leaflet default image asset 404s.
+  - **Interactive POI Bottom Sheet**:
+    - Slides up smoothly on marker selection (`poi-bottom-sheet`).
+    - Displays venue hero photo via `PlaceService.getPlaceImage()`, category badge, municipality pin, operating hours, honest cost bounds (`₱min - ₱max` or "Cost not provided"), full tags, and direct Google Maps directions action button.
+    - Tap-to-dismiss via close button (X) or backdrop overlay.
+  - **Angular Configuration (`angular.json`)**:
+    - Added `leaflet`, `leaflet.markercluster`, and `localforage` to `allowedCommonJsDependencies` to achieve a 100% warning-free production build.
+  - **Unit Test Suite (`map.page.spec.ts`)**:
+    - 9 comprehensive Vitest unit tests verifying component creation, 17 filter pill initialization, places loading, category filtering, offline fallback, honest cost formatting, directions URL generation, bottom sheet lifecycle, and map recenter logic.
+- **Files Created**:
+  - `Project/src/app/tabs/map/map.page.spec.ts`
+- **Files Modified**:
+  - `Project/src/app/tabs/map/map.page.ts`
+  - `Project/src/app/tabs/map/map.page.html`
+  - `Project/src/app/tabs/map/map.page.scss`
+  - `Project/angular.json`
+- **Verification**:
+  - `npm run test:unit`: 9 test files, 32/32 tests passed in 25.80s [100%] (all 9 `map.page.spec.ts` tests passed).
+  - `python -m pytest backend/tests/ -v`: 2 passed in 3.46s [100%].
+  - `npm run typecheck:e2e`: 0 errors.
+  - `npm run build`: 0 errors, 0 warnings, production bundle generated cleanly.
+- **Next Steps**:
+  - Commit and push Milestone 5 to `origin/main`.
+  - Proceed to Milestone 6: Custom Itinerary Builder with BOLA ownership checks and multi-day stop reordering.
+
+
+

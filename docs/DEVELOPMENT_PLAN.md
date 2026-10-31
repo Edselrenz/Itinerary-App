@@ -13,8 +13,8 @@ This plan tracks the 11 sequential milestones defined in the **End-to-End Engine
 | **2** | **OSM POI Pipeline & Seeding** | Overpass importer, bounding box check, 17 curated featured places. | Idempotent seed produces 0 duplicate rows. | **COMPLETED** |
 | **3** | **Auth & Ionic App Shell** | Argon2id auth, JWT, Google OAuth verify, Guest storage, 4-tab shell. | Pytest 100% pass; Angular build succeeds. | **COMPLETED** |
 | **4** | **Home Tab & Debounced Search** | 300ms RxJS search, popular destinations carousel, saved cards. | Local database search, 0 Nominatim calls. | **COMPLETED** |
-| **5** | **Leaflet Map & 16 Filters** | Bounded Leaflet map, category filters, marker cluster, bottom sheet. | Responsive map, external directions handoff. | **NEXT** |
-| **6** | **Custom Itinerary Builder** | Multi-day custom creator, stop reordering, honest budget math. | BOLA ownership checks, duplicate guards. | **PENDING** |
+| **5** | **Leaflet Map & 16 Filters** | Bounded Leaflet map, category filters, marker cluster, bottom sheet. | Responsive map, external directions handoff. | **COMPLETED** |
+| **6** | **Custom Itinerary Builder** | Multi-day custom creator, stop reordering, honest budget math. | BOLA ownership checks, duplicate guards. | **NEXT** |
 | **7** | **Suggested Itinerary Engine** | Deterministic Haversine clustering, preference scoring, diversity. | Transparent assumptions, no hallucinated venues. | **PENDING** |
 | **8** | **Overview, Day View & Sync** | Timeline view, stop detail cards, reactive cross-tab persistence. | Home cards sync immediately after edit. | **PENDING** |
 | **9** | **Pilot Security & Tunneling** | Rate limiting (SlowAPI), offline interceptor, backup/restore drills. | Cross-device LAN testing, isolated DB port. | **PENDING** |
@@ -69,10 +69,21 @@ This plan tracks the 11 sequential milestones defined in the **End-to-End Engine
 - [x] Enrich Destination Detail Modal with operating hours and honest cost formatting.
 - [x] Implement Home tab unit tests (`home.page.spec.ts`) with 6 passing tests.
 
-### Milestone 5: Leaflet Map & 16 Category Filters (Next)
-- [ ] Step 6: Custom Itinerary builder with BOLA-checked backend endpoints and stop reordering.
-- [ ] Step 7: Deterministic Haversine clustering recommendation engine.
-- [ ] Step 8: Multi-day timeline overview, stop cards, and cross-tab reactive persistence.
-- [ ] Step 9: Rate limiting (SlowAPI), offline error recovery banners, and backup drills.
-- [ ] Step 10: Complete 24-point acceptance checklist verification.
+### Milestone 5: Leaflet Map & 16 Category Filters
+- [x] Implement Leaflet map bounded to Nueva Ecija `[15.58, 121.00]` with max bounds constraint.
+- [x] Configure OpenStreetMap raster tile layer with mandatory attribution.
+- [x] Integrate 16 canonical category filter pills carousel with reactive filtering.
+- [x] Integrate Leaflet MarkerCluster with custom CSS vector pins (`.custom-map-pin`).
+- [x] Build interactive POI Bottom Sheet with operating hours, honest pricing, and Google Maps directions link.
+- [x] Handle Ionic tab switching lifecycle with `map.invalidateSize()` on `ionViewDidEnter()`.
+- [x] Implement 9 Vitest unit tests in `map.page.spec.ts` (100% passing).
+- [x] Eliminate CommonJS optimization warnings via `allowedCommonJsDependencies` in `angular.json`.
+
+### Milestone 6: Custom Itinerary Builder (Next)
+- [ ] Backend CRUD endpoints in `backend/app/api/v1/itineraries.py` with strict BOLA checks.
+- [ ] Multi-day custom creator with day tabs and stop reordering (`POST /api/v1/itineraries/{id}/reorder`).
+- [ ] Place picker modal and manual off-grid stop entry.
+- [ ] Same-day duplicate stop guard dialog.
+- [ ] Honest budget calculation helper.
+- [ ] Unsaved changes route guard.
 

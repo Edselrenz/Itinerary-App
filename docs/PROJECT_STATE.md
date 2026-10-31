@@ -7,8 +7,8 @@ This document serves as the primary handoff reference for developers and coding 
 ## 1. Project Status Overview
 
 - **Application Name**: Nueva Ecija Travel Itinerary (MVP)
-- **Current Development Phase**: **Milestone 5 — Leaflet Map & 16 Category Filters**
-- **Last Verified Working State**: **Milestone 4 (Home Tab & Local Place Search)** completely implemented and verified with automated test suites (23/23 unit tests, 2/2 backend tests) and clean production bundle generation.
+- **Current Development Phase**: **Milestone 6 — Custom Itinerary Builder**
+- **Last Verified Working State**: **Milestone 5 (Leaflet Map & 16 Category Filters)** completely implemented and verified with automated test suites (32/32 unit tests across 9 test files, 2/2 backend tests) and clean production bundle generation (0 errors, 0 warnings).
 - **Current Blockers**: **None**.
 
 ---
@@ -108,25 +108,33 @@ This document serves as the primary handoff reference for developers and coding 
   - Fixed modal hero image overflow (240px cover constraint) and added touch scrollability to modal content.
   - Saved Itineraries card list connected to `GuestStorageService.itineraries$` with clean trip cards and empty-state planner prompt.
   - 6 passing unit tests in `home.page.spec.ts`.
-- [x] **Production Build**: Verified with `npm run build` (0 errors, 0 warnings).
+- [x] **Interactive Leaflet Map & 16 Category Filters (`Project/src/app/tabs/map/`)**:
+  - Bounded Leaflet map centered on Nueva Ecija `[15.58, 121.00]` with OpenStreetMap raster tiles and proper attribution.
+  - 17 category filter pills track ("All Places" + 16 canonical categories) with reactive filtering.
+  - Leaflet MarkerCluster integration (`L.markerClusterGroup`) with custom CSS vector pins (`.custom-map-pin`).
+  - Interactive POI Bottom Sheet displaying venue photography with local fallbacks, category badges, operating hours, honest pricing, and direct Google Maps directions handoff.
+  - Ionic tab lifecycle resize handling (`map.invalidateSize()` on `ionViewDidEnter()`).
+  - Floating Recenter button and live destination counter pill.
+  - 9 passing unit tests in `map.page.spec.ts`.
+- [x] **Production Build**: Verified with `npm run build` (0 errors, 0 warnings, allowedCommonJsDependencies configured).
 - [x] **Live GitHub Pages Deployment**: Fully deployed and verified live at [https://edselrenz.github.io/Itinerary-App/](https://edselrenz.github.io/Itinerary-App/) (HTTP 200 OK).
 
 ---
 
 ## 3. Features Currently Being Developed
 
-- **Milestone 5: Leaflet Map & 16 Category Filters**:
-  - Bounded Leaflet map centered on Nueva Ecija `[15.58, 121.00]` with OpenStreetMap raster tiles and proper attribution.
-  - 16 category filter pills / modal sheet.
-  - POI marker clustering with `leaflet.markercluster`.
-  - Interactive POI bottom sheet with operating hours, honest costs, and external directions button.
-  - Tab lifecycle resize handling (`map.invalidateSize()`).
+- **Milestone 6: Custom Itinerary Builder**:
+  - Backend CRUD endpoints in `backend/app/api/v1/itineraries.py` with strict BOLA checks.
+  - Multi-day custom creator with day tabs and stop reordering (`POST /api/v1/itineraries/{id}/reorder`).
+  - Place picker modal and manual off-grid stop entry.
+  - Same-day duplicate stop guard dialog.
+  - Honest budget calculation helper.
+  - Unsaved changes route guard.
 
 ---
 
 ## 4. Features Not Yet Implemented
 
-- **Milestone 6**: Custom Itinerary multi-day builder with stop reordering and BOLA checks.
 - **Milestone 7**: Deterministic Haversine clustering recommendation engine.
 - **Milestone 8**: Day timeline view, stop detail cards, and cross-tab reactive persistence.
 - **Milestone 9**: Rate limiting via SlowAPI and backup/restore drills.
@@ -138,10 +146,10 @@ This document serves as the primary handoff reference for developers and coding 
 
 1. **Backend Automated Tests**:
    - Command: `python -m pytest backend/tests/ -v`
-   - Result: `2 passed, 1 warning in 2.18s [100%]` (`test_foundation.py` and `test_auth.py`).
+   - Result: `2 passed, 1 warning in 3.46s [100%]` (`test_foundation.py` and `test_auth.py`).
 2. **Mobile Client Unit Tests**:
    - Command: `npm run test:unit` in `Project/`
-   - Result: `8 test files passed, 23 tests passed in 14.91s [100%]` (includes 11 `place.service.spec.ts` and 6 `home.page.spec.ts` tests).
+   - Result: `9 test files passed, 32 tests passed in 25.80s [100%]` (includes 11 `place.service.spec.ts`, 6 `home.page.spec.ts`, and 9 `map.page.spec.ts` tests).
 3. **Mobile Client Compilation**:
    - Command: `npm run build` in `Project/`
    - Result: `Application bundle generation complete [0 errors, 0 warnings]` (Artifacts in `Project/www`).
@@ -153,8 +161,8 @@ This document serves as the primary handoff reference for developers and coding 
 
 ## 6. Immediate Next Development Task
 
-Proceed to **Milestone 5 — Leaflet Map & 16 Category Filters**:
-1. Implement Leaflet map in `Project/src/app/tabs/map/map.page.ts` bounded to Nueva Ecija `[15.15, 120.70]` to `[16.15, 121.40]`.
-2. Connect to `PlaceService.searchPlaces()` with viewport bounding box parameters and category filters.
-3. Integrate MarkerCluster for POIs and bottom sheet modal for POI detail view.
+Proceed to **Milestone 6 — Custom Itinerary Builder**:
+1. Implement backend CRUD endpoints in `backend/app/api/v1/itineraries.py` with strict BOLA checks.
+2. Build frontend custom itinerary planner modal with multi-day tabs, stop reordering, and duplicate stop guards.
+
 

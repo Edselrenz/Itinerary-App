@@ -97,16 +97,18 @@ This checklist tracks completed, active, and pending tasks across all developmen
 
 ---
 
-## Phase 5: Leaflet Map & Category Filters (CURRENT FOCUS)
-- [ ] Implement Leaflet map bounded to Nueva Ecija `[15.58, 121.00]`.
-- [ ] Integrate 16 category filter modal / pills.
-- [ ] Implement Leaflet MarkerCluster integration for POI markers.
-- [ ] Build POI Bottom Sheet with opening hours, cost range, verified facts, and "Get Directions" button.
-- [ ] Handle Ionic tab resize (`map.invalidateSize()`).
+## Phase 5: Leaflet Map & Category Filters (COMPLETED)
+- [x] Implement Leaflet map bounded to Nueva Ecija `[15.58, 121.00]`.
+- [x] Integrate 16 canonical category filter pills carousel.
+- [x] Implement Leaflet MarkerCluster integration with custom CSS pins.
+- [x] Build interactive POI Bottom Sheet with operating hours, cost bounds, and "Get Directions" button.
+- [x] Handle Ionic tab lifecycle resizing (`map.invalidateSize()` on `ionViewDidEnter`).
+- [x] Implement comprehensive Vitest unit tests in `map.page.spec.ts` (9 tests passing).
+- [x] Eliminate CommonJS optimization warnings in `angular.json`.
 
 ---
 
-## Phase 6: Custom Itinerary Builder
+## Phase 6: Custom Itinerary Builder (NEXT FOCUS)
 - [ ] Backend CRUD endpoints in `backend/app/api/v1/itineraries.py` with strict BOLA ownership checks.
 - [ ] Reorder endpoint `POST /api/v1/itineraries/{id}/reorder`.
 - [ ] Frontend Custom Itinerary creator with day tabs.

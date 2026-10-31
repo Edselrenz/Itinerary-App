@@ -35,6 +35,11 @@
             ],
             "styles": ["src/global.scss", "src/theme/variables.scss"],
             "scripts": [],
+            "allowedCommonJsDependencies": [
+              "leaflet",
+              "leaflet.markercluster",
+              "localforage"
+            ],
             "browser": "src/main.ts"
           },
           "configurations": {
