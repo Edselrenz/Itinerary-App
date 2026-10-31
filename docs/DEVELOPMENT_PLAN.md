@@ -15,10 +15,14 @@ This plan tracks the 11 sequential milestones defined in the **End-to-End Engine
 | **4** | **Home Tab & Debounced Search** | 300ms RxJS search, popular destinations carousel, saved cards. | Local database search, 0 Nominatim calls. | **COMPLETED** |
 | **5** | **Leaflet Map & 16 Filters** | Bounded Leaflet map, category filters, marker cluster, bottom sheet. | Responsive map, external directions handoff. | **COMPLETED** |
 | **6** | **Custom Itinerary Builder** | Multi-day custom creator, stop reordering, honest budget math. | BOLA ownership checks, duplicate guards. | **COMPLETED** |
-| **7** | **Suggested Itinerary Engine** | Deterministic Haversine clustering, preference scoring, diversity. | Transparent assumptions, no hallucinated venues. | **NEXT** |
-| **8** | **Overview, Day View & Sync** | Timeline view, stop detail cards, reactive cross-tab persistence. | Home cards sync immediately after edit. | **PENDING** |
-| **9** | **Pilot Security & Tunneling** | Rate limiting (SlowAPI), offline interceptor, backup/restore drills. | Cross-device LAN testing, isolated DB port. | **PENDING** |
+| **7** | **Suggested Itinerary Engine** | Deterministic Haversine clustering, preference scoring, diversity. | Transparent assumptions, no hallucinated venues. | **COMPLETED** |
+| **8** | **Overview, Day View & Sync** | Timeline view, stop detail cards, reactive cross-tab persistence. | Home cards sync immediately after edit. | **COMPLETED** |
+| **9** | **Pilot Security & Tunneling** | Rate limiting (SlowAPI), offline interceptor, backup/restore drills. | Cross-device LAN testing, isolated DB port. | **COMPLETED** |
 | **10** | **QA & Pilot Acceptance** | Full automated verification matrix, 24-point acceptance checklist. | 100% pass across all 24 acceptance criteria. | **COMPLETED** |
+| **11** | **Priority 1: Security & Data-Loss** | Fix BOLA/IDOR (CR-001, CR-002), edit-mode data loss (CR-003), JWT/OAuth hardening (CR-004, CR-005). | Negative BOLA tests pass; edit preserves days; strong secrets enforced. | **ACTIVE** |
+| **12** | **Priority 2: Core Reliability** | Token refresh (CR-006), timezone calendar fixes (CR-007), generator radius/budget (CR-008, CR-009), PATCH stop (CR-010), map routing (CR-011), URL safety (CR-012). | Zero timezone shift; 25km radius bound; auth refresh works seamlessly. | **PENDING** |
+| **13** | **Priority 3: Maintainability** | Clean dead starter files, remove destructive scripts, fix acceptance tautologies (CR-014), memory leaks & typos (CR-015), doc sync (CR-016). | Clean codebase; 0 memory leaks; exact test assertions. | **PENDING** |
+| **14** | **Priority 4: Performance & E2E** | Cloudflare Tunnel IP rate limiting, SQL generator pre-filtering, OSM batching (CR-013), rewrite modern E2E test suite (CR-014). | Independent remote rate limiting; sub-100ms generation; passing E2E spec. | **PENDING** |
 
 ---
 
@@ -100,12 +104,53 @@ This plan tracks the 11 sequential milestones defined in the **End-to-End Engine
 - [x] Offline fallback suggested itinerary generator for offline/guest mode.
 - [x] 10 unit tests in `suggested-wizard.page.spec.ts` (100% passing).
 
-### Milestone 8: Itinerary Management & Day Timeline View (Next)
-- [ ] Itinerary Detail / Day Timeline view (`/itinerary/:id`) showing chronological stop cards.
-- [ ] Stop details modal with opening hours, directions link, notes, and pricing tag.
-- [ ] History / Saved Itineraries tab (`/tabs/history` or Tab 3) showing active, upcoming, and past trips.
-- [ ] Edit action opening saved custom itineraries in `/custom-builder/:id`.
-- [ ] Delete itinerary action with confirmation modal and optimistic local/server removal.
-- [ ] Cross-tab reactive synchronization (`ItineraryService.itineraries$`).
-- [ ] Comprehensive unit tests for timeline and itinerary management.
+### Milestone 8: Itinerary Management & Day Timeline View (Completed)
+- [x] Itinerary Detail / Day Timeline view (`/itinerary/:id`) showing chronological stop cards.
+- [x] Stop details modal with opening hours, directions link, notes, and pricing tag.
+- [x] History / Saved Itineraries tab (`/tabs/history`) showing active, upcoming, and past trips reactively synced.
+- [x] Edit action opening saved custom itineraries in `/custom-builder/:id`.
+- [x] Delete itinerary action with confirmation modal and optimistic local/server removal.
+- [x] Cross-tab reactive synchronization (`ItineraryService.itineraries$`).
+- [x] Comprehensive unit tests for timeline and itinerary management (`itinerary-detail.page.spec.ts`).
+
+### Milestone 9: Pilot Security & Tunneling (Completed)
+- [x] Rate limiting on auth endpoints with SlowAPI (5/min per IP on login, register, refresh, and OAuth).
+- [x] Offline host laptop warning banner in client (`ConnectivityService` + `app.component` floating status banner with live health probe).
+- [x] PostgreSQL backup and restore drill (`scripts/db_backup_restore.py` + `backend/tests/test_backup_restore.py`).
+- [x] Cloudflare Tunnel automated start/stop scripts (`start_server.bat` / `stop_server.bat` and PowerShell helpers).
+
+### Milestone 10: QA & Pilot Acceptance Gate (Completed)
+- [x] Walk through full 24-point MVP acceptance checklist (`scripts/verify_acceptance_gate.py` passing 24/24 checks, 100%).
+- [x] End-to-end automated verification run (Backend pytest 6/6, Frontend Vitest 98/98, ESLint & Prettier 0 warnings).
+
+---
+
+## Post-Acceptance Hardening & Optimization Roadmap
+
+### Milestone 11: Priority 1 — Critical Security & Data-Loss Fixes (Active)
+- [ ] **CR-001**: Fix cross-itinerary BOLA in `POST /api/v1/itineraries/{id}/reorder` (`backend/app/api/v1/itineraries.py`). Scope item lookup to `itinerary.days`.
+- [ ] **CR-002**: Fix cross-itinerary BOLA in `DELETE /api/v1/itineraries/{id}/days/{day_id}/items/{item_id}`. Verify `day.itinerary_id == itinerary.id` and `item.day_id == day.id`.
+- [ ] **CR-003**: Fix edit-mode itinerary saving dropping all days and stops (`CustomBuilderPage.saveItinerary()`, `ItineraryService.updateItinerary()`, `PATCH /api/v1/itineraries/{id}`). Extend `ItineraryUpdate` to accept `days`.
+- [ ] **CR-004**: Reject default JWT secret outside development/test mode; enforce `google_oauth_client_id` in token verification; restrict CORS regex to `https://edselrenz.github.io`.
+- [ ] **CR-005**: Require `email_verified is True` in Google OAuth account linking; enforce `user.is_active` check in `authenticate_google_user()`.
+
+### Milestone 12: Priority 2 — Core Reliability & Functional Accuracy
+- [ ] **CR-006**: Implement refresh token rotation in `authInterceptor` and `AuthService.refreshSession()`; prevent silent guest storage fallback on 401.
+- [ ] **CR-007**: Fix timezone off-by-one shifting by creating local calendar date helpers (`toLocalIsoDate`, `parseLocalIsoDate`, `addDaysLocal`).
+- [ ] **CR-008**: Enforce `settings.default_dest_radius_km` (25km) and cumulative daily budget in `backend/app/algorithms/itinerary_generator.py`; escape `%`/`_` in SQL queries.
+- [ ] **CR-009**: Connect online guests to `/api/v1/itineraries/suggest`; filter curated pool by destination/preferences in offline generator; bind wizard chips dynamically.
+- [ ] **CR-010**: Implement `PATCH /api/v1/itineraries/{id}/days/{day_id}/items/{item_id}`; fix `sort_order` default=1 bug; validate `place_id` foreign key.
+- [ ] **CR-011**: Support route queryParams in `MapPage` from Home tab; add `tileerror` listener; render honest pricing & provenance badges in bottom sheet.
+- [ ] **CR-012**: Validate custom API URL; scope Bearer token injection strictly to `environment.apiBaseUrl`.
+- [ ] **CR-013 (F.4)**: Add `--clean --if-exists` to PostgreSQL backup/restore script.
+
+### Milestone 13: Priority 3 — Maintainability & Code Quality Cleanup
+- [ ] **CR-014**: Delete 16 dead starter files and remove destructive `setup_steps_0_to_2.py`; replace 7 tautological checks in `verify_acceptance_gate.py`.
+- [ ] **CR-015**: Fix memory leak in `ProfilePage`; wire non-functional buttons; dynamically query nearby places; fix UI copy typos; prune 44 unused image files.
+- [ ] **CR-016**: Synchronize all documentation files (`docs/KNOWN_ISSUES.md`, `docs/DEVELOPMENT_PLAN.md`, `docs/TESTING_DOCUMENTATION.md`).
+
+### Milestone 14: Priority 4 — Long-Term Performance & Comprehensive E2E Testing
+- [ ] **CR-013**: Key SlowAPI rate limits by `CF-Connecting-IP` for Cloudflare Tunnel traffic; pre-filter places in SQL; batch OSM imports.
+- [ ] **CR-014**: Rewrite `Project/e2e/app.spec.ts` to test actual user journeys.
+
 

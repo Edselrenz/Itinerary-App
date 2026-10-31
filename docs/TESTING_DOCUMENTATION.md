@@ -133,10 +133,42 @@ Exit Code: 0
 
 ---
 
-## 4. Pending Tests for Upcoming Milestones
+## 4. Completed Milestone Verification Gates (Phases 7–10)
 
-- [ ] Milestone 7: Deterministic Haversine clustering algorithms, preference weight scoring matrix, 2-3 stops/day pacing, and category diversity penalty tests.
-- [ ] Milestone 8: Cross-tab reactive persistence and guest-to-account itinerary migration synchronization.
-- [ ] Milestone 9: SlowAPI rate limiting under concurrent load and laptop-sleep offline interceptor recovery.
-- [ ] Milestone 10: 24-point pilot acceptance verification matrix.
+- [x] **Milestone 7 (Suggested Itinerary Engine)**:
+  - Haversine clustering algorithm, preference weight matrix, 2–3 stops/day pacing, and diversity penalty tests (`backend/tests/test_itineraries.py::test_suggested_itinerary_engine`).
+  - Wizard UI lifecycle and scoring tests (`Project/src/app/features/itinerary/suggested-wizard/suggested-wizard.page.spec.ts`).
+- [x] **Milestone 8 (Itinerary Management & Day Timeline View)**:
+  - Day timeline view, stop details, and reactive cross-tab persistence (`Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.spec.ts`).
+  - Guest-to-account migration helper (`backend/tests/test_phase8.py`).
+- [x] **Milestone 9 (Pilot Security & Tunneling)**:
+  - SlowAPI rate limiting (5 req/min) verification (`backend/tests/test_phase9.py`).
+  - PostgreSQL backup and restore drill (`scripts/db_backup_restore.py` + `backend/tests/test_backup_restore.py`).
+  - Connectivity service and offline warning banner unit tests (`connectivity.service.spec.ts`).
+- [x] **Milestone 10 (QA & Pilot Acceptance Gate)**:
+  - 24-point acceptance checklist fully verified via `scripts/verify_acceptance_gate.py` (24/24 passing, 100.0%).
+  - Full suite verification: 6/6 backend test suites passing, 16 frontend test files passing (98/98 unit tests).
+
+---
+
+## 5. Planned Security & Hardening Tests (Phases 11–14)
+> Ref: [CODE_REVIEW_AUDIT.md](file:///c:/Users/Edward/Desktop/CaseStudy/docs/CODE_REVIEW_AUDIT.md) & [TODO.md](file:///c:/Users/Edward/Desktop/CaseStudy/docs/TODO.md)
+
+- [ ] **BOLA Negative Security Tests (`CR-001`, `CR-002`)**:
+  - Test cross-itinerary reorder rejection (`POST /api/v1/itineraries/{id}/reorder` with foreign item ID returns 400).
+  - Test cross-itinerary item deletion rejection (`DELETE /api/v1/itineraries/{id}/days/{day_id}/items/{item_id}` returns 404).
+- [ ] **Itinerary Edit Mode Data Retention Test (`CR-003`)**:
+  - Test that updating an itinerary via `PATCH` with new days and modified stops preserves all days and stops in both PostgreSQL and guest IndexedDB.
+- [ ] **Auth Hardening Tests (`CR-004`, `CR-005`)**:
+  - Assert backend startup fails with default JWT secret in staging/production environments.
+  - Test that Google OAuth login rejects unverified emails (`email_verified is not True`) and deactivated accounts (`is_active = False`).
+- [ ] **Token Refresh & Interceptor Queue Tests (`CR-006`)**:
+  - Test that 401 response triggers `/auth/refresh` and retries pending requests without downgrading user to guest mode.
+- [ ] **Timezone-Agnostic Date Utility Tests (`CR-007`)**:
+  - Unit test suite verifying date calculations behave identically across UTC+8, UTC, and UTC-8 without off-by-one shifts.
+- [ ] **Clustering Radius & Budget Bounds Tests (`CR-008`)**:
+  - Unit tests verifying no POI farther than `default_dest_radius_km` (25km) is recommended and cumulative daily budget is respected.
+- [ ] **End-to-End User Journey Tests (`CR-014`)**:
+  - Modern E2E spec verifying `/welcome` -> `/guest` -> `/tabs/home` -> `/tabs/map` -> `/custom-builder` flows.
+
 
