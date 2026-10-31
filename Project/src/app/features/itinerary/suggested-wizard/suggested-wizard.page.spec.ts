@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { of } from 'rxjs';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ToastController } from '@ionic/angular';
 import { SuggestedWizardPage } from './suggested-wizard.page';
@@ -18,9 +18,9 @@ describe('SuggestedWizardPage', () => {
     title: 'Suggested Bongabon Trip',
     destination: 'Bongabon',
     start_date: '2026-11-01',
-    end_date: '2026-11-02',
-    daily_budget: 2500,
-    preferences: ['nature', 'food'],
+    end_date: '2026-11-03',
+    daily_budget: 3000,
+    preferences: ['food', 'culture', 'resort'],
     type: 'suggested',
     assumptions: ['3 stops scheduled per day', 'Lunch stop anchored at 12:00 PM'],
     created_at: '2026-10-31T00:00:00Z',
@@ -37,15 +37,15 @@ describe('SuggestedWizardPage', () => {
             day_id: 'day-1',
             place_id: 'poi-1',
             sort_order: 0,
-            planned_time: '09:00',
-            duration_minutes: 90,
+            planned_time: '12:00 PM - 2:00 PM',
+            duration_minutes: 120,
             notes: 'Morning stop',
             estimated_cost_min: 100,
             estimated_cost_max: 200,
             place: {
               id: 'poi-1',
-              name: 'Mount Labi Peak',
-              category: 'nature_park',
+              name: 'Rohi Paperflower Cafe',
+              category: 'cafe',
               latitude: 15.632,
               longitude: 121.144,
               municipality_name: 'Bongabon',
@@ -67,9 +67,16 @@ describe('SuggestedWizardPage', () => {
     ],
   };
 
+  const mockNearbyPlaces = [
+    { id: 'nb-1', name: 'Boss Samgyupsal', category: 'restaurant' as const, openingHours: 'Daily, 10:00 AM to 10:00 PM', municipality: 'Bongabon' },
+    { id: 'nb-2', name: 'Bongabon District Hospital', category: 'hospital' as const, openingHours: 'Mon-Sat, 7:00 AM to 5:00 PM', municipality: 'Bongabon' },
+    { id: 'nb-3', name: 'J&B- Convenience Store', category: 'store' as const, openingHours: 'Daily, 24 hrs', municipality: 'Bongabon' },
+  ];
+
   const mockPlaceService = {
     getPlaceImage: vi.fn().mockReturnValue('assets/images/placeholder.jpg'),
-    formatCategoryName: vi.fn().mockReturnValue('Nature & Adventure'),
+    formatCategoryName: vi.fn().mockReturnValue('Cafe & Dining'),
+    getNearbyPlaces: vi.fn().mockReturnValue(mockNearbyPlaces),
   };
 
   const mockItineraryService = {
@@ -87,6 +94,7 @@ describe('SuggestedWizardPage', () => {
     vi.clearAllMocks();
     mockItineraryService.suggestItinerary.mockReturnValue(of(mockGeneratedPlan));
     mockItineraryService.createItinerary.mockReturnValue(of(mockGeneratedPlan));
+    mockPlaceService.getNearbyPlaces.mockReturnValue(mockNearbyPlaces);
 
     const mockToast = { present: vi.fn().mockResolvedValue(undefined) };
     const mockToastController = { create: vi.fn().mockResolvedValue(mockToast) };
@@ -109,12 +117,13 @@ describe('SuggestedWizardPage', () => {
     fixture.detectChanges();
   });
 
-  it('should initialize with default values and preferences', () => {
+  it('should initialize with default values and preferences matching Figma', () => {
     expect(component).toBeTruthy();
     expect(component.form.get('destination')?.value).toBe('Nueva Ecija');
-    expect(component.form.get('daily_budget')?.value).toBe(2500);
-    expect(component.isPreferenceSelected('nature')).toBe(true);
+    expect(component.form.get('daily_budget')?.value).toBe(3000);
     expect(component.isPreferenceSelected('food')).toBe(true);
+    expect(component.isPreferenceSelected('culture')).toBe(true);
+    expect(component.isPreferenceSelected('resort')).toBe(true);
   });
 
   it('should update destination when setDestination is called', () => {
@@ -128,11 +137,11 @@ describe('SuggestedWizardPage', () => {
   });
 
   it('should toggle preferences correctly', () => {
-    component.togglePreference('nature');
-    expect(component.isPreferenceSelected('nature')).toBe(false);
+    component.togglePreference('resort');
+    expect(component.isPreferenceSelected('resort')).toBe(false);
 
-    component.togglePreference('nature');
-    expect(component.isPreferenceSelected('nature')).toBe(true);
+    component.togglePreference('resort');
+    expect(component.isPreferenceSelected('resort')).toBe(true);
   });
 
   it('should calculate computedTripDays correctly', () => {
@@ -149,17 +158,30 @@ describe('SuggestedWizardPage', () => {
     expect(mockItineraryService.suggestItinerary).toHaveBeenCalledWith(
       expect.objectContaining({
         destination: 'Nueva Ecija',
-        daily_budget: 2500,
+        daily_budget: 3000,
         save_immediately: false,
       })
     );
     expect(component.generatedPlan).toEqual(mockGeneratedPlan);
-    expect(component.budgetSummary).toBeTruthy();
+    expect(component.viewMode).toBe('itinerary');
   });
 
   it('should switch active day tab with selectDay', () => {
     component.selectDay(1);
     expect(component.activeDayIndex).toBe(1);
+  });
+
+  it('should open and close nearby places correctly', () => {
+    component.openNearbyPlaces();
+    expect(component.viewMode).toBe('nearby');
+
+    component.setNearbyTab('hospitals');
+    expect(component.activeNearbyTab).toBe('hospitals');
+    expect(component.filteredNearbyPlaces.length).toBe(1);
+    expect(component.filteredNearbyPlaces[0].name).toBe('Bongabon District Hospital');
+
+    component.closeNearbyPlaces();
+    expect(component.viewMode).toBe('itinerary');
   });
 
   it('should save itinerary and navigate home on acceptAndSave', async () => {
@@ -175,11 +197,12 @@ describe('SuggestedWizardPage', () => {
     component.generatedPlan = mockGeneratedPlan;
     component.backToForm();
     expect(component.generatedPlan).toBeNull();
+    expect(component.viewMode).toBe('form');
   });
 
-  it('should correctly format place costs', () => {
-    expect(component.formatPlaceCost({ estimated_cost_min: 150, estimated_cost_max: 300 })).toBe('₱150 - ₱300');
-    expect(component.formatPlaceCost({ estimated_cost_min: 200, estimated_cost_max: 200 })).toBe('₱200');
-    expect(component.formatPlaceCost({})).toBe('Price not listed');
+  it('should correctly format place timing and duration', () => {
+    expect(component.getTimingTime({ planned_time: '12:00 PM - 2:00 PM' })).toBe('12:00 PM - 2:00 PM');
+    expect(component.getTimingDuration({ planned_time: '1 Night · 2 Days' })).toBe('22 hrs');
+    expect(component.getTimingDuration({ duration_minutes: 180 })).toBe('3 hrs');
   });
 });

@@ -825,3 +825,41 @@ This log records chronological development sessions, detailing objectives, execu
   - `npm --prefix Project run test:unit`: **12/12 test files, 63/63 unit tests passed in 19.12s [100%]**.
   - `npm --prefix Project run typecheck:e2e`: **0 TypeScript errors [100%]**.
   - `python -m pytest backend/tests/ -v`: **4/4 backend pytest suites passed in 2.94s [100%]**.
+
+---
+
+## Session 29: Implementation of Figma Suggested Itinerary & Nearby Places Flow
+- **Date & Time**: 2026-10-31 14:10:00 (Local)
+- **Objective**: Implement the complete Figma Suggested Itinerary flow matching user-provided screenshots (Screen 1 Questionnaire, Screen 2 Suggested Itinerary with Day 1 Bongabon stops, and Screens 3-5 Nearby Places across Restaurants, Hospital & Pharmacies, and Stores).
+- **Key Enhancements & Design Alignment**:
+  - **Asset Extraction & High-Res Place Mapping**:
+    - Extracted and bundled authentic local assets into `Project/src/assets/images/`:
+      - `rohi_paperflower.png` (Rohi Paperflower Cafe)
+      - `nueva_ecija_arch.png` (Nueva Ecija Welcome Arch hero banner)
+      - `museo_bongabon.png` (Museo de Bongabon)
+      - `thornes_samgyupsal.png` (Thornes Samgyupsal House)
+  - **Place Service & Curated Nearby Places (`Project/src/app/core/services/place.service.ts`)**:
+    - Added image resolution mappings for all Bongabon stops.
+    - Added curated offline places for Rohi Paperflower Cafe, Museo de Bongabon, and Thornes Samgyupsal House with verified coordinates and realistic pricing.
+    - Implemented `getNearbyPlaces(municipality: string)` with verified opening hours matching Figma:
+      - **Restaurants (6)**: Boss Samgyupsal (Daily, 10:00 AM to 10:00 PM), Lomi-Raiyah Foodhouse (Mon-Sat, 5:00 AM to 8:00 PM), The Hangover by Y3-J (Daily, 6:00 AM to 11:30 PM), Banchan Gogi Unlimited Korean Grill (Daily, 12:30 PM to 11:00 PM), Tara G! (Daily, 24 hrs), Hera's Diner By Rac's Catering (Tue-Sun, 6:00 AM to 8:00 PM).
+      - **Hospital & Pharmacies (4)**: Bongabon District Hospital (Mon-Sat, 7:00 AM to 5:00 PM), PharmVille Pharmacy and Medical Supplies (Daily, 7:00 AM to 10:00 PM), Deb Pharmacy (Mon-Sat, 7:30 AM to 7:00 PM. Sun and Holidays, 9:00 AM to 5:00 PM), Resma Medical Clinic (Daily, 6:30 AM to 3:30 PM).
+      - **Stores (6)**: J&B- Convenience Store (Daily, 24 hrs), Rc Sylvia Store (Daily, 6:00 AM to 8:00 PM), Maila Store (Daily, 6:00 AM to 8:00 PM), Alfamart Curva Bongabon (Mon-Fri, 6:00 AM to 11:00 PM. Sat-Sun, 24 hrs), M2 Mc. Oil (Daily, 5:30 AM to 8:00 PM), Franks N' Burgers (Daily, 24 hrs).
+  - **Deterministic Itinerary Engine Alignment (`Project/src/app/core/services/itinerary.service.ts`)**:
+    - Updated `generateOfflineSuggestedItinerary()` to build 3 distinct multi-city day clusters matching Figma:
+      - Day 1 (Bongabon): Rohi Paperflower Cafe, La Casa Prime Cabins, Museo de Bongabon, Thornes Samgyupsal House.
+      - Day 2 (Cabanatuan City): Casa Batik, Farm Villaronte, D' Pavilion Farm.
+      - Day 3 (Gapan City): Tagpuan sa Lumang Gapan, Minalungao National Park, Pantabangan Lake.
+  - **Suggested Wizard Page Redesign (`Project/src/app/features/itinerary/suggested-wizard/`)**:
+    - Architected unified 3-state view flow (`viewMode: 'form' | 'itinerary' | 'nearby'`):
+      - **View 1 (Form)**: "Tell us your travel details" questionnaire with blue icons (`pin-outline`, `calendar-outline`, `cash-outline`), inline date picker with helper subtitle (`e.g., Oct 30 – Nov 2 (4 days, 3 nights)`), 5 preference pills (`Nature & Parks`, `Food Trip`, `Culture & History`, `Shopping`, `Resort`), and "Find Itinerary" CTA.
+      - **View 2 (Suggested Itinerary)**: Hero card with Nueva Ecija welcome arch, 3-day duration, budget, and preference tags; capsule day switcher; active day header; 4 vertical stop cards with authentic timing labels (`12:00 PM - 2:00 PM (2 hrs)`, `1 Night - 2 Days (22 hrs)`, `2:00 PM - 5:00 PM (3 hrs)`, `5:00 PM - 7:00 PM (2 hrs)`); interactive trigger button for "Nearby Places in Bongabon"; back navigation to Form; edit pencil button.
+      - **View 3 (Nearby Places)**: Header with back navigation to View 2; intro copy; 3-tab segmented capsule switcher (`Restaurants`, `Hospital & Pharmacies`, `Stores`); centered opening hour cards matching Figma layout.
+    - Compacted SCSS to 534 lines, resulting in 0 Angular style budget warnings (compiled raw size well under 10.00 kB).
+  - **Unit Test Suite Updates (`Project/src/app/features/itinerary/suggested-wizard/suggested-wizard.page.spec.ts`)**:
+    - Updated default values (daily budget 3000, preferences `food`, `culture`, `resort`).
+    - Added unit tests for `openNearbyPlaces`, `closeNearbyPlaces`, tab switching, and timing formatters.
+- **Verification & Test Results**:
+  - `npm --prefix Project run build`: **0 compilation errors, 0 style budget warnings, production bundle successfully generated [100%]**.
+  - `npm --prefix Project run test:unit`: **12/12 test files, 64/64 unit tests passed [100%]**.
+  - `python -m pytest backend/tests/ -v`: **4/4 backend pytest suites passed in 2.30s [100%]**.

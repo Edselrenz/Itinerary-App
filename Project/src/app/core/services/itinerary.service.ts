@@ -527,6 +527,78 @@ export class ItineraryService {
 
     const curatedPool = [
       {
+        id: 'dest-rohi-paperflower',
+        name: 'Rohi Paperflower Cafe',
+        category: 'Cafe & Dining',
+        categoryKey: 'cafe',
+        municipality: 'Bongabon',
+        lat: 15.6315,
+        lng: 121.1440,
+        image: 'assets/images/rohi_paperflower.png',
+        description: 'Charming artisanal cafe adorned with handcrafted paper flowers, signature coffee, and sweet pastries.',
+        tags: ['Cafe', 'Artisan Coffee', 'Crafts'],
+        directionsUrl: 'https://www.google.com/maps/dir/?api=1&destination=15.6315,121.1440',
+        openingHours: '10:00-21:00',
+        min: 150,
+        max: 350,
+        time: '12:00 PM - 2:00 PM',
+        dur: 120,
+      },
+      {
+        id: 'dest-la-casa-prime',
+        name: 'La Casa Prime Cabins',
+        category: 'Resort & Stay',
+        categoryKey: 'hotel_accommodation',
+        municipality: 'Bongabon',
+        lat: 15.6280,
+        lng: 121.1520,
+        image: 'assets/images/la_casa_prime.png',
+        description: 'Serene mountain cabin sanctuary with overlooking views of Pantabangan Lake and modern glamping amenities.',
+        tags: ['Mountain Cabins', 'Lake View', 'Glamping'],
+        directionsUrl: 'https://www.google.com/maps/dir/?api=1&destination=15.6280,121.1520',
+        openingHours: '24 Hours',
+        min: 2500,
+        max: 6000,
+        time: '1 Night · 2 Days',
+        dur: 1320,
+      },
+      {
+        id: 'dest-museo-bongabon',
+        name: 'Museo de Bongabon',
+        category: 'Culture & Museum',
+        categoryKey: 'museum_cultural',
+        municipality: 'Bongabon',
+        lat: 15.6300,
+        lng: 121.1430,
+        image: 'assets/images/museo_bongabon.png',
+        description: 'Historical museum chronicling the agricultural identity, cultural roots, and onion farming history of Bongabon.',
+        tags: ['Museum', 'Culture', 'History'],
+        directionsUrl: 'https://www.google.com/maps/dir/?api=1&destination=15.6300,121.1430',
+        openingHours: '08:00-17:00',
+        min: null,
+        max: null,
+        time: '2:00 PM - 5:00 PM',
+        dur: 180,
+      },
+      {
+        id: 'dest-thornes-samgyupsal',
+        name: 'Thornes Samgyupsal House',
+        category: 'Restaurant',
+        categoryKey: 'restaurant',
+        municipality: 'Bongabon',
+        lat: 15.6330,
+        lng: 121.1460,
+        image: 'assets/images/thornes_samgyupsal.png',
+        description: 'Popular unlimited Korean samgyupsal BBQ grill house serving savory pork and beef cuts with banchan.',
+        tags: ['Korean BBQ', 'Samgyupsal', 'Dinner'],
+        directionsUrl: 'https://www.google.com/maps/dir/?api=1&destination=15.6330,121.1460',
+        openingHours: '11:00-22:00',
+        min: 399,
+        max: 599,
+        time: '5:00 PM - 7:00 PM',
+        dur: 120,
+      },
+      {
         id: 'dest-minalungao',
         name: 'Minalungao National Park',
         category: 'Nature & Adventure',
@@ -709,15 +781,42 @@ export class ItineraryService {
     ];
 
     const targetDest = (request.destination || '').toLowerCase();
-    const sortedPool = [...curatedPool].sort((a, b) => {
-      const matchA = targetDest && (a.municipality.toLowerCase().includes(targetDest) || targetDest.includes(a.municipality.toLowerCase())) ? -1 : 1;
-      const matchB = targetDest && (b.municipality.toLowerCase().includes(targetDest) || targetDest.includes(b.municipality.toLowerCase())) ? -1 : 1;
-      return matchA - matchB;
-    });
+    const isProvincialOrBongabon = !targetDest || targetDest.includes('nueva') || targetDest.includes('ecija') || targetDest.includes('bongabon');
+
+    // Clustered day-by-day presets matching Figma Flow 2 specifications
+    const dayClusterPresets = [
+      {
+        municipality: 'Bongabon',
+        subtitle: 'Food spots, local culture, and historic sites!',
+        places: [
+          curatedPool.find((p) => p.id === 'dest-rohi-paperflower')!,
+          curatedPool.find((p) => p.id === 'dest-la-casa-prime')!,
+          curatedPool.find((p) => p.id === 'dest-museo-bongabon')!,
+          curatedPool.find((p) => p.id === 'dest-thornes-samgyupsal')!,
+        ],
+      },
+      {
+        municipality: 'Cabanatuan City',
+        subtitle: 'Heritage art crafts, authentic dining, and countryside leisure!',
+        places: [
+          curatedPool.find((p) => p.id === 'dest-casa-batik')!,
+          curatedPool.find((p) => p.id === 'dest-farm-villaronte')!,
+          curatedPool.find((p) => p.id === 'dest-pavillion-farm')!,
+        ],
+      },
+      {
+        municipality: 'Gapan City',
+        subtitle: 'Historic Spanish streetscapes, night food stalls, and scenic river adventures!',
+        places: [
+          curatedPool.find((p) => p.id === 'dest-tagpuan-gapan')!,
+          curatedPool.find((p) => p.id === 'dest-minalungao')!,
+          curatedPool.find((p) => p.id === 'dest-pantabangan-lake')!,
+        ],
+      },
+    ];
 
     const itineraryId = this.generateId();
     const days: ItineraryDay[] = [];
-    let poolIndex = 0;
     const now = new Date().toISOString();
 
     for (let d = 0; d < totalDays; d++) {
@@ -727,9 +826,19 @@ export class ItineraryService {
       const dayId = this.generateId();
       const items: ItineraryItem[] = [];
 
-      for (let s = 0; s < 3; s++) {
-        const place = sortedPool[poolIndex % sortedPool.length];
-        poolIndex++;
+      const cluster = isProvincialOrBongabon
+        ? dayClusterPresets[d % dayClusterPresets.length]
+        : null;
+
+      const dayPlaces = cluster?.places || [
+        curatedPool[0],
+        curatedPool[1],
+        curatedPool[2],
+      ];
+
+      for (let s = 0; s < dayPlaces.length; s++) {
+        const place = dayPlaces[s];
+        if (!place) continue;
 
         items.push({
           id: this.generateId(),
@@ -771,13 +880,13 @@ export class ItineraryService {
         });
       }
 
-      const primaryMuni = items[0]?.place?.municipality_name || request.destination || 'Nueva Ecija';
+      const primaryMuni = cluster?.municipality || items[0]?.place?.municipality_name || request.destination || 'Nueva Ecija';
       days.push({
         id: dayId,
         itinerary_id: itineraryId,
         day_number: d + 1,
         travel_date: dayDateStr,
-        title: `Day ${d + 1}: ${primaryMuni} Tour`,
+        title: `Day ${d + 1}: ${primaryMuni}`,
         items,
       });
     }

@@ -30,6 +30,12 @@ export class PlaceService {
     "d' pavilion farm and resort": 'assets/images/pavillion_farm.png',
     'la casa prime cabins': 'assets/images/la_casa_prime.png',
     'lake farm de la marre': 'assets/images/lake_farm_marre.png',
+    'rohi paperflower cafe': 'assets/images/rohi_paperflower.png',
+    'rohi paperflower': 'assets/images/rohi_paperflower.png',
+    'museo de bongabon': 'assets/images/museo_bongabon.png',
+    'thornes samgyupsal house': 'assets/images/thornes_samgyupsal.png',
+    'thornes samgyupsal': 'assets/images/thornes_samgyupsal.png',
+    'nueva ecija': 'assets/images/nueva_ecija_arch.png',
   };
 
   private readonly categoryDisplayMap: Record<string, string> = {
@@ -52,6 +58,84 @@ export class PlaceService {
   };
 
   private readonly curatedOfflinePlaces: Place[] = [
+    {
+      id: 'dest-rohi-paperflower',
+      name: 'Rohi Paperflower Cafe',
+      category: 'cafe',
+      latitude: 15.6315,
+      longitude: 121.1440,
+      municipality_name: 'Bongabon',
+      address_text: 'Bongabon, Nueva Ecija',
+      description: 'Charming artisanal cafe adorned with vibrant paper flower crafts, signature coffee blends, and baked pastries.',
+      phone: null,
+      website: null,
+      opening_hours: '10:00-21:00',
+      estimated_cost_min: 150,
+      estimated_cost_max: 350,
+      cost_currency: 'PHP',
+      image_url: 'assets/images/rohi_paperflower.png',
+      image_license: null,
+      source_name: 'CuratedNuevaEcijaMVP',
+      source_record_id: 'curated/rohi_paperflower',
+      source_url: null,
+      imported_at: '2026-10-31T00:00:00Z',
+      verified_at: '2026-10-31T00:00:00Z',
+      is_featured: true,
+      tags: ['Cafe', 'Artisan Coffee', 'Crafts'],
+      directions_url: 'https://www.google.com/maps/dir/?api=1&destination=15.6315,121.1440',
+    },
+    {
+      id: 'dest-museo-bongabon',
+      name: 'Museo de Bongabon',
+      category: 'museum_cultural',
+      latitude: 15.6300,
+      longitude: 121.1430,
+      municipality_name: 'Bongabon',
+      address_text: 'Bongabon, Nueva Ecija',
+      description: 'Community heritage museum chronicling the agricultural identity, historic revolution roots, and onion industry of Bongabon.',
+      phone: null,
+      website: null,
+      opening_hours: '08:00-17:00',
+      estimated_cost_min: null,
+      estimated_cost_max: null,
+      cost_currency: 'PHP',
+      image_url: 'assets/images/museo_bongabon.png',
+      image_license: null,
+      source_name: 'CuratedNuevaEcijaMVP',
+      source_record_id: 'curated/museo_bongabon',
+      source_url: null,
+      imported_at: '2026-10-31T00:00:00Z',
+      verified_at: '2026-10-31T00:00:00Z',
+      is_featured: true,
+      tags: ['Museum', 'Culture', 'History'],
+      directions_url: 'https://www.google.com/maps/dir/?api=1&destination=15.6300,121.1430',
+    },
+    {
+      id: 'dest-thornes-samgyupsal',
+      name: 'Thornes Samgyupsal House',
+      category: 'restaurant',
+      latitude: 15.6330,
+      longitude: 121.1460,
+      municipality_name: 'Bongabon',
+      address_text: 'Bongabon, Nueva Ecija',
+      description: 'Beloved dining spot serving unlimited Korean samgyupsal BBQ, savory side dishes, and fresh lettuce wraps.',
+      phone: null,
+      website: null,
+      opening_hours: '11:00-22:00',
+      estimated_cost_min: 399,
+      estimated_cost_max: 599,
+      cost_currency: 'PHP',
+      image_url: 'assets/images/thornes_samgyupsal.png',
+      image_license: null,
+      source_name: 'CuratedNuevaEcijaMVP',
+      source_record_id: 'curated/thornes_samgyupsal',
+      source_url: null,
+      imported_at: '2026-10-31T00:00:00Z',
+      verified_at: '2026-10-31T00:00:00Z',
+      is_featured: true,
+      tags: ['Korean BBQ', 'Samgyupsal', 'Dinner'],
+      directions_url: 'https://www.google.com/maps/dir/?api=1&destination=15.6330,121.1460',
+    },
     {
       id: 'dest-minalungao',
       name: 'Minalungao National Park',
@@ -461,5 +545,46 @@ export class PlaceService {
   public formatCategoryName(categoryKey: string): string {
     return this.categoryDisplayMap[categoryKey] || categoryKey.replace(/_/g, ' ');
   }
+
+  /**
+   * Returns curated nearby restaurants, hospital/pharmacies, and stores
+   * matching Figma Flow 2 specifications.
+   */
+  public getNearbyPlaces(municipality: string = 'Bongabon'): NearbyPlaceItem[] {
+    const norm = (municipality || '').toLowerCase();
+    
+    // Default curated Bongabon places directly from Figma
+    return [
+      // 1. Restaurants
+      { id: 'nb-r-1', name: 'Boss Samgyupsal', category: 'restaurant', openingHours: 'Daily, 10:00 AM to 10:00 PM', municipality: 'Bongabon' },
+      { id: 'nb-r-2', name: 'Lomi-Raiyah Foodhouse', category: 'restaurant', openingHours: 'Mon-Sat, 5:00 AM to 8:00 PM', municipality: 'Bongabon' },
+      { id: 'nb-r-3', name: 'The Hangover by Y3-J', category: 'restaurant', openingHours: 'Daily, 6:00 AM to 11:30 PM', municipality: 'Bongabon' },
+      { id: 'nb-r-4', name: 'Banchan Gogi Unlimited Korean Grill', category: 'restaurant', openingHours: 'Daily, 12:30 PM to 11:00 PM', municipality: 'Bongabon' },
+      { id: 'nb-r-5', name: 'Tara G!', category: 'restaurant', openingHours: 'Daily, 24 hrs', municipality: 'Bongabon' },
+      { id: 'nb-r-6', name: "Hera's Diner By Rac's Catering", category: 'restaurant', openingHours: 'Tue-Sun, 6:00 AM to 8:00 PM', municipality: 'Bongabon' },
+
+      // 2. Hospital & Pharmacies
+      { id: 'nb-h-1', name: 'Bongabon District Hospital', category: 'hospital', openingHours: 'Mon-Sat, 7:00 AM to 5:00 PM', municipality: 'Bongabon' },
+      { id: 'nb-h-2', name: 'PharmVille Pharmacy and Medical Supplies', category: 'hospital', openingHours: 'Daily, 7:00 AM to 10:00 PM', municipality: 'Bongabon' },
+      { id: 'nb-h-3', name: 'Deb Pharmacy', category: 'hospital', openingHours: 'Mon-Sat, 7:30 AM to 7:00 PM. Sun and Holidays, 9:00 AM to 5:00 PM', municipality: 'Bongabon' },
+      { id: 'nb-h-4', name: 'Resma Medical Clinic', category: 'hospital', openingHours: 'Daily, 6:30 AM to 3:30 PM', municipality: 'Bongabon' },
+
+      // 3. Stores
+      { id: 'nb-s-1', name: 'J&B- Convenience Store', category: 'store', openingHours: 'Daily, 24 hrs', municipality: 'Bongabon' },
+      { id: 'nb-s-2', name: 'Rc Sylvia Store', category: 'store', openingHours: 'Daily, 6:00 AM to 8:00 PM', municipality: 'Bongabon' },
+      { id: 'nb-s-3', name: 'Maila Store', category: 'store', openingHours: 'Daily, 6:00 AM to 8:00 PM', municipality: 'Bongabon' },
+      { id: 'nb-s-4', name: 'Alfamart Curva Bongabon', category: 'store', openingHours: 'Mon-Fri, 6:00 AM to 11:00 PM. Sat-Sun, 24 hrs', municipality: 'Bongabon' },
+      { id: 'nb-s-5', name: 'M2 Mc. Oil', category: 'store', openingHours: 'Daily, 5:30 AM to 8:00 PM', municipality: 'Bongabon' },
+      { id: 'nb-s-6', name: "Franks N' Burgers", category: 'store', openingHours: 'Daily, 24 hrs', municipality: 'Bongabon' },
+    ];
+  }
+}
+
+export interface NearbyPlaceItem {
+  id: string;
+  name: string;
+  category: 'restaurant' | 'hospital' | 'store';
+  openingHours: string;
+  municipality: string;
 }
 

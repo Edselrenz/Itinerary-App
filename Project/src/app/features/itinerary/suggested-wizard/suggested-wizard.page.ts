@@ -17,24 +17,27 @@ import {
   arrowBack,
   arrowForwardOutline,
   calendarOutline,
+  cartOutline,
   cashOutline,
   checkmarkCircle,
   closeOutline,
   createOutline,
   informationCircleOutline,
   locationOutline,
+  medkitOutline,
+  restaurantOutline,
   searchOutline,
   sparkles,
+  storefrontOutline,
   timeOutline,
 } from 'ionicons/icons';
 import { Itinerary, ItineraryBudgetSummary, ItineraryDay } from '../../../core/models/itinerary.models';
 import { ItineraryService } from '../../../core/services/itinerary.service';
-import { PlaceService } from '../../../core/services/place.service';
+import { NearbyPlaceItem, PlaceService } from '../../../core/services/place.service';
 
 export interface PreferenceOption {
   key: string;
   label: string;
-  icon?: string;
 }
 
 @Component({
@@ -63,6 +66,11 @@ export class SuggestedWizardPage implements OnInit {
   public activeDayIndex = 0;
   public budgetSummary: ItineraryBudgetSummary | null = null;
 
+  // View state: 'form' (Screen 1) | 'itinerary' (Screen 2) | 'nearby' (Screen 3-5)
+  public viewMode: 'form' | 'itinerary' | 'nearby' = 'form';
+  public activeNearbyTab: 'restaurants' | 'hospitals' | 'stores' = 'restaurants';
+  public nearbyPlacesList: NearbyPlaceItem[] = [];
+
   public quickDestinations = [
     'Bongabon',
     'Pantabangan',
@@ -74,14 +82,16 @@ export class SuggestedWizardPage implements OnInit {
 
   public budgetPresets = [1500, 2500, 4000, 6000];
 
+  // 5 preferences matching Figma Flow 2 Screen 1
   public preferenceOptions: PreferenceOption[] = [
     { key: 'nature', label: 'Nature & Parks' },
     { key: 'food', label: 'Food Trip' },
     { key: 'culture', label: 'Culture & History' },
     { key: 'shopping', label: 'Shopping' },
+    { key: 'resort', label: 'Resort' },
   ];
 
-  public selectedPreferences: Set<string> = new Set(['nature', 'food']);
+  public selectedPreferences: Set<string> = new Set(['food', 'culture', 'resort']);
 
   constructor(
     private fb: FormBuilder,
@@ -103,21 +113,27 @@ export class SuggestedWizardPage implements OnInit {
       createOutline,
       informationCircleOutline,
       closeOutline,
+      restaurantOutline,
+      medkitOutline,
+      cartOutline,
+      storefrontOutline,
     });
 
     const today = new Date();
-    const tomorrow = new Date();
-    tomorrow.setDate(today.getDate() + 1);
+    const endDay = new Date();
+    endDay.setDate(today.getDate() + 2); // 3 days, 2 nights default
 
     this.form = this.fb.group({
       destination: ['Nueva Ecija', [Validators.required]],
       start_date: [today.toISOString().split('T')[0], [Validators.required]],
-      end_date: [tomorrow.toISOString().split('T')[0], [Validators.required]],
-      daily_budget: [2500, [Validators.required, Validators.min(0)]],
+      end_date: [endDay.toISOString().split('T')[0], [Validators.required]],
+      daily_budget: [3000, [Validators.required, Validators.min(0)]],
     });
   }
 
-  public ngOnInit(): void {}
+  public ngOnInit(): void {
+    this.nearbyPlacesList = this.placeService.getNearbyPlaces('Bongabon');
+  }
 
   public setDestination(dest: string): void {
     this.form.patchValue({ destination: dest });
@@ -150,6 +166,29 @@ export class SuggestedWizardPage implements OnInit {
     return Math.max(1, Math.ceil(diff / (1000 * 60 * 60 * 24)) + 1);
   }
 
+  public get formattedTripDateSubtitle(): string {
+    const startStr = this.form.get('start_date')?.value;
+    const endStr = this.form.get('end_date')?.value;
+    if (!startStr || !endStr) {
+      return 'e.g., Oct 30 – Nov 2 (4 days, 3 nights)';
+    }
+
+    const start = new Date(startStr);
+    const end = new Date(endStr);
+    const days = this.computedTripDays;
+    const nights = Math.max(0, days - 1);
+
+    const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
+    const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
+
+    let rangeStr = `${startMonth} ${start.getDate()} – ${endMonth} ${end.getDate()}`;
+    if (startMonth === endMonth) {
+      rangeStr = `${startMonth} ${start.getDate()} – ${end.getDate()}`;
+    }
+
+    return `${rangeStr} (${days} ${days === 1 ? 'day' : 'days'}, ${nights} ${nights === 1 ? 'night' : 'nights'})`;
+  }
+
   public generateItinerary(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -174,7 +213,9 @@ export class SuggestedWizardPage implements OnInit {
         this.isGenerating = false;
         this.generatedPlan = plan;
         this.activeDayIndex = 0;
+        this.viewMode = 'itinerary';
         this.budgetSummary = this.itineraryService.calculateBudgetSummary(plan);
+        this.refreshNearbyPlaces();
       },
       error: async (err) => {
         this.isGenerating = false;
@@ -191,6 +232,35 @@ export class SuggestedWizardPage implements OnInit {
 
   public selectDay(index: number): void {
     this.activeDayIndex = index;
+    this.refreshNearbyPlaces();
+  }
+
+  public refreshNearbyPlaces(): void {
+    const curDay = this.generatedPlan?.days[this.activeDayIndex];
+    const muni = this.getDayLocationName(curDay);
+    this.nearbyPlacesList = this.placeService.getNearbyPlaces(muni);
+  }
+
+  public openNearbyPlaces(stop?: any): void {
+    this.viewMode = 'nearby';
+  }
+
+  public closeNearbyPlaces(): void {
+    this.viewMode = 'itinerary';
+  }
+
+  public setNearbyTab(tab: 'restaurants' | 'hospitals' | 'stores'): void {
+    this.activeNearbyTab = tab;
+  }
+
+  public get filteredNearbyPlaces(): NearbyPlaceItem[] {
+    const catMap: Record<string, string> = {
+      restaurants: 'restaurant',
+      hospitals: 'hospital',
+      stores: 'store',
+    };
+    const targetCat = catMap[this.activeNearbyTab];
+    return this.nearbyPlacesList.filter((p) => p.category === targetCat);
   }
 
   public async acceptAndSave(targetRoute: string = '/tabs/home'): Promise<void> {
@@ -266,10 +336,13 @@ export class SuggestedWizardPage implements OnInit {
 
   public backToForm(): void {
     this.generatedPlan = null;
+    this.viewMode = 'form';
   }
 
   public onBack(): void {
-    if (this.generatedPlan) {
+    if (this.viewMode === 'nearby') {
+      this.closeNearbyPlaces();
+    } else if (this.viewMode === 'itinerary' || this.generatedPlan) {
       this.backToForm();
     } else {
       this.router.navigate(['/tabs/home']);
@@ -295,20 +368,27 @@ export class SuggestedWizardPage implements OnInit {
 
   public getDaySubtitle(day: ItineraryDay | undefined): string {
     const muni = this.getDayLocationName(day);
+    if (muni === 'Bongabon') {
+      return 'Food spots, local culture, and historic sites!';
+    }
     return `Food spots, local culture, and historic sites in ${muni}!`;
   }
 
-  public formatStopTiming(stop: any): string {
-    if (stop.planned_time && stop.duration_minutes) {
-      const durHours = Math.round(stop.duration_minutes / 60);
-      const durText = durHours >= 1 ? `${durHours} hrs` : `${stop.duration_minutes} mins`;
-      return `${stop.planned_time} (${durText})`;
+  public getTimingTime(stop: any): string {
+    if (stop.planned_time) {
+      return stop.planned_time;
+    }
+    return '12:00 PM - 2:00 PM';
+  }
+
+  public getTimingDuration(stop: any): string {
+    if (stop.planned_time && stop.planned_time.includes('Night')) {
+      return '22 hrs';
     }
     if (stop.duration_minutes) {
-      const durHours = Math.round(stop.duration_minutes / 60);
-      return durHours >= 1 ? `(${durHours} hrs)` : `(${stop.duration_minutes} mins)`;
+      const hrs = Math.round(stop.duration_minutes / 60);
+      return hrs >= 1 ? `${hrs} hrs` : `${stop.duration_minutes} mins`;
     }
-    return '';
+    return '2 hrs';
   }
 }
-

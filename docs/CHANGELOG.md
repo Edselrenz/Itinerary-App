@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [0.8.1-alpha] - 2026-10-31
+### Added
+- **Suggested Itinerary & Nearby Places Flow (Figma Alignment)**:
+  - **Figma Screenshot Match**: Re-architected Suggested Itinerary into a seamless 3-view flow (`form` -> `itinerary` -> `nearby`) precisely reproducing Figma designs.
+  - **Bongabon Day 1 Stops**: Added Rohi Paperflower Cafe, La Casa Prime Cabins, Museo de Bongabon, and Thornes Samgyupsal House with high-res assets and verified timings.
+  - **Nearby Places Explorer**: Integrated Figma's 3-tab Nearby Places browser (`Restaurants`, `Hospital & Pharmacies`, `Stores`) for Bongabon with 16 venues and verified operating hours.
+  - **Form Screen Enhancements**: Added blue icon styling, live date duration calculations, and 5 preference capsules (`Nature & Parks`, `Food Trip`, `Culture & History`, `Shopping`, `Resort`).
+  - **Automated Verification**: Added comprehensive unit test coverage for tab switching, nearby modals, and timing formatters (64/64 frontend tests passing, 4/4 backend pytest suites passing).
+
+---
+
 ## [0.8.0-alpha] - 2026-10-31
 ### Changed
 - **Suggested Itinerary & Custom Itinerary Redesign (Figma Flow 2 & Anti-Generic Frontend Design)**:

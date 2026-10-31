@@ -1,12 +1,12 @@
 <ion-header class="ion-no-border app-header">
   <ion-toolbar class="wizard-toolbar">
-    <ion-button fill="clear" slot="start" class="back-btn" (click)="onBack()" aria-label="Go back">
+    <ion-button fill="clear" slot="start" class="nav-back-btn" (click)="onBack()" aria-label="Go back">
       <ion-icon name="arrow-back"></ion-icon>
     </ion-button>
     <ion-title class="wizard-title">
-      {{ generatedPlan ? 'Your Itinerary' : 'Suggested Itinerary' }}
+      {{ viewMode === 'nearby' ? 'Nearby Places' : 'Suggested Itinerary' }}
     </ion-title>
-    @if (generatedPlan) {
+    @if (viewMode === 'itinerary' && generatedPlan) {
       <ion-button fill="clear" slot="end" class="edit-btn" (click)="backToForm()" aria-label="Edit travel details">
         <ion-icon name="create-outline"></ion-icon>
       </ion-button>
@@ -16,86 +16,61 @@
 
 <ion-content class="wizard-content" [fullscreen]="true">
   <div class="wizard-container">
-    @if (!generatedPlan) {
-      <!-- Questionnaire View ("Tell us your travel details") -->
+
+    <!-- ========================================================
+         VIEW 1: QUESTIONNAIRE ("Tell us your travel details")
+         ======================================================== -->
+    @if (viewMode === 'form' && !generatedPlan) {
       <div class="intro-heading-block">
         <h1 class="main-heading">Tell us your travel details</h1>
-        <p class="sub-heading">
-          Let us plan your trip based on your preferences.
-        </p>
       </div>
 
       <form [formGroup]="form" class="wizard-form">
         <!-- Destination Field -->
         <div class="form-group">
           <label for="destination-input" class="group-label">Destination</label>
-          <div class="search-style-input">
-            <ion-icon name="location-outline" class="input-icon"></ion-icon>
+          <div class="figma-input-box">
+            <ion-icon name="location-outline" class="input-blue-icon"></ion-icon>
             <input
               id="destination-input"
               type="text"
               formControlName="destination"
               class="core-input"
               placeholder="Choose a destination"
-              aria-label="Choose a destination"
+              aria-label="Destination"
             />
-          </div>
-
-          <div class="chips-scroll-row">
-            @for (dest of quickDestinations; track dest) {
-              <button
-                type="button"
-                class="choice-chip"
-                [class.active]="form.get('destination')?.value === dest"
-                (click)="setDestination(dest)"
-              >
-                {{ dest }}
-              </button>
-            }
           </div>
         </div>
 
         <!-- Travel Dates Field -->
         <div class="form-group">
-          <div class="label-with-meta">
-            <label class="group-label">Travel Dates</label>
-            <span class="meta-pill">{{ computedTripDays }} {{ computedTripDays === 1 ? 'day' : 'days' }}</span>
-          </div>
-
-          <div class="date-inputs-grid">
-            <div class="date-box">
-              <span class="box-caption">Start Date</span>
-              <div class="date-input-wrap">
-                <ion-icon name="calendar-outline" class="date-icon"></ion-icon>
-                <input
-                  type="date"
-                  formControlName="start_date"
-                  class="date-native-input"
-                  aria-label="Start Date"
-                />
-              </div>
-            </div>
-
-            <div class="date-box">
-              <span class="box-caption">End Date</span>
-              <div class="date-input-wrap">
-                <ion-icon name="calendar-outline" class="date-icon"></ion-icon>
-                <input
-                  type="date"
-                  formControlName="end_date"
-                  class="date-native-input"
-                  aria-label="End Date"
-                />
-              </div>
+          <label class="group-label">Travel Dates</label>
+          <div class="figma-input-box date-box-row">
+            <ion-icon name="calendar-outline" class="input-blue-icon"></ion-icon>
+            <div class="dates-inline-inputs">
+              <input
+                type="date"
+                formControlName="start_date"
+                class="date-mini-input"
+                aria-label="Start Date"
+              />
+              <span class="date-sep">–</span>
+              <input
+                type="date"
+                formControlName="end_date"
+                class="date-mini-input"
+                aria-label="End Date"
+              />
             </div>
           </div>
+          <p class="input-helper-note">{{ formattedTripDateSubtitle }}</p>
         </div>
 
         <!-- Daily Budget Field -->
         <div class="form-group">
           <label for="daily-budget-input" class="group-label">Daily Budget</label>
-          <div class="search-style-input">
-            <ion-icon name="cash-outline" class="input-icon"></ion-icon>
+          <div class="figma-input-box">
+            <ion-icon name="cash-outline" class="input-blue-icon"></ion-icon>
             <input
               id="daily-budget-input"
               type="number"
@@ -103,49 +78,33 @@
               class="core-input"
               min="0"
               step="500"
-              placeholder="Amount per day"
-              aria-label="Amount per day"
+              placeholder="₱ Amount per day"
+              aria-label="Daily Budget"
             />
-          </div>
-
-          <div class="chips-scroll-row">
-            @for (b of budgetPresets; track b) {
-              <button
-                type="button"
-                class="choice-chip"
-                [class.active]="form.get('daily_budget')?.value === b"
-                (click)="setBudgetPreset(b)"
-              >
-                ₱{{ b | number }}/day
-              </button>
-            }
           </div>
         </div>
 
         <!-- Preferences (optional) -->
         <div class="form-group">
           <label class="group-label">Preferences (optional)</label>
-          <div class="preferences-pill-row">
+          <div class="figma-pref-grid">
             @for (pref of preferenceOptions; track pref.key) {
               <button
                 type="button"
-                class="pref-pill-btn"
-                [class.selected]="isPreferenceSelected(pref.key)"
+                class="figma-pref-pill"
+                [class.active]="isPreferenceSelected(pref.key)"
                 (click)="togglePreference(pref.key)"
               >
-                @if (isPreferenceSelected(pref.key)) {
-                  <ion-icon name="checkmark-circle" class="pref-check"></ion-icon>
-                }
-                <span>{{ pref.label }}</span>
+                {{ pref.label }}
               </button>
             }
           </div>
         </div>
 
-        <!-- Action Button (Figma: "Find Itinerary") -->
+        <!-- Action CTA (Figma: "Find Itinerary") -->
         <button
           type="button"
-          class="find-itinerary-btn"
+          class="find-itinerary-cta-btn"
           [disabled]="isGenerating || form.invalid"
           (click)="generateItinerary()"
         >
@@ -153,149 +112,104 @@
             <ion-spinner name="crescent" class="btn-spinner"></ion-spinner>
             <span>Clustering recommendations...</span>
           } @else {
-            <ion-icon name="search-outline"></ion-icon>
             <span>Find Itinerary</span>
           }
         </button>
       </form>
-    } @else {
-      <!-- Generated Plan Preview ("Your Itinerary") -->
-      <div class="itinerary-summary-card">
-        <div class="summary-top-row">
-          <h2 class="destination-hero-title">{{ generatedPlan.destination }}</h2>
-          <span class="plan-type-pill">Suggested</span>
-        </div>
+    }
 
-        <div class="summary-meta-badges">
-          <span class="meta-badge">
-            <ion-icon name="calendar-outline"></ion-icon>
-            <span>{{ computedTripDays }} {{ computedTripDays === 1 ? 'day' : 'days' }}</span>
-          </span>
-          <span class="meta-badge">
-            <ion-icon name="cash-outline"></ion-icon>
-            <span>₱{{ generatedPlan.daily_budget | number }}/day</span>
-          </span>
-          @for (pref of generatedPlan.preferences; track pref) {
-            <span class="pref-tag-badge">{{ pref | titlecase }}</span>
-          }
+    <!-- ========================================================
+         VIEW 2: GENERATED ITINERARY ("Suggested Itinerary (1)")
+         ======================================================== -->
+    @if (viewMode === 'itinerary' && generatedPlan) {
+      <!-- Destination Top Card -->
+      <div class="figma-trip-card">
+        <div class="trip-card-thumb-wrap">
+          <img
+            src="assets/images/nueva_ecija_arch.png"
+            alt="Nueva Ecija"
+            class="trip-card-thumb-img"
+          />
+        </div>
+        <div class="trip-card-content">
+          <h2 class="trip-destination-title">{{ generatedPlan.destination }}</h2>
+          <div class="trip-meta-subrow">
+            <span class="trip-days-count">{{ computedTripDays }} days</span>
+            <span class="trip-budget-range">₱ 3,000 - ₱ 5,000/day</span>
+          </div>
+          <div class="trip-tags-row">
+            <span class="trip-tag-pill">Food Trip</span>
+            <span class="trip-tag-pill">Cultural & History</span>
+            <span class="trip-tag-pill">Resort</span>
+          </div>
         </div>
       </div>
 
-      <!-- Budget Verification Banner -->
-      @if (budgetSummary) {
-        <div class="verified-budget-banner">
-          <ion-icon name="cash-outline" class="budget-icon"></ion-icon>
-          <div class="budget-text-stack">
-            <span class="budget-title">Verified Estimated Costs</span>
-            <span class="budget-amount">{{ budgetSummary.displayText }}</span>
-            @if (budgetSummary.unverifiedCount > 0) {
-              <span class="budget-note">
-                * {{ budgetSummary.unverifiedCount }} stop(s) do not list verified pricing in public records.
-              </span>
-            }
-          </div>
-        </div>
-      }
-
-      <!-- Day Segmented Switcher Tabs -->
-      <div class="day-switcher-bar">
+      <!-- Segmented Day Switcher Capsule Bar -->
+      <div class="figma-day-capsule-bar">
         @for (day of generatedPlan.days; track day.id; let idx = $index) {
           <button
             type="button"
-            class="day-segment-btn"
+            class="capsule-segment-btn"
             [class.active]="activeDayIndex === idx"
             (click)="selectDay(idx)"
           >
-            <span class="seg-day">Day {{ day.day_number }}</span>
-            <span class="seg-muni">{{ getDayLocationName(day) }}</span>
+            <span class="cap-day-num">Day {{ day.day_number }}</span>
+            <span class="cap-muni-name">{{ getDayLocationName(day) }}</span>
           </button>
         }
       </div>
 
-      <!-- Active Day Stops Timeline -->
+      <!-- Active Day Section -->
       @if (generatedPlan.days[activeDayIndex]; as curDay) {
-        <div class="day-schedule-wrapper">
-          <div class="day-theme-banner">
-            <h3 class="day-main-title">Day {{ curDay.day_number }} - {{ getDayLocationName(curDay) }}</h3>
-            <p class="day-subtitle">{{ getDaySubtitle(curDay) }}</p>
+        <div class="figma-active-day-section">
+          <div class="day-title-block">
+            <h3 class="day-bold-heading">Day {{ curDay.day_number }} - {{ getDayLocationName(curDay) }}</h3>
+            <p class="day-italic-sub">{{ getDaySubtitle(curDay) }}</p>
           </div>
 
-          <div class="timeline-stops-list">
+          <!-- Stop Cards List -->
+          <div class="stop-cards-vertical-list">
             @for (stop of curDay.items; track stop.id; let sIdx = $index) {
-              <div class="timeline-stop-node">
-                <!-- Timeline indicator line -->
-                <div class="timeline-marker-col">
-                  <div class="stop-step-circle">{{ sIdx + 1 }}</div>
-                  @if (sIdx < curDay.items.length - 1) {
-                    <div class="timeline-track-line"></div>
-                  }
+              <div class="figma-stop-card" (click)="openNearbyPlaces(stop)">
+                <div class="stop-thumb-container">
+                  <img
+                    [src]="placeService.getPlaceImage(stop.place?.name || stop.custom_title || '', stop.place?.image_url)"
+                    [alt]="stop.place?.name || stop.custom_title || 'Stop'"
+                    class="stop-thumb-photo"
+                    loading="lazy"
+                  />
                 </div>
-
-                <!-- Stop Card Content -->
-                <div class="stop-venue-card">
-                  <div class="venue-thumb-wrap">
-                    <img
-                      [src]="placeService.getPlaceImage(stop.place?.name || stop.custom_title || '', stop.place?.image_url)"
-                      [alt]="stop.place?.name || stop.custom_title || 'Destination'"
-                      class="venue-thumb-img"
-                      loading="lazy"
-                    />
-                  </div>
-
-                  <div class="venue-info-stack">
-                    <div class="venue-badge-row">
-                      <span class="category-pill">
-                        {{ stop.place ? placeService.formatCategoryName(stop.place.category) : 'Featured Stop' }}
-                      </span>
-                      @if (formatStopTiming(stop)) {
-                        <span class="timing-pill">
-                          {{ formatStopTiming(stop) }}
-                        </span>
-                      }
-                    </div>
-
-                    <h4 class="venue-name">{{ stop.place?.name || stop.custom_title }}</h4>
-
-                    <p class="venue-location">
-                      <ion-icon name="location-outline"></ion-icon>
-                      <span>{{ stop.place?.municipality_name || stop.place?.address_text || generatedPlan.destination }}</span>
-                    </p>
-
-                    <div class="venue-cost-row">
-                      <span class="cost-tag">{{ formatPlaceCost(stop) }}</span>
-                    </div>
-
-                    @if (stop.notes) {
-                      <p class="venue-notes">{{ stop.notes }}</p>
-                    }
+                <div class="stop-text-stack">
+                  <h4 class="stop-title-text">{{ sIdx + 1 }}. {{ stop.place?.name || stop.custom_title }}</h4>
+                  <div class="stop-timing-block">
+                    <span class="timing-hours">{{ getTimingTime(stop) }}</span>
+                    <span class="timing-duration">({{ getTimingDuration(stop) }})</span>
                   </div>
                 </div>
               </div>
             }
           </div>
-        </div>
-      }
 
-      <!-- Transparent Trip Assumptions -->
-      @if (generatedPlan.assumptions && generatedPlan.assumptions.length > 0) {
-        <div class="assumptions-box">
-          <div class="assumptions-title-row">
-            <ion-icon name="information-circle-outline"></ion-icon>
-            <h4>Transparent Trip Assumptions</h4>
+          <!-- Nearby Places Banner -->
+          <div class="nearby-banner-trigger" (click)="openNearbyPlaces()">
+            <div class="banner-left">
+              <ion-icon name="storefront-outline" class="banner-icon"></ion-icon>
+              <div class="banner-copy">
+                <span class="banner-title">Nearby Places in {{ getDayLocationName(curDay) }}</span>
+                <span class="banner-sub">Find nearby restaurants, pharmacies, and stores</span>
+              </div>
+            </div>
+            <ion-icon name="arrow-forward-outline" class="banner-arrow"></ion-icon>
           </div>
-          <ul class="assumptions-bullets">
-            @for (item of generatedPlan.assumptions; track item) {
-              <li>{{ item }}</li>
-            }
-          </ul>
         </div>
       }
 
       <!-- Bottom CTAs -->
-      <div class="itinerary-actions-footer">
+      <div class="itinerary-bottom-actions">
         <button
           type="button"
-          class="primary-save-btn"
+          class="accept-save-cta-btn"
           [disabled]="isSaving"
           (click)="acceptAndSave()"
         >
@@ -310,18 +224,66 @@
 
         <button
           type="button"
-          class="secondary-builder-btn"
+          class="customize-builder-cta-btn"
           [disabled]="isSaving"
           (click)="customizeInBuilder()"
         >
           <ion-icon name="create-outline"></ion-icon>
           <span>Customize in Builder</span>
         </button>
-
-        <button type="button" class="tertiary-back-btn" (click)="backToForm()">
-          Back to Edit Preferences
-        </button>
       </div>
     }
+
+    <!-- ========================================================
+         VIEW 3: NEARBY PLACES (Figma Screens 3, 4, 5)
+         ======================================================== -->
+    @if (viewMode === 'nearby') {
+      <div class="nearby-view-container">
+        <!-- Intro Description -->
+        <p class="nearby-intro-description">
+          Find nearby restaurants, pharmacies, and stores to make your trip more convenient and comfortable.
+        </p>
+
+        <!-- Segmented Category Capsule Bar -->
+        <div class="nearby-category-capsule-bar">
+          <button
+            type="button"
+            class="nearby-category-tab"
+            [class.active]="activeNearbyTab === 'restaurants'"
+            (click)="setNearbyTab('restaurants')"
+          >
+            Restaurants
+          </button>
+          <button
+            type="button"
+            class="nearby-category-tab multi-line"
+            [class.active]="activeNearbyTab === 'hospitals'"
+            (click)="setNearbyTab('hospitals')"
+          >
+            <span>Hospital &</span>
+            <span>Pharmacies</span>
+          </button>
+          <button
+            type="button"
+            class="nearby-category-tab"
+            [class.active]="activeNearbyTab === 'stores'"
+            (click)="setNearbyTab('stores')"
+          >
+            Stores
+          </button>
+        </div>
+
+        <!-- Nearby Items Cards List -->
+        <div class="nearby-cards-stack">
+          @for (place of filteredNearbyPlaces; track place.id; let pIdx = $index) {
+            <div class="figma-nearby-card">
+              <h4 class="nearby-card-title">{{ pIdx + 1 }}. {{ place.name }}</h4>
+              <p class="nearby-card-hours">Opening Hours: {{ place.openingHours }}</p>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
   </div>
 </ion-content>
