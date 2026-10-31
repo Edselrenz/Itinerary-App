@@ -160,4 +160,10 @@ describe('HomePage', () => {
     component.onSeeAllItineraries();
     expect(router.navigate).toHaveBeenCalledWith(['/tabs/history']);
   });
+
+  it('navigates to /itinerary/:id when openItinerary is called', () => {
+    const dummyItin = { id: 'itin-detail-test' } as any;
+    component.openItinerary(dummyItin);
+    expect(router.navigate).toHaveBeenCalledWith(['/itinerary', 'itin-detail-test']);
+  });
 });

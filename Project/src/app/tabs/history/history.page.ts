@@ -78,7 +78,7 @@ export class HistoryPage implements OnInit, OnDestroy {
 
   public openItinerary(itinerary: Itinerary): void {
     if (itinerary.id) {
-      this.router.navigate(['/custom-builder', itinerary.id]);
+      this.router.navigate(['/itinerary', itinerary.id]);
     }
   }
 

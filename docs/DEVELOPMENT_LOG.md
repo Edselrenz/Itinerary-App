@@ -958,3 +958,35 @@ This log records chronological development sessions, detailing objectives, execu
 
 
 
+
+---
+
+## Session 34: Milestone 8 - Unified Itinerary Overview, Day Timeline & Guest Migration
+- **Date & Time**: 2026-10-31 16:15:00 (Local)
+- **Objective**: Implement Milestone 8 from `docs/TODO.md`: Unified Itinerary Overview screen with day switcher chips (`ItineraryDetailPage`), day timeline view with stop cards, stop details modal, Nearby Places sub-view (Figma Screens 3-5), guest-to-account migration helper (`GuestMigrationService`), and reactive navigation synchronization between Home, History, and Itinerary Detail.
+- **Key Enhancements**:
+  - **Unified Itinerary Overview & Day Timeline View (`ItineraryDetailPage`)**:
+    - Created `Project/src/app/features/itinerary/itinerary-detail/` (`itinerary-detail.page.ts`, `.html`, `.scss`, `.spec.ts`).
+    - Built hero card (`figma-trip-card`) matching Figma Screen 2 (`Suggested Itinirerary (1)`): destination thumbnail, days count, daily budget, and preference capsules.
+    - Implemented segmented day switcher capsule bar (`figma-day-capsule-bar`) with active `#0084ff` highlight.
+    - Implemented vertical stop cards (`figma-stop-card`) with place thumbnail, numbering, scheduled timings (`12:00 PM - 2:00 PM (2 hrs)`), cost estimates, and notes.
+    - Built bottom action "Customize Itinerary in Builder" and delete confirmation alert with feedback toast.
+    - Built stop details modal sheet with opening hours, cost range, full description, and external Google Maps directions handoff.
+  - **Nearby Places Sub-View Integration (Figma Screens 3, 4, 5)**:
+    - Integrated Nearby Places directly into `ItineraryDetailPage` via "Nearby Places in <Muni>" banner trigger.
+    - Pill capsule filter for Restaurants, Hospital & Pharmacies, and Stores.
+    - Rendered clean centered cards (`figma-nearby-card`) with opening hours matching Figma mockups.
+  - **Guest-to-Account Migration Service (`GuestMigrationService`)**:
+    - Created `guest-migration.service.ts` and `guest-migration.service.spec.ts`.
+    - Automatically transfers local guest trips from `GuestStorageService` to the backend upon login or signup.
+    - Added reactive guest trips indicator and "Sync to Account Now" trigger in `ProfilePage`.
+  - **Route & Navigation Synchronization**:
+    - Registered route `/itinerary/:id` in `app.routes.ts`.
+    - Updated `HomePage.openItinerary()` and `HistoryPage.openItinerary()` to navigate directly to `/itinerary/:id`.
+  - **Style Budget Optimization**:
+    - Centralized shared Figma overview and nearby places styles in `src/global.scss`.
+    - Component stylesheet compiled to 21.94 kB raw / 5.84 kB transfer, well within the 10.00 kB budget.
+- **Verification & Test Results**:
+  - `npm --prefix Project run test:unit`: **15/15 test files, 89/89 unit tests passed [100%]**.
+  - `python -m pytest backend/tests/ -v`: **4/4 backend test suites passed [100%]**.
+  - `npm --prefix Project run build`: **0 compilation errors, 0 style budget warnings, production build successful [100%]**.

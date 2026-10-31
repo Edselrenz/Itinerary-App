@@ -24,6 +24,7 @@ import {
   mailOutline,
 } from 'ionicons/icons';
 import { AuthService } from '../../../core/services/auth.service';
+import { GuestMigrationService } from '../../../core/services/guest-migration.service';
 
 @Component({
   selector: 'app-login',
@@ -52,6 +53,7 @@ export class LoginPage {
   constructor(
     private router: Router,
     private authService: AuthService,
+    private guestMigrationService: GuestMigrationService,
     private toastController: ToastController
   ) {
     addIcons({
@@ -90,7 +92,12 @@ export class LoginPage {
     this.authService
       .login({ email: email!.trim(), password: password! })
       .subscribe({
-        next: () => {
+        next: async () => {
+          try {
+            await this.guestMigrationService.migrateGuestData(true);
+          } catch {
+            // Migration is best-effort and non-blocking
+          }
           this.isLoading = false;
           this.router.navigate(['/tabs/home']);
         },

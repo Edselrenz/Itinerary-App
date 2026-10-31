@@ -43,6 +43,13 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'itinerary/:id',
+    loadComponent: () =>
+      import('./features/itinerary/itinerary-detail/itinerary-detail.page').then(
+        (m) => m.ItineraryDetailPage
+      ),
+  },
+  {
     path: 'tabs',
     loadChildren: () => import('./tabs/tabs.routes').then((m) => m.routes),
   },

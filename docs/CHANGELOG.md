@@ -6,6 +6,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [0.8.6-alpha] - 2026-10-31
+### Added
+- **Phase 8: Unified Itinerary Overview, Day Timeline & Guest Migration**:
+  - **Unified Itinerary Overview & Day View (`/itinerary/:id`)**:
+    - Created `ItineraryDetailPage` matching Figma Screen 2 (`Suggested Itinirerary (1)`):
+      - Hero card with destination photo thumbnail, title, travel duration, daily budget, and preference pills.
+      - Segmented day switcher capsule bar with active `#0084ff` highlight.
+      - Day timeline view with numbered stop cards, photos, scheduled timings (`12:00 PM - 2:00 PM (2 hrs)`), cost estimates, and notes.
+      - Stop details modal sheet with opening hours, cost, description, and external Google Maps navigation.
+      - "Customize Itinerary in Builder" action and delete confirmation alert.
+  - **Nearby Places Sub-View (Figma Screens 3, 4, 5)**:
+    - Integrated "Nearby Places" directly into `ItineraryDetailPage` and `SuggestedWizardPage`.
+    - Tab filter capsule for Restaurants, Hospital & Pharmacies, and Stores.
+    - Centered card format with opening hours matching Figma mockups.
+  - **Guest-to-Account Itinerary Migration (`GuestMigrationService`)**:
+    - Built `GuestMigrationService` to seamlessly sync local guest trips from `GuestStorageService` to the backend upon login or registration.
+    - Wired into `LoginPage` and `SignupPage`.
+    - Added reactive guest trip indicator and "Sync to Account Now" trigger to `ProfilePage`.
+  - **Navigation Synchronization**:
+    - Wired Home tab and History tab to navigate directly to `/itinerary/:id` when tapping saved itineraries.
+  - **Automated Verification**:
+    - 100% test pass rate across 15 test files (89/89 Vitest unit tests passing; 4/4 Pytest backend tests passing).
+    - 0 compilation errors and 0 Angular style budget warnings.
+
+---
+
 ## [0.8.5-alpha] - 2026-10-31
 ### Changed
 - **Travel Dates Pop-Up Window Design Format Alignment (Anti-Generic Frontend Design)**:

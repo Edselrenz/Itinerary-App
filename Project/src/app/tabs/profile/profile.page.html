@@ -21,6 +21,35 @@
         </div>
       </div>
 
+      <!-- Unsynced Guest Trips Migration Card (if any guest trips exist on device) -->
+      @if (guestItineraryCount > 0) {
+        <div class="sync-prompt-card">
+          <div class="sync-prompt-header">
+            <ion-icon name="cloud-upload-outline" class="sync-prompt-icon"></ion-icon>
+            <div class="sync-prompt-copy">
+              <h4 class="sync-prompt-title">Unsaved Local Trips Detected</h4>
+              <p class="sync-prompt-desc">
+                Found {{ guestItineraryCount }} {{ guestItineraryCount === 1 ? 'trip' : 'trips' }} created on this device before signing in.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            class="sync-action-btn"
+            [disabled]="isMigrating"
+            (click)="syncGuestTrips()"
+          >
+            @if (isMigrating) {
+              <ion-spinner name="crescent"></ion-spinner>
+              <span>Syncing Trips...</span>
+            } @else {
+              <ion-icon name="sync-outline"></ion-icon>
+              <span>Sync to Account Now</span>
+            }
+          </button>
+        </div>
+      }
+
       <div class="action-card">
         <div class="info-row">
           <ion-icon name="calendar-outline"></ion-icon>
@@ -39,7 +68,12 @@
         </div>
         <h2 class="guest-title">Guest Traveler</h2>
         <p class="guest-desc">
-          You are currently exploring in <strong>Guest Mode</strong>. Your created itineraries and preferences are saved only on this device.
+          You are currently exploring in <strong>Guest Mode</strong>.
+          @if (guestItineraryCount > 0) {
+            You have <strong>{{ guestItineraryCount }} {{ guestItineraryCount === 1 ? 'itinerary' : 'itineraries' }}</strong> saved only on this device.
+          } @else {
+            Your created itineraries and preferences are saved only on this device.
+          }
         </p>
 
         <div class="sync-banner">
@@ -58,4 +92,3 @@
     }
   </div>
 </ion-content>
-

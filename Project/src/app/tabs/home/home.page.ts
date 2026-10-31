@@ -442,7 +442,9 @@ export class HomePage implements OnInit, OnDestroy {
   }
 
   public openItinerary(itinerary: Itinerary): void {
-    this.router.navigate(['/custom-builder', itinerary.id]);
+    if (itinerary.id) {
+      this.router.navigate(['/itinerary', itinerary.id]);
+    }
   }
 
   public get displayedSavedItineraries(): Itinerary[] {

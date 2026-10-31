@@ -1,0 +1,295 @@
+<ion-header class="ion-no-border app-header">
+  <ion-toolbar class="detail-toolbar">
+    <div class="figma-header-bar">
+      <button type="button" class="figma-back-btn" (click)="onBack()" aria-label="Go back">
+        <ion-icon name="arrow-back"></ion-icon>
+      </button>
+      <h1 class="figma-header-title">
+        {{ viewMode === 'nearby' ? 'Nearby Places' : (itinerary?.type === 'suggested' ? 'Suggested Itinerary' : (itinerary?.title || 'Trip Details')) }}
+      </h1>
+      @if (itinerary && viewMode === 'itinerary') {
+        <div class="header-action-group">
+          <button type="button" class="figma-header-edit-btn" (click)="onEdit()" aria-label="Edit itinerary">
+            <ion-icon name="create-outline"></ion-icon>
+          </button>
+          <button type="button" class="figma-header-delete-btn" (click)="onDelete()" aria-label="Delete itinerary">
+            <ion-icon name="trash-outline"></ion-icon>
+          </button>
+        </div>
+      }
+    </div>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="detail-content" [fullscreen]="true">
+  <div class="detail-container">
+
+    @if (isLoading) {
+      <div class="loading-state">
+        <ion-spinner name="crescent" color="primary"></ion-spinner>
+        <p>Loading itinerary...</p>
+      </div>
+    } @else if (!itinerary) {
+      <div class="empty-state">
+        <ion-icon name="alert-circle-outline"></ion-icon>
+        <h2>Itinerary Not Found</h2>
+        <p>This itinerary may have been removed or is no longer available.</p>
+        <button type="button" class="find-itinerary-cta-btn" (click)="onBack()">
+          Back to Saved Trips
+        </button>
+      </div>
+    } @else {
+
+      <!-- ========================================================
+           VIEW 1: ITINERARY OVERVIEW & DAY TIMELINE (Figma Screen 2)
+           ======================================================== -->
+      @if (viewMode === 'itinerary') {
+        <!-- Destination Top Card -->
+        <div class="figma-trip-card">
+          <div class="trip-card-thumb-wrap">
+            <img
+              src="assets/images/nueva_ecija_arch.png"
+              [alt]="itinerary.destination"
+              class="trip-card-thumb-img"
+            />
+          </div>
+          <div class="trip-card-content">
+            <h2 class="trip-destination-title">{{ itinerary.destination }}, Nueva Ecija</h2>
+            <div class="trip-meta-subrow">
+              <span class="trip-days-count">{{ computedTripDays }} {{ computedTripDays === 1 ? 'day' : 'days' }}</span>
+              <span class="trip-budget-range">{{ formatDailyBudget(itinerary) }}</span>
+            </div>
+            @if (itinerary.preferences && itinerary.preferences.length > 0) {
+              <div class="trip-tags-row">
+                @for (tag of itinerary.preferences; track tag) {
+                  <span class="trip-tag-pill">{{ tag }}</span>
+                }
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Segmented Day Switcher Capsule Bar -->
+        <div class="figma-day-capsule-bar">
+          @for (day of itinerary.days; track day.id; let idx = $index) {
+            <button
+              type="button"
+              class="capsule-segment-btn"
+              [class.active]="activeDayIndex === idx"
+              (click)="selectDay(idx)"
+            >
+              <span class="cap-day-num">Day {{ day.day_number }}</span>
+              <span class="cap-muni-name">{{ getDayLocation(day) }}</span>
+            </button>
+          }
+        </div>
+
+        <!-- Active Day Section -->
+        @if (currentDay) {
+          <div class="figma-active-day-section">
+            <div class="day-title-block">
+              <h3 class="day-bold-heading">Day {{ currentDay.day_number }} - {{ getDayLocation(currentDay) }}</h3>
+              <p class="day-italic-sub">{{ getDaySubtitle(currentDay) }}</p>
+            </div>
+
+            @if (!currentDay.items || currentDay.items.length === 0) {
+              <div class="day-empty-stops">
+                <ion-icon name="calendar-outline"></ion-icon>
+                <h4>No stops scheduled for Day {{ currentDay.day_number }}</h4>
+                <p>Add places or customize this day in the Custom Builder.</p>
+                <button type="button" class="customize-link-btn" (click)="onEdit()">
+                  Customize Day {{ currentDay.day_number }}
+                </button>
+              </div>
+            } @else {
+              <!-- Stop Cards Vertical List -->
+              <div class="stop-cards-vertical-list">
+                @for (stop of currentDay.items; track stop.id; let sIdx = $index) {
+                  <div class="figma-stop-card" (click)="openStopDetail(stop)">
+                    <div class="stop-thumb-container">
+                      <img
+                        [src]="getStopImage(stop)"
+                        [alt]="getStopTitle(stop)"
+                        class="stop-thumb-photo"
+                        loading="lazy"
+                      />
+                    </div>
+                    <div class="stop-text-stack">
+                      <h4 class="stop-title-text">{{ sIdx + 1 }}. {{ getStopTitle(stop) }}</h4>
+                      <div class="stop-timing-block">
+                        <span class="timing-hours">{{ getTimingTime(stop) }}</span>
+                        <span class="timing-duration">({{ getTimingDuration(stop) }})</span>
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+
+              <!-- Nearby Places Banner Trigger -->
+              <div class="nearby-banner-trigger" (click)="openNearbyPlaces()">
+                <div class="banner-left">
+                  <ion-icon name="storefront-outline" class="banner-icon"></ion-icon>
+                  <div class="banner-copy">
+                    <span class="banner-title">Nearby Places in {{ getDayLocation(currentDay) }}</span>
+                    <span class="banner-sub">Find nearby restaurants, pharmacies, and stores</span>
+                  </div>
+                </div>
+                <ion-icon name="arrow-forward-outline" class="banner-arrow"></ion-icon>
+              </div>
+            }
+
+            <!-- Verified Budget Math Banner -->
+            @if (budgetSummary) {
+              <div class="verified-budget-card" style="margin-top: 14px;">
+                <ion-icon name="cash-outline" class="budget-card-icon"></ion-icon>
+                <div class="budget-card-text">
+                  <div class="budget-card-header">
+                    <span class="budget-card-label">Estimated Trip Cost</span>
+                    <span class="budget-card-amount">{{ budgetSummary.displayText }}</span>
+                  </div>
+                  <p class="budget-card-note">Calculated from verified venue admission, meals & activities.</p>
+                </div>
+              </div>
+            }
+
+            <!-- Bottom Sticky Action -->
+            <div class="itinerary-bottom-actions">
+              <button type="button" class="customize-builder-cta-btn" (click)="onEdit()">
+                <ion-icon name="create-outline"></ion-icon>
+                <span>Customize Itinerary in Builder</span>
+              </button>
+            </div>
+          </div>
+        }
+      }
+
+      <!-- ========================================================
+           VIEW 2: NEARBY PLACES (Figma Screens 3, 4, 5)
+           ======================================================== -->
+      @if (viewMode === 'nearby') {
+        <div class="nearby-view-container">
+          <p class="nearby-intro-description">
+            Find nearby restaurants, pharmacies, and stores to make your trip more convenient and comfortable.
+          </p>
+
+          <div class="nearby-category-capsule-bar">
+            <button
+              type="button"
+              class="nearby-category-tab"
+              [class.active]="activeNearbyTab === 'restaurants'"
+              (click)="setNearbyTab('restaurants')"
+            >
+              Restaurants
+            </button>
+            <button
+              type="button"
+              class="nearby-category-tab multi-line"
+              [class.active]="activeNearbyTab === 'hospitals'"
+              (click)="setNearbyTab('hospitals')"
+            >
+              <span>Hospital &</span>
+              <span>Pharmacies</span>
+            </button>
+            <button
+              type="button"
+              class="nearby-category-tab"
+              [class.active]="activeNearbyTab === 'stores'"
+              (click)="setNearbyTab('stores')"
+            >
+              Stores
+            </button>
+          </div>
+
+          <div class="nearby-cards-stack">
+            @for (place of filteredNearbyPlaces; track place.id; let pIdx = $index) {
+              <div class="figma-nearby-card">
+                <h4 class="nearby-card-title">{{ pIdx + 1 }}. {{ place.name }}</h4>
+                <p class="nearby-card-hours">Opening Hours: {{ place.openingHours }}</p>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    }
+  </div>
+
+  <!-- ========================================================
+       STOP DETAILS MODAL SHEET
+       ======================================================== -->
+  <ion-modal
+    [isOpen]="isStopModalOpen"
+    (didDismiss)="closeStopDetail()"
+    class="destination-modal"
+    [initialBreakpoint]="0.85"
+    [breakpoints]="[0, 0.85, 1.0]"
+  >
+    <ng-template>
+      @if (selectedStop) {
+        <div class="modal-detail-content">
+          <div class="modal-handle-bar"></div>
+
+          <div class="modal-image-wrap">
+            <img
+              [src]="getStopImage(selectedStop)"
+              [alt]="getStopTitle(selectedStop)"
+              class="modal-hero-img"
+            />
+            <button
+              type="button"
+              class="modal-close-btn"
+              (click)="closeStopDetail()"
+              aria-label="Close modal"
+            >
+              <ion-icon name="close-outline"></ion-icon>
+            </button>
+            <span class="modal-category-badge">{{ getStopCategory(selectedStop) }}</span>
+          </div>
+
+          <div class="modal-body-content">
+            <div class="modal-muni-tag">
+              <ion-icon name="location-outline"></ion-icon>
+              <span>{{ selectedStop.place?.municipality_name || itinerary?.destination || 'Nueva Ecija' }}, Nueva Ecija</span>
+            </div>
+
+            <h2 class="modal-title">{{ getStopTitle(selectedStop) }}</h2>
+
+            <div class="modal-meta-grid">
+              @if (selectedStop.place?.opening_hours) {
+                <div class="modal-meta-item">
+                  <ion-icon name="time-outline"></ion-icon>
+                  <span>{{ selectedStop.place?.opening_hours }}</span>
+                </div>
+              }
+              <div class="modal-meta-item">
+                <ion-icon name="cash-outline"></ion-icon>
+                <span>{{ getStopCost(selectedStop) }}</span>
+              </div>
+            </div>
+
+            @if (selectedStop.place?.description) {
+              <p class="modal-full-desc">{{ selectedStop.place?.description }}</p>
+            }
+
+            @if (selectedStop.notes) {
+              <div class="stop-notes-box">
+                <span class="notes-label">Traveler Note:</span>
+                <p>{{ selectedStop.notes }}</p>
+              </div>
+            }
+
+            <div class="modal-actions-grid">
+              <button
+                type="button"
+                class="external-map-btn"
+                (click)="openInGoogleMaps(selectedStop)"
+              >
+                <ion-icon name="open-outline"></ion-icon>
+                <span>Open in Google Maps</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+    </ng-template>
+  </ion-modal>
+</ion-content>

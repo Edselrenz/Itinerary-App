@@ -87,9 +87,9 @@ describe('HistoryPage', () => {
     expect(stops).toBe(1);
   });
 
-  it('navigates to custom builder when openItinerary is called', () => {
+  it('navigates to itinerary detail when openItinerary is called', () => {
     component.openItinerary(mockItinerary1);
-    expect(router.navigate).toHaveBeenCalledWith(['/custom-builder', 'itin-1']);
+    expect(router.navigate).toHaveBeenCalledWith(['/itinerary', 'itin-1']);
   });
 
   it('prompts delete alert and calls deleteItinerary', async () => {

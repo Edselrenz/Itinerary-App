@@ -28,6 +28,7 @@ import {
   mailOutline,
 } from 'ionicons/icons';
 import { AuthService } from '../../../core/services/auth.service';
+import { GuestMigrationService } from '../../../core/services/guest-migration.service';
 
 export const passwordMatchValidator: ValidatorFn = (
   control: AbstractControl
@@ -77,6 +78,7 @@ export class SignupPage {
   constructor(
     private router: Router,
     private authService: AuthService,
+    private guestMigrationService: GuestMigrationService,
     private toastController: ToastController
   ) {
     addIcons({
@@ -135,7 +137,12 @@ export class SignupPage {
         password: val.password!,
       })
       .subscribe({
-        next: () => {
+        next: async () => {
+          try {
+            await this.guestMigrationService.migrateGuestData(true);
+          } catch {
+            // Non-blocking
+          }
           this.isLoading = false;
           this.router.navigate(['/tabs/home']);
         },

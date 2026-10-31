@@ -145,15 +145,15 @@ This checklist tracks completed, active, and pending tasks across all developmen
 
 ---
 
-## Phase 8: Overview, Day View & Reactive Home Persistence (NEXT FOCUS)
-- [ ] Unified Itinerary Overview screen with day selector chips.
-- [ ] Day timeline view with scheduled stop cards and category badges.
-- [ ] Reactive synchronization: Home tab updates immediately when an itinerary is modified or deleted.
-- [ ] Guest-to-account migration helper.
+## Phase 8: Overview, Day View & Reactive Home Persistence (COMPLETED)
+- [x] Unified Itinerary Overview screen with day selector chips (`ItineraryDetailPage` matching Figma Screen 2).
+- [x] Day timeline view with scheduled stop cards, category badges, and Nearby Places modal / sub-view (Figma Screens 3-5).
+- [x] Reactive synchronization: Home tab & History tab update immediately when an itinerary is created, modified, or deleted.
+- [x] Guest-to-account migration helper (`GuestMigrationService` wired to login, signup, and profile tab).
 
 ---
 
-## Phase 9: Pilot Security & Deployment Readiness
+## Phase 9: Pilot Security & Deployment Readiness (NEXT FOCUS)
 - [ ] Rate limiting on auth endpoints with SlowAPI (e.g. 5/min per IP).
 - [ ] Offline host laptop warning banner in client.
 - [ ] PostgreSQL backup and restore drill (`pg_dump` / `pg_restore`).
