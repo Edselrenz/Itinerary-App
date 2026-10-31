@@ -884,3 +884,30 @@ This log records chronological development sessions, detailing objectives, execu
   - `npm --prefix Project run build`: **0 compilation errors, 0 style budget warnings, production bundle successfully generated [100%]**.
   - `npm --prefix Project run test:unit`: **12/12 test files, 66/66 unit tests passed in 17.91s [100%]**.
   - `python -m pytest backend/tests/ -v`: **4/4 backend pytest suites passed in 6.38s [100%]**.
+
+---
+
+## Session 31: Home Tab Saved Itineraries Limit (Max 2) and Dedicated History/Saved Itineraries Tab
+- **Date & Time**: 2026-10-31 14:50:00 (Local)
+- **Objective**: Fulfill user request to limit saved itineraries displayed on the Home tab to 2 with a "See all" button that routes to a dedicated tab (`/tabs/history`) showing all saved itineraries.
+- **Key Enhancements**:
+  - **Home Tab (`Project/src/app/tabs/home/`)**:
+    - Added `displayedSavedItineraries` getter returning `this.savedItineraries.slice(0, 2)`.
+    - Updated template to display "See all" button with routerLink to `/tabs/history` and loop through `displayedSavedItineraries`.
+    - Added `onSeeAllItineraries()` method routing to `/tabs/history`.
+    - Updated unit tests in `home.page.spec.ts` confirming max 2 itineraries displayed and "See all" navigation.
+  - **History Tab (`Project/src/app/tabs/history/`)**:
+    - Replaced placeholder screen with a full-featured Saved Itineraries view reactively connected to `ItineraryService.itineraries$`.
+    - Saved trips summary banner showing count of trips.
+    - Card list displaying plan type badges (`Suggested Plan` vs `Custom Plan`), daily budget tag (`₱X/day`), title, destination with location icon, date range, days count, and total stop count (`X Days · Y Stops`).
+    - Delete button with confirmation alert and feedback toast.
+    - Empty state with quick links to both `/suggested-wizard` and `/custom-builder`.
+    - Header action with `+ New Trip` icon button.
+    - Added comprehensive unit tests in `history.page.spec.ts`.
+  - **Style Optimization**:
+    - Compacted `history.page.scss` to 9.50 kB, well below the 10.00 kB Angular style budget.
+- **Verification & Test Results**:
+  - `npm --prefix Project run build`: **0 compilation errors, 0 style budget warnings, production bundle successfully generated [100%]**.
+  - `npm --prefix Project run test:unit`: **13/13 test files, 70/70 unit tests passed [100%]**.
+  - `python -m pytest backend/tests/ -v`: **4/4 backend pytest suites passed [100%]**.
+

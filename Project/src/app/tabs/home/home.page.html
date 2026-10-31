@@ -157,13 +157,13 @@
         <div class="section-top-row">
           <h2 class="section-heading">Saved Itineraries</h2>
           @if (savedItineraries.length > 0) {
-            <button type="button" class="see-all-link" routerLink="/tabs/history">View all</button>
+            <button type="button" class="see-all-link" (click)="onSeeAllItineraries()" routerLink="/tabs/history">See all</button>
           }
         </div>
 
         @if (savedItineraries.length > 0) {
           <div class="itineraries-list">
-            @for (itin of savedItineraries; track itin.id) {
+            @for (itin of displayedSavedItineraries; track itin.id) {
               <div class="itinerary-card" (click)="openItinerary(itin)" role="button" tabindex="0">
                 <div class="itin-header">
                   <span class="itin-badge" [class.suggested]="itin.type === 'suggested'">

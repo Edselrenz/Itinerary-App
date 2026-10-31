@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [0.8.3-alpha] - 2026-10-31
+### Added
+- **Home Tab Saved Itineraries Limit & Dedicated History/Saved Itineraries Tab**:
+  - **Home Tab Truncation**: Capped displayed saved itineraries to exactly 2 (`displayedSavedItineraries = savedItineraries.slice(0, 2)`) to keep the home feed clean and focused.
+  - **"See all" Redirection**: Updated header button to "See all" and linked directly to the dedicated Saved Itineraries tab (`/tabs/history`).
+  - **History Tab Implementation**: Replaced placeholder with a production-grade Saved Itineraries view reactively connected to `ItineraryService.itineraries$`.
+  - **Rich Trip Cards**: Each saved itinerary displays plan type badges (`Suggested Plan` vs `Custom Plan`), daily budget pill (`₱X/day`), title, destination with location icon, travel date span, days and stops counter (`X Days · Y Stops`), and delete action with confirmation dialog.
+  - **Empty State**: Added an empty state with dual action buttons linking travelers directly to `/suggested-wizard` and `/custom-builder`.
+  - **Style Budget Compliant**: Kept `history.page.scss` at 9.50 kB, preserving zero Angular style budget warnings.
+  - **Test Suite**: Added unit tests in `history.page.spec.ts` and updated `home.page.spec.ts`.
+
+---
+
 ## [0.8.2-alpha] - 2026-10-31
 ### Added
 - **Custom Itinerary Questionnaire Flow (Figma Alignment)**:

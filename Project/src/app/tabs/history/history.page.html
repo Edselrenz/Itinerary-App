@@ -1,19 +1,103 @@
-<ion-header class="ion-no-border">
-  <ion-toolbar>
-    <ion-title>History</ion-title>
+<ion-header class="ion-no-border app-header">
+  <ion-toolbar class="history-toolbar">
+    <ion-title class="history-title">Saved Itineraries</ion-title>
+    <ion-button
+      slot="end"
+      fill="clear"
+      class="new-trip-btn"
+      routerLink="/custom-builder"
+      aria-label="New Itinerary"
+    >
+      <ion-icon name="add-outline" slot="icon-only"></ion-icon>
+    </ion-button>
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="placeholder-content" [fullscreen]="true">
-  <div class="placeholder-card">
-    <div class="icon-circle">
-      <ion-icon name="time-outline"></ion-icon>
-    </div>
-    <h2>Travel History</h2>
-    <p class="description">Planned for a later release — MVP focuses on Home discovery, interactive Map, and Itinerary Planning.</p>
-    <div class="status-chip">
-      <span>Coming in v1.1</span>
-    </div>
+<ion-content class="history-content" [fullscreen]="true">
+  <div class="history-container">
+    @if (savedItineraries.length > 0) {
+      <div class="history-stats-banner">
+        <h2 class="stats-heading">Your Saved Trips</h2>
+        <p class="stats-subtitle">
+          {{ savedItineraries.length }} {{ savedItineraries.length === 1 ? 'trip' : 'trips' }} planned in Nueva Ecija
+        </p>
+      </div>
+
+      <div class="itineraries-grid">
+        @for (itin of savedItineraries; track itin.id) {
+          <div
+            class="history-itinerary-card"
+            (click)="openItinerary(itin)"
+            role="button"
+            tabindex="0"
+          >
+            <div class="itin-header-row">
+              <span class="itin-badge" [class.suggested]="itin.type === 'suggested'">
+                {{ itin.type === 'suggested' ? 'Suggested Plan' : 'Custom Plan' }}
+              </span>
+              <div class="itin-header-actions">
+                <span class="itin-budget">₱{{ itin.daily_budget }}/day</span>
+                <button
+                  type="button"
+                  class="trash-action-btn"
+                  (click)="deleteItinerary($event, itin)"
+                  aria-label="Delete itinerary"
+                >
+                  <ion-icon name="trash-outline"></ion-icon>
+                </button>
+              </div>
+            </div>
+
+            <h3 class="itin-title">{{ itin.title }}</h3>
+
+            <p class="itin-destination">
+              <ion-icon name="location-outline"></ion-icon>
+              <span>{{ itin.destination }}</span>
+            </p>
+
+            <div class="itin-footer-row">
+              <span class="itin-dates">
+                <ion-icon name="calendar-outline"></ion-icon>
+                <span>{{ itin.start_date }} &rarr; {{ itin.end_date }}</span>
+              </span>
+              <span class="itin-stops-pill">
+                {{ itin.days.length || 1 }} Days · {{ getTotalStops(itin) }} Stops
+              </span>
+            </div>
+          </div>
+        }
+      </div>
+    } @else {
+      <!-- Empty State -->
+      <div class="empty-history-wrapper">
+        <div class="empty-icon-circle">
+          <ion-icon name="time-outline"></ion-icon>
+        </div>
+        <h2 class="empty-title">No Saved Itineraries Yet</h2>
+        <p class="empty-subtitle">
+          Your saved trips will appear here. Choose how you would like to plan your Nueva Ecija travel experience:
+        </p>
+
+        <div class="empty-actions-col">
+          <button
+            type="button"
+            class="empty-cta-btn suggested-btn"
+            routerLink="/suggested-wizard"
+          >
+            <ion-icon name="sparkles"></ion-icon>
+            <span>Suggested Itinerary</span>
+          </button>
+
+          <button
+            type="button"
+            class="empty-cta-btn custom-btn"
+            routerLink="/custom-builder"
+          >
+            <ion-icon name="add-outline"></ion-icon>
+            <span>Custom Itinerary</span>
+          </button>
+        </div>
+      </div>
+    }
   </div>
 </ion-content>
-

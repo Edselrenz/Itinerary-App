@@ -139,6 +139,11 @@ This document serves as the primary handoff reference for developers and coding 
     - Offline fallback generator in `ItineraryService` (`generateOfflineSuggestedItinerary`).
     - Home tab Suggested Itinerary action card wired to `/suggested-wizard`.
   - 10 unit tests in `suggested-wizard.page.spec.ts` (100% passing).
+- [x] **Saved Itineraries & History Tab (`Milestone 8`)**:
+  - Home tab list capped at max 2 saved itineraries with "See all" redirection button.
+  - History Tab (`/tabs/history`) fully converted into a dedicated Saved Itineraries screen reactively synced with `ItineraryService.itineraries$`.
+  - Cards feature plan type badges (`Suggested Plan` / `Custom Plan`), budget tags, destination with location icon, date ranges, days and stop counters, and delete confirmation dialogs.
+  - Direct routing to `/custom-builder/:id` upon card selection.
 - [x] **Live GitHub Pages Deployment**: Fully deployed and verified live at [https://edselrenz.github.io/Itinerary-App/](https://edselrenz.github.io/Itinerary-App/) (HTTP 200 OK with `--base-href /Itinerary-App/` deep linking enabled).
 
 ---
@@ -148,9 +153,6 @@ This document serves as the primary handoff reference for developers and coding 
 - **Milestone 8: Itinerary Management & Day Timeline View**:
   - Unified Itinerary Overview screen with day selector chips and timeline layout (`/itinerary/:id`).
   - Stop details modal with opening hours, directions link, notes, and pricing tag.
-  - History / Saved Itineraries tab (`/tabs/history` or Tab 3) showing active, upcoming, and past trips.
-  - Edit action opening saved custom itineraries in `/custom-builder/:id`.
-  - Delete itinerary action with confirmation modal and optimistic local/server removal.
   - Cross-tab reactive synchronization (`ItineraryService.itineraries$`).
 
 ---
