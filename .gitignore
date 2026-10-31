@@ -22,6 +22,8 @@ backend/.env
 .cloudflared/
 *.tunnel.json
 cert.pem
+tools/
+*.exe
 
 # Cloud, Firebase & OAuth Service Accounts
 client_secret*.json
