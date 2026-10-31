@@ -2,10 +2,12 @@ import {
   AfterViewInit,
   ChangeDetectorRef,
   Component,
+  ElementRef,
   Inject,
   OnDestroy,
   OnInit,
   PLATFORM_ID,
+  ViewChild,
 } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import {
@@ -101,6 +103,8 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
   public isLoading = false;
   public categoryFilters: CategoryFilterItem[] = CATEGORY_FILTERS;
 
+  @ViewChild('mapElement', { static: false }) private mapElementRef?: ElementRef<HTMLDivElement>;
+
   private isBrowser = false;
 
   constructor(
@@ -109,6 +113,9 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
     @Inject(PLATFORM_ID) private platformId: object
   ) {
     this.isBrowser = isPlatformBrowser(this.platformId);
+    if (this.isBrowser && typeof window !== 'undefined') {
+      (window as unknown as { L: unknown }).L = L;
+    }
     addIcons({
       bandageOutline,
       basketOutline,
@@ -143,7 +150,9 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
 
   public ngAfterViewInit(): void {
     if (this.isBrowser) {
-      this.initMap();
+      setTimeout(() => {
+        this.initMap();
+      }, 100);
     }
   }
 
@@ -151,10 +160,14 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
    * Ionic page lifecycle hook: recalculates dimensions when navigating back to tab.
    */
   public ionViewDidEnter(): void {
-    if (this.map) {
-      setTimeout(() => {
-        this.map?.invalidateSize();
-      }, 150);
+    if (this.isBrowser) {
+      if (!this.map) {
+        this.initMap();
+      } else {
+        setTimeout(() => {
+          this.map?.invalidateSize();
+        }, 150);
+      }
     }
   }
 
@@ -164,7 +177,9 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
       this.markerCluster = null;
     }
     if (this.map) {
-      this.map.remove();
+      if (typeof this.map.remove === 'function') {
+        this.map.remove();
+      }
       this.map = null;
     }
   }
@@ -173,7 +188,8 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
    * Initializes the Leaflet map, OpenStreetMap tiles, and marker cluster group.
    */
   public initMap(): void {
-    const mapElement = document.getElementById('leaflet-map');
+    const mapElement =
+      this.mapElementRef?.nativeElement || document.getElementById('leaflet-map');
     if (!mapElement || this.map) {
       return;
     }

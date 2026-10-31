@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [0.5.1-alpha] - 2026-10-31
+### Fixed
+- **Map Tab Fullscreen Geometry & Tab Occlusion (`Project/src/app/tabs/map`)**:
+  - Added `:host { display: block; position: absolute; inset: 0; width: 100%; height: 100%; background-color: #f8fafc; z-index: 10; }` preventing the underlying Home tab from bleeding through.
+  - Set `.map-page-content`, `.map-wrapper`, and `.map-canvas` to `position: absolute; inset: 0; width: 100%; height: 100%;` resolving Leaflet 0-height container collapse.
+  - Added `@ViewChild('mapElement')` and attached `window.L = L` in browser mode for robust element discovery.
+  - Fixed tab button default color in `tabs.page.scss` to `#94a3b8` (muted slate) so inactive icons do not appear active.
+
+---
+
 ## [0.5.0-alpha] - 2026-10-31
 ### Added
 - **Interactive Leaflet Map & 16 Category Filters (`Milestone 5`)**:

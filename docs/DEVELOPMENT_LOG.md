@@ -582,5 +582,38 @@ This log records chronological development sessions, detailing objectives, execu
   - Commit and push Milestone 5 to `origin/main`.
   - Proceed to Milestone 6: Custom Itinerary Builder with BOLA ownership checks and multi-day stop reordering.
 
+---
+
+## Session 23: Fix Map Tab Viewport Layout & Home Screen Occlusion
+- **Date & Time**: 2026-10-31 10:55:00 (Local)
+- **Objective**: Fix rendering regression where navigating to the Map tab (`/tabs/map`) rendered the category filter buttons directly floating on top of the Home tab instead of displaying the full-screen interactive Leaflet map.
+- **Root Cause Analysis**:
+  - The `<app-map>` component lacked host styles (`:host`). In Angular, custom component tags default to `display: inline` with `height: 0` when child elements use absolute positioning.
+  - The map container elements (`.map-wrapper` and `.map-canvas`) used relative percentage heights (`height: 100%`) without an explicitly sized block ancestor, resolving to `clientHeight = 0`.
+  - With height 0 and a transparent background, the underlying `<app-home>` view remained fully visible through the empty layer. Leaflet could not calculate viewport tile boundaries in a 0x0 container, and only the absolutely positioned top filter bar (`top: 1rem`) rendered.
+  - In `tabs.page.scss`, `--color: #0084ff;` was applied to all tab buttons, causing unselected tabs to appear active/blue.
+- **Key Changes Implemented**:
+  - **Host & Container Geometry (`Project/src/app/tabs/map/map.page.scss`)**:
+    - Added `:host { display: block; position: absolute; inset: 0; width: 100%; height: 100%; background-color: #f8fafc; z-index: 10; }` to completely occlude previous tabs and establish a reliable coordinate system.
+    - Set `.map-page-content`, `.map-wrapper`, and `.map-canvas` to `position: absolute; inset: 0; width: 100%; height: 100%;` guaranteeing full viewport dimensions for Leaflet.
+  - **Component Initialization (`Project/src/app/tabs/map/map.page.ts` & `map.page.html`)**:
+    - Added `#mapElement` template reference and `@ViewChild('mapElement')` for robust element binding.
+    - Attached global `(window as any).L = L` in browser mode for runtime plugin safety.
+    - Updated `ngAfterViewInit()` with a 100ms layout delay and hooked `ionViewDidEnter()` to re-initialize or trigger `map.invalidateSize()`.
+  - **Tab Styling (`Project/src/app/tabs/tabs.page.scss`)**:
+    - Updated `--color: #94a3b8;` so unselected tabs are properly muted and only the active tab displays brand blue (`#0084ff`).
+- **Files Modified**:
+  - `Project/src/app/tabs/map/map.page.scss`
+  - `Project/src/app/tabs/map/map.page.html`
+  - `Project/src/app/tabs/map/map.page.ts`
+  - `Project/src/app/tabs/tabs.page.scss`
+- **Verification**:
+  - `npm run test:unit`: 9 test files, 32/32 tests passed in 23.31s [100%].
+  - `npm run build`: 0 errors, 0 warnings, bundle compiled in 9.17s.
+- **Next Steps**:
+  - Commit and push to `origin/main`.
+  - Proceed to Milestone 6: Custom Itinerary Builder.
+
+
 
 

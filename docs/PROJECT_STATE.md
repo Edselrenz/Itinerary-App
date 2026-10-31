@@ -114,6 +114,7 @@ This document serves as the primary handoff reference for developers and coding 
   - Leaflet MarkerCluster integration (`L.markerClusterGroup`) with custom CSS vector pins (`.custom-map-pin`).
   - Interactive POI Bottom Sheet displaying venue photography with local fallbacks, category badges, operating hours, honest pricing, and direct Google Maps directions handoff.
   - Ionic tab lifecycle resize handling (`map.invalidateSize()` on `ionViewDidEnter()`).
+  - Fixed map host and canvas viewport height collapsing and tab occlusion (`position: absolute; inset: 0`).
   - Floating Recenter button and live destination counter pill.
   - 9 passing unit tests in `map.page.spec.ts`.
 - [x] **Production Build**: Verified with `npm run build` (0 errors, 0 warnings, allowedCommonJsDependencies configured).
