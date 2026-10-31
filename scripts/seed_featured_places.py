@@ -18,7 +18,7 @@ if str(BACKEND_DIR) not in sys.path:
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from app.core.database import SessionLocal
+from app.core.database import Base, SessionLocal, engine
 from app.models.entities import Municipality, Place
 
 # Key Nueva Ecija Cities and Municipalities with center coordinates
@@ -454,6 +454,8 @@ def seed_municipalities_and_featured(db: Session) -> dict[str, int]:
 
 
 def main() -> None:
+    # Ensure all tables exist before seeding (supports SQLite and PostgreSQL)
+    Base.metadata.create_all(bind=engine)
     with SessionLocal() as db:
         summary = seed_municipalities_and_featured(db)
     print(f"[SEED COMPLETE] {summary}")
