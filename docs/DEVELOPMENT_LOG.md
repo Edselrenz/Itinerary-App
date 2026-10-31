@@ -614,6 +614,33 @@ This log records chronological development sessions, detailing objectives, execu
   - Commit and push to `origin/main`.
   - Proceed to Milestone 6: Custom Itinerary Builder.
 
+---
+
+## Session 24: Fix GitHub Pages Deep-Linking 404 & Relative Base-HREF Resolution
+- **Date & Time**: 2026-10-31 11:08:00 (Local)
+- **Objective**: Resolve blank white screen bug on deployed GitHub Pages site when navigating directly to deep URLs such as `https://edselrenz.github.io/Itinerary-App/tabs/home` or `https://edselrenz.github.io/Itinerary-App/tabs/map`.
+- **Root Cause Analysis**:
+  - `.github/workflows/deploy.yml` built the Angular production bundle with `--base-href ./`.
+  - While root-level visits (`https://edselrenz.github.io/Itinerary-App/`) resolved relative `./` to the repository root, deep links (`/tabs/home`, `/tabs/map`, etc.) caused the browser to resolve relative scripts against `/Itinerary-App/tabs/`.
+  - Consequently, the browser requested `https://edselrenz.github.io/Itinerary-App/tabs/main-*.js` and `https://edselrenz.github.io/Itinerary-App/tabs/chunk-*.js`.
+  - Because these files do not exist inside `/tabs/`, GitHub Pages responded with `404.html` (`Content-Type: text/html`), causing the browser to reject the scripts (`Expected a JavaScript module script but the server responded with a MIME type of "text/html"`), completely halting JavaScript execution and rendering a blank white screen.
+- **Key Implementation Details**:
+  - Updated `.github/workflows/deploy.yml` to compile with explicit repository base path:
+    `npm run build -- --base-href /Itinerary-App/`
+  - This ensures that both `index.html` and `404.html` contain `<base href="/Itinerary-App/">`.
+  - Whenever GitHub Pages serves `404.html` on a direct deep-link hit, the browser resolves all chunk, style, and asset requests to `/Itinerary-App/*.js` (200 OK). Angular Router then boots up, extracts the sub-path `/tabs/...`, and mounts the correct tab view immediately.
+- **Files Modified**:
+  - `.github/workflows/deploy.yml`
+- **Verification**:
+  - Verified live failure via `curl -s https://edselrenz.github.io/Itinerary-App/404.html` returning `<base href="./">`.
+  - Ran `npm --prefix Project run build -- --base-href /Itinerary-App/`: Exit code 0, 0 errors, 0 warnings.
+  - Verified `Project/www/index.html` contains `<base href="/Itinerary-App/">` and relative scripts load from base.
+  - Ran `npm --prefix Project run test:unit`: 9 test files, 32/32 tests passed in 31.00s [100%].
+- **Next Steps**:
+  - Push commit to `origin/main` to trigger the GitHub Actions deployment workflow.
+  - Proceed to Milestone 6: Custom Itinerary Builder.
+
+
 
 
 

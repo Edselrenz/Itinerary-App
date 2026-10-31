@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [0.5.2-alpha] - 2026-10-31
+### Fixed
+- **GitHub Pages Deep-Linking & Base HREF (`.github/workflows/deploy.yml`)**:
+  - Replaced ambiguous relative `--base-href ./` with explicit repository path `--base-href /Itinerary-App/` in CI build step.
+  - Resolved 404 script loading failures and blank white screens when users directly enter deep URLs (`/tabs/home`, `/tabs/map`, etc.) on GitHub Pages.
+
+---
+
 ## [0.5.1-alpha] - 2026-10-31
 ### Fixed
 - **Map Tab Fullscreen Geometry & Tab Occlusion (`Project/src/app/tabs/map`)**:

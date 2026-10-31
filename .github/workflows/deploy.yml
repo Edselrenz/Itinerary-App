@@ -45,7 +45,7 @@ jobs:
 
       - name: Build Ionic Angular frontend
         working-directory: Project
-        run: npm run build -- --base-href ./
+        run: npm run build -- --base-href /Itinerary-App/
 
       - name: Prepare SPA routing for GitHub Pages
         run: |

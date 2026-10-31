@@ -118,7 +118,7 @@ This document serves as the primary handoff reference for developers and coding 
   - Floating Recenter button and live destination counter pill.
   - 9 passing unit tests in `map.page.spec.ts`.
 - [x] **Production Build**: Verified with `npm run build` (0 errors, 0 warnings, allowedCommonJsDependencies configured).
-- [x] **Live GitHub Pages Deployment**: Fully deployed and verified live at [https://edselrenz.github.io/Itinerary-App/](https://edselrenz.github.io/Itinerary-App/) (HTTP 200 OK).
+- [x] **Live GitHub Pages Deployment**: Fully deployed and verified live at [https://edselrenz.github.io/Itinerary-App/](https://edselrenz.github.io/Itinerary-App/) (HTTP 200 OK with `--base-href /Itinerary-App/` deep linking enabled).
 
 ---
 
