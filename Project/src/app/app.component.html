@@ -14,6 +14,15 @@
         <div class="banner-actions">
           <button
             type="button"
+            class="banner-config-btn"
+            (click)="configureApiUrl()"
+            title="Set backend API address / tunnel"
+          >
+            <ion-icon name="settings-outline"></ion-icon>
+            <span>Set Server</span>
+          </button>
+          <button
+            type="button"
             class="banner-retry-btn"
             [disabled]="connectivityService.isCheckingHealth$ | async"
             (click)="retryConnection()"

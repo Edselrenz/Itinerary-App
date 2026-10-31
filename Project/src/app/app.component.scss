@@ -231,6 +231,30 @@
     flex-shrink: 0;
   }
 
+  .banner-config-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(255, 255, 255, 0.12);
+    color: #e2e8f0;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 9999px;
+    padding: 5px 10px;
+    font-size: 0.74rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.22);
+      color: #ffffff;
+    }
+
+    ion-icon {
+      font-size: 13px;
+    }
+  }
+
   .banner-retry-btn {
     display: flex;
     align-items: center;

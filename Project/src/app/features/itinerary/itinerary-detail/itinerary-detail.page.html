@@ -257,7 +257,7 @@
               @if (selectedStop.place?.opening_hours) {
                 <div class="modal-meta-item">
                   <ion-icon name="time-outline"></ion-icon>
-                  <span>{{ selectedStop.place?.opening_hours }}</span>
+                  <span>{{ selectedStop.place.opening_hours }}</span>
                 </div>
               }
               <div class="modal-meta-item">
@@ -267,7 +267,7 @@
             </div>
 
             @if (selectedStop.place?.description) {
-              <p class="modal-full-desc">{{ selectedStop.place?.description }}</p>
+              <p class="modal-full-desc">{{ selectedStop.place.description }}</p>
             }
 
             @if (selectedStop.notes) {

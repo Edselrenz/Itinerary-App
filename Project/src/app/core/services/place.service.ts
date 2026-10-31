@@ -13,8 +13,12 @@ import {
   providedIn: 'root',
 })
 export class PlaceService {
-  private readonly baseUrl = `${environment.apiBaseUrl}/places`;
-  private readonly municipalitiesUrl = `${environment.apiBaseUrl}/municipalities`;
+  private get baseUrl(): string {
+    return `${environment.apiBaseUrl}/places`;
+  }
+  private get municipalitiesUrl(): string {
+    return `${environment.apiBaseUrl}/municipalities`;
+  }
 
   // Curated asset mapping for high-definition photography
   private readonly localImageMap: Record<string, string> = {

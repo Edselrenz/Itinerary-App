@@ -63,3 +63,4 @@ In production environments (Docker or standalone PostgreSQL host), schedule auto
 # Daily backup at 02:00 AM UTC
 0 2 * * * cd /opt/CaseStudy && python scripts/db_backup_restore.py backup >> /var/log/ne_backup.log 2>&1
 ```
+

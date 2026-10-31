@@ -22,7 +22,9 @@ export { ItineraryBudgetSummary } from '../models/itinerary.models';
   providedIn: 'root',
 })
 export class ItineraryService {
-  private readonly baseUrl = `${environment.apiBaseUrl}/itineraries`;
+  private get baseUrl(): string {
+    return `${environment.apiBaseUrl}/itineraries`;
+  }
 
   private readonly itinerariesSubject = new BehaviorSubject<Itinerary[]>([]);
   public itineraries$: Observable<Itinerary[]> = this.itinerariesSubject.asObservable();

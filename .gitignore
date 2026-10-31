@@ -9,12 +9,19 @@
 !.env.example
 .env.local
 .env.*.local
+backend/.env
 
-# Angular Environment Overrides (Matches root or nested under Project/)
-**/src/environments/environment.prod.ts
+# Angular Environment Overrides (Preserves prod template; ignores custom local/secret configs)
 **/src/environments/environment.local.ts
+**/src/environments/environment.*.local.ts
 **/src/environments/environment.*.secret.ts
 !**/src/environments/environment.example.ts
+!**/src/environments/environment.prod.ts
+
+# Cloudflare Tunnels & Public Exposure Credentials
+.cloudflared/
+*.tunnel.json
+cert.pem
 
 # Cloud, Firebase & OAuth Service Accounts
 client_secret*.json

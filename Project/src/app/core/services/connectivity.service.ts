@@ -47,6 +47,25 @@ export class ConnectivityService {
   }
 
   /**
+   * Returns current active API base URL.
+   */
+  public get currentApiUrl(): string {
+    return environment.apiBaseUrl;
+  }
+
+  /**
+   * Sets or clears a custom API base URL (e.g. Cloudflare tunnel or ngrok).
+   */
+  public setCustomApiUrl(url: string | null): void {
+    if (url && url.trim()) {
+      localStorage.setItem('ne_custom_api_url', url.trim());
+    } else {
+      localStorage.removeItem('ne_custom_api_url');
+    }
+    this.isDismissedManually = false;
+  }
+
+  /**
    * Actively probes the backend health endpoint to verify connectivity.
    */
   public checkHostHealth(): Observable<boolean> {

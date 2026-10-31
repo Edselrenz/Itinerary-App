@@ -2,7 +2,7 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonApp, IonIcon, IonRouterOutlet, IonSpinner } from '@ionic/angular';
 import { addIcons } from 'ionicons';
-import { closeOutline, cloudOfflineOutline, refreshOutline } from 'ionicons/icons';
+import { closeOutline, cloudOfflineOutline, refreshOutline, settingsOutline } from 'ionicons/icons';
 import { ConnectivityService } from './core/services/connectivity.service';
 
 @Component({
@@ -25,6 +25,7 @@ export class AppComponent implements OnInit, OnDestroy {
       cloudOfflineOutline,
       refreshOutline,
       closeOutline,
+      settingsOutline,
     });
   }
 
@@ -43,6 +44,18 @@ export class AppComponent implements OnInit, OnDestroy {
 
   public retryConnection(): void {
     this.connectivityService.checkHostHealth().subscribe();
+  }
+
+  public configureApiUrl(): void {
+    const current = this.connectivityService.currentApiUrl;
+    const entered = window.prompt(
+      'Configure Backend URL (e.g. Cloudflare tunnel https://*.trycloudflare.com or custom host):',
+      current
+    );
+    if (entered !== null) {
+      this.connectivityService.setCustomApiUrl(entered.trim() ? entered.trim() : null);
+      this.connectivityService.checkHostHealth().subscribe();
+    }
   }
 
   public dismissOfflineBanner(): void {
