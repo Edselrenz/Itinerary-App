@@ -215,8 +215,8 @@
                 <div class="stop-card">
                   <div class="stop-thumb-wrap">
                     <img
-                      [src]="placeService.getPlaceImage(stop.place?.name || '', stop.place?.image_url)"
-                      [alt]="stop.place?.name || 'Destination'"
+                      [src]="placeService.getPlaceImage(stop.place?.name || stop.custom_title || '', stop.place?.image_url)"
+                      [alt]="stop.place?.name || stop.custom_title || 'Destination'"
                       class="stop-thumb"
                       loading="lazy"
                     />
@@ -233,7 +233,7 @@
                     <h4 class="stop-name">{{ stop.place?.name || stop.custom_title }}</h4>
                     <p class="stop-muni">
                       <ion-icon name="location-outline"></ion-icon>
-                      <span>{{ stop.place?.municipality_name || generatedPlan.destination }}</span>
+                      <span>{{ stop.place?.municipality_name || stop.place?.address_text || generatedPlan.destination }}</span>
                     </p>
 
                     @if (stop.planned_time) {
@@ -284,6 +284,16 @@
             <ion-icon name="checkmark-circle"></ion-icon>
             <span>Accept & Save Itinerary</span>
           }
+        </button>
+
+        <button
+          type="button"
+          class="customize-builder-btn"
+          [disabled]="isSaving"
+          (click)="customizeInBuilder()"
+        >
+          <ion-icon name="create-outline"></ion-icon>
+          <span>Customize in Builder</span>
         </button>
 
         <button type="button" class="back-edit-btn" (click)="backToForm()">

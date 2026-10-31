@@ -54,6 +54,7 @@ export interface ItineraryItemCreatePayload {
   notes?: string | null;
   estimated_cost_min?: number | null;
   estimated_cost_max?: number | null;
+  place?: Place | null;
 }
 
 export interface ItineraryDayCreatePayload {

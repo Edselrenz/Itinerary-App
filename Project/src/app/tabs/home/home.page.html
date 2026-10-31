@@ -84,6 +84,8 @@
         <div
           class="action-card suggested-card"
           routerLink="/suggested-wizard"
+          (click)="onSuggestedClick()"
+          (keydown.enter)="onSuggestedClick()"
           role="button"
           tabindex="0"
         >
@@ -107,6 +109,8 @@
         <div
           class="action-card custom-card"
           routerLink="/custom-builder"
+          (click)="onCustomClick()"
+          (keydown.enter)="onCustomClick()"
           role="button"
           tabindex="0"
         >

@@ -745,6 +745,44 @@ This log records chronological development sessions, detailing objectives, execu
   - Commit Milestone 7 changes to Git and push to `origin/main`.
   - Proceed to Milestone 8: Itinerary Management, Day-by-Day Timeline View, and Cross-Tab Synchronization.
 
+---
+
+## Session 27: Suggested Itinerary GitHub Pages & Offline Reliability Fix
+- **Date & Time**: 2026-10-31 12:45:00 (Local)
+- **Objective**: Fix suggested itinerary generation and navigation on static GitHub Pages (`https://edselrenz.github.io/Itinerary-App/`), resolving unhandled HTTPS mixed content timeouts, missing stop assets, and routing dead-ends.
+- **Root Cause Analysis**:
+  1. **HTTPS Mixed Content & Network Hangs**: On static GitHub Pages, the app runs over HTTPS while `apiBaseUrl` points to `http://127.0.0.1:8000/api/v1`. The browser blocks requests to localhost or hangs on network timeouts, leaving `isGenerating` spinning infinitely on "Clustering recommendations...".
+  2. **Empty String Substring Match in `PlaceService.getPlaceImage`**: When a stop's place name was empty or undefined, `key.includes('')` evaluated to true on the very first map key, defaulting to `minalungao.png` inappropriately.
+  3. **Non-Existent Asset References in Offline Curated Pool**: `generateOfflineSuggestedItinerary()` in `ItineraryService` referenced non-existent images (`rohi_cafe.png`, `museo_bongabon.png`) and omitted the nested `place` object on generated stops, causing missing category badges, blank photos, and empty municipality tags.
+  4. **Home Tab Saved Itinerary Routing Dead-End**: Clicking a saved suggested itinerary on the Home tab routed to `/tabs/history` (an unimplemented "Coming in v1.1" placeholder), preventing users from reviewing their stops.
+- **Tasks & Code Changes**:
+  - **`Project/src/app/core/services/itinerary.service.ts`**:
+    - Updated `suggestItinerary()`: Added immediate client-side offline check (`if (!this.authService.isAuthenticated()) return from(this.generateOfflineSuggestedItinerary(request))`). For authenticated sessions, added a 4-second timeout fallback (`timeout(4000)`) preventing client hangs.
+    - Updated `generateOfflineSuggestedItinerary()`: Replaced placeholder filenames with all 10 verified bundled images (`minalungao.png`, `tagpuan_gapan.png`, `pantabangan_lake.png`, `george_point.png`, `highland_bali.png`, `farm_villaronte.png`, `casa_batik.png`, `pavillion_farm.png`, `lake_farm_marre.png`, `la_casa_prime.png`).
+    - Populated full `place` object (`Place` model) on each offline-generated `ItineraryItem`.
+    - Added sorting in `generateOfflineSuggestedItinerary()` to prioritize venues matching the requested destination municipality.
+    - Updated `createGuestItinerary()` to preserve `place` on each stop in guest `localStorage`.
+  - **`Project/src/app/core/services/place.service.ts`**:
+    - Added guard in `getPlaceImage()`: `if (!normalized) return 'assets/images/minalungao.png';` before running substring comparisons.
+  - **`Project/src/app/core/models/itinerary.models.ts`**:
+    - Added `place?: Place | null;` to `ItineraryItemCreatePayload`.
+  - **`Project/src/app/tabs/home/` (`home.page.html` & `home.page.ts`)**:
+    - Added explicit `(click)="onSuggestedClick()"` and `(keydown.enter)="onSuggestedClick()"` to `.suggested-card` to ensure reliable tap/click navigation across all mobile and desktop WebKit/Chromium browsers.
+    - Added `(click)="onCustomClick()"` and `(keydown.enter)="onCustomClick()"` to `.custom-card`.
+    - Updated `openItinerary()` to route all itineraries to `['/custom-builder', itinerary.id]` so saved suggested itineraries open immediately in the interactive builder with full day and stop details.
+  - **`Project/src/app/features/itinerary/suggested-wizard/` (`suggested-wizard.page.ts`, `.html`, `.scss`)**:
+    - Updated `acceptAndSave()` to include `place` on each stop payload and support custom navigation targets (`targetRoute: string = '/tabs/home'`).
+    - Added "Customize in Builder" button calling `customizeInBuilder()`, which saves the plan and routes directly into `/custom-builder/:id`.
+    - Updated template image binding to `[src]="placeService.getPlaceImage(stop.place?.name || stop.custom_title || '', stop.place?.image_url)"` and municipality fallback to `stop.place?.municipality_name || stop.place?.address_text || generatedPlan.destination`.
+- **Verification & Test Results**:
+  - `python -m pytest backend/tests/ -v`: **4/4 test suites passed [100%]**.
+  - `npm --prefix Project run test:unit`: **12/12 test files, 63/63 unit tests passed [100%]**.
+  - `npm --prefix Project run typecheck:e2e`: **0 TypeScript errors [100%]**.
+  - `npm --prefix Project run build`: **0 errors, 0 warnings (Angular production bundle generated successfully)**.
+- **Next Recommended Steps**:
+  - Commit changes to Git and push to `origin/main` to deploy to GitHub Pages.
+
+
 
 
 

@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [0.7.1-alpha] - 2026-10-31
+### Fixed
+- **Suggested Itinerary Offline & GitHub Pages Reliability**:
+  - Fixed client hanging on static GitHub Pages HTTPS deployment by checking guest/offline state upfront in `ItineraryService.suggestItinerary()` and attaching a 4-second timeout fallback.
+  - Replaced missing image asset references (`rohi_cafe.png`, `museo_bongabon.png`) in offline curated fallback pool with verified bundled photos (`minalungao.png`, `tagpuan_gapan.png`, `pantabangan_lake.png`, `george_point.png`, `highland_bali.png`, `farm_villaronte.png`, etc.).
+  - Attached fully-formed `Place` objects to offline generated stops, preventing blank category badges, missing municipalities, and 404 images.
+  - Fixed substring match bug in `PlaceService.getPlaceImage` when handling empty strings.
+  - Added explicit `(click)` and `(keydown.enter)` navigation triggers to Home tab planner entry cards to guarantee touch responsiveness across mobile WebKit and Chrome.
+  - Updated Home tab's `openItinerary()` to route saved suggested plans to `/custom-builder/:id` rather than dead-ending into `/tabs/history`.
+  - Added "Customize in Builder" button in Suggested Wizard allowing instant transition to builder view.
+
+---
+
 ## [0.7.0-alpha] - 2026-10-31
 ### Added
 - **Deterministic Suggested Itinerary Recommendation Engine (`Milestone 7`)**:

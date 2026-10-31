@@ -137,7 +137,11 @@ export class PlaceService {
       return remoteUrl;
     }
 
-    const normalized = placeName.toLowerCase().trim();
+    const normalized = (placeName || '').toLowerCase().trim();
+    if (!normalized) {
+      return 'assets/images/minalungao.png';
+    }
+
     for (const [key, assetPath] of Object.entries(this.localImageMap)) {
       if (normalized.includes(key) || key.includes(normalized)) {
         return assetPath;

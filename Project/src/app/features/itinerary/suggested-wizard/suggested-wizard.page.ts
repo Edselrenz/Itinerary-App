@@ -191,7 +191,7 @@ export class SuggestedWizardPage implements OnInit {
     this.activeDayIndex = index;
   }
 
-  public async acceptAndSave(): Promise<void> {
+  public async acceptAndSave(targetRoute: string = '/tabs/home'): Promise<void> {
     if (!this.generatedPlan) return;
 
     this.isSaving = true;
@@ -219,6 +219,7 @@ export class SuggestedWizardPage implements OnInit {
           notes: it.notes,
           estimated_cost_min: it.estimated_cost_min,
           estimated_cost_max: it.estimated_cost_max,
+          place: it.place,
         })),
       })),
     };
@@ -234,7 +235,11 @@ export class SuggestedWizardPage implements OnInit {
             position: 'top',
           });
           await toast.present();
-          await this.router.navigate(['/tabs/home']);
+          if (targetRoute === '/custom-builder') {
+            await this.router.navigate(['/custom-builder', saved.id]);
+          } else {
+            await this.router.navigate([targetRoute]);
+          }
           resolve();
         },
         error: async (err) => {
@@ -254,11 +259,7 @@ export class SuggestedWizardPage implements OnInit {
 
   public customizeInBuilder(): void {
     if (!this.generatedPlan) return;
-
-    // Navigate to custom builder or history
-    this.acceptAndSave().then(() => {
-      // User can customize from saved list
-    });
+    this.acceptAndSave('/custom-builder');
   }
 
   public backToForm(): void {

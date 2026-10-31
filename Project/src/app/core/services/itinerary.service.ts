@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, catchError, from, map, of, switchMap, tap } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, from, map, of, switchMap, tap, timeout } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   Itinerary,
@@ -191,9 +191,22 @@ export class ItineraryService {
 
   /**
    * Generates a suggested itinerary using deterministic clustering and transparent assumptions.
+   * If in guest mode (e.g. static GitHub Pages), immediately generates locally for instant response.
    */
   public suggestItinerary(request: SuggestedItineraryRequest): Observable<Itinerary> {
+    if (!this.authService.isAuthenticated()) {
+      return from(this.generateOfflineSuggestedItinerary(request)).pipe(
+        tap((plan) => {
+          if (request.save_immediately) {
+            this.guestStorage.saveItinerary(plan as unknown as GuestItinerary);
+            this.replaceInSubject(plan);
+          }
+        })
+      );
+    }
+
     return this.http.post<Itinerary>(`${this.baseUrl}/suggest`, request).pipe(
+      timeout(4000),
       tap((plan) => {
         if (request.save_immediately && plan.id) {
           this.replaceInSubject(plan);
@@ -287,6 +300,7 @@ export class ItineraryService {
         notes: it.notes,
         estimated_cost_min: it.estimated_cost_min,
         estimated_cost_max: it.estimated_cost_max,
+        place: it.place || null,
       }));
 
       return {
@@ -513,98 +527,198 @@ export class ItineraryService {
 
     const curatedPool = [
       {
-        id: 'off-rohi',
-        name: 'Rohi Paperflower Cafe',
-        category: 'Cafe & Dining',
-        municipality: 'Bongabon',
-        image: 'assets/images/rohi_cafe.png',
-        min: 150,
-        max: 400,
-        time: '12:00',
-        dur: 90,
-      },
-      {
-        id: 'off-museo',
-        name: 'Museo de Bongabon',
-        category: 'Culture & Museum',
-        municipality: 'Bongabon',
-        image: 'assets/images/museo_bongabon.png',
-        min: null,
-        max: null,
-        time: '09:00',
-        dur: 120,
-      },
-      {
-        id: 'off-thornes',
-        name: 'Thornes Samgyupsal House',
-        category: 'Restaurant',
-        municipality: 'Bongabon',
-        image: 'assets/images/thornes.png',
-        min: 299,
-        max: 499,
-        time: '17:30',
-        dur: 90,
-      },
-      {
-        id: 'off-pantabangan',
-        name: 'Pantabangan Dam and Lake Viewpoint',
-        category: 'Tourist Attraction',
-        municipality: 'Pantabangan',
-        image: 'assets/images/pantabangan_lake.png',
-        min: null,
-        max: null,
-        time: '09:00',
-        dur: 120,
-      },
-      {
-        id: 'off-george',
-        name: 'George Point Viewdeck & Resto',
-        category: 'Cafe & Dining',
-        municipality: 'Pantabangan',
-        image: 'assets/images/george_point.png',
-        min: 150,
-        max: 450,
-        time: '12:00',
-        dur: 90,
-      },
-      {
-        id: 'off-minalungao',
+        id: 'dest-minalungao',
         name: 'Minalungao National Park',
         category: 'Nature & Adventure',
+        categoryKey: 'nature_park',
         municipality: 'General Tinio',
+        lat: 15.2981,
+        lng: 121.1223,
         image: 'assets/images/minalungao.png',
+        description: 'Towering 16-meter limestone cliffs, emerald-green Peñaranda River bamboo rafting, and subterranean caves.',
+        tags: ['Balsa Rafting', 'Cliff Diving', 'Caving'],
+        directionsUrl: 'https://www.google.com/maps/dir/?api=1&destination=15.2981,121.1223',
+        openingHours: '07:00-17:00',
         min: 100,
         max: 500,
         time: '09:00',
         dur: 180,
       },
       {
-        id: 'off-gapan',
+        id: 'dest-tagpuan-gapan',
         name: 'Tagpuan sa Lumang Gapan',
         category: 'Heritage & Faith',
+        categoryKey: 'church_religious',
         municipality: 'Gapan City',
+        lat: 15.3065,
+        lng: 120.9461,
         image: 'assets/images/tagpuan_gapan.png',
+        description: 'The "Little Vigan" of Nueva Ecija featuring restored Spanish colonial street lamps, historic brick facades, and night food stalls.',
+        tags: ['Colonial Walk', 'Night Market', 'Historic Street'],
+        directionsUrl: 'https://www.google.com/maps/dir/?api=1&destination=15.3065,120.9461',
+        openingHours: '06:00-20:00',
         min: null,
         max: null,
-        time: '14:30',
+        time: '17:00',
         dur: 120,
       },
       {
-        id: 'off-ednas',
-        name: "Edna's Cakeland",
+        id: 'dest-pantabangan-lake',
+        name: 'Pantabangan Dam and Lake Viewpoint',
+        category: 'Tourist Attraction',
+        categoryKey: 'tourist_attraction',
+        municipality: 'Pantabangan',
+        lat: 15.8126,
+        lng: 121.1098,
+        image: 'assets/images/pantabangan_lake.png',
+        description: 'One of Southeast Asia\'s largest clean water reservoirs, framed by scenic Sierra Madre mountain ridges and bass fishing spots.',
+        tags: ['Bass Fishing', 'Scenic View', 'Dam Site'],
+        directionsUrl: 'https://www.google.com/maps/dir/?api=1&destination=15.8126,121.1098',
+        openingHours: '06:00-18:00',
+        min: null,
+        max: null,
+        time: '09:00',
+        dur: 120,
+      },
+      {
+        id: 'dest-george-point',
+        name: 'George Point Viewdeck & Resto',
         category: 'Cafe & Dining',
-        municipality: 'Cabanatuan City',
-        image: 'assets/images/ednas_cakeland.png',
+        categoryKey: 'cafe',
+        municipality: 'Pantabangan',
+        lat: 15.8200,
+        lng: 121.1150,
+        image: 'assets/images/george_point.png',
+        description: 'Scenic panoramic hilltop overlooking Pantabangan Lake, ideal for sunset views, relaxing lakeside dining, and coffee.',
+        tags: ['Sunset View', 'Lakeside Coffee', 'Photography'],
+        directionsUrl: 'https://www.google.com/maps/dir/?api=1&destination=15.8200,121.1150',
+        openingHours: '08:00-20:00',
         min: 150,
         max: 450,
         time: '12:00',
         dur: 90,
       },
+      {
+        id: 'dest-highland-bali',
+        name: 'Highland Bali Villas Resort and Spa',
+        category: 'Resort & Stay',
+        categoryKey: 'hotel_accommodation',
+        municipality: 'Pantabangan',
+        lat: 15.8180,
+        lng: 121.1210,
+        image: 'assets/images/highland_bali.png',
+        description: 'Balinese-inspired lakefront retreat with water sports, exotic villas, and breathtaking vistas across the water.',
+        tags: ['Water Sports', 'Resort Villas', 'Spa'],
+        directionsUrl: 'https://www.google.com/maps/dir/?api=1&destination=15.8180,121.1210',
+        openingHours: '24 Hours',
+        min: 3500,
+        max: 8000,
+        time: '15:00',
+        dur: 150,
+      },
+      {
+        id: 'dest-farm-villaronte',
+        name: 'Farm Villaronte',
+        category: 'Tourist Attraction',
+        categoryKey: 'tourist_attraction',
+        municipality: 'San Jose City',
+        lat: 15.7850,
+        lng: 120.9980,
+        image: 'assets/images/farm_villaronte.png',
+        description: 'Vibrant flower farm, organic produce picking, rustic pavilions, and family-friendly agro-tourism trails.',
+        tags: ['Sunflower Fields', 'Organic Produce', 'Agri-Tour'],
+        directionsUrl: 'https://www.google.com/maps/dir/?api=1&destination=15.7850,120.9980',
+        openingHours: '08:00-17:00',
+        min: 50,
+        max: 200,
+        time: '09:00',
+        dur: 120,
+      },
+      {
+        id: 'dest-casa-batik',
+        name: 'Casa Batik',
+        category: 'Culture & Museum',
+        categoryKey: 'museum_cultural',
+        municipality: 'Cabanatuan City',
+        lat: 15.4850,
+        lng: 120.9650,
+        image: 'assets/images/casa_batik.png',
+        description: 'Artisan craft space celebrating Philippine textile traditions, local handcrafted coffee, and homegrown culinary heritage.',
+        tags: ['Handcrafted Goods', 'Art Cafe', 'Local Heritage'],
+        directionsUrl: 'https://www.google.com/maps/dir/?api=1&destination=15.4850,120.9650',
+        openingHours: '09:00-18:00',
+        min: 100,
+        max: 300,
+        time: '10:30',
+        dur: 90,
+      },
+      {
+        id: 'dest-pavillion-farm',
+        name: "D' Pavilion Farm and Resort",
+        category: 'Resort & Swimming',
+        categoryKey: 'resort_swimming',
+        municipality: 'Bongabon',
+        lat: 15.6322,
+        lng: 121.1447,
+        image: 'assets/images/pavillion_farm.png',
+        description: 'Sprawling eco-tourism estate in the Onion Capital with open lawns, fresh mountain breezes, and native dining.',
+        tags: ['Mountain View', 'Onion Capital', 'Eco Camp'],
+        directionsUrl: 'https://www.google.com/maps/dir/?api=1&destination=15.6322,121.1447',
+        openingHours: '08:00-18:00',
+        min: 150,
+        max: 400,
+        time: '11:30',
+        dur: 120,
+      },
+      {
+        id: 'dest-lake-farm-marre',
+        name: 'Lake Farm de La Marre',
+        category: 'Resort & Stay',
+        categoryKey: 'hotel_accommodation',
+        municipality: 'San Jose City',
+        lat: 15.7720,
+        lng: 120.9850,
+        image: 'assets/images/lake_farm_marre.png',
+        description: 'Tranquil countryside lakefront farm estate with boating, peaceful nature retreats, and farm-to-table culinary dining.',
+        tags: ['Lakeside Retreat', 'Nature Farm', 'Boating'],
+        directionsUrl: 'https://www.google.com/maps/dir/?api=1&destination=15.7720,120.9850',
+        openingHours: '08:00-20:00',
+        min: 500,
+        max: 2500,
+        time: '14:00',
+        dur: 120,
+      },
+      {
+        id: 'dest-la-casa-prime',
+        name: 'La Casa Prime Cabins',
+        category: 'Resort & Stay',
+        categoryKey: 'hotel_accommodation',
+        municipality: 'Bongabon',
+        lat: 15.6280,
+        lng: 121.1520,
+        image: 'assets/images/la_casa_prime.png',
+        description: 'Serene mountain cabin sanctuary with overlooking views of Pantabangan Lake and modern glamping amenities.',
+        tags: ['Mountain Cabins', 'Lake View', 'Glamping'],
+        directionsUrl: 'https://www.google.com/maps/dir/?api=1&destination=15.6280,121.1520',
+        openingHours: '24 Hours',
+        min: 2500,
+        max: 6000,
+        time: '16:30',
+        dur: 120,
+      },
     ];
+
+    const targetDest = (request.destination || '').toLowerCase();
+    const sortedPool = [...curatedPool].sort((a, b) => {
+      const matchA = targetDest && (a.municipality.toLowerCase().includes(targetDest) || targetDest.includes(a.municipality.toLowerCase())) ? -1 : 1;
+      const matchB = targetDest && (b.municipality.toLowerCase().includes(targetDest) || targetDest.includes(b.municipality.toLowerCase())) ? -1 : 1;
+      return matchA - matchB;
+    });
 
     const itineraryId = this.generateId();
     const days: ItineraryDay[] = [];
     let poolIndex = 0;
+    const now = new Date().toISOString();
 
     for (let d = 0; d < totalDays; d++) {
       const dayDate = new Date(start);
@@ -614,7 +728,7 @@ export class ItineraryService {
       const items: ItineraryItem[] = [];
 
       for (let s = 0; s < 3; s++) {
-        const place = curatedPool[poolIndex % curatedPool.length];
+        const place = sortedPool[poolIndex % sortedPool.length];
         poolIndex++;
 
         items.push({
@@ -625,27 +739,52 @@ export class ItineraryService {
           sort_order: s + 1,
           planned_time: place.time,
           duration_minutes: place.dur,
-          notes: 'Recommended based on local popularity and cluster proximity.',
+          notes: `Recommended based on local popularity and cluster proximity in ${place.municipality}.`,
           estimated_cost_min: place.min,
           estimated_cost_max: place.max,
+          place: {
+            id: place.id,
+            name: place.name,
+            category: place.categoryKey,
+            latitude: place.lat,
+            longitude: place.lng,
+            municipality_name: place.municipality,
+            address_text: `${place.municipality}, Nueva Ecija`,
+            description: place.description,
+            phone: null,
+            website: null,
+            opening_hours: place.openingHours,
+            estimated_cost_min: place.min,
+            estimated_cost_max: place.max,
+            cost_currency: 'PHP',
+            image_url: place.image,
+            image_license: null,
+            source_name: 'CuratedNuevaEcijaMVP',
+            source_record_id: `curated/${place.id}`,
+            source_url: null,
+            imported_at: now,
+            verified_at: now,
+            is_featured: true,
+            tags: place.tags,
+            directions_url: place.directionsUrl,
+          },
         });
       }
 
-      const primaryMuni = items[0]?.custom_title ? 'Nueva Ecija' : request.destination;
+      const primaryMuni = items[0]?.place?.municipality_name || request.destination || 'Nueva Ecija';
       days.push({
         id: dayId,
         itinerary_id: itineraryId,
         day_number: d + 1,
         travel_date: dayDateStr,
-        title: `Day ${d + 1}: ${request.destination || primaryMuni} Tour`,
+        title: `Day ${d + 1}: ${primaryMuni} Tour`,
         items,
       });
     }
 
-    const now = new Date().toISOString();
     return {
       id: itineraryId,
-      title: request.title || `Suggested ${request.destination} Itinerary`,
+      title: request.title || `Suggested ${request.destination || 'Nueva Ecija'} Itinerary`,
       destination: request.destination || 'Nueva Ecija',
       start_date: request.start_date,
       end_date: request.end_date,
@@ -654,7 +793,7 @@ export class ItineraryService {
       type: 'suggested',
       assumptions: [
         'Pacing: 2 to 3 stops scheduled per day to allow relaxed travel along provincial roads.',
-        `Geographic clustering: Stops on each day are clustered around ${request.destination} to prevent backtracking.`,
+        `Geographic clustering: Stops on each day are clustered around ${request.destination || 'Nueva Ecija'} to prevent backtracking.`,
         'Budget & Expenses: Estimates reflect entrance, activities, and dining where available. Inter-town transit and fuel are not included.',
         'Operating Hours: Hours reflect verified public records; travelers are encouraged to verify schedules locally for holidays.',
       ],

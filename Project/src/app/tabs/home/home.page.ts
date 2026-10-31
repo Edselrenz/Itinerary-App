@@ -433,13 +433,15 @@ export class HomePage implements OnInit, OnDestroy {
     });
   }
 
+  public onSuggestedClick(): void {
+    this.router.navigate(['/suggested-wizard']);
+  }
+
+  public onCustomClick(): void {
+    this.router.navigate(['/custom-builder']);
+  }
+
   public openItinerary(itinerary: Itinerary): void {
-    if (itinerary.type === 'custom') {
-      this.router.navigate(['/custom-builder', itinerary.id]);
-    } else {
-      this.router.navigate(['/tabs/history'], {
-        queryParams: { id: itinerary.id },
-      });
-    }
+    this.router.navigate(['/custom-builder', itinerary.id]);
   }
 }
