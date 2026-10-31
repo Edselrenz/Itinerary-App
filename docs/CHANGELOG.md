@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [0.4.9-alpha] - 2026-10-31
+### Changed & Fixed
+- **Login Screen Figma Alignment & Boilerplate Cleanup**:
+  - Replaced Login screen layout with exact Figma design: centered airplane branding, left-aligned *"Welcome back!"*, and clean *"Log in to continue your journey."* subtitle.
+  - Removed all repetitive "Nueva Ecija" boilerplate from the authentication flow.
+  - Updated inputs with embedded blue icons (`mail-outline` and `key-outline`) and trailing eye toggle.
+  - Transformed Google and Apple social logins into uniform outlined pill buttons.
+  - Upgraded action button to solid blue pill button with focus and disabled states.
+
+---
+
 ## [0.4.8-alpha] - 2026-10-31
 ### Added
 - **Fullscreen Interactive Loading / Splash Screen**:

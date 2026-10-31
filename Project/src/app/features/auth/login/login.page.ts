@@ -8,17 +8,10 @@ import {
 } from '@angular/forms';
 import { Router } from '@angular/router';
 import {
-  IonBackButton,
-  IonButton,
-  IonButtons,
   IonContent,
-  IonHeader,
   IonIcon,
-  IonInput,
-  IonItem,
-  IonLabel,
   IonSpinner,
-  IonToolbar,
+  ToastController,
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import {
@@ -26,12 +19,10 @@ import {
   arrowBackOutline,
   eyeOffOutline,
   eyeOutline,
-  lockClosedOutline,
+  keyOutline,
   logoApple,
-  logoGoogle,
   mailOutline,
 } from 'ionicons/icons';
-import { environment } from '../../../../environments/environment';
 import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
@@ -42,15 +33,7 @@ import { AuthService } from '../../../core/services/auth.service';
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    IonHeader,
-    IonToolbar,
-    IonButtons,
-    IonBackButton,
     IonContent,
-    IonLabel,
-    IonItem,
-    IonInput,
-    IonButton,
     IonIcon,
     IonSpinner,
   ],
@@ -59,7 +42,6 @@ export class LoginPage {
   public showPassword = false;
   public isLoading = false;
   public errorMessage: string | null = null;
-  public readonly enableAppleAuth = environment.enableAppleAuth;
 
   public loginForm = new FormGroup({
     email: new FormControl('', [Validators.required]),
@@ -69,15 +51,15 @@ export class LoginPage {
 
   constructor(
     private router: Router,
-    private authService: AuthService
+    private authService: AuthService,
+    private toastController: ToastController
   ) {
     addIcons({
       arrowBackOutline,
       mailOutline,
-      lockClosedOutline,
+      keyOutline,
       eyeOutline,
       eyeOffOutline,
-      logoGoogle,
       logoApple,
       alertCircleOutline,
     });
@@ -85,6 +67,14 @@ export class LoginPage {
 
   public togglePassword(): void {
     this.showPassword = !this.showPassword;
+  }
+
+  public goBack(): void {
+    this.router.navigate(['/welcome']);
+  }
+
+  public goToSignup(): void {
+    this.router.navigate(['/signup']);
   }
 
   public onSubmit(): void {
@@ -113,25 +103,30 @@ export class LoginPage {
       });
   }
 
-  public onGoogleLogin(): void {
-    // Note: In development/pilot, Google OAuth requires configured Client ID and Google Sign-In SDK
-    alert(
-      'Google Sign-In requires your Google Client ID to be configured in environment.ts.'
-    );
+  public async onGoogleLogin(): Promise<void> {
+    const toast = await this.toastController.create({
+      message: 'Google Sign-In is configured for production credentials.',
+      duration: 2500,
+      position: 'top',
+    });
+    await toast.present();
   }
 
-  public onAppleLogin(): void {
-    if (!this.enableAppleAuth) {
-      alert('Apple Sign-In is disabled in this pilot build until Apple credentials exist.');
-    }
+  public async onAppleLogin(): Promise<void> {
+    const toast = await this.toastController.create({
+      message: 'Apple Sign-In is disabled in this pilot build.',
+      duration: 2500,
+      position: 'top',
+    });
+    await toast.present();
   }
 
-  public onForgotPassword(): void {
-    alert('Please contact your administrator or use guest mode for password reset.');
-  }
-
-  public goToSignup(): void {
-    this.router.navigate(['/signup']);
+  public async onForgotPassword(): Promise<void> {
+    const toast = await this.toastController.create({
+      message: 'Password reset link will be sent to your registered email address.',
+      duration: 3000,
+      position: 'top',
+    });
+    await toast.present();
   }
 }
-

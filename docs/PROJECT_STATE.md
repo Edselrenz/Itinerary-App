@@ -62,7 +62,15 @@ This document serves as the primary handoff reference for developers and coding 
   - Subtitle: *"You can browse destinations, view sample itineraries, and explore features. Your data won't be save"*.
   - Solid blue pill button: *"Continue as Guest"* (activates guest session & enters `/tabs/home`).
   - Outline blue pill button: *"Create an Account"* (navigates to `/signup`).
-- [x] **Figma-Aligned Login Screen (`/login`)**: Full form, password visibility toggle, Remember Me, authentic Google logo button (`google_logo.png`), disabled Apple button.
+- [x] **Figma-Aligned Login Screen (`/login`)**:
+  - Blue back navigation arrow (`←`).
+  - Centered brand header with 45-degree tilted airplane icon + *"Trip mo, trip ko"*.
+  - Left-aligned headline: *"Welcome back!"* and subtitle: *"Log in to continue your journey."*.
+  - Clean input fields with blue `mail-outline` and `key-outline` leading icons, and `eye-outline` toggle.
+  - Remember me checkbox and blue `Forgot password?` link.
+  - Solid blue pill action button (*"Log in"*).
+  - Outlined pill social logins (*Continue with Google* and *Continue with Apple*).
+  - Clean footer: *"Don't have an account? Sign up"*.
 - [x] **Figma-Aligned Signup Screen (`/signup`)**: Name fields, username, email, password strength, and cross-field matching-passwords confirmation validator.
 - [x] **Figma-Aligned Home Page (`/tabs/home`)**:
   - Top header with bold 2-line title (*"Where are you / going next?"*) and electric blue notification bell.

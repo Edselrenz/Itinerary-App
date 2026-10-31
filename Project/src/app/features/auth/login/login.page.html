@@ -1,108 +1,128 @@
-<ion-header class="ion-no-border">
-  <ion-toolbar>
-    <ion-buttons slot="start">
-      <ion-back-button defaultHref="/welcome" text="" icon="arrow-back-outline"></ion-back-button>
-    </ion-buttons>
-  </ion-toolbar>
-</ion-header>
+<ion-content class="login-content" [fullscreen]="true">
+  <div class="login-screen-container">
+    <!-- Top Left Back Arrow -->
+    <header class="top-nav-row">
+      <button type="button" class="back-btn" (click)="goBack()" aria-label="Go back to welcome screen">
+        <ion-icon name="arrow-back-outline"></ion-icon>
+      </button>
+    </header>
 
-<ion-content class="auth-content" [fullscreen]="true">
-  <div class="auth-container">
-    <div class="header-section">
-      <h1 class="auth-title">Welcome back!</h1>
-      <p class="auth-subtitle">Log in to continue your journey across Nueva Ecija.</p>
-    </div>
-
-    @if (errorMessage) {
-      <div class="error-banner">
-        <ion-icon name="alert-circle-outline"></ion-icon>
-        <span>{{ errorMessage }}</span>
+    <div class="login-body">
+      <!-- Centered Airplane Branding -->
+      <div class="brand-header">
+        <svg class="brand-airplane-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>
+        </svg>
+        <span class="brand-title">Trip mo, trip ko</span>
       </div>
-    }
 
-    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="auth-form">
-      <div class="input-group">
-        <ion-label class="input-label">Email or Username</ion-label>
-        <ion-item lines="none" class="input-item">
-          <ion-icon name="mail-outline" slot="start"></ion-icon>
-          <ion-input
-            type="text"
+      <!-- Welcome Back Title & Subtitle (Left aligned) -->
+      <div class="heading-group">
+        <h1 class="welcome-title">Welcome back!</h1>
+        <p class="welcome-subtitle">Log in to continue your journey.</p>
+      </div>
+
+      @if (errorMessage) {
+        <div class="error-banner">
+          <ion-icon name="alert-circle-outline"></ion-icon>
+          <span>{{ errorMessage }}</span>
+        </div>
+      }
+
+      <!-- Login Form -->
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+        <!-- Email Address -->
+        <div class="field-container">
+          <ion-icon name="mail-outline" class="field-leading-icon"></ion-icon>
+          <input
+            type="email"
             formControlName="email"
-            placeholder="Enter your email or username"
+            placeholder="Email Address"
             autocomplete="email"
-          ></ion-input>
-        </ion-item>
+            class="native-field-input"
+            aria-label="Email Address"
+          />
+        </div>
         @if (loginForm.get('email')?.touched && loginForm.get('email')?.invalid) {
-          <div class="field-error">Please enter your email or username</div>
+          <div class="field-validation-error">Please enter your email address</div>
         }
-      </div>
 
-      <div class="input-group">
-        <ion-label class="input-label">Password</ion-label>
-        <ion-item lines="none" class="input-item">
-          <ion-icon name="lock-closed-outline" slot="start"></ion-icon>
-          <ion-input
+        <!-- Password with leading key and trailing eye toggle -->
+        <div class="field-container">
+          <ion-icon name="key-outline" class="field-leading-icon"></ion-icon>
+          <input
             [type]="showPassword ? 'text' : 'password'"
             formControlName="password"
-            placeholder="Enter your password"
+            placeholder="Password"
             autocomplete="current-password"
-          ></ion-input>
-          <ion-button fill="clear" slot="end" class="eye-btn" (click)="togglePassword()">
+            class="native-field-input"
+            aria-label="Password"
+          />
+          <button
+            type="button"
+            class="field-trailing-btn"
+            (click)="togglePassword()"
+            aria-label="Toggle password visibility"
+          >
             <ion-icon [name]="showPassword ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
-          </ion-button>
-        </ion-item>
+          </button>
+        </div>
         @if (loginForm.get('password')?.touched && loginForm.get('password')?.invalid) {
-          <div class="field-error">Password is required</div>
+          <div class="field-validation-error">Password is required</div>
         }
-      </div>
 
-      <div class="form-aux">
-        <label class="remember-label">
-          <input type="checkbox" formControlName="rememberMe" />
-          <span>Remember me</span>
-        </label>
-        <button type="button" class="forgot-link" (click)="onForgotPassword()">Forgot password?</button>
-      </div>
+        <!-- Remember Me & Forgot Password Row -->
+        <div class="options-row">
+          <label class="remember-checkbox-label">
+            <input type="checkbox" formControlName="rememberMe" class="custom-checkbox" />
+            <span class="remember-text">Remeber me</span>
+          </label>
+          <button type="button" class="forgot-pwd-btn" (click)="onForgotPassword()">
+            Forgot password?
+          </button>
+        </div>
 
-      <ion-button
-        expand="block"
-        type="submit"
-        class="submit-btn"
-        [disabled]="loginForm.invalid || isLoading"
-      >
-        @if (isLoading) {
-          <ion-spinner name="crescent"></ion-spinner>
-        } @else {
-          Log in
-        }
-      </ion-button>
-    </form>
-
-    <div class="social-divider">
-      <span>or continue with</span>
-    </div>
-
-    <div class="social-actions">
-      <button type="button" class="social-btn google-btn" (click)="onGoogleLogin()">
-        <img src="assets/images/google_logo.png" alt="Google logo" class="google-logo-img" />
-        <span>Continue with Google</span>
-      </button>
-
-      <div class="apple-wrapper">
-        <button type="button" class="social-btn apple-btn" [disabled]="!enableAppleAuth" (click)="onAppleLogin()">
-          <ion-icon name="logo-apple"></ion-icon>
-          <span>Continue with Apple</span>
+        <!-- Solid Blue Pill Log In Button -->
+        <button
+          type="submit"
+          class="primary-login-btn"
+          [disabled]="loginForm.invalid || isLoading"
+        >
+          @if (isLoading) {
+            <ion-spinner name="crescent" color="light"></ion-spinner>
+          } @else {
+            Log in
+          }
         </button>
-        @if (!enableAppleAuth) {
-          <span class="apple-disabled-caption">Apple Sign-In is disabled in this pilot build</span>
-        }
-      </div>
-    </div>
+      </form>
 
-    <div class="footer-switch">
-      <span>Don't have an account?</span>
-      <a (click)="goToSignup()">Sign up</a>
+      <!-- Centered "or" Divider -->
+      <div class="or-divider-row">
+        <span class="or-divider-line"></span>
+        <span class="or-divider-text">or</span>
+        <span class="or-divider-line"></span>
+      </div>
+
+      <!-- Outlined Pill Social Login Buttons -->
+      <div class="social-login-group">
+        <!-- Google -->
+        <button type="button" class="social-pill-btn" (click)="onGoogleLogin()">
+          <img src="assets/images/google_logo.png" alt="Google logo" class="social-logo-img" />
+          <span class="social-btn-text">Continue with Google</span>
+        </button>
+
+        <!-- Apple -->
+        <button type="button" class="social-pill-btn" (click)="onAppleLogin()">
+          <ion-icon name="logo-apple" class="apple-logo-icon"></ion-icon>
+          <span class="social-btn-text">Continue with Apple</span>
+        </button>
+      </div>
+
+      <!-- Footer: Don't have an account? Sign up -->
+      <footer class="login-footer">
+        <span class="footer-prompt">Don't have an account?</span>
+        <a class="footer-signup-link" (click)="goToSignup()">Sign up</a>
+      </footer>
     </div>
   </div>
 </ion-content>
-

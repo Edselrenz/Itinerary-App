@@ -356,7 +356,39 @@ This log records chronological development sessions, detailing objectives, execu
   - `npm run build`: Exit code 0, 0 compiler warnings, bundle generated in 16.82s.
   - `python -m pytest backend/tests`: 2 passed in 6.54s [100%].
 - **Next Steps**:
-  - Commit and push to `origin/main` to deploy the loading screen to GitHub Pages.
+  - Pushed commit `d13a9bc` to `origin/main`.
+
+---
+
+## Session 16: Login Page Exact Alignment with Figma Mockup
+- **Date & Time**: 2026-10-31 07:58:00 (Local)
+- **Objective**: Refactor the Login screen (`/login`) to match the user-provided screenshot pixel-for-pixel using the `anti-generic-frontend-design` skill, removing forced "Nueva Ecija" boilerplate.
+- **Key Visual Changes**:
+  - **Back Navigation**: Left-aligned blue arrow (`arrow-back-outline`, `#0084ff`) returning to `/welcome`.
+  - **Branding Header**: Centered 45-degree tilted blue airplane icon + bold *"Trip mo, trip ko"* title.
+  - **Headlines**: Left-aligned bold *"Welcome back!"* headline with clean subtitle *"Log in to continue your journey."* (all redundant "Nueva Ecija" boilerplate removed).
+  - **Inputs**:
+    - Eliminated redundant outer text labels.
+    - Added blue leading icons (`mail-outline` and `key-outline`).
+    - Added blue trailing eye toggle (`eye-outline` / `eye-off-outline`).
+    - Styled with 12px rounded borders and focus ring (`#0084ff`).
+  - **Options Row**: Added checkbox with `Remeber me` label and blue `Forgot password?` link.
+  - **Primary Action**: Full-width solid blue pill button (`border-radius: 9999px`, `#0084ff`) labeled *"Log in"*.
+  - **Divider**: Thin horizontal rule with centered lowercase `"or"`.
+  - **Social Logins**: Refactored into two outlined pill buttons with gray borders:
+    - *Continue with Google* (Google color logo).
+    - *Continue with Apple* (Apple black logo).
+  - **Footer Link**: Centered *"Don't have an account? Sign up"* with blue link.
+- **Files Modified**:
+  - `Project/src/app/features/auth/login/login.page.html`
+  - `Project/src/app/features/auth/login/login.page.scss`
+  - `Project/src/app/features/auth/login/login.page.ts`
+- **Verification**:
+  - `npm run build`: Exit code 0, 0 compiler warnings, bundle generated in 4.96s.
+  - `python -m pytest backend/tests`: 2 passed in 2.25s [100%].
+- **Next Steps**:
+  - Commit and push to `origin/main` to update the live GitHub Pages build.
+
 
 
 
