@@ -911,3 +911,32 @@ This log records chronological development sessions, detailing objectives, execu
   - `npm --prefix Project run test:unit`: **13/13 test files, 70/70 unit tests passed [100%]**.
   - `python -m pytest backend/tests/ -v`: **4/4 backend pytest suites passed [100%]**.
 
+---
+
+## Session 32: Suggested Itinerary & Custom Builder Travel Details Redesign with Date Picker Pop-Up Window
+- **Date & Time**: 2026-10-31 15:15:00 (Local)
+- **Objective**: Redesign the Suggested Itinerary questionnaire screen to match the user-provided Figma screenshot (`media_1793429982308_d8faa776.png`) with crisp white background, side-by-side back arrow and title, crisp dark input borders, and an interactive pop-up window to select "From" (departure) and "To" (return) travel dates.
+- **Key Enhancements**:
+  - **Figma Header & Form Aesthetics (`suggested-wizard.page.html`, `suggested-wizard.page.scss`, `global.scss`)**:
+    - Replaced the generic Ionic toolbar with a borderless header containing a blue arrow (`#0084ff`) sitting directly beside "Suggested Itinerary", matching Figma precision.
+    - Set pure white background (`#ffffff`) for host, content, and form container.
+    - Updated destination icon to solid `location-sharp` in blue.
+    - Upgraded input borders to crisp dark slate (`#1e293b`) with 12px rounded corners and smooth focus transitions.
+    - Formatted preference pills with dark borders (`#1e293b`) wrapping into the 2-2-1 layout (`Nature & Parks`, `Food Trip` / `Culture & History`, `Shopping` / `Resort`).
+    - Styled "Find Itinerary" button as a prominent 20px pill-curved action button.
+  - **Travel Dates Pop-Up Window ("From" & "To")**:
+    - Tapping the "Travel Dates" box triggers an accessible, backdrop-blurred modal window (`isDatePickerOpen`).
+    - Card features:
+      - Departure date selector ("From") and return date selector ("To") with native date pickers and formatted preview (`Thu, Oct 30, 2026`).
+      - Quick duration preset chips (`2 Days (1N)`, `3 Days (2N)`, `4 Days (3N)`, `1 Week`).
+      - Live trip duration calculation banner (`X Days, Y Nights in Nueva Ecija`) with automatic validation preventing inverted date ranges.
+      - Dual action controls: "Cancel" and "Apply Dates" updating reactive form controls.
+    - Replicated the identical date picker pop-up window into `CustomBuilderPage` for unified cross-flow UX.
+  - **Automated Test Coverage**:
+    - Added test suites for the date picker pop-up workflow in `suggested-wizard.page.spec.ts` (12/12 tests passing).
+    - Added test suites for the date picker pop-up workflow in `custom-builder.page.spec.ts` (9/9 tests passing).
+- **Verification & Test Results**:
+  - `npm --prefix Project run test:unit`: **13/13 test files, 74/74 unit tests passed [100%]**.
+  - `npm --prefix Project run build`: **0 compilation errors, 0 style budget warnings, production bundle successfully generated [100%]**.
+
+

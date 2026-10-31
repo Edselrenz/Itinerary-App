@@ -215,4 +215,33 @@ describe('CustomBuilderPage', () => {
     await component.onCancel();
     expect(router.navigate).toHaveBeenCalledWith(['/tabs/home']);
   });
+  it('should handle date picker pop-up window workflow correctly', () => {
+    expect(component.isDatePickerOpen).toBe(false);
+
+    component.openDatePicker();
+    expect(component.isDatePickerOpen).toBe(true);
+    expect(component.popupStartDate).toBeTruthy();
+    expect(component.popupEndDate).toBeTruthy();
+
+    component.popupStartDate = '2026-11-15';
+    component.popupEndDate = '2026-11-18';
+    expect(component.tempTripSummary.isValid).toBe(true);
+    expect(component.tempTripSummary.days).toBe(4);
+
+    component.setPresetDuration(2);
+    expect(component.popupEndDate).toBe('2026-11-16');
+
+    component.applyDatePicker();
+    expect(component.isDatePickerOpen).toBe(false);
+    expect(component.form.get('start_date')?.value).toBe('2026-11-15');
+    expect(component.form.get('end_date')?.value).toBe('2026-11-16');
+
+    expect(component.displayDateRangeText).toContain('Nov 15');
+    expect(component.hasSelectedDates).toBe(true);
+
+    component.openDatePicker();
+    expect(component.isDatePickerOpen).toBe(true);
+    component.closeDatePicker();
+    expect(component.isDatePickerOpen).toBe(false);
+  });
 });

@@ -205,4 +205,33 @@ describe('SuggestedWizardPage', () => {
     expect(component.getTimingDuration({ planned_time: '1 Night · 2 Days' })).toBe('22 hrs');
     expect(component.getTimingDuration({ duration_minutes: 180 })).toBe('3 hrs');
   });
+  it('should handle date picker pop-up window workflow correctly', () => {
+    expect(component.isDatePickerOpen).toBe(false);
+
+    component.openDatePicker();
+    expect(component.isDatePickerOpen).toBe(true);
+    expect(component.popupStartDate).toBeTruthy();
+    expect(component.popupEndDate).toBeTruthy();
+
+    component.popupStartDate = '2026-11-10';
+    component.popupEndDate = '2026-11-14';
+    expect(component.tempTripSummary.isValid).toBe(true);
+    expect(component.tempTripSummary.days).toBe(5);
+
+    component.setPresetDuration(3);
+    expect(component.popupEndDate).toBe('2026-11-12');
+
+    component.applyDatePicker();
+    expect(component.isDatePickerOpen).toBe(false);
+    expect(component.form.get('start_date')?.value).toBe('2026-11-10');
+    expect(component.form.get('end_date')?.value).toBe('2026-11-12');
+
+    expect(component.displayDateRangeText).toContain('Nov 10');
+    expect(component.hasSelectedDates).toBe(true);
+
+    component.openDatePicker();
+    expect(component.isDatePickerOpen).toBe(true);
+    component.closeDatePicker();
+    expect(component.isDatePickerOpen).toBe(false);
+  });
 });

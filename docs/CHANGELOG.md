@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [0.8.4-alpha] - 2026-10-31
+### Changed
+- **Suggested Itinerary & Custom Builder Questionnaire Redesign (Figma Match)**:
+  - **Figma Alignment**: Redesigned Suggested Itinerary form to match the user's Figma screenshot (`media_1793429982308_d8faa776.png`) with clean white background, borderless header with left-aligned blue back arrow and title, crisp `#1e293b` input borders, and 2-2-1 preference pills.
+  - **Interactive Travel Dates Pop-Up Window**: Replaced inline raw date pickers with a clean Travel Dates field that opens an interactive pop-up window to select "From" (departure) and "To" (return) dates.
+  - **Pop-Up Window Capabilities**: Features dual departure/return inputs, friendly date formatting previews, duration preset chips (`2D1N`, `3D2N`, `4D3N`, `1 Week`), and live trip duration validation.
+  - **Unified Builder Experience**: Brought the same date picker pop-up window into `CustomBuilderPage` for consistent questionnaire behavior.
+  - **Automated Verification**: Added comprehensive unit test coverage for date picker pop-up controls in both wizards (13/13 test files, 74/74 unit tests passing; 0 build errors, 0 style budget warnings).
+
+---
+
 ## [0.8.3-alpha] - 2026-10-31
 ### Added
 - **Home Tab Saved Itineraries Limit & Dedicated History/Saved Itineraries Tab**:

@@ -64,7 +64,7 @@
         <div class="form-group">
           <label for="custom-destination-input" class="group-label">Destination</label>
           <div class="figma-input-box">
-            <ion-icon name="location-outline" class="input-blue-icon"></ion-icon>
+            <ion-icon name="location-sharp" class="input-blue-icon"></ion-icon>
             <input
               id="custom-destination-input"
               type="text"
@@ -79,23 +79,19 @@
         <!-- Travel Dates Field -->
         <div class="form-group">
           <label class="group-label">Travel Dates</label>
-          <div class="figma-input-box date-box-row">
+          <div
+            class="figma-input-box clickable"
+            (click)="openDatePicker()"
+            role="button"
+            tabindex="0"
+            (keydown.enter)="openDatePicker()"
+            (keydown.space)="openDatePicker()"
+            aria-label="Select start and end dates"
+          >
             <ion-icon name="calendar-outline" class="input-blue-icon"></ion-icon>
-            <div class="dates-inline-inputs">
-              <input
-                type="date"
-                formControlName="start_date"
-                class="date-mini-input"
-                aria-label="Start Date"
-              />
-              <span class="date-sep">–</span>
-              <input
-                type="date"
-                formControlName="end_date"
-                class="date-mini-input"
-                aria-label="End Date"
-              />
-            </div>
+            <span class="date-picker-trigger-text" [class.placeholder]="!hasSelectedDates">
+              {{ displayDateRangeText }}
+            </span>
           </div>
           <p class="input-helper-note">{{ formattedTripDateSubtitle }}</p>
         </div>
@@ -538,6 +534,106 @@
               <span>View Full Itinerary / Save Trip</span>
             }
           </button>
+        </div>
+      </div>
+    }
+    <!-- ========================================================
+         TRAVEL DATES POP-UP WINDOW ("FROM" & "TO")
+         ======================================================== -->
+    @if (isDatePickerOpen) {
+      <div class="date-picker-backdrop" (click)="closeDatePicker()">
+        <div class="date-picker-modal-card" (click)="$event.stopPropagation()">
+          <div class="date-picker-header">
+            <div class="header-icon-title">
+              <ion-icon name="calendar-outline" class="modal-calendar-icon"></ion-icon>
+              <h3>Select Travel Dates</h3>
+            </div>
+            <button type="button" class="date-picker-close-btn" (click)="closeDatePicker()" aria-label="Close date picker">
+              <ion-icon name="close-outline"></ion-icon>
+            </button>
+          </div>
+
+          <p class="date-picker-instruction">
+            Select your departure (From) and return (To) dates for this trip:
+          </p>
+
+          <div class="date-pickers-grid">
+            <!-- From Date Input -->
+            <div class="picker-date-card">
+              <label class="picker-card-label">
+                <span class="badge-tag from-tag">From</span>
+                Departure Date
+              </label>
+              <div class="picker-field-box">
+                <ion-icon name="calendar-outline" class="picker-field-icon"></ion-icon>
+                <input
+                  type="date"
+                  [(ngModel)]="popupStartDate"
+                  (change)="onPopupDateChange()"
+                  [min]="minDate"
+                  class="native-date-input"
+                  aria-label="Departure Date (From)"
+                />
+              </div>
+              @if (popupStartDate) {
+                <p class="date-card-preview">{{ formatFriendlyDate(popupStartDate) }}</p>
+              }
+            </div>
+
+            <!-- To Date Input -->
+            <div class="picker-date-card">
+              <label class="picker-card-label">
+                <span class="badge-tag to-tag">To</span>
+                Return Date
+              </label>
+              <div class="picker-field-box">
+                <ion-icon name="calendar-outline" class="picker-field-icon"></ion-icon>
+                <input
+                  type="date"
+                  [(ngModel)]="popupEndDate"
+                  (change)="onPopupDateChange()"
+                  [min]="popupStartDate || minDate"
+                  class="native-date-input"
+                  aria-label="Return Date (To)"
+                />
+              </div>
+              @if (popupEndDate) {
+                <p class="date-card-preview">{{ formatFriendlyDate(popupEndDate) }}</p>
+              }
+            </div>
+          </div>
+
+          <!-- Quick Duration Presets -->
+          <div class="presets-row-wrap">
+            <span class="presets-title">Quick presets:</span>
+            <div class="presets-chips">
+              <button type="button" class="preset-chip-btn" (click)="setPresetDuration(2)">2 Days (1N)</button>
+              <button type="button" class="preset-chip-btn" (click)="setPresetDuration(3)">3 Days (2N)</button>
+              <button type="button" class="preset-chip-btn" (click)="setPresetDuration(4)">4 Days (3N)</button>
+              <button type="button" class="preset-chip-btn" (click)="setPresetDuration(7)">1 Week</button>
+            </div>
+          </div>
+
+          <!-- Duration Calculation Banner -->
+          <div class="duration-status-card" [class.status-error]="!tempTripSummary.isValid">
+            <ion-icon [name]="tempTripSummary.isValid ? 'checkmark-circle' : 'information-circle-outline'"></ion-icon>
+            <span class="status-text">{{ tempTripSummary.label }}</span>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="picker-modal-actions">
+            <button type="button" class="picker-cancel-action" (click)="closeDatePicker()">
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="picker-apply-action"
+              [disabled]="!tempTripSummary.isValid"
+              (click)="applyDatePicker()"
+            >
+              Apply Dates
+            </button>
+          </div>
         </div>
       </div>
     }

@@ -30,6 +30,7 @@ import {
   closeOutline,
   createOutline,
   locationOutline,
+      locationSharp,
   saveOutline,
   searchOutline,
   sparkles,
@@ -110,6 +111,12 @@ export class CustomBuilderPage implements OnInit, OnDestroy {
   ];
   public selectedPreferences = new Set<string>();
 
+  // Date Picker Pop-Up Window State ("From" and "To")
+  public isDatePickerOpen = false;
+  public popupStartDate = '';
+  public popupEndDate = '';
+  public minDate = new Date().toISOString().split('T')[0];
+
   // Category Filter Pills (Figma: All, Tourist Spots, Food, Shopping, Other)
   public browseCategories = ['All', 'Tourist Spots', 'Food', 'Shopping', 'Other'];
   public selectedCategory = 'All';
@@ -162,6 +169,7 @@ export class CustomBuilderPage implements OnInit, OnDestroy {
       timeOutline,
       cashOutline,
       locationOutline,
+      locationSharp,
       calendarOutline,
       saveOutline,
       checkmark,
@@ -249,6 +257,97 @@ export class CustomBuilderPage implements OnInit, OnDestroy {
 
   public isPreferenceSelected(key: string): boolean {
     return this.selectedPreferences.has(key);
+  }
+
+  // --- Travel Dates Pop-Up Controls ("From" and "To") ---
+
+  public openDatePicker(): void {
+    const currentStart = this.form.get('start_date')?.value;
+    const currentEnd = this.form.get('end_date')?.value;
+    this.popupStartDate = currentStart || this.minDate;
+    if (currentEnd) {
+      this.popupEndDate = currentEnd;
+    } else {
+      const end = new Date(this.popupStartDate);
+      end.setDate(end.getDate() + 1);
+      this.popupEndDate = end.toISOString().split('T')[0];
+    }
+    this.isDatePickerOpen = true;
+  }
+
+  public closeDatePicker(): void {
+    this.isDatePickerOpen = false;
+  }
+
+  public onPopupDateChange(): void {
+    if (this.popupStartDate && this.popupEndDate && this.popupEndDate < this.popupStartDate) {
+      this.popupEndDate = this.popupStartDate;
+    }
+  }
+
+  public setPresetDuration(days: number): void {
+    const start = this.popupStartDate ? new Date(this.popupStartDate) : new Date();
+    this.popupStartDate = start.toISOString().split('T')[0];
+    const end = new Date(start);
+    end.setDate(end.getDate() + Math.max(0, days - 1));
+    this.popupEndDate = end.toISOString().split('T')[0];
+  }
+
+  public applyDatePicker(): void {
+    if (!this.tempTripSummary.isValid) return;
+    this.form.patchValue({
+      start_date: this.popupStartDate,
+      end_date: this.popupEndDate,
+    });
+    this.isDatePickerOpen = false;
+  }
+
+  public get displayDateRangeText(): string {
+    const startStr = this.form.get('start_date')?.value;
+    const endStr = this.form.get('end_date')?.value;
+    if (!startStr || !endStr) {
+      return 'Select start and end dates';
+    }
+    const start = new Date(startStr);
+    const end = new Date(endStr);
+    const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
+    const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
+    const startYear = start.getFullYear();
+    const endYear = end.getFullYear();
+
+    if (startYear !== endYear) {
+      return `${startMonth} ${start.getDate()}, ${startYear} – ${endMonth} ${end.getDate()}, ${endYear}`;
+    }
+    if (startMonth === endMonth) {
+      return `${startMonth} ${start.getDate()} – ${end.getDate()}, ${startYear}`;
+    }
+    return `${startMonth} ${start.getDate()} – ${endMonth} ${end.getDate()}, ${startYear}`;
+  }
+
+  public get hasSelectedDates(): boolean {
+    return !!(this.form.get('start_date')?.value && this.form.get('end_date')?.value);
+  }
+
+  public get tempTripSummary(): { days: number; nights: number; isValid: boolean; label: string } {
+    if (!this.popupStartDate || !this.popupEndDate) {
+      return { days: 0, nights: 0, isValid: false, label: 'Select both departure (From) and return (To) dates' };
+    }
+    const start = new Date(this.popupStartDate);
+    const end = new Date(this.popupEndDate);
+    if (end < start) {
+      return { days: 0, nights: 0, isValid: false, label: 'Return date must be on or after departure date' };
+    }
+    const diff = Math.max(0, end.getTime() - start.getTime());
+    const days = Math.max(1, Math.ceil(diff / (1000 * 60 * 60 * 24)) + 1);
+    const nights = Math.max(0, days - 1);
+    const label = `${days} ${days === 1 ? 'Day' : 'Days'}, ${nights} ${nights === 1 ? 'Night' : 'Nights'} in Nueva Ecija`;
+    return { days, nights, isValid: true, label };
+  }
+
+  public formatFriendlyDate(dateStr: string): string {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
   }
 
   public get computedTripDays(): number {
