@@ -126,3 +126,28 @@ def test_auth_lifecycle():
     assert apple_res.status_code == 501
     assert "Apple Sign-In is disabled" in apple_res.json()["detail"]
 
+
+def test_auth_rate_limiting():
+    """Verifies that SlowAPI throttles rapid authentication attempts after 5 requests/minute."""
+    from app.core.limiter import limiter
+
+    limiter.reset()
+    client = TestClient(app)
+
+    responses = []
+    for i in range(6):
+        res = client.post(
+            "/api/v1/auth/login",
+            json={"email": f"attacker_{i}@example.ph", "password": "InvalidPassword123!"},
+        )
+        responses.append(res)
+
+    # First 5 attempts return 401 (credentials check)
+    for res in responses[:5]:
+        assert res.status_code == 401
+
+    # 6th attempt is throttled with 429 Too Many Requests
+    assert responses[5].status_code == 429
+    assert "Rate limit exceeded" in responses[5].text
+
+

@@ -6,6 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [0.9.0-alpha] - 2026-10-31
+### Added
+- **Phase 9: Pilot Security, Connectivity Resilience & Disaster Recovery**:
+  - **SlowAPI Rate Limiting**:
+    - Integrated SlowAPI rate limiting (`app.core.limiter`) on authentication routes (`/api/v1/auth/login`, `/register`, `/refresh`, `/oauth/google`) capped at 5 req/min per IP.
+    - Verified with integration test `test_auth_rate_limiting` asserting HTTP 429 Too Many Requests on the 6th attempt.
+  - **Offline Host Laptop Warning Banner (`ConnectivityService`)**:
+    - Built `ConnectivityService` with reactive `isHostOffline$` and active `checkHostHealth()` prober against `GET /api/v1/health`.
+    - Wired into `authInterceptor` to detect connection drops (HTTP 0, 502, 504) and automatically recover when requests succeed.
+    - Added floating offline status banner to `AppComponent` with "Retry" health check and dismiss controls.
+    - Added comprehensive unit tests in `connectivity.service.spec.ts` and `app.component.spec.ts`.
+  - **Database Disaster Recovery Utility (`scripts/db_backup_restore.py`)**:
+    - Created backup and restore CLI utility supporting PostgreSQL (`pg_dump` / `psql`) and SQLite (online backup API / DDL iterdump).
+    - Includes automated `drill` subcommand that seeds canary data, snapshots, simulates data loss, restores from snapshot, and verifies data integrity.
+    - Created automated test `test_backup_restore.py` verifying the full drill cycle.
+    - Created documentation guide in `docs/BACKUP_AND_RESTORE.md`.
+
+---
+
 ## [0.8.6-alpha] - 2026-10-31
 ### Added
 - **Phase 8: Unified Itinerary Overview, Day Timeline & Guest Migration**:

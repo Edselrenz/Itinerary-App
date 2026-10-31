@@ -1,13 +1,16 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { IonApp, IonRouterOutlet } from '@ionic/angular';
+import { IonApp, IonIcon, IonRouterOutlet, IonSpinner } from '@ionic/angular';
+import { addIcons } from 'ionicons';
+import { closeOutline, cloudOfflineOutline, refreshOutline } from 'ionicons/icons';
+import { ConnectivityService } from './core/services/connectivity.service';
 
 @Component({
   selector: 'app-root',
   templateUrl: 'app.component.html',
   styleUrls: ['app.component.scss'],
   standalone: true,
-  imports: [CommonModule, IonApp, IonRouterOutlet],
+  imports: [CommonModule, IonApp, IonRouterOutlet, IonIcon, IonSpinner],
 })
 export class AppComponent implements OnInit, OnDestroy {
   public showSplashScreen = true;
@@ -16,6 +19,14 @@ export class AppComponent implements OnInit, OnDestroy {
   private autoDismissTimer?: ReturnType<typeof setTimeout>;
   private touchStartY = 0;
   private touchStartX = 0;
+
+  constructor(public connectivityService: ConnectivityService) {
+    addIcons({
+      cloudOfflineOutline,
+      refreshOutline,
+      closeOutline,
+    });
+  }
 
   public ngOnInit(): void {
     // Auto-dismiss after 2.8 seconds once the underlying frontend has initialized
@@ -28,6 +39,14 @@ export class AppComponent implements OnInit, OnDestroy {
     if (this.autoDismissTimer) {
       clearTimeout(this.autoDismissTimer);
     }
+  }
+
+  public retryConnection(): void {
+    this.connectivityService.checkHostHealth().subscribe();
+  }
+
+  public dismissOfflineBanner(): void {
+    this.connectivityService.dismissBanner();
   }
 
   public dismissSplash(): void {

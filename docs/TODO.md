@@ -153,14 +153,14 @@ This checklist tracks completed, active, and pending tasks across all developmen
 
 ---
 
-## Phase 9: Pilot Security & Deployment Readiness (NEXT FOCUS)
-- [ ] Rate limiting on auth endpoints with SlowAPI (e.g. 5/min per IP).
-- [ ] Offline host laptop warning banner in client.
-- [ ] PostgreSQL backup and restore drill (`pg_dump` / `pg_restore`).
+## Phase 9: Pilot Security & Deployment Readiness (COMPLETED)
+- [x] Rate limiting on auth endpoints with SlowAPI (5/min per IP on login, register, refresh, and OAuth).
+- [x] Offline host laptop warning banner in client (`ConnectivityService` + `app.component` floating status banner with live health probe).
+- [x] PostgreSQL backup and restore drill (`scripts/db_backup_restore.py` + `backend/tests/test_backup_restore.py`).
 
 ---
 
-## Phase 10: QA & Pilot Acceptance Gate
+## Phase 10: QA & Pilot Acceptance Gate (NEXT FOCUS)
 - [ ] Walk through full 24-point MVP acceptance checklist.
 - [ ] End-to-end automated verification run.
 

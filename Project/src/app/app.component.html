@@ -1,4 +1,43 @@
 <ion-app>
+  <!-- Pilot Offline Host Laptop Warning Banner -->
+  @if (connectivityService.isHostOffline$ | async) {
+    <div class="offline-host-banner" role="status" aria-live="polite">
+      <div class="banner-inner">
+        <div class="banner-lead">
+          <ion-icon name="cloud-offline-outline" class="offline-lead-icon"></ion-icon>
+          <div class="offline-copy">
+            <span class="offline-title">Pilot Backend Offline</span>
+            <span class="offline-desc">Host laptop (127.0.0.1:8000) unreachable. Local saved trips & offline features remain active.</span>
+          </div>
+        </div>
+
+        <div class="banner-actions">
+          <button
+            type="button"
+            class="banner-retry-btn"
+            [disabled]="connectivityService.isCheckingHealth$ | async"
+            (click)="retryConnection()"
+          >
+            @if (connectivityService.isCheckingHealth$ | async) {
+              <ion-spinner name="crescent"></ion-spinner>
+            } @else {
+              <ion-icon name="refresh-outline"></ion-icon>
+            }
+            <span>Retry</span>
+          </button>
+          <button
+            type="button"
+            class="banner-dismiss-btn"
+            (click)="dismissOfflineBanner()"
+            aria-label="Dismiss offline banner"
+          >
+            <ion-icon name="close-outline"></ion-icon>
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
   <ion-router-outlet></ion-router-outlet>
 
   @if (showSplashScreen) {

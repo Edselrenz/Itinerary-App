@@ -990,3 +990,28 @@ This log records chronological development sessions, detailing objectives, execu
   - `npm --prefix Project run test:unit`: **15/15 test files, 89/89 unit tests passed [100%]**.
   - `python -m pytest backend/tests/ -v`: **4/4 backend test suites passed [100%]**.
   - `npm --prefix Project run build`: **0 compilation errors, 0 style budget warnings, production build successful [100%]**.
+
+---
+
+## Session 35: Milestone 9 - Pilot Security, Connectivity Resilience & Disaster Recovery
+- **Date & Time**: 2026-10-31 16:35:00 (Local)
+- **Objective**: Implement Milestone 9 from `docs/TODO.md`: SlowAPI rate limiting on authentication endpoints, client offline host laptop warning banner, and automated database disaster recovery drill.
+- **Key Enhancements**:
+  - **SlowAPI Rate Limiting (`backend/app/core/limiter.py`, `backend/app/main.py`, `backend/app/api/v1/auth.py`)**:
+    - Created `limiter` instance using remote IP address resolution.
+    - Added `SlowAPIMiddleware` and `RateLimitExceeded` handler to FastAPI.
+    - Configured rate limit of 5 requests/minute on sensitive auth endpoints: `/login`, `/register`, `/refresh`, and `/oauth/google`.
+    - Added integration test `test_auth_rate_limiting` in `backend/tests/test_auth.py` verifying that rapid repeated attempts trigger HTTP 429 Too Many Requests on the 6th attempt.
+  - **Client Connectivity & Host Offline Warning Banner (`ConnectivityService`)**:
+    - Implemented `ConnectivityService` (`connectivity.service.ts`, `.spec.ts`) with reactive `isHostOffline$` and `checkHostHealth()` prober.
+    - Connected `authInterceptor` to detect offline connection failures (HTTP 0, 502, 504) and automatically clear offline state on successful 2xx responses.
+    - Designed floating top status banner in `AppComponent` ([`app.component.html`](file:///c:/Users/Edward/Desktop/CaseStudy/Project/src/app/app.component.html), [`.scss`](file:///c:/Users/Edward/Desktop/CaseStudy/Project/src/app/app.component.scss)) following `/anti-generic-frontend-design` (sleek midnight slate pill, amber icon, blue retry action with live spinner, and session dismiss button).
+  - **Database Disaster Recovery Drill Utility (`scripts/db_backup_restore.py`)**:
+    - Implemented database backup, verification, and restore CLI tool with multi-engine support (PostgreSQL via `pg_dump`/`psql`, SQLite via online backup/iterdump).
+    - Added automated canary disaster recovery drill (`run_drill()`) simulating catastrophic loss and asserting successful full data restoration.
+    - Added automated test in `backend/tests/test_backup_restore.py`.
+    - Documented operations in `docs/BACKUP_AND_RESTORE.md`.
+- **Verification & Test Results**:
+  - `python -m pytest backend/tests/ -v`: **6/6 backend test suites passed (100%)**.
+  - `npm --prefix Project run test:unit`: **16/16 test files, 98/98 unit tests passed (100%)**.
+  - `npm --prefix Project run build`: **0 compilation errors, 0 style budget warnings, production build successful (100%)**.

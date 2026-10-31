@@ -1,11 +1,12 @@
 """REST endpoints for Traveler Authentication, Registration, and OAuth."""
 
 import uuid
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.database import get_db
+from app.core.limiter import limiter
 from app.models.entities import User
 from app.schemas.auth import (
     GoogleOAuthIn,
@@ -41,7 +42,9 @@ def make_token_response(user: User) -> TokenOut:
 
 
 @router.post("/register", response_model=TokenOut, status_code=status.HTTP_201_CREATED)
+@limiter.limit("5/minute")
 def register(
+    request: Request,
     payload: UserRegisterIn,
     db: Session = Depends(get_db),
 ) -> TokenOut:
@@ -51,7 +54,9 @@ def register(
 
 
 @router.post("/login", response_model=TokenOut)
+@limiter.limit("5/minute")
 def login(
+    request: Request,
     payload: UserLoginIn,
     db: Session = Depends(get_db),
 ) -> TokenOut:
@@ -61,7 +66,9 @@ def login(
 
 
 @router.post("/refresh", response_model=TokenOut)
+@limiter.limit("10/minute")
 def refresh_session(
+    request: Request,
     payload: RefreshTokenIn,
     db: Session = Depends(get_db),
 ) -> TokenOut:
@@ -98,7 +105,9 @@ def get_profile(
 
 
 @router.post("/oauth/google", response_model=TokenOut)
+@limiter.limit("5/minute")
 def google_oauth(
+    request: Request,
     payload: GoogleOAuthIn,
     db: Session = Depends(get_db),
 ) -> TokenOut:
