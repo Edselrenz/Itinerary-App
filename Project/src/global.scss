@@ -409,7 +409,7 @@ body {
 }
 
 /* ========================================================
-   DATE PICKER POP-UP WINDOW ("FROM" & "TO")
+   DATE PICKER POP-UP WINDOW ("FROM" & "TO") - FIGMA ALIGNED
    ======================================================== */
 .date-picker-backdrop {
   position: fixed;
@@ -432,10 +432,11 @@ body {
 .date-picker-modal-card {
   background: #ffffff;
   border-radius: 20px;
+  border: 1.5px solid #1e293b;
   width: 100%;
   max-width: 440px;
   box-shadow: 0 20px 45px rgba(15, 23, 42, 0.25);
-  padding: 22px 20px 20px;
+  padding: 24px 22px 20px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -449,248 +450,120 @@ body {
 
 .date-picker-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  margin-bottom: -2px;
 
-  .header-icon-title {
+  .header-titles {
     display: flex;
-    align-items: center;
-    gap: 10px;
+    flex-direction: column;
+    gap: 2px;
 
-    .modal-calendar-icon {
-      font-size: 22px;
-      color: #0084ff;
+    .picker-main-title {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: #000000;
+      letter-spacing: -0.01em;
     }
 
-    h3 {
+    .picker-subtitle {
       margin: 0;
-      font-size: 1.18rem;
-      font-weight: 800;
-      color: #0f172a;
-      letter-spacing: -0.01em;
+      font-size: 0.85rem;
+      color: #64748b;
     }
   }
 
   .date-picker-close-btn {
-    background: #f1f5f9;
+    background: transparent;
     border: none;
-    border-radius: 50%;
-    width: 32px;
-    height: 32px;
+    padding: 2px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #64748b;
-    font-size: 18px;
-    cursor: pointer;
-    transition: background 0.15s ease;
-
-    &:hover {
-      background: #e2e8f0;
-      color: #0f172a;
-    }
-  }
-}
-
-.date-picker-instruction {
-  font-size: 0.88rem;
-  color: #64748b;
-  margin: 0;
-  line-height: 1.4;
-}
-
-.date-pickers-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-
-  @media (max-width: 380px) {
-    grid-template-columns: 1fr;
-  }
-}
-
-.picker-date-card {
-  background: #f8fafc;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 10px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  transition: border-color 0.15s ease;
-
-  &:focus-within {
-    border-color: #0084ff;
-    background: #ffffff;
-  }
-}
-
-.picker-card-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: #334155;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-
-  .badge-tag {
-    font-size: 0.68rem;
-    font-weight: 800;
-    padding: 2px 7px;
-    border-radius: 6px;
-    text-transform: uppercase;
-
-    &.from-tag {
-      background: #eff6ff;
-      color: #0084ff;
-    }
-
-    &.to-tag {
-      background: #f0fdf4;
-      color: #16a34a;
-    }
-  }
-}
-
-.picker-field-box {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-
-  .picker-field-icon {
-    font-size: 16px;
     color: #0084ff;
-  }
-
-  .native-date-input {
-    border: none;
-    background: transparent;
-    font-size: 0.92rem;
-    font-weight: 600;
-    color: #0f172a;
-    outline: none;
-    width: 100%;
-  }
-}
-
-.date-card-preview {
-  font-size: 0.76rem;
-  font-weight: 600;
-  color: #0084ff;
-  margin: 0;
-}
-
-.presets-row-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-
-  .presets-title {
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: #64748b;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-  }
-
-  .presets-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-
-  .preset-chip-btn {
-    background: #f1f5f9;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 5px 10px;
-    font-size: 0.78rem;
-    font-weight: 600;
-    color: #334155;
+    font-size: 26px;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: opacity 0.15s ease;
 
     &:hover {
-      background: #e2e8f0;
-      color: #0f172a;
+      opacity: 0.75;
     }
   }
 }
 
-.duration-status-card {
+.date-input-field {
+  color: #0f172a;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+
+  &::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.15s ease;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+}
+
+.popup-duration-summary {
   display: flex;
   align-items: center;
   gap: 8px;
   background: #eff6ff;
   border: 1px solid #bfdbfe;
-  border-radius: 10px;
-  padding: 10px 12px;
-  font-size: 0.86rem;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 0.88rem;
   font-weight: 600;
   color: #1d4ed8;
 
-  ion-icon {
+  .summary-icon {
     font-size: 18px;
     color: #0084ff;
     flex-shrink: 0;
   }
 
-  &.status-error {
+  &.summary-invalid {
     background: #fef2f2;
     border-color: #fecaca;
     color: #b91c1c;
 
-    ion-icon {
+    .summary-icon {
       color: #dc2626;
     }
   }
 }
 
-.picker-modal-actions {
+.popup-actions-stack {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
+  gap: 8px;
   margin-top: 4px;
 
-  .picker-cancel-action {
-    background: transparent;
-    border: 1px solid #cbd5e1;
-    border-radius: 12px;
-    padding: 10px 18px;
-    font-size: 0.92rem;
-    font-weight: 600;
-    color: #475569;
-    cursor: pointer;
-    transition: background 0.15s ease;
-
-    &:hover {
-      background: #f8fafc;
-      color: #0f172a;
-    }
+  .popup-apply-btn {
+    margin-top: 0;
+    width: 100%;
+    border-radius: 20px;
+    padding: 14px;
   }
 
-  .picker-apply-action {
-    background: #0084ff;
+  .popup-cancel-text-btn {
+    background: none;
     border: none;
-    border-radius: 12px;
-    padding: 10px 22px;
-    font-size: 0.92rem;
-    font-weight: 700;
-    color: #ffffff;
+    color: #64748b;
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding: 6px 12px;
     cursor: pointer;
-    transition: background 0.15s ease;
-    box-shadow: 0 4px 12px rgba(0, 132, 255, 0.25);
+    transition: color 0.15s ease;
 
-    &:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    &:hover:not(:disabled) {
-      background: #0070d8;
+    &:hover {
+      color: #0f172a;
     }
   }
 }

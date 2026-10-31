@@ -285,6 +285,10 @@ export class CustomBuilderPage implements OnInit, OnDestroy {
     }
   }
 
+    public isPresetActive(days: number): boolean {
+    return this.tempTripSummary.isValid && this.tempTripSummary.days === days;
+  }
+
   public setPresetDuration(days: number): void {
     const start = this.popupStartDate ? new Date(this.popupStartDate) : new Date();
     this.popupStartDate = start.toISOString().split('T')[0];

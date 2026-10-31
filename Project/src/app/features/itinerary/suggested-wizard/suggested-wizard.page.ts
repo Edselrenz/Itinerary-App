@@ -17,7 +17,8 @@ import {
   calendarOutline,
   cartOutline,
   cashOutline,
-  checkmarkCircle,
+  alertCircleOutline,
+      checkmarkCircle,
   closeOutline,
   createOutline,
   informationCircleOutline,
@@ -113,6 +114,7 @@ export class SuggestedWizardPage implements OnInit {
       calendarOutline,
       cashOutline,
       timeOutline,
+      alertCircleOutline,
       checkmarkCircle,
       createOutline,
       informationCircleOutline,
@@ -183,6 +185,10 @@ export class SuggestedWizardPage implements OnInit {
     if (this.popupStartDate && this.popupEndDate && this.popupEndDate < this.popupStartDate) {
       this.popupEndDate = this.popupStartDate;
     }
+  }
+
+    public isPresetActive(days: number): boolean {
+    return this.tempTripSummary.isValid && this.tempTripSummary.days === days;
   }
 
   public setPresetDuration(days: number): void {

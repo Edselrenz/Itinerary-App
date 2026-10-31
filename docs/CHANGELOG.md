@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [0.8.5-alpha] - 2026-10-31
+### Changed
+- **Travel Dates Pop-Up Window Design Format Alignment (Anti-Generic Frontend Design)**:
+  - **Previous Tab Format Consistency**: Refactored the "Select Travel Dates" pop-up window to match the exact visual language of the previous tabs (bold black labels, `.figma-input-box` with 1.5px dark charcoal border `#1e293b`, blue `#0084ff` calendar icons, and borderless date input controls).
+  - **Quick Presets as Preference Pills**: Transformed duration presets into canonical `.figma-pref-pill` capsules with dark borders (`#1e293b`) that illuminate in solid `#0084ff` blue when active.
+  - **Seamless Action Button Stack**: Replaced small side-by-side action buttons with the full-width `.find-itinerary-cta-btn` pill button and clean text cancel action.
+  - **Production Verification**: 100% test pass rate across 13 test files (74/74 tests) and 0 Angular style budget warnings.
+
+---
+
 ## [0.8.4-alpha] - 2026-10-31
 ### Changed
 - **Suggested Itinerary & Custom Builder Questionnaire Redesign (Figma Match)**:

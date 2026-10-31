@@ -538,100 +538,117 @@
       </div>
     }
     <!-- ========================================================
-         TRAVEL DATES POP-UP WINDOW ("FROM" & "TO")
+         TRAVEL DATES POP-UP WINDOW ("FROM" & "TO") - FIGMA ALIGNED
          ======================================================== -->
     @if (isDatePickerOpen) {
       <div class="date-picker-backdrop" (click)="closeDatePicker()">
         <div class="date-picker-modal-card" (click)="$event.stopPropagation()">
+          <!-- Header Row -->
           <div class="date-picker-header">
-            <div class="header-icon-title">
-              <ion-icon name="calendar-outline" class="modal-calendar-icon"></ion-icon>
-              <h3>Select Travel Dates</h3>
+            <div class="header-titles">
+              <h3 class="picker-main-title">Select Travel Dates</h3>
+              <p class="picker-subtitle">Choose your departure and return dates</p>
             </div>
             <button type="button" class="date-picker-close-btn" (click)="closeDatePicker()" aria-label="Close date picker">
               <ion-icon name="close-outline"></ion-icon>
             </button>
           </div>
 
-          <p class="date-picker-instruction">
-            Select your departure (From) and return (To) dates for this trip:
-          </p>
-
-          <div class="date-pickers-grid">
-            <!-- From Date Input -->
-            <div class="picker-date-card">
-              <label class="picker-card-label">
-                <span class="badge-tag from-tag">From</span>
-                Departure Date
-              </label>
-              <div class="picker-field-box">
-                <ion-icon name="calendar-outline" class="picker-field-icon"></ion-icon>
-                <input
-                  type="date"
-                  [(ngModel)]="popupStartDate"
-                  (change)="onPopupDateChange()"
-                  [min]="minDate"
-                  class="native-date-input"
-                  aria-label="Departure Date (From)"
-                />
-              </div>
-              @if (popupStartDate) {
-                <p class="date-card-preview">{{ formatFriendlyDate(popupStartDate) }}</p>
-              }
+          <!-- Departure Date (From) -->
+          <div class="form-group">
+            <label class="group-label">Departure Date (From)</label>
+            <div class="figma-input-box">
+              <ion-icon name="calendar-outline" class="input-blue-icon"></ion-icon>
+              <input
+                type="date"
+                [(ngModel)]="popupStartDate"
+                (change)="onPopupDateChange()"
+                [min]="minDate"
+                class="core-input date-input-field"
+                aria-label="Departure Date (From)"
+              />
             </div>
+            @if (popupStartDate) {
+              <p class="input-helper-note">{{ formatFriendlyDate(popupStartDate) }}</p>
+            }
+          </div>
 
-            <!-- To Date Input -->
-            <div class="picker-date-card">
-              <label class="picker-card-label">
-                <span class="badge-tag to-tag">To</span>
-                Return Date
-              </label>
-              <div class="picker-field-box">
-                <ion-icon name="calendar-outline" class="picker-field-icon"></ion-icon>
-                <input
-                  type="date"
-                  [(ngModel)]="popupEndDate"
-                  (change)="onPopupDateChange()"
-                  [min]="popupStartDate || minDate"
-                  class="native-date-input"
-                  aria-label="Return Date (To)"
-                />
-              </div>
-              @if (popupEndDate) {
-                <p class="date-card-preview">{{ formatFriendlyDate(popupEndDate) }}</p>
-              }
+          <!-- Return Date (To) -->
+          <div class="form-group">
+            <label class="group-label">Return Date (To)</label>
+            <div class="figma-input-box">
+              <ion-icon name="calendar-outline" class="input-blue-icon"></ion-icon>
+              <input
+                type="date"
+                [(ngModel)]="popupEndDate"
+                (change)="onPopupDateChange()"
+                [min]="popupStartDate || minDate"
+                class="core-input date-input-field"
+                aria-label="Return Date (To)"
+              />
             </div>
+            @if (popupEndDate) {
+              <p class="input-helper-note">{{ formatFriendlyDate(popupEndDate) }}</p>
+            }
           </div>
 
           <!-- Quick Duration Presets -->
-          <div class="presets-row-wrap">
-            <span class="presets-title">Quick presets:</span>
-            <div class="presets-chips">
-              <button type="button" class="preset-chip-btn" (click)="setPresetDuration(2)">2 Days (1N)</button>
-              <button type="button" class="preset-chip-btn" (click)="setPresetDuration(3)">3 Days (2N)</button>
-              <button type="button" class="preset-chip-btn" (click)="setPresetDuration(4)">4 Days (3N)</button>
-              <button type="button" class="preset-chip-btn" (click)="setPresetDuration(7)">1 Week</button>
+          <div class="form-group">
+            <label class="group-label">Quick Presets</label>
+            <div class="figma-pref-grid">
+              <button
+                type="button"
+                class="figma-pref-pill"
+                [class.active]="isPresetActive(2)"
+                (click)="setPresetDuration(2)"
+              >
+                2 Days (1N)
+              </button>
+              <button
+                type="button"
+                class="figma-pref-pill"
+                [class.active]="isPresetActive(3)"
+                (click)="setPresetDuration(3)"
+              >
+                3 Days (2N)
+              </button>
+              <button
+                type="button"
+                class="figma-pref-pill"
+                [class.active]="isPresetActive(4)"
+                (click)="setPresetDuration(4)"
+              >
+                4 Days (3N)
+              </button>
+              <button
+                type="button"
+                class="figma-pref-pill"
+                [class.active]="isPresetActive(7)"
+                (click)="setPresetDuration(7)"
+              >
+                1 Week
+              </button>
             </div>
           </div>
 
-          <!-- Duration Calculation Banner -->
-          <div class="duration-status-card" [class.status-error]="!tempTripSummary.isValid">
-            <ion-icon [name]="tempTripSummary.isValid ? 'checkmark-circle' : 'information-circle-outline'"></ion-icon>
-            <span class="status-text">{{ tempTripSummary.label }}</span>
+          <!-- Trip Duration Summary -->
+          <div class="popup-duration-summary" [class.summary-invalid]="!tempTripSummary.isValid">
+            <ion-icon [name]="tempTripSummary.isValid ? 'checkmark-circle' : 'alert-circle-outline'" class="summary-icon"></ion-icon>
+            <span class="summary-text">{{ tempTripSummary.label }}</span>
           </div>
 
           <!-- Action Buttons -->
-          <div class="picker-modal-actions">
-            <button type="button" class="picker-cancel-action" (click)="closeDatePicker()">
-              Cancel
-            </button>
+          <div class="popup-actions-stack">
             <button
               type="button"
-              class="picker-apply-action"
+              class="find-itinerary-cta-btn popup-apply-btn"
               [disabled]="!tempTripSummary.isValid"
               (click)="applyDatePicker()"
             >
               Apply Dates
+            </button>
+            <button type="button" class="popup-cancel-text-btn" (click)="closeDatePicker()">
+              Cancel
             </button>
           </div>
         </div>

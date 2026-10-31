@@ -939,4 +939,22 @@ This log records chronological development sessions, detailing objectives, execu
   - `npm --prefix Project run test:unit`: **13/13 test files, 74/74 unit tests passed [100%]**.
   - `npm --prefix Project run build`: **0 compilation errors, 0 style budget warnings, production bundle successfully generated [100%]**.
 
+---
+
+## Session 33: Refactoring Date Picker Pop-Up Window to Match Previous Tabs Design Language
+- **Date & Time**: 2026-10-31 15:23:00 (Local)
+- **Objective**: Refactor the "Select Travel Dates" pop-up window according to `/anti-generic-frontend-design` to strictly follow the design format of the previous tabs (Figma questionnaire & results screens).
+- **Key Enhancements**:
+  - **Eliminated Generic SaaS Clutter**: Removed pale tinted cards, tiny colored badge tags, raw browser input borders, and generic alert banners from the pop-up modal.
+  - **Adopted Canonical Previous-Tab Components**:
+    - **Departure & Return Inputs**: Replaced with `.form-group` + `.figma-input-box` featuring 1.5px dark charcoal border (`#1e293b`), blue calendar icon (`#0084ff`), and borderless `.core-input.date-input-field`, identical to the Destination and Daily Budget fields.
+    - **Quick Duration Presets**: Replaced gray rectangular buttons with `.figma-pref-pill` capsules with dark border (`#1e293b`) that illuminate in solid `#0084ff` blue when active (`isPresetActive(days)`), identical to the preference pills in the previous tabs.
+    - **Header & Close Button**: Styled with bold 800 black heading (`#000000`) and borderless blue close icon (`#0084ff`).
+    - **Action Buttons**: Applied `.find-itinerary-cta-btn` pill style for "Apply Dates" and clean text button for "Cancel".
+    - **Cross-Component Sync**: Applied identical changes to both `suggested-wizard` and `custom-builder`.
+- **Verification & Test Results**:
+  - `npm --prefix Project run test:unit`: **13/13 test files, 74/74 unit tests passed [100%]**.
+  - `npm --prefix Project run build`: **0 compilation errors, 0 style budget warnings, production bundle successfully generated [100%]**.
+
+
 
