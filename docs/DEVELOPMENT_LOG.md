@@ -424,6 +424,29 @@ This log records chronological development sessions, detailing objectives, execu
 
 ---
 
+## Session 18: Gray Out Apple Social Auth Buttons (Login & Signup)
+- **Date & Time**: 2026-10-31 08:54:00 (Local)
+- **Objective**: Visually gray out the Apple Sign-In / Sign-Up buttons on both `/login` and `/signup` with disabled styling and informational guidance to indicate that Apple authentication is unavailable in this version.
+- **Key Visual Changes**:
+  - **Apple Button Disabled State**:
+    - Added `.unavailable-btn` styling to the Apple pill button on both login and signup pages.
+    - Set muted background (`#f1f5f9`), subtle border (`#e2e8f0`), and reduced opacity (`0.6`).
+    - Styled Apple icon and text in muted slate (`#94a3b8`).
+    - Set cursor to `not-allowed` and removed active scale transform.
+    - Retained click feedback toast informing users that Apple Sign-In/Sign-Up is disabled in the pilot build.
+- **Files Modified**:
+  - `Project/src/app/features/auth/login/login.page.html`
+  - `Project/src/app/features/auth/login/login.page.scss`
+  - `Project/src/app/features/auth/signup/signup.page.html`
+  - `Project/src/app/features/auth/signup/signup.page.scss`
+- **Verification**:
+  - `npm run build`: Exit code 0, bundle generated in 5.01s.
+  - `python -m pytest backend/tests`: 2 passed in 2.03s [100%].
+- **Next Steps**:
+  - Pushed commit `3d3d20d` to `origin/main` to trigger automated GitHub Pages deployment.
+
+---
+
 ## Session 19: PlaceService Implementation, Type Definitions & Unit Test Suite
 - **Date & Time**: 2026-10-31 09:12:00 (Local)
 - **Objective**: Implement Milestone 4 Step 1: Create the Angular client `PlaceService` and associated TypeScript interfaces to connect with the backend `/api/v1/places` and `/api/v1/municipalities` endpoints, complete with local photography fallback resolution and full unit testing.
