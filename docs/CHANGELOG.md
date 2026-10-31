@@ -8,8 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [0.4.11-alpha] - 2026-10-31
 ### Changed
-- **Apple Social Signup Unavailable State**:
-  - Visually grayed out the "Continue with Apple" button on `/signup` with a muted slate palette (`#f1f5f9` background, `#e2e8f0` border, `#94a3b8` icon and text) and `not-allowed` cursor.
+- **Apple Social Auth Unavailable State (Login & Signup)**:
+  - Visually grayed out the "Continue with Apple" button across both `/login` and `/signup` screens with a muted slate palette (`#f1f5f9` background, `#e2e8f0` border, `#94a3b8` icon and text) and `not-allowed` cursor.
   - Retained accessible informational feedback to clearly communicate pilot status.
 
 ---
