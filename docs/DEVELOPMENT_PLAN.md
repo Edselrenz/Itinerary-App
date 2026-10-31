@@ -12,8 +12,8 @@ This plan tracks the 11 sequential milestones defined in the **End-to-End Engine
 | **1** | **PostgreSQL & FastAPI Core** | 7 SQLAlchemy 2.0 ORM models, Alembic migration, health check. | `GET /api/v1/health` returns 200 OK. | **COMPLETED** |
 | **2** | **OSM POI Pipeline & Seeding** | Overpass importer, bounding box check, 17 curated featured places. | Idempotent seed produces 0 duplicate rows. | **COMPLETED** |
 | **3** | **Auth & Ionic App Shell** | Argon2id auth, JWT, Google OAuth verify, Guest storage, 4-tab shell. | Pytest 100% pass; Angular build succeeds. | **COMPLETED** |
-| **4** | **Home Tab & Debounced Search** | 300ms RxJS search, popular destinations carousel, saved cards. | Local database search, 0 Nominatim calls. | **NEXT** |
-| **5** | **Leaflet Map & 16 Filters** | Bounded Leaflet map, category filters, marker cluster, bottom sheet. | Responsive map, external directions handoff. | **PENDING** |
+| **4** | **Home Tab & Debounced Search** | 300ms RxJS search, popular destinations carousel, saved cards. | Local database search, 0 Nominatim calls. | **COMPLETED** |
+| **5** | **Leaflet Map & 16 Filters** | Bounded Leaflet map, category filters, marker cluster, bottom sheet. | Responsive map, external directions handoff. | **NEXT** |
 | **6** | **Custom Itinerary Builder** | Multi-day custom creator, stop reordering, honest budget math. | BOLA ownership checks, duplicate guards. | **PENDING** |
 | **7** | **Suggested Itinerary Engine** | Deterministic Haversine clustering, preference scoring, diversity. | Transparent assumptions, no hallucinated venues. | **PENDING** |
 | **8** | **Overview, Day View & Sync** | Timeline view, stop detail cards, reactive cross-tab persistence. | Home cards sync immediately after edit. | **PENDING** |
@@ -61,14 +61,15 @@ This plan tracks the 11 sequential milestones defined in the **End-to-End Engine
 - [x] Build 4-Tab Shell (`tabs.routes.ts`) for Home, Map, History (placeholder), and Profile (account status / guest notice).
 - [x] Fix Angular Ionic 9 import resolution (`@ionic/angular`) and verify clean `npm run build`.
 
-### Milestone 4: Home Tab & Local Place Search (In Progress)
+### Milestone 4: Home Tab & Local Place Search
 - [x] Implement Place service (`place.service.ts`) and models (`place.models.ts`) in Angular client with 11 passing unit tests.
-- [ ] Connect Home tab search bar to `GET /api/v1/places` using 300ms RxJS debounce.
-- [ ] Connect Popular Destinations horizontal carousel to live `PlaceService.getFeaturedPlaces()`.
-- [ ] Build Saved Itineraries card list fetching from API (logged-in) or `GuestStorageService` (guests).
+- [x] Connect Home tab search bar to `GET /api/v1/places` using 300ms RxJS debounce and `switchMap` cancellation.
+- [x] Connect Popular Destinations horizontal carousel to live `PlaceService.getFeaturedPlaces()`.
+- [x] Build Saved Itineraries card list fetching from `GuestStorageService` with empty-state planner prompt.
+- [x] Enrich Destination Detail Modal with operating hours and honest cost formatting.
+- [x] Implement Home tab unit tests (`home.page.spec.ts`) with 6 passing tests.
 
-### Milestones 5–10: (Pending Milestone 4 completion)
-- [ ] Step 5: Leaflet map integration with 16 category filter pills and POI bottom sheet.
+### Milestone 5: Leaflet Map & 16 Category Filters (Next)
 - [ ] Step 6: Custom Itinerary builder with BOLA-checked backend endpoints and stop reordering.
 - [ ] Step 7: Deterministic Haversine clustering recommendation engine.
 - [ ] Step 8: Multi-day timeline overview, stop cards, and cross-tab reactive persistence.

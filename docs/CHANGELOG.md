@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [0.4.13-alpha] - 2026-10-31
+### Added & Changed
+- **Home Tab Local Search, Dynamic Featured Places & Saved Itineraries (`Milestone 4`)**:
+  - Implemented 300ms debounced RxJS search with `FormControl`, `debounceTime`, `distinctUntilChanged`, and `switchMap` cancellation to query `PlaceService.searchPlaces()` against local database POIs (zero Nominatim calls).
+  - Built reactive search results view with 2-column cards, loading spinner, category badges, and empty-state guidance.
+  - Connected Popular Destinations horizontal track to live featured places via `PlaceService.getFeaturedPlaces()` with seamless fallback to curated local high-res photography.
+  - Enriched Destination Detail Modal with operating hours and honest cost estimates (`₱min - ₱max` or `"Cost not provided"`).
+  - Integrated Saved Itineraries section connected to `GuestStorageService.itineraries$` with clean trip cards and an empty-state call-to-action.
+  - Created unit test suite in `home.page.spec.ts` (6 tests passing, bringing total test count to 23).
+
+---
+
 ## [0.4.12-alpha] - 2026-10-31
 ### Added
 - **Place Models & PlaceService (`Milestone 4 Step 1`)**:

@@ -20,12 +20,12 @@
     <div class="search-container">
       <input
         type="text"
-        [(ngModel)]="searchTerm"
-        placeholder="Search destination (e.g. Cabanatuan, Gapan, etc."
+        [formControl]="searchControl"
+        placeholder="Search destination (e.g. Cabanatuan, Gapan, etc.)"
         class="search-input"
         aria-label="Search destination"
       />
-      @if (searchTerm) {
+      @if (searchControl.value) {
         <button type="button" class="clear-btn" (click)="clearSearch()" aria-label="Clear search">
           <ion-icon name="close-circle"></ion-icon>
         </button>
@@ -34,68 +34,111 @@
       }
     </div>
 
-    <!-- Suggested & Custom Planner Entry Cards (2-column grid) -->
-    <div class="planner-cards-grid">
-      <!-- Suggested Itinerary (Dark Navy Gradient) -->
-      <div
-        class="action-card suggested-card"
-        routerLink="/tabs/map"
-        [queryParams]="{ mode: 'suggested' }"
-        role="button"
-        tabindex="0"
-      >
-        <div class="card-icon-wrap">
-          <svg class="sparkles-svg" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2l2.4 5.6L20 10l-5.6 2.4L12 18l-2.4-5.6L4 10l5.6-2.4L12 2z"/>
-            <path d="M18 16l1.2 2.8L22 20l-2.8 1.2L18 24l-1.2-2.8L14 20l2.8-1.2L18 16z"/>
-            <path d="M6 3l.8 1.8L8.6 5.6l-1.8.8L6 8.2l-.8-1.8L3.4 5.6l1.8-.8L6 3z"/>
-          </svg>
+    <!-- Dynamic Search Results View -->
+    @if (isSearching) {
+      <section class="search-results-section">
+        <div class="section-top-row">
+          <h2 class="section-heading">Search Results</h2>
+          @if (!searchLoading) {
+            <span class="search-count">{{ searchResults.length }} {{ searchResults.length === 1 ? 'place' : 'places' }} found</span>
+          }
         </div>
-        <h3 class="card-heading">
-          Suggested<br />
-          Itinerary
-        </h3>
-        <p class="card-copy">
-          Let us plan your trip based on your preferences.
-        </p>
-      </div>
 
-      <!-- Custom Itinerary (White with Sky-Blue outline) -->
-      <div
-        class="action-card custom-card"
-        routerLink="/tabs/map"
-        [queryParams]="{ mode: 'custom' }"
-        role="button"
-        tabindex="0"
-      >
-        <div class="card-icon-wrap">
-          <svg class="custom-plan-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-            <polyline points="14 2 14 8 20 8"></polyline>
-            <circle cx="12" cy="14" r="3.5"></circle>
-            <polyline points="12 12.5 12 14 13.5 14"></polyline>
-          </svg>
+        @if (searchLoading) {
+          <div class="search-loading-state">
+            <ion-spinner name="crescent" color="primary"></ion-spinner>
+            <p>Searching Nueva Ecija destinations...</p>
+          </div>
+        } @else if (searchResults.length > 0) {
+          <div class="search-results-grid">
+            @for (item of searchResults; track item.id) {
+              <div class="result-card" (click)="openDestinationDetail(item)" role="button" tabindex="0">
+                <div class="result-image-wrapper">
+                  <img [src]="item.image" [alt]="item.name" class="result-img" loading="lazy" />
+                  <span class="result-category-badge">{{ item.category }}</span>
+                </div>
+                <div class="result-info">
+                  <h4 class="result-title">{{ item.name }}</h4>
+                  <p class="result-muni">
+                    <ion-icon name="location-outline"></ion-icon>
+                    <span>{{ item.municipality }}</span>
+                  </p>
+                  <p class="result-cost">{{ item.costDisplay }}</p>
+                </div>
+              </div>
+            }
+          </div>
+        } @else {
+          <div class="empty-state">
+            <ion-icon name="search-outline" class="empty-state-icon"></ion-icon>
+            <p class="empty-state-title">No destinations found</p>
+            <p class="empty-state-desc">We couldn't find any places matching "{{ searchControl.value }}". Try another municipality or attraction name.</p>
+            <button type="button" class="reset-filter-btn" (click)="clearSearch()">Clear Search</button>
+          </div>
+        }
+      </section>
+    } @else {
+      <!-- Suggested & Custom Planner Entry Cards (2-column grid) -->
+      <div class="planner-cards-grid">
+        <!-- Suggested Itinerary (Dark Navy Gradient) -->
+        <div
+          class="action-card suggested-card"
+          routerLink="/tabs/map"
+          [queryParams]="{ mode: 'suggested' }"
+          role="button"
+          tabindex="0"
+        >
+          <div class="card-icon-wrap">
+            <svg class="sparkles-svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2l2.4 5.6L20 10l-5.6 2.4L12 18l-2.4-5.6L4 10l5.6-2.4L12 2z"/>
+              <path d="M18 16l1.2 2.8L22 20l-2.8 1.2L18 24l-1.2-2.8L14 20l2.8-1.2L18 16z"/>
+              <path d="M6 3l.8 1.8L8.6 5.6l-1.8.8L6 8.2l-.8-1.8L3.4 5.6l1.8-.8L6 3z"/>
+            </svg>
+          </div>
+          <h3 class="card-heading">
+            Suggested<br />
+            Itinerary
+          </h3>
+          <p class="card-copy">
+            Let us plan your trip based on your preferences.
+          </p>
         </div>
-        <h3 class="card-heading">
-          Custom<br />
-          Itinerary
-        </h3>
-        <p class="card-copy">
-          Pick your own places and we will organize the best route for you.
-        </p>
-      </div>
-    </div>
 
-    <!-- Popular Destinations Section -->
-    <section class="popular-section">
-      <div class="section-top-row">
-        <h2 class="section-heading">Popular Destinations</h2>
-        <button type="button" class="see-all-link" (click)="onSeeAll()">See all</button>
+        <!-- Custom Itinerary (White with Sky-Blue outline) -->
+        <div
+          class="action-card custom-card"
+          routerLink="/tabs/map"
+          [queryParams]="{ mode: 'custom' }"
+          role="button"
+          tabindex="0"
+        >
+          <div class="card-icon-wrap">
+            <svg class="custom-plan-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <circle cx="12" cy="14" r="3.5"></circle>
+              <polyline points="12 12.5 12 14 13.5 14"></polyline>
+            </svg>
+          </div>
+          <h3 class="card-heading">
+            Custom<br />
+            Itinerary
+          </h3>
+          <p class="card-copy">
+            Pick your own places and we will organize the best route for you.
+          </p>
+        </div>
       </div>
 
-      @if (filteredDestinations.length > 0) {
+      <!-- Popular Destinations Section -->
+      <section class="popular-section">
+        <div class="section-top-row">
+          <h2 class="section-heading">Popular Destinations</h2>
+          <button type="button" class="see-all-link" (click)="onSeeAll()">See all</button>
+        </div>
+
         <div class="destinations-track">
-          @for (item of filteredDestinations; track item.id) {
+          @for (item of destinations; track item.id) {
             <div class="dest-card" (click)="openDestinationDetail(item)" role="button" tabindex="0">
               <div class="dest-image-wrapper">
                 <img [src]="item.image" [alt]="item.name" class="dest-img" loading="lazy" />
@@ -105,13 +148,61 @@
             </div>
           }
         </div>
-      } @else {
-        <div class="empty-state">
-          <p>No destinations found for "{{ searchTerm }}".</p>
-          <button type="button" class="reset-filter-btn" (click)="clearSearch()">Reset Filter</button>
+      </section>
+
+      <!-- Saved Itineraries Section -->
+      <section class="saved-section">
+        <div class="section-top-row">
+          <h2 class="section-heading">Saved Itineraries</h2>
+          @if (savedItineraries.length > 0) {
+            <button type="button" class="see-all-link" routerLink="/tabs/history">View all</button>
+          }
         </div>
-      }
-    </section>
+
+        @if (savedItineraries.length > 0) {
+          <div class="itineraries-list">
+            @for (itin of savedItineraries; track itin.id) {
+              <div class="itinerary-card" (click)="openItinerary(itin)" role="button" tabindex="0">
+                <div class="itin-header">
+                  <span class="itin-badge" [class.suggested]="itin.type === 'suggested'">
+                    {{ itin.type === 'suggested' ? 'Suggested Plan' : 'Custom Plan' }}
+                  </span>
+                  <span class="itin-budget">₱{{ itin.daily_budget }}/day</span>
+                </div>
+                <h4 class="itin-title">{{ itin.title }}</h4>
+                <p class="itin-destination">
+                  <ion-icon name="location-outline"></ion-icon>
+                  <span>{{ itin.destination }}</span>
+                </p>
+                <div class="itin-footer">
+                  <span class="itin-dates">
+                    <ion-icon name="calendar-outline"></ion-icon>
+                    <span>{{ itin.start_date }} &rarr; {{ itin.end_date }}</span>
+                  </span>
+                </div>
+              </div>
+            }
+          </div>
+        } @else {
+          <div
+            class="empty-itinerary-card"
+            routerLink="/tabs/map"
+            [queryParams]="{ mode: 'suggested' }"
+            role="button"
+            tabindex="0"
+          >
+            <div class="empty-itin-icon">
+              <ion-icon name="calendar-outline"></ion-icon>
+            </div>
+            <div class="empty-itin-text">
+              <h4 class="empty-itin-title">No trips planned yet</h4>
+              <p class="empty-itin-subtitle">Choose Suggested or Custom Itinerary above to start planning your adventure.</p>
+            </div>
+            <ion-icon name="arrow-forward" class="empty-itin-arrow"></ion-icon>
+          </div>
+        }
+      </section>
+    }
   </div>
 
   <!-- Destination Detail Modal Sheet -->
@@ -129,7 +220,7 @@
           
           <div class="modal-image-wrap">
             <img [src]="selectedDestination.image" [alt]="selectedDestination.name" class="modal-hero-img" />
-            <button type="button" class="modal-close-btn" (click)="closeDestinationDetail()">
+            <button type="button" class="modal-close-btn" (click)="closeDestinationDetail()" aria-label="Close modal">
               <ion-icon name="close-outline"></ion-icon>
             </button>
             <span class="modal-category-badge">{{ selectedDestination.category }}</span>
@@ -142,6 +233,21 @@
             </div>
             
             <h2 class="modal-title">{{ selectedDestination.name }}</h2>
+
+            <!-- Meta details: Hours & Cost -->
+            <div class="modal-meta-grid">
+              @if (selectedDestination.openingHours) {
+                <div class="modal-meta-item">
+                  <ion-icon name="time-outline"></ion-icon>
+                  <span>{{ selectedDestination.openingHours }}</span>
+                </div>
+              }
+              <div class="modal-meta-item">
+                <ion-icon name="cash-outline"></ion-icon>
+                <span>{{ selectedDestination.costDisplay }}</span>
+              </div>
+            </div>
+
             <p class="modal-full-desc">{{ selectedDestination.description }}</p>
 
             <div class="modal-tags-row">

@@ -7,8 +7,8 @@ This document serves as the primary handoff reference for developers and coding 
 ## 1. Project Status Overview
 
 - **Application Name**: Nueva Ecija Travel Itinerary (MVP)
-- **Current Development Phase**: **Milestone 4 — Home Tab & Local Place Search**
-- **Last Verified Working State**: **Milestone 3 (Authentication & Ionic App Shell)** completely implemented and verified with automated test suites and production bundle generation.
+- **Current Development Phase**: **Milestone 5 — Leaflet Map & 16 Category Filters**
+- **Last Verified Working State**: **Milestone 4 (Home Tab & Local Place Search)** completely implemented and verified with automated test suites (23/23 unit tests, 2/2 backend tests) and clean production bundle generation.
 - **Current Blockers**: **None**.
 
 ---
@@ -100,6 +100,13 @@ This document serves as the primary handoff reference for developers and coding 
   - Curated high-resolution image fallback resolver `getPlaceImage()`.
   - Canonical category display formatter `formatCategoryName()`.
   - 11 passing Angular unit tests in `place.service.spec.ts`.
+- [x] **Home Tab Integration (`Project/src/app/tabs/home/`)**:
+  - Reactive search input with `FormControl`, `debounceTime(300)`, and `switchMap` cancellation querying `/api/v1/places?q=...` (0 Nominatim calls).
+  - Search results view with 2-column cards, loading spinner, category badges, and empty-state guidance.
+  - Popular Destinations carousel populated dynamically via `PlaceService.getFeaturedPlaces()`.
+  - Destination Detail Modal sheet with verified operating hours, honest cost bounds (`₱min - ₱max` or "Cost not provided"), and keyless Google Maps external URL directions.
+  - Saved Itineraries card list connected to `GuestStorageService.itineraries$` with clean trip cards and empty-state planner prompt.
+  - 6 passing unit tests in `home.page.spec.ts`.
 - [x] **Production Build**: Verified with `npm run build` (0 errors, 0 warnings).
 - [x] **Live GitHub Pages Deployment**: Fully deployed and verified live at [https://edselrenz.github.io/Itinerary-App/](https://edselrenz.github.io/Itinerary-App/) (HTTP 200 OK).
 
@@ -107,17 +114,17 @@ This document serves as the primary handoff reference for developers and coding 
 
 ## 3. Features Currently Being Developed
 
-- **Milestone 4: Home Tab & Local Place Search**:
-  - [x] Implementation of Angular `PlaceService` and models.
-  - [ ] Connecting the Home tab search bar with RxJS 300ms debounce and query cancellation (`switchMap`).
-  - [ ] Connecting Popular Destinations carousel to live `PlaceService.getFeaturedPlaces()`.
-  - [ ] Displaying the Saved Itineraries card list (`GuestStorageService` for guests, `/api/v1/itineraries` for registered users).
+- **Milestone 5: Leaflet Map & 16 Category Filters**:
+  - Bounded Leaflet map centered on Nueva Ecija `[15.58, 121.00]` with OpenStreetMap raster tiles and proper attribution.
+  - 16 category filter pills / modal sheet.
+  - POI marker clustering with `leaflet.markercluster`.
+  - Interactive POI bottom sheet with operating hours, honest costs, and external directions button.
+  - Tab lifecycle resize handling (`map.invalidateSize()`).
 
 ---
 
 ## 4. Features Not Yet Implemented
 
-- **Milestone 5**: Interactive Leaflet map with 16 category filter pills and POI bottom sheet.
 - **Milestone 6**: Custom Itinerary multi-day builder with stop reordering and BOLA checks.
 - **Milestone 7**: Deterministic Haversine clustering recommendation engine.
 - **Milestone 8**: Day timeline view, stop detail cards, and cross-tab reactive persistence.
@@ -130,13 +137,13 @@ This document serves as the primary handoff reference for developers and coding 
 
 1. **Backend Automated Tests**:
    - Command: `python -m pytest backend/tests/ -v`
-   - Result: `2 passed, 1 warning in 1.99s [100%]` (`test_foundation.py` and `test_auth.py`).
+   - Result: `2 passed, 1 warning in 2.18s [100%]` (`test_foundation.py` and `test_auth.py`).
 2. **Mobile Client Unit Tests**:
    - Command: `npm run test:unit` in `Project/`
-   - Result: `7 test files passed, 17 tests passed in 14.11s [100%]` (includes 11 `place.service.spec.ts` tests).
+   - Result: `8 test files passed, 23 tests passed in 14.91s [100%]` (includes 11 `place.service.spec.ts` and 6 `home.page.spec.ts` tests).
 3. **Mobile Client Compilation**:
    - Command: `npm run build` in `Project/`
-   - Result: `Application bundle generation complete [0 errors]` (Artifacts in `Project/www`).
+   - Result: `Application bundle generation complete [0 errors, 0 warnings]` (Artifacts in `Project/www`).
 4. **TypeScript Strict Type Check**:
    - Command: `npm run typecheck:e2e` in `Project/`
    - Result: `0 errors`.
@@ -145,9 +152,8 @@ This document serves as the primary handoff reference for developers and coding 
 
 ## 6. Immediate Next Development Task
 
-Complete the remaining parts of **Milestone 4 — Home Tab Integration**:
-1. Connect Home search input to an RxJS `FormControl` with `debounceTime(300)` and `distinctUntilChanged()`.
-2. Connect `home.page.ts` to `PlaceService.getFeaturedPlaces()` to populate the Popular Destinations horizontal carousel.
-3. Wire Saved Itineraries card list to `GuestStorageService` and `GET /api/v1/itineraries`.
-4. Verify search cancellation and zero-Nominatim network calls.
+Proceed to **Milestone 5 — Leaflet Map & 16 Category Filters**:
+1. Implement Leaflet map in `Project/src/app/tabs/map/map.page.ts` bounded to Nueva Ecija `[15.15, 120.70]` to `[16.15, 121.40]`.
+2. Connect to `PlaceService.searchPlaces()` with viewport bounding box parameters and category filters.
+3. Integrate MarkerCluster for POIs and bottom sheet modal for POI detail view.
 

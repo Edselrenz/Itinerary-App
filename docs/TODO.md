@@ -78,7 +78,7 @@ This checklist tracks completed, active, and pending tasks across all developmen
 
 ---
 
-## Phase 4: Home Tab & Local Place Search (CURRENT FOCUS)
+## Phase 4: Home Tab & Local Place Search
 - [x] Implement `PlaceService` in `Project/src/app/core/services/place.service.ts`:
   - [x] `searchPlaces(params)` (query, categories, bounding box, municipality, limit, offset)
   - [x] `getFeaturedPlaces(limit)`
@@ -87,15 +87,17 @@ This checklist tracks completed, active, and pending tasks across all developmen
   - [x] `getPlaceImage(name, remoteUrl)` local photography fallback resolver
   - [x] `formatCategoryName(categoryKey)`
   - [x] Unit test suite (`place.service.spec.ts`) with 11 passing tests
-- [ ] Connect Home tab search bar with RxJS 300ms debounce to live `PlaceService` backend.
+- [x] Connect Home tab search bar with RxJS 300ms debounce to live `PlaceService` backend (`switchMap` stale query cancellation).
 - [x] Render Popular Destinations carousel with verified imagery, descriptions, and category tags.
-- [ ] Connect Popular Destinations carousel to live `PlaceService.getFeaturedPlaces()`.
-- [ ] Render Saved Itineraries card list (API for signed-in users, `GuestStorageService` for guests).
-- [ ] Verify search response times and zero-Nominatim network calls.
+- [x] Connect Popular Destinations carousel to live `PlaceService.getFeaturedPlaces()`.
+- [x] Render Saved Itineraries card list (`GuestStorageService` for guests, with empty-state planner prompt).
+- [x] Enrich Destination Detail Modal with hours and honest pricing (`₱min - ₱max` or "Cost not provided").
+- [x] Home tab unit test suite (`home.page.spec.ts`) with 6 passing tests.
+- [x] Verify search response times and zero-Nominatim network calls.
 
 ---
 
-## Phase 5: Leaflet Map & Category Filters
+## Phase 5: Leaflet Map & Category Filters (CURRENT FOCUS)
 - [ ] Implement Leaflet map bounded to Nueva Ecija `[15.58, 121.00]`.
 - [ ] Integrate 16 category filter modal / pills.
 - [ ] Implement Leaflet MarkerCluster integration for POI markers.

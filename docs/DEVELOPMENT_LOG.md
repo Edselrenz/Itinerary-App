@@ -477,6 +477,44 @@ This log records chronological development sessions, detailing objectives, execu
 - **Next Steps**:
   - Wire `PlaceService` into `home.page.ts` for 300ms debounced destination search and live featured places carousel.
 
+---
+
+## Session 20: Home Tab Integration — Debounced Search, Featured Carousel & Saved Itineraries
+- **Date & Time**: 2026-10-31 09:55:00 (Local)
+- **Objective**: Complete Milestone 4: Wire `PlaceService` into `HomePage` (`Project/src/app/tabs/home/`), implement RxJS 300ms debounced local search with query cancellation (`switchMap`), populate the Popular Destinations horizontal carousel dynamically from `/api/v1/places?featured=true`, render the Saved Itineraries card list from `GuestStorageService`, enrich the Destination Detail Modal with verified opening hours and honest pricing, and implement a full unit test suite.
+- **Key Implementation Details**:
+  - **Reactive Debounced Search (`home.page.ts` & `home.page.html`)**:
+    - Connected `searchControl = new FormControl('')` to an RxJS pipeline (`debounceTime(300)`, `distinctUntilChanged()`, `switchMap()`).
+    - Stale in-flight requests are automatically cancelled on rapid typing.
+    - Zero Nominatim network queries: searches operate purely against the local database (`/api/v1/places?q=...`) with graceful offline fallback.
+    - Search results view renders 2-column venue cards with high-res images, category badges, municipality tags, and prices.
+    - Friendly empty state with "Clear Search" action when no results match.
+  - **Popular Destinations Dynamic Ingestion**:
+    - Calls `PlaceService.getFeaturedPlaces(20)` on initialization to populate the 17 seeded curated places.
+    - Mapped with `PlaceService.getPlaceImage()` preserving local high-resolution asset photography.
+  - **Honest Cost & Metadata in Modal**:
+    - Displays verified operating hours (`openingHours`) and honest price ranges (e.g. `₱100 - ₱500`, or `"Cost not provided"` for unverified stops like Pantabangan Dam).
+    - Preserves external key-free Google Maps directions hand-off.
+  - **Saved Itineraries Section**:
+    - Subscribed to `GuestStorageService.itineraries$` to display saved traveler trip plans with budget chips and travel dates.
+    - Added an empty-state action card guiding travelers to start planning via Suggested or Custom Itinerary.
+  - **Unit Test Suite (`home.page.spec.ts`)**:
+    - 6 Vitest unit tests verifying component creation, featured places loading, 300ms debounced search, search input clearing, modal lifecycle, and honest cost formatting.
+- **Files Created**:
+  - `Project/src/app/tabs/home/home.page.spec.ts`
+- **Files Modified**:
+  - `Project/src/app/tabs/home/home.page.ts`
+  - `Project/src/app/tabs/home/home.page.html`
+  - `Project/src/app/tabs/home/home.page.scss`
+- **Verification**:
+  - `npm run test:unit`: 8 test files, 23/23 tests passed in 14.91s (all 6 `home.page.spec.ts` tests passed in 661ms).
+  - `python -m pytest backend/tests/ -v`: 2 passed in 2.18s [100%].
+  - `npm run typecheck:e2e`: 0 errors.
+  - `npm run build`: 0 errors, 0 budget warnings, production bundle generated cleanly.
+- **Next Steps**:
+  - Proceed to Milestone 5: Leaflet Map implementation with 16 category filter pills and POI bottom sheet.
+
+
 
 
 
