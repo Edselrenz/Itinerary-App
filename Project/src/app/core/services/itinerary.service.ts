@@ -11,16 +11,12 @@ import {
   ItineraryReorderEntry,
   ItineraryUpdatePayload,
   SuggestedItineraryRequest,
+  ItineraryBudgetSummary,
 } from '../models/itinerary.models';
 import { AuthService } from './auth.service';
 import { GuestItinerary, GuestStorageService } from './guest-storage.service';
 
-export interface ItineraryBudgetSummary {
-  verifiedMin: number;
-  verifiedMax: number;
-  unverifiedCount: number;
-  displayText: string;
-}
+export { ItineraryBudgetSummary } from '../models/itinerary.models';
 
 @Injectable({
   providedIn: 'root',

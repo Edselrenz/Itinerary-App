@@ -25,8 +25,8 @@ import {
   sparkles,
   timeOutline,
 } from 'ionicons/icons';
-import { Itinerary } from '../../../core/models/itinerary.models';
-import { ItineraryBudgetSummary, ItineraryService } from '../../../core/services/itinerary.service';
+import { Itinerary, ItineraryBudgetSummary } from '../../../core/models/itinerary.models';
+import { ItineraryService } from '../../../core/services/itinerary.service';
 import { PlaceService } from '../../../core/services/place.service';
 
 export interface PreferenceOption {
@@ -282,3 +282,4 @@ export class SuggestedWizardPage implements OnInit {
     return 'Price not listed';
   }
 }
+

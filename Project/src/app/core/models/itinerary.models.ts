@@ -101,3 +101,11 @@ export interface SuggestedItineraryRequest {
   save_immediately?: boolean;
 }
 
+export interface ItineraryBudgetSummary {
+  verifiedMin: number;
+  verifiedMax: number;
+  unverifiedCount: number;
+  displayText: string;
+}
+
+
