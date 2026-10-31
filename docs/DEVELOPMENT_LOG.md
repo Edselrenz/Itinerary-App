@@ -420,7 +420,29 @@ This log records chronological development sessions, detailing objectives, execu
   - `npm run build`: Exit code 0, 0 compiler warnings, bundle generated in 4.50s.
   - `python -m pytest backend/tests`: 2 passed in 2.01s [100%].
 - **Next Steps**:
-  - Commit and push to `origin/main` to trigger automated GitHub Pages deployment.
+  - Pushed commit `93847f4` to `origin/main`.
+
+---
+
+## Session 18: Gray Out Apple Social Signup Button
+- **Date & Time**: 2026-10-31 08:44:00 (Local)
+- **Objective**: Visually gray out the Apple Sign-Up button on `/signup` with disabled styling and informational guidance to indicate that Apple authentication is unavailable in this version.
+- **Key Visual Changes**:
+  - **Apple Button Disabled State**:
+    - Added `.unavailable-btn` styling to the Apple pill button on the signup page.
+    - Set muted background (`#f1f5f9`), subtle border (`#e2e8f0`), and reduced opacity (`0.6`).
+    - Styled Apple icon and text in muted slate (`#94a3b8`).
+    - Set cursor to `not-allowed` and removed active scale transform.
+    - Retained click feedback toast informing users that Apple Sign-Up is disabled in the pilot build.
+- **Files Modified**:
+  - `Project/src/app/features/auth/signup/signup.page.html`
+  - `Project/src/app/features/auth/signup/signup.page.scss`
+- **Verification**:
+  - `npm run build`: Exit code 0, bundle generated in 9.80s.
+  - `python -m pytest backend/tests`: 2 passed in 3.46s [100%].
+- **Next Steps**:
+  - Commit and push to `origin/main` to update live deployment.
+
 
 
 

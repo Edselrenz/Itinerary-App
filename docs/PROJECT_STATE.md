@@ -69,7 +69,7 @@ This document serves as the primary handoff reference for developers and coding 
   - Clean input fields with blue `mail-outline` and `key-outline` leading icons, and `eye-outline` toggle.
   - Remember me checkbox and blue `Forgot password?` link.
   - Solid blue pill action button (*"Log in"*).
-  - Outlined pill social logins (*Continue with Google* and *Continue with Apple*).
+  - Outlined pill social logins (*Continue with Google* and grayed-out unavailable *Continue with Apple*).
   - Clean footer: *"Don't have an account? Sign up"*.
 - [x] **Figma-Aligned Signup Screen (`/signup`)**:
   - Blue back navigation arrow (`←`).
@@ -80,7 +80,7 @@ This document serves as the primary handoff reference for developers and coding 
   - Solid blue pill action button (*"Sign up"*).
   - Centered switch prompt directly below button: *"Already have an account? Log in"*.
   - Centered *"or"* divider rule.
-  - Outlined pill social logins (*Continue with Google* and *Continue with Apple*).
+  - Outlined pill social logins (*Continue with Google* and grayed-out unavailable *Continue with Apple*).
   - Automated username generation for backend compatibility.
 - [x] **Figma-Aligned Home Page (`/tabs/home`)**:
   - Top header with bold 2-line title (*"Where are you / going next?"*) and electric blue notification bell.

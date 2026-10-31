@@ -173,8 +173,14 @@
           <span class="social-btn-text">Continue with Google</span>
         </button>
 
-        <!-- Apple -->
-        <button type="button" class="social-pill-btn" (click)="onAppleSignup()">
+        <!-- Apple (Unavailable) -->
+        <button
+          type="button"
+          class="social-pill-btn unavailable-btn"
+          (click)="onAppleSignup()"
+          aria-disabled="true"
+          title="Apple Sign-Up is unavailable in this version"
+        >
           <ion-icon name="logo-apple" class="apple-logo-icon"></ion-icon>
           <span class="social-btn-text">Continue with Apple</span>
         </button>
