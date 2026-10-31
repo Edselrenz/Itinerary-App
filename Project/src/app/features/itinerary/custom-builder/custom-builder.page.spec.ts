@@ -121,11 +121,34 @@ describe('CustomBuilderPage', () => {
     fixture.detectChanges();
   });
 
-  it('should create the custom builder component and initialize days', () => {
+  it('should create the custom builder component and initialize in form view', () => {
     expect(component).toBeTruthy();
+    expect(component.activeView).toBe('form');
     expect(component.days.length).toBeGreaterThanOrEqual(1);
     expect(component.currentDay).toBeTruthy();
     expect(component.currentDay?.day_number).toBe(1);
+  });
+
+  it('supports preference toggling and date duration formatting', () => {
+    expect(component.isPreferenceSelected('nature')).toBe(false);
+    component.togglePreference('nature');
+    expect(component.isPreferenceSelected('nature')).toBe(true);
+    component.togglePreference('nature');
+    expect(component.isPreferenceSelected('nature')).toBe(false);
+
+    expect(component.formattedTripDateSubtitle).toContain('day');
+    component.form.patchValue({ start_date: '', end_date: '' });
+    expect(component.formattedTripDateSubtitle).toContain('e.g.');
+  });
+
+  it('proceeds to builder browse view and syncs days on find itinerary', () => {
+    component.togglePreference('food');
+    component.proceedToBuilder();
+    expect(component.activeView).toBe('browse');
+    expect(component.selectedCategory).toBe('Food');
+
+    component.backToForm();
+    expect(component.activeView).toBe('form');
   });
 
   it('allows adding and selecting a new day', () => {

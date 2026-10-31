@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [0.8.2-alpha] - 2026-10-31
+### Added
+- **Custom Itinerary Questionnaire Flow (Figma Alignment)**:
+  - Added "Tell us your travel details" questionnaire view to Custom Itinerary matching Figma mockups (`media_1793427570420_e2591e62.png`).
+  - Added blue icon accents (`#0084ff`), live date duration calculations, and 5 preference capsules (`Nature & Parks`, `Food Trip`, `Culture & History`, `Shopping`, `Resort`).
+  - Added "Find Itinerary" CTA transitioning to the places browser and synchronizing days with chosen travel dates.
+  - Centralized shared questionnaire styles in `src/global.scss`, keeping `custom-builder.page.scss` under 10.00 kB with 0 Angular style budget warnings.
+  - Added unit test coverage for the questionnaire flow (66/66 frontend tests passing).
+
+---
+
 ## [0.8.1-alpha] - 2026-10-31
 ### Added
 - **Suggested Itinerary & Nearby Places Flow (Figma Alignment)**:

@@ -1,53 +1,151 @@
 <ion-header class="ion-no-border app-header">
-  <ion-toolbar class="builder-toolbar">
-    <ion-button fill="clear" slot="start" class="nav-btn" (click)="onCancel()" aria-label="Go back">
+  <ion-toolbar class="builder-toolbar" [class.form-toolbar]="activeView === 'form'">
+    <ion-button fill="clear" slot="start" class="nav-btn" (click)="onHeaderBack()" aria-label="Go back">
       <ion-icon name="arrow-back"></ion-icon>
     </ion-button>
-    <ion-title class="builder-title">
-      {{ activeView === 'browse' ? 'Custom Itinerary' : 'Your Custom Itinerary' }}
+    <ion-title class="builder-title" [class.form-header-title]="activeView === 'form'">
+      {{ activeView === 'form' ? 'Custom Itinerary' : (activeView === 'browse' ? 'Custom Itinerary' : 'Your Custom Itinerary') }}
     </ion-title>
-    <ion-button
-      slot="end"
-      class="header-save-btn"
-      (click)="saveItinerary()"
-      [disabled]="isSaving"
-      aria-label="Save itinerary"
-    >
-      @if (isSaving) {
-        <ion-spinner name="crescent" class="save-spinner"></ion-spinner>
-      } @else {
-        <ion-icon name="checkmark-circle" class="save-icon"></ion-icon>
-        <span class="save-text">Save</span>
-      }
-    </ion-button>
+    @if (activeView !== 'form') {
+      <ion-button
+        slot="end"
+        class="header-save-btn"
+        (click)="saveItinerary()"
+        [disabled]="isSaving"
+        aria-label="Save itinerary"
+      >
+        @if (isSaving) {
+          <ion-spinner name="crescent" class="save-spinner"></ion-spinner>
+        } @else {
+          <ion-icon name="checkmark-circle" class="save-icon"></ion-icon>
+          <span class="save-text">Save</span>
+        }
+      </ion-button>
+    }
   </ion-toolbar>
 
   <!-- Top View Mode Switcher Segment -->
-  <div class="view-mode-bar">
-    <button
-      type="button"
-      class="view-mode-tab"
-      [class.active]="activeView === 'browse'"
-      (click)="switchToBrowse()"
-    >
-      <ion-icon name="add-outline"></ion-icon>
-      <span>Add Places</span>
-    </button>
-    <button
-      type="button"
-      class="view-mode-tab"
-      [class.active]="activeView === 'timeline'"
-      (click)="switchToTimeline()"
-    >
-      <ion-icon name="calendar-outline"></ion-icon>
-      <span>Your Itinerary ({{ totalStopsCount }})</span>
-    </button>
-  </div>
+  @if (activeView !== 'form') {
+    <div class="view-mode-bar">
+      <button
+        type="button"
+        class="view-mode-tab"
+        [class.active]="activeView === 'browse'"
+        (click)="switchToBrowse()"
+      >
+        <ion-icon name="add-outline"></ion-icon>
+        <span>Add Places</span>
+      </button>
+      <button
+        type="button"
+        class="view-mode-tab"
+        [class.active]="activeView === 'timeline'"
+        (click)="switchToTimeline()"
+      >
+        <ion-icon name="calendar-outline"></ion-icon>
+        <span>Your Itinerary ({{ totalStopsCount }})</span>
+      </button>
+    </div>
+  }
 </ion-header>
 
 <ion-content class="builder-content" [fullscreen]="true">
   <div class="builder-container">
-    @if (activeView === 'browse') {
+    @if (activeView === 'form') {
+      <!-- ========================================================
+           VIEW 0: "Tell us your travel details" QUESTIONNAIRE
+           ======================================================== -->
+      <div class="intro-heading-block">
+        <h1 class="main-heading">Tell us your travel details</h1>
+      </div>
+
+      <form [formGroup]="form" class="wizard-form">
+        <!-- Destination Field -->
+        <div class="form-group">
+          <label for="custom-destination-input" class="group-label">Destination</label>
+          <div class="figma-input-box">
+            <ion-icon name="location-outline" class="input-blue-icon"></ion-icon>
+            <input
+              id="custom-destination-input"
+              type="text"
+              formControlName="destination"
+              class="core-input"
+              placeholder="Choose a destination"
+              aria-label="Destination"
+            />
+          </div>
+        </div>
+
+        <!-- Travel Dates Field -->
+        <div class="form-group">
+          <label class="group-label">Travel Dates</label>
+          <div class="figma-input-box date-box-row">
+            <ion-icon name="calendar-outline" class="input-blue-icon"></ion-icon>
+            <div class="dates-inline-inputs">
+              <input
+                type="date"
+                formControlName="start_date"
+                class="date-mini-input"
+                aria-label="Start Date"
+              />
+              <span class="date-sep">–</span>
+              <input
+                type="date"
+                formControlName="end_date"
+                class="date-mini-input"
+                aria-label="End Date"
+              />
+            </div>
+          </div>
+          <p class="input-helper-note">{{ formattedTripDateSubtitle }}</p>
+        </div>
+
+        <!-- Daily Budget Field -->
+        <div class="form-group">
+          <label for="custom-daily-budget-input" class="group-label">Daily Budget</label>
+          <div class="figma-input-box">
+            <ion-icon name="cash-outline" class="input-blue-icon"></ion-icon>
+            <input
+              id="custom-daily-budget-input"
+              type="number"
+              formControlName="daily_budget"
+              class="core-input"
+              min="0"
+              step="500"
+              placeholder="₱ Amount per day"
+              aria-label="Daily Budget"
+            />
+          </div>
+        </div>
+
+        <!-- Preferences (optional) -->
+        <div class="form-group">
+          <label class="group-label">Preferences (optional)</label>
+          <div class="figma-pref-grid">
+            @for (pref of preferenceOptions; track pref.key) {
+              <button
+                type="button"
+                class="figma-pref-pill"
+                [class.active]="isPreferenceSelected(pref.key)"
+                (click)="togglePreference(pref.key)"
+              >
+                {{ pref.label }}
+              </button>
+            }
+          </div>
+        </div>
+
+        <!-- Action CTA (Figma: "Find Itinerary") -->
+        <button
+          type="button"
+          class="find-itinerary-cta-btn"
+          [disabled]="form.invalid"
+          (click)="proceedToBuilder()"
+        >
+          <span>Find Itinerary</span>
+        </button>
+      </form>
+    } @else if (activeView === 'browse') {
       <!-- ========================================================
            VIEW 1: ADD PLACES ("Add the places you want to visit")
            ======================================================== -->

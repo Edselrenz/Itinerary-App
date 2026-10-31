@@ -863,3 +863,24 @@ This log records chronological development sessions, detailing objectives, execu
   - `npm --prefix Project run build`: **0 compilation errors, 0 style budget warnings, production bundle successfully generated [100%]**.
   - `npm --prefix Project run test:unit`: **12/12 test files, 64/64 unit tests passed [100%]**.
   - `python -m pytest backend/tests/ -v`: **4/4 backend pytest suites passed in 2.30s [100%]**.
+
+---
+
+## Session 30: Custom Itinerary Travel Details Questionnaire Redesign Matching Figma
+- **Date & Time**: 2026-10-31 14:35:00 (Local)
+- **Objective**: Implement the Custom Itinerary travel details questionnaire screen matching the user-uploaded Figma screenshot (`media_1793427570420_e2591e62.png`), complete with blue icons, date subtitle helper, 5 preference capsules, and "Find Itinerary" CTA transitioning to the custom builder.
+- **Key Enhancements**:
+  - **CustomBuilderPage View Flow**:
+    - Added `activeView: 'form' | 'browse' | 'timeline'`. New custom itineraries land on `'form'` ("Tell us your travel details") by default, while existing itineraries open directly in `'timeline'`.
+    - Implemented questionnaire form with destination input (location icon in blue `#0084ff`), date range picker with live computed subtitle (`e.g., Oct 30 – Nov 2 (4 days, 3 nights)`), daily budget input with cash icon, and 5 preference capsules (`Nature & Parks`, `Food Trip`, `Culture & History`, `Shopping`, `Resort`).
+    - Added `proceedToBuilder()` method which synchronizes the day schedule with selected dates, applies category filters matching selected preferences, and transitions to `'browse'` view ("Add the places you want to visit").
+    - Updated navigation: back button in `'form'` returns to `/tabs/home` via `onCancel()`, and back button in `'browse'` returns to `'form'` to allow travelers to adjust their travel parameters.
+  - **Style Optimization & Zero Budget Warnings**:
+    - Moved shared questionnaire styles into `Project/src/global.scss` to eliminate duplication between `suggested-wizard` and `custom-builder`.
+    - Compacted `custom-builder.page.scss` to compile to < 10.00 kB, completely eliminating the Angular style budget warning.
+  - **Unit Test Suite Coverage (`Project/src/app/features/itinerary/custom-builder/custom-builder.page.spec.ts`)**:
+    - Added unit test cases verifying initialization in `'form'` view, preference toggling, date duration formatting, and `proceedToBuilder()` transitions (8/8 tests passing).
+- **Verification & Test Results**:
+  - `npm --prefix Project run build`: **0 compilation errors, 0 style budget warnings, production bundle successfully generated [100%]**.
+  - `npm --prefix Project run test:unit`: **12/12 test files, 66/66 unit tests passed in 17.91s [100%]**.
+  - `python -m pytest backend/tests/ -v`: **4/4 backend pytest suites passed in 6.38s [100%]**.

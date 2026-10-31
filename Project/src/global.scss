@@ -201,3 +201,144 @@ body {
     }
   }
 }
+
+/* ========================================================
+   Figma Itinerary Details Questionnaire (Shared)
+   ======================================================== */
+.intro-heading-block {
+  margin: 12px 0 24px;
+}
+
+.main-heading {
+  font-size: 1.55rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.wizard-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.group-label {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.figma-input-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #fff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 13px 14px;
+
+  &:focus-within {
+    border-color: #0084ff;
+  }
+}
+
+.input-blue-icon {
+  font-size: 20px;
+  color: #0084ff;
+  flex-shrink: 0;
+}
+
+.core-input {
+  border: none;
+  background: transparent;
+  width: 100%;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #0f172a;
+  outline: none;
+
+  &::placeholder {
+    color: #94a3b8;
+  }
+}
+
+.dates-inline-inputs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-grow: 1;
+}
+
+.date-mini-input {
+  border: none;
+  background: transparent;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: #0f172a;
+  outline: none;
+  flex: 1;
+}
+
+.date-sep {
+  color: #64748b;
+  font-weight: 700;
+}
+
+.input-helper-note {
+  font-size: 0.78rem;
+  color: #64748b;
+  margin: 2px 0 0 2px;
+}
+
+.figma-pref-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.figma-pref-pill {
+  background: #fff;
+  border: 1px solid #64748b;
+  border-radius: 9999px;
+  padding: 8px 20px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #0f172a;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &.active {
+    background: #0084ff;
+    border-color: #0084ff;
+    color: #fff;
+  }
+}
+
+.find-itinerary-cta-btn {
+  background: #0084ff;
+  color: #fff;
+  border: none;
+  border-radius: 14px;
+  padding: 15px;
+  font-size: 1rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin-top: 14px;
+  box-shadow: 0 4px 14px rgba(0, 132, 255, 0.25);
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}

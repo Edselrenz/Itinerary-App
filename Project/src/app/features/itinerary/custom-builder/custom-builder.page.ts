@@ -97,8 +97,18 @@ export class CustomBuilderPage implements OnInit, OnDestroy {
   public isSaving = false;
   public hasUnsavedChanges = false;
 
-  // View Mode: 'browse' ("Add the places you want to visit") vs 'timeline' ("Your Custom Itinerary")
-  public activeView: 'browse' | 'timeline' = 'browse';
+  // View Mode: 'form' ("Tell us your travel details") vs 'browse' ("Add the places you want to visit") vs 'timeline' ("Your Custom Itinerary")
+  public activeView: 'form' | 'browse' | 'timeline' = 'form';
+
+  // Preference options matching Figma
+  public preferenceOptions = [
+    { key: 'nature', label: 'Nature & Parks' },
+    { key: 'food', label: 'Food Trip' },
+    { key: 'culture', label: 'Culture & History' },
+    { key: 'shopping', label: 'Shopping' },
+    { key: 'resort', label: 'Resort' },
+  ];
+  public selectedPreferences = new Set<string>();
 
   // Category Filter Pills (Figma: All, Tourist Spots, Food, Shopping, Other)
   public browseCategories = ['All', 'Tourist Spots', 'Food', 'Shopping', 'Other'];
@@ -173,7 +183,7 @@ export class CustomBuilderPage implements OnInit, OnDestroy {
       destination: ['Nueva Ecija', [Validators.required]],
       start_date: [today.toISOString().split('T')[0], [Validators.required]],
       end_date: [tomorrow.toISOString().split('T')[0], [Validators.required]],
-      daily_budget: [2500, [Validators.required, Validators.min(0)]],
+      daily_budget: [3000, [Validators.required, Validators.min(0)]],
     });
   }
 
@@ -185,6 +195,7 @@ export class CustomBuilderPage implements OnInit, OnDestroy {
       this.activeView = 'timeline';
       this.loadItinerary(this.itineraryId);
     } else {
+      this.activeView = 'form';
       this.initDefaultDays();
     }
 
@@ -226,6 +237,114 @@ export class CustomBuilderPage implements OnInit, OnDestroy {
 
     this.activeDayIndex = 0;
     this.updateBudgetSummary();
+  }
+
+  public togglePreference(key: string): void {
+    if (this.selectedPreferences.has(key)) {
+      this.selectedPreferences.delete(key);
+    } else {
+      this.selectedPreferences.add(key);
+    }
+  }
+
+  public isPreferenceSelected(key: string): boolean {
+    return this.selectedPreferences.has(key);
+  }
+
+  public get computedTripDays(): number {
+    const startStr = this.form.get('start_date')?.value;
+    const endStr = this.form.get('end_date')?.value;
+    if (!startStr || !endStr) return 1;
+
+    const start = new Date(startStr);
+    const end = new Date(endStr);
+    const diff = Math.max(0, end.getTime() - start.getTime());
+    return Math.max(1, Math.ceil(diff / (1000 * 60 * 60 * 24)) + 1);
+  }
+
+  public get formattedTripDateSubtitle(): string {
+    const startStr = this.form.get('start_date')?.value;
+    const endStr = this.form.get('end_date')?.value;
+    if (!startStr || !endStr) {
+      return 'e.g., Oct 30 – Nov 2 (4 days, 3 nights)';
+    }
+
+    const start = new Date(startStr);
+    const end = new Date(endStr);
+    const days = this.computedTripDays;
+    const nights = Math.max(0, days - 1);
+
+    const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
+    const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
+
+    let rangeStr = `${startMonth} ${start.getDate()} – ${endMonth} ${end.getDate()}`;
+    if (startMonth === endMonth) {
+      rangeStr = `${startMonth} ${start.getDate()} – ${end.getDate()}`;
+    }
+
+    return `${rangeStr} (${days} ${days === 1 ? 'day' : 'days'}, ${nights} ${nights === 1 ? 'night' : 'nights'})`;
+  }
+
+  public proceedToBuilder(): void {
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
+
+    // Sync days array with selected dates
+    const targetDays = this.computedTripDays;
+    const startDateStr = this.form.get('start_date')?.value;
+    const startDate = startDateStr ? new Date(startDateStr) : new Date();
+
+    if (this.days.length !== targetDays) {
+      const newDays: BuilderDay[] = [];
+      for (let i = 0; i < targetDays; i++) {
+        const d = new Date(startDate);
+        d.setDate(d.getDate() + i);
+        const existing = this.days[i];
+        newDays.push({
+          id: existing?.id || this.generateTempId(),
+          day_number: i + 1,
+          travel_date: d.toISOString().split('T')[0],
+          title: existing?.title || `Day ${i + 1}`,
+          items: existing?.items || [],
+        });
+      }
+      this.days = newDays;
+      this.activeDayIndex = Math.min(this.activeDayIndex, this.days.length - 1);
+    }
+
+    // Pre-filter places if preferences are selected
+    if (this.selectedPreferences.size > 0) {
+      if (this.selectedPreferences.has('food')) {
+        this.selectedCategory = 'Food';
+      } else if (
+        this.selectedPreferences.has('nature') ||
+        this.selectedPreferences.has('culture') ||
+        this.selectedPreferences.has('resort')
+      ) {
+        this.selectedCategory = 'Tourist Spots';
+      } else if (this.selectedPreferences.has('shopping')) {
+        this.selectedCategory = 'Shopping';
+      }
+      this.applyBrowseFilter();
+    }
+
+    this.activeView = 'browse';
+  }
+
+  public backToForm(): void {
+    this.activeView = 'form';
+  }
+
+  public async onHeaderBack(): Promise<void> {
+    if (this.activeView === 'form') {
+      await this.onCancel();
+    } else if (!this.isEditMode) {
+      this.activeView = 'form';
+    } else {
+      await this.onCancel();
+    }
   }
 
   private loadItinerary(id: string): void {
@@ -707,7 +826,7 @@ export class CustomBuilderPage implements OnInit, OnDestroy {
       start_date: formVals.start_date,
       end_date: formVals.end_date,
       daily_budget: Number(formVals.daily_budget),
-      preferences: [],
+      preferences: Array.from(this.selectedPreferences),
       type: 'custom' as const,
       assumptions: ['Budget estimates reflect entrance and primary activity fees.'],
       days: this.days.map((d) => ({
