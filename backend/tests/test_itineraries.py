@@ -256,3 +256,187 @@ def test_itinerary_lifecycle_and_bola_protection():
         ).status_code
         == 404
     )
+
+
+def test_suggested_itinerary_engine():
+    TestingSessionLocal = make_test_session()
+
+    def override_get_db():
+        db = TestingSessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app.dependency_overrides[get_db] = override_get_db
+    client = TestClient(app)
+
+    db = TestingSessionLocal()
+    # Seed municipalities
+    muni_bongabon = Municipality(
+        name="Bongabon", slug="bongabon", is_city=False, center_lat=15.6322, center_lng=121.1447
+    )
+    muni_pantabangan = Municipality(
+        name="Pantabangan", slug="pantabangan", is_city=False, center_lat=15.8239, center_lng=121.1444
+    )
+    db.add_all([muni_bongabon, muni_pantabangan])
+    db.flush()
+
+    # Seed places in Bongabon
+    p1 = Place(
+        name="Rohi Paperflower Cafe",
+        category="cafe",
+        municipality_id=muni_bongabon.id,
+        latitude=15.6315,
+        longitude=121.1438,
+        is_featured=True,
+        estimated_cost_min=150.0,
+        estimated_cost_max=400.0,
+        source_record_id="test/rohi-paperflower",
+        tags=["cafe", "food"],
+    )
+    p2 = Place(
+        name="Museo de Bongabon",
+        category="museum_cultural",
+        municipality_id=muni_bongabon.id,
+        latitude=15.6330,
+        longitude=121.1455,
+        is_featured=True,
+        estimated_cost_min=None,
+        estimated_cost_max=None,
+        source_record_id="test/museo-bongabon",
+        tags=["museum", "heritage"],
+    )
+    p3 = Place(
+        name="Thornes Samgyupsal House",
+        category="restaurant",
+        municipality_id=muni_bongabon.id,
+        latitude=15.6328,
+        longitude=121.1460,
+        is_featured=True,
+        estimated_cost_min=299.0,
+        estimated_cost_max=499.0,
+        source_record_id="test/thornes-samgyup",
+        tags=["restaurant", "food"],
+    )
+    # Seed places in Pantabangan
+    p4 = Place(
+        name="Pantabangan Dam Viewpoint",
+        category="tourist_attraction",
+        municipality_id=muni_pantabangan.id,
+        latitude=15.8126,
+        longitude=121.1098,
+        is_featured=True,
+        estimated_cost_min=None,
+        estimated_cost_max=None,
+        source_record_id="test/pantabangan-dam",
+        tags=["scenic", "nature"],
+    )
+    p5 = Place(
+        name="George Point Viewdeck & Resto",
+        category="restaurant",
+        municipality_id=muni_pantabangan.id,
+        latitude=15.8205,
+        longitude=121.1350,
+        is_featured=True,
+        estimated_cost_min=200.0,
+        estimated_cost_max=600.0,
+        source_record_id="test/george-point",
+        tags=["restaurant", "scenic"],
+    )
+    p6 = Place(
+        name="Highland Bali Villas Resort",
+        category="resort_swimming",
+        municipality_id=muni_pantabangan.id,
+        latitude=15.8270,
+        longitude=121.1415,
+        is_featured=True,
+        estimated_cost_min=3500.0,
+        estimated_cost_max=8500.0,
+        source_record_id="test/highland-bali",
+        tags=["resort", "swimming"],
+    )
+    db.add_all([p1, p2, p3, p4, p5, p6])
+    db.commit()
+
+    # 1. Anonymous / Guest suggested itinerary request (no Bearer token)
+    guest_req = {
+        "title": "Bongabon Weekend Escape",
+        "destination": "Bongabon",
+        "start_date": "2026-11-01",
+        "end_date": "2026-11-02",
+        "daily_budget": 2500.0,
+        "preferences": ["nature", "food"],
+        "save_immediately": False,
+    }
+    res = client.post("/api/v1/itineraries/suggest", json=guest_req)
+    assert res.status_code == 200
+    plan = res.json()
+
+    assert plan["title"] == "Bongabon Weekend Escape"
+    assert plan["destination"] == "Bongabon"
+    assert plan["type"] == "suggested"
+    assert plan["user_id"] is None  # Guest mode unpersisted draft
+    assert len(plan["days"]) == 2
+
+    # Check Day 1 stops
+    day_1 = plan["days"][0]
+    assert day_1["day_number"] == 1
+    assert len(day_1["items"]) >= 2
+    # Verify chronological sort order
+    for idx, item in enumerate(day_1["items"]):
+        assert item["sort_order"] == idx + 1
+        assert item["place"] is not None
+
+    # Check transparent assumptions
+    assumptions = plan["assumptions"]
+    assert len(assumptions) >= 4
+    assert any("Pacing" in a for a in assumptions)
+    assert any("Geographic clustering" in a for a in assumptions)
+    assert any("Pricing Notice" in a for a in assumptions)
+
+    # 2. Date validation (end date before start date -> 422)
+    invalid_req = {
+        "title": "Invalid Trip",
+        "destination": "Bongabon",
+        "start_date": "2026-11-05",
+        "end_date": "2026-11-01",
+        "daily_budget": 1000.0,
+    }
+    invalid_res = client.post("/api/v1/itineraries/suggest", json=invalid_req)
+    assert invalid_res.status_code == 422
+
+    # 3. Authenticated user with save_immediately=True
+    auth_user_req = {
+        "first_name": "Maria",
+        "last_name": "Santos",
+        "username": "mariasantos",
+        "email": "maria@example.ph",
+        "password": "Password123!",
+    }
+    user_res = client.post("/api/v1/auth/register", json=auth_user_req)
+    assert user_res.status_code == 201
+    auth_headers = {"Authorization": f"Bearer {user_res.json()['access_token']}"}
+
+    save_req = {
+        "title": "Bongabon Saved Tour",
+        "destination": "Bongabon",
+        "start_date": "2026-11-01",
+        "end_date": "2026-11-01",
+        "daily_budget": 3000.0,
+        "preferences": ["food"],
+        "save_immediately": True,
+    }
+    save_res = client.post("/api/v1/itineraries/suggest", json=save_req, headers=auth_headers)
+    assert save_res.status_code == 200
+    saved_plan = save_res.json()
+    assert saved_plan["user_id"] is not None
+    saved_id = saved_plan["id"]
+
+    # Verify that the itinerary is now in the user's saved list
+    list_res = client.get("/api/v1/itineraries", headers=auth_headers)
+    assert list_res.status_code == 200
+    user_itins = list_res.json()
+    assert any(i["id"] == saved_id for i in user_itins)
+
+

@@ -334,4 +334,28 @@ All operations enforce strict Broken Object Level Authorization (BOLA): querying
   - `400 Bad Request`: If any item ID does not belong to the target itinerary.
   - `404 Not Found`: BOLA gate failure.
 
+### 4.10 Generate Suggested Itinerary
+- **Endpoint**: `POST /api/v1/itineraries/suggest`
+- **Authentication**: Optional. If Bearer token is provided and `save_immediately: true`, the generated itinerary is persisted and assigned to the authenticated user. If unauthenticated or `save_immediately: false`, returns an unpersisted draft (`user_id = null`).
+- **Request Body**:
+  ```json
+  {
+    "title": "Suggested Bongabon Trip",
+    "destination": "Bongabon",
+    "start_date": "2026-11-01",
+    "end_date": "2026-11-02",
+    "daily_budget": 2500.0,
+    "preferences": ["nature", "food"],
+    "save_immediately": false
+  }
+  ```
+- **Clustering & Pacing Rules**:
+  - Day 1 anchor resolved to destination municipality center (or nearest featured POI). Subsequent days cluster around unvisited geographic clusters to prevent backtracking.
+  - Places scored deterministically: +40 for category match, +20 if featured, +30 max proximity bonus, -25 duplicate category penalty, +10 budget fit.
+  - Paced realistically with 2-3 stops/day, slotting a morning visit (09:00), lunchtime dining window (12:00 PM for restaurants/cafes), and afternoon activity (14:30).
+- **Responses**:
+  - `200 OK`: `ItineraryOut` model with `type: "suggested"`, structured multi-day items, and generated transparent assumptions list.
+  - `422 Unprocessable Content`: Invalid date range (end date before start date or trip longer than 7 days) or negative daily budget.
+
+
 

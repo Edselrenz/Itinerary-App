@@ -36,6 +36,13 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'suggested-wizard',
+    loadComponent: () =>
+      import('./features/itinerary/suggested-wizard/suggested-wizard.page').then(
+        (m) => m.SuggestedWizardPage
+      ),
+  },
+  {
     path: 'tabs',
     loadChildren: () => import('./tabs/tabs.routes').then((m) => m.routes),
   },

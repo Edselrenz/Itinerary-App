@@ -130,19 +130,22 @@ This checklist tracks completed, active, and pending tasks across all developmen
 
 ---
 
-## Phase 7: Deterministic Suggested Itinerary Engine (NEXT FOCUS)
-- [ ] Implement `backend/app/algorithms/itinerary_generator.py`:
-  - [ ] Haversine distance clustering anchor.
-  - [ ] Configurable weights (preference, proximity, featured status, diversity penalty).
-  - [ ] Transparent assumptions banner generator.
-  - [ ] Sparse-data fallback handling.
-- [ ] Backend endpoint `POST /api/v1/itineraries/suggest`.
-- [ ] Frontend Suggested Itinerary form ("Tell us your travel details") with destination picker, date range, daily budget, and preference chips.
-- [ ] Unit tests for recommendation scoring and diversity rules.
+## Phase 7: Deterministic Suggested Itinerary Engine (COMPLETED)
+- [x] Implement `backend/app/algorithms/itinerary_generator.py`:
+  - [x] Haversine distance clustering anchor.
+  - [x] Configurable weights (preference, proximity, featured status, diversity penalty).
+  - [x] Transparent assumptions banner generator.
+  - [x] Sparse-data fallback handling.
+- [x] Backend endpoint `POST /api/v1/itineraries/suggest` (guest drafts + optional saving).
+- [x] Automated pytest suite in `backend/tests/test_itineraries.py` (`test_suggested_itinerary_engine`).
+- [x] Frontend Suggested Itinerary form ("Tell us your travel details") with destination picker, date range, daily budget presets, and preference chips.
+- [x] Frontend "Your Itinerary" preview sheet with day timeline, honest pricing, assumptions box, and "Accept & Save" CTA.
+- [x] Offline fallback generator in `ItineraryService` (`generateOfflineSuggestedItinerary`).
+- [x] Unit tests for recommendation scoring and wizard lifecycle (`suggested-wizard.page.spec.ts`, 10/10 passing).
 
 ---
 
-## Phase 8: Overview, Day View & Reactive Home Persistence
+## Phase 8: Overview, Day View & Reactive Home Persistence (NEXT FOCUS)
 - [ ] Unified Itinerary Overview screen with day selector chips.
 - [ ] Day timeline view with scheduled stop cards and category badges.
 - [ ] Reactive synchronization: Home tab updates immediately when an itinerary is modified or deleted.

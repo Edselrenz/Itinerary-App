@@ -89,12 +89,23 @@ This plan tracks the 11 sequential milestones defined in the **End-to-End Engine
 - [x] Unsaved changes route/exit guard.
 - [x] 19 automated tests (3 backend pytest, 13 itinerary service vitest, 6 custom builder vitest).
 
-### Milestone 7: Suggested Itinerary Engine (Next)
-- [ ] Backend generation endpoint `POST /api/v1/itineraries/suggest` with deterministic Haversine geographic clustering.
-- [ ] User preference questionnaire and scoring matrix (nature, heritage, food, leisure).
-- [ ] Same-day municipality proximity clustering to prevent cross-province backtracking.
-- [ ] 2-3 stops per day pacing with lunch/dining window slotting.
-- [ ] Transparent assumptions list (admission costs, travel window, fuel/transit exclusions).
-- [ ] Automated pytest suite verifying clustering radius, category diversity, and zero hallucinated venues.
-- [ ] Suggested Itinerary wizard frontend and preview sheet.
+### Milestone 7: Suggested Itinerary Engine (Completed)
+- [x] Backend generation endpoint `POST /api/v1/itineraries/suggest` with deterministic Haversine geographic clustering.
+- [x] User preference questionnaire and scoring matrix (nature, heritage, food, leisure).
+- [x] Same-day municipality proximity clustering to prevent cross-province backtracking.
+- [x] 2-3 stops per day pacing with lunch/dining window slotting.
+- [x] Transparent assumptions list (admission costs, travel window, fuel/transit exclusions).
+- [x] Automated pytest suite verifying clustering radius, category diversity, and zero hallucinated venues.
+- [x] Suggested Itinerary wizard frontend and preview sheet with "Accept & Save" persistence.
+- [x] Offline fallback suggested itinerary generator for offline/guest mode.
+- [x] 10 unit tests in `suggested-wizard.page.spec.ts` (100% passing).
+
+### Milestone 8: Itinerary Management & Day Timeline View (Next)
+- [ ] Itinerary Detail / Day Timeline view (`/itinerary/:id`) showing chronological stop cards.
+- [ ] Stop details modal with opening hours, directions link, notes, and pricing tag.
+- [ ] History / Saved Itineraries tab (`/tabs/history` or Tab 3) showing active, upcoming, and past trips.
+- [ ] Edit action opening saved custom itineraries in `/custom-builder/:id`.
+- [ ] Delete itinerary action with confirmation modal and optimistic local/server removal.
+- [ ] Cross-tab reactive synchronization (`ItineraryService.itineraries$`).
+- [ ] Comprehensive unit tests for timeline and itinerary management.
 

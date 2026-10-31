@@ -118,7 +118,7 @@ class ItineraryOut(BaseModel):
     """Serialized itinerary with days and stops."""
 
     id: uuid.UUID
-    user_id: uuid.UUID
+    user_id: uuid.UUID | None = None
     title: str
     destination: str
     start_date: date
@@ -134,6 +134,27 @@ class ItineraryOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class SuggestedItineraryRequest(BaseModel):
+    """Payload to request an automated, geographically clustered suggested itinerary."""
+
+    title: str = Field("Suggested Nueva Ecija Itinerary", max_length=160)
+    destination: str = Field("Nueva Ecija", max_length=120)
+    start_date: date
+    end_date: date
+    daily_budget: float = Field(2500.0, ge=0.0)
+    preferences: list[str] = Field(default_factory=list)
+    save_immediately: bool = Field(
+        False, description="If True and authenticated, persists directly to database."
+    )
+
+    @model_validator(mode="after")
+    def validate_dates(self) -> "SuggestedItineraryRequest":
+        if self.end_date < self.start_date:
+            raise ValueError("end_date cannot be earlier than start_date.")
+        return self
+
+
+
 class ItineraryReorderItem(BaseModel):
     """Specifies new ordering and day assignment for a stop."""
 
@@ -146,3 +167,4 @@ class ItineraryReorderIn(BaseModel):
     """Batch reorder request payload."""
 
     items: list[ItineraryReorderItem]
+

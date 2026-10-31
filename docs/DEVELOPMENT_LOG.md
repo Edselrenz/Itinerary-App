@@ -695,6 +695,57 @@ This log records chronological development sessions, detailing objectives, execu
   - Commit Milestone 6 changes and push to `origin/main`.
   - Proceed to Milestone 7: Suggested Itinerary Engine (Deterministic Haversine clustering, preference scoring, and transparent assumptions).
 
+---
+
+## Session 26: Milestone 7 — Suggested Itinerary Engine & Wizard Implementation
+- **Date & Time**: 2026-10-31 12:10:00 (Local)
+- **Objective**: Implement Milestone 7: Suggested Itinerary Engine and Suggested Itinerary Wizard end-to-end across backend and frontend according to the MVP build guide and Figma specifications.
+- **Backend Implementation**:
+  - **Optional Authentication Dependency (`backend/app/services/auth_service.py`)**:
+    - Created `get_current_user_optional` dependency allowing both authenticated travelers and anonymous/guest travelers to generate suggested itineraries.
+  - **Pydantic v2 Schemas (`backend/app/schemas/itinerary.py`)**:
+    - Made `user_id` optional in `ItineraryOut` to support unpersisted guest drafts.
+    - Added `SuggestedItineraryRequest` schema (`title`, `destination`, `start_date`, `end_date`, `daily_budget`, `preferences`, `save_immediately`).
+  - **Deterministic Clustering & Recommendation Engine (`backend/app/algorithms/itinerary_generator.py`)**:
+    - Implemented `haversine_distance()` computing geodesic distance between latitude/longitude pairs.
+    - Implemented `resolve_destination_anchor()` resolving destination municipality centers, place anchors, or provincial centroid (`15.5800, 121.0000`).
+    - Implemented `score_place()`:
+      - Preference match: +40 points.
+      - Featured place: +20 points.
+      - Proximity bonus: Up to +30 points scaled inversely to distance (1 / (1 + dist_km)).
+      - Category diversity penalty: -25 points for repeat categories on the same day.
+      - Daily budget fit: +10 points if estimated minimum cost is within daily budget.
+    - Multi-day clustering: Anchors Day 1 at the user's primary destination; subsequent days anchor to geographic clusters of unvisited venues, preventing cross-province backtracking.
+    - Realistic pacing: Allocates 2 to 3 stops per day, scheduling morning visits (09:00), lunchtime dining window (12:00 PM for restaurants/cafes), and afternoon activities (14:30).
+    - Transparent assumptions generator: Outlines pacing, lunch anchors, transit time exclusions, and honest notices for unlisted attraction fees.
+  - **FastAPI Endpoint (`backend/app/api/v1/itineraries.py`)**:
+    - Added `POST /api/v1/itineraries/suggest`: Validates date ranges, executes deterministic generator, and saves immediately if `save_immediately=True` and caller is authenticated, or returns unpersisted draft.
+  - **Pytest Automated Verification (`backend/tests/test_itineraries.py`)**:
+    - Added `test_suggested_itinerary_engine`: Tests anonymous suggested generation, multi-day clustering, lunch slot allocation, transparent assumptions, and date validation error handling.
+- **Frontend Implementation**:
+  - **Models & Service (`Project/src/app/core/models/itinerary.models.ts` & `itinerary.service.ts`)**:
+    - Added `SuggestedItineraryRequest` interface.
+    - Added `ItineraryService.suggestItinerary(req)` with dual-mode operation: calls `POST /api/v1/itineraries/suggest` via HTTP and provides `generateOfflineSuggestedItinerary()` fallback using curated seeded places when offline.
+    - Added unit tests for HTTP suggest and offline fallback in `itinerary.service.spec.ts`.
+  - **Suggested Itinerary Wizard Page (`Project/src/app/features/itinerary/suggested-wizard/`)**:
+    - `suggested-wizard.page.ts`: Form validation, destination quick chips, date range duration calculation, budget presets, toggleable preference chips, reactive generation state, active day tab switching, and "Accept & Save" persistence.
+    - `suggested-wizard.page.html`: Dual-view layout featuring initial "Tell us your travel details" questionnaire and generated "Your Itinerary" preview sheet with day timeline, honest cost tags, transparent assumptions box, and action CTAs.
+    - `suggested-wizard.page.scss`: Mobile-first styling under 5.5 kB, well below the 10.00 kB Angular component budget.
+    - `suggested-wizard.page.spec.ts`: 10 comprehensive Vitest tests verifying initialization, chip toggling, trip duration, generation, day tabs, save flow, and cost formatting (100% passing).
+  - **Home Tab & Router Integration**:
+    - Updated `Project/src/app/tabs/home/home.page.html`: Wired the "Suggested Itinerary" action card directly to `/suggested-wizard`.
+    - Updated `Project/src/app/app.routes.ts`: Registered route `/suggested-wizard`.
+  - **Angular Build Optimization (`Project/angular.json`)**:
+    - Added `"optimization": { "scripts": true, "styles": true, "fonts": false }` to prevent build failures during font inlining in sandboxed/offline environments.
+- **Verification & Test Results**:
+  - `python -m pytest backend/tests/ -v`: **4/4 passed, 1 warning in 2.36s [100%]**.
+  - `npm --prefix Project run test:unit`: **12 test files, 63/63 passed in 21.16s [100%]**.
+  - `npm --prefix Project run build`: **0 errors, 0 warnings (styles well within 10kB budget, bundle generated in 8.32s)**.
+- **Next Recommended Steps**:
+  - Commit Milestone 7 changes to Git and push to `origin/main`.
+  - Proceed to Milestone 8: Itinerary Management, Day-by-Day Timeline View, and Cross-Tab Synchronization.
+
+
 
 
 

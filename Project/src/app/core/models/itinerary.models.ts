@@ -90,3 +90,14 @@ export interface ItineraryReorderEntry {
   day_id: string;
   sort_order: number;
 }
+
+export interface SuggestedItineraryRequest {
+  title?: string;
+  destination: string;
+  start_date: string;
+  end_date: string;
+  daily_budget: number;
+  preferences: string[];
+  save_immediately?: boolean;
+}
+

@@ -271,9 +271,53 @@ describe('ItineraryService', () => {
       expect(req.request.body).toEqual({ items: entries });
       req.flush(mockItinerary);
     });
+
+    it('should generate suggested itinerary via HTTP', () => {
+      const suggestReq = {
+        title: 'Bongabon Tour',
+        destination: 'Bongabon',
+        start_date: '2026-11-01',
+        end_date: '2026-11-02',
+        daily_budget: 2500,
+        preferences: ['nature', 'food'],
+      };
+
+      service.suggestItinerary(suggestReq).subscribe((plan) => {
+        expect(plan.destination).toBe('Bongabon');
+        expect(plan.type).toBe('suggested');
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}/itineraries/suggest`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual(suggestReq);
+      req.flush({ ...mockItinerary, destination: 'Bongabon', type: 'suggested' });
+    });
   });
 
   describe('Guest / Offline Operations', () => {
+    it('generates suggested itinerary offline when HTTP fails', async () => {
+      const suggestReq = {
+        title: 'Offline Suggested Trip',
+        destination: 'Pantabangan',
+        start_date: '2026-11-10',
+        end_date: '2026-11-11',
+        daily_budget: 2000,
+        preferences: ['scenic'],
+      };
+
+      const planPromise = new Promise<Itinerary>((resolve) => {
+        service.suggestItinerary(suggestReq).subscribe(resolve);
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}/itineraries/suggest`);
+      req.error(new ProgressEvent('Network error'));
+
+      const plan = await planPromise;
+      expect(plan.destination).toBe('Pantabangan');
+      expect(plan.days.length).toBe(2);
+      expect(plan.type).toBe('suggested');
+      expect(plan.assumptions.length).toBeGreaterThanOrEqual(3);
+    });
     it('creates and saves guest itinerary offline', async () => {
       mockAuthService.isAuthenticated.mockReturnValue(false);
 

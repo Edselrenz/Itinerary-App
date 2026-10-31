@@ -6,6 +6,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [0.7.0-alpha] - 2026-10-31
+### Added
+- **Deterministic Suggested Itinerary Recommendation Engine (`Milestone 7`)**:
+  - Implemented `backend/app/algorithms/itinerary_generator.py` using deterministic Haversine distance clustering and category/preference scoring without paid external AI or mapping APIs.
+  - Added preference scoring matrix (+40 category match, +20 featured place, up to +30 distance proximity, -25 duplicate category penalty, +10 budget fit).
+  - Implemented multi-day geographic clustering preventing cross-province backtracking.
+  - Implemented realistic pacing allocating 2-3 stops/day and dedicated lunchtime dining windows (11:30 AM - 1:30 PM).
+  - Implemented transparent trip assumptions generator outlining pacing rationale, transit time exclusions, and unlisted entrance fee notices.
+  - Added `get_current_user_optional` in `backend/app/services/auth_service.py` to support guest draft generation.
+  - Added `POST /api/v1/itineraries/suggest` endpoint supporting optional persistence for authenticated users and guest drafts.
+  - Authored automated pytest in `backend/tests/test_itineraries.py` (`test_suggested_itinerary_engine`) verifying multi-day clustering, anonymous mode, and validation (100% passing).
+- **Frontend Suggested Itinerary Wizard (`Milestone 7`)**:
+  - Implemented `suggestItinerary()` in `Project/src/app/core/services/itinerary.service.ts` with offline fallback (`generateOfflineSuggestedItinerary`) using seeded curated places.
+  - Created `SuggestedWizardPage` in `Project/src/app/features/itinerary/suggested-wizard/`:
+    - Responsive questionnaire form with quick destination chips, trip duration calculator, daily budget presets (₱1,500 - ₱6,000), and preference chips.
+    - "Your Itinerary" preview sheet with day timeline, stop cards, transparent assumptions box, and "Accept & Save" persistence.
+  - Authored 10 comprehensive Vitest unit tests in `suggested-wizard.page.spec.ts` (100% passing).
+- **Home Tab & Router Integration**:
+  - Connected "Suggested Itinerary" action card on Home tab (`Project/src/app/tabs/home/home.page.html`) to route `/suggested-wizard`.
+  - Registered route `/suggested-wizard` in `Project/src/app/app.routes.ts`.
+
+### Technical Improvements
+- Added `"optimization": { "scripts": true, "styles": true, "fonts": false }` to `Project/angular.json` ensuring offline sandboxed Angular builds pass without font download errors.
+- Styled `suggested-wizard.page.scss` cleanly under 5.5 kB, comfortably below Angular's strict 10 kB style budget.
+- Expanded total automated unit tests to 63 Vitest tests (100% passing) and 4 Pytest backend test suites (100% passing).
+
+---
+
 ## [0.6.0-alpha] - 2026-10-31
 ### Added
 - **Backend Custom Itinerary CRUD & BOLA Architecture (`Milestone 6`)**:

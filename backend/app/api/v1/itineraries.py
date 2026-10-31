@@ -22,8 +22,13 @@ from app.schemas.itinerary import (
     ItineraryOut,
     ItineraryReorderIn,
     ItineraryUpdate,
+    SuggestedItineraryRequest,
 )
-from app.services.auth_service import get_current_user
+from app.services.auth_service import get_current_user, get_current_user_optional
+from app.algorithms.itinerary_generator import (
+    generate_suggested_itinerary_data,
+    persist_generated_itinerary,
+)
 
 router = APIRouter(prefix="/itineraries", tags=["itineraries"])
 
@@ -105,6 +110,77 @@ def serialize_itinerary(itinerary: Itinerary) -> ItineraryOut:
         updated_at=itinerary.updated_at,
         days=days_out,
     )
+
+
+@router.post("/suggest", response_model=ItineraryOut, status_code=status.HTTP_200_OK)
+def suggest_itinerary(
+    payload: SuggestedItineraryRequest,
+    current_user: User | None = Depends(get_current_user_optional),
+    db: Session = Depends(get_db),
+) -> ItineraryOut:
+    """Generates an algorithmic, geographically clustered suggested itinerary draft with transparent assumptions."""
+    try:
+        user_id = current_user.id if current_user else None
+        data = generate_suggested_itinerary_data(db=db, request=payload, user_id=user_id)
+
+        if payload.save_immediately and current_user:
+            persisted = persist_generated_itinerary(db=db, data=data, user_id=current_user.id)
+            return serialize_itinerary(persisted)
+
+        days_out: list[ItineraryDayOut] = []
+        for d in data["days"]:
+            items_out: list[ItineraryItemOut] = []
+            for item in d["items"]:
+                items_out.append(
+                    ItineraryItemOut(
+                        id=item["id"],
+                        day_id=d["id"],
+                        place_id=item["place_id"],
+                        custom_title=item.get("custom_title"),
+                        custom_lat=item.get("custom_lat"),
+                        custom_lng=item.get("custom_lng"),
+                        sort_order=item["sort_order"],
+                        planned_time=item["planned_time"],
+                        duration_minutes=item["duration_minutes"],
+                        notes=item["notes"],
+                        estimated_cost_min=item["estimated_cost_min"],
+                        estimated_cost_max=item["estimated_cost_max"],
+                        created_at=item["created_at"],
+                        updated_at=item["updated_at"],
+                        place=serialize_place(item["place"]) if item.get("place") else None,
+                    )
+                )
+            days_out.append(
+                ItineraryDayOut(
+                    id=d["id"],
+                    itinerary_id=data["id"],
+                    day_number=d["day_number"],
+                    travel_date=d["travel_date"],
+                    title=d["title"],
+                    items=items_out,
+                )
+            )
+
+        return ItineraryOut(
+            id=data["id"],
+            user_id=user_id,
+            title=data["title"],
+            destination=data["destination"],
+            start_date=data["start_date"],
+            end_date=data["end_date"],
+            daily_budget=float(data["daily_budget"]),
+            preferences=data["preferences"],
+            type="suggested",
+            assumptions=data["assumptions"],
+            created_at=data["created_at"],
+            updated_at=data["updated_at"],
+            days=days_out,
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
 
 
 @router.post("", response_model=ItineraryOut, status_code=status.HTTP_201_CREATED)
@@ -456,3 +532,4 @@ def reorder_itinerary_items(
 
     loaded = db.scalar(get_eager_itinerary_stmt(itinerary_id, current_user.id))
     return serialize_itinerary(loaded)
+

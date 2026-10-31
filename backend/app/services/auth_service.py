@@ -263,3 +263,25 @@ def get_current_user(
         )
     return user
 
+
+def get_current_user_optional(
+    token: str | None = Depends(oauth2_scheme),
+    db: Session = Depends(get_db),
+) -> User | None:
+    """Dependency for extracting the authenticated user if a valid Bearer token is provided, or None."""
+    if not token:
+        return None
+    try:
+        payload = decode_jwt_token(token, expected_type="access")
+        user_id_str = payload.get("sub")
+        if not user_id_str:
+            return None
+        user_uuid = uuid.UUID(user_id_str)
+        user = db.scalar(select(User).where(User.id == user_uuid))
+        if user and user.is_active:
+            return user
+    except Exception:
+        return None
+    return None
+
+

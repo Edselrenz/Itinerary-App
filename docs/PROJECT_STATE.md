@@ -7,8 +7,8 @@ This document serves as the primary handoff reference for developers and coding 
 ## 1. Project Status Overview
 
 - **Application Name**: Nueva Ecija Travel Itinerary (MVP)
-- **Current Development Phase**: **Milestone 7 — Suggested Itinerary Engine**
-- **Last Verified Working State**: **Milestone 6 (Custom Itinerary Builder)** completely implemented and verified with automated test suites (51/51 unit tests across 11 test files, 3/3 backend pytest suites) and clean production bundle generation (0 errors, 0 warnings).
+- **Current Development Phase**: **Milestone 8 — Itinerary Management & Day Timeline View**
+- **Last Verified Working State**: **Milestone 7 (Suggested Itinerary Engine & Wizard)** completely implemented and verified with automated test suites (63/63 unit tests across 12 test files, 4/4 backend pytest suites) and clean production bundle generation (0 errors, 0 warnings).
 - **Current Blockers**: **None**.
 
 ---
@@ -125,25 +125,38 @@ This document serves as the primary handoff reference for developers and coding 
   - Multi-day Custom Builder UI (`Project/src/app/features/itinerary/custom-builder`) with day tabs, stop cards, place picker modal, off-grid venues, duplicate alerts, and unsaved changes exit guard.
   - Home tab integration with custom builder navigation and reactive saved itinerary cards.
   - 19 automated tests (3 backend, 13 itinerary service, 6 custom builder) passing with 100% coverage.
+- [x] **Suggested Itinerary Recommendation Engine (`Milestone 7`)**:
+  - Deterministic clustering generator (`backend/app/algorithms/itinerary_generator.py`) using Haversine distance and database scoring without paid external AI or mapping APIs.
+  - Preference scoring (+40 match, +20 featured, +30 proximity, -25 duplicate category penalty, +10 budget fit).
+  - Multi-day geographic cluster anchor preventing cross-province backtracking.
+  - Realistic daily pacing (2-3 stops/day) with lunchtime dining slot (12:00 PM).
+  - Transparent trip assumptions list (transit time exclusions, honest unpriced venue notices).
+  - FastAPI endpoint `POST /api/v1/itineraries/suggest` with optional authentication support.
+  - Automated pytest suite verifying clustering radius, category diversity, and zero hallucinated venues.
+  - Frontend Suggested Itinerary Wizard (`Project/src/app/features/itinerary/suggested-wizard/`):
+    - Questionnaire form with destination chips, trip duration calculator, budget presets, and preference chips.
+    - "Your Itinerary" preview sheet with day timeline, stop cards, transparent assumptions, and "Accept & Save" persistence.
+    - Offline fallback generator in `ItineraryService` (`generateOfflineSuggestedItinerary`).
+    - Home tab Suggested Itinerary action card wired to `/suggested-wizard`.
+  - 10 unit tests in `suggested-wizard.page.spec.ts` (100% passing).
 - [x] **Live GitHub Pages Deployment**: Fully deployed and verified live at [https://edselrenz.github.io/Itinerary-App/](https://edselrenz.github.io/Itinerary-App/) (HTTP 200 OK with `--base-href /Itinerary-App/` deep linking enabled).
 
 ---
 
 ## 3. Features Currently Being Developed
 
-- **Milestone 7: Suggested Itinerary Engine**:
-  - Deterministic Haversine geographic clustering backend engine (`POST /api/v1/itineraries/suggest`).
-  - Preference scoring matrix (nature, culture, dining, leisure).
-  - Same-day proximity clustering to avoid backtracking across provincial borders.
-  - 2-3 stops per day pacing with lunch/dining window slotting.
-  - Transparent assumptions list (admission fees, travel window, fuel/transit exclusions).
-  - Suggested Itinerary wizard questionnaire UI.
+- **Milestone 8: Itinerary Management & Day Timeline View**:
+  - Unified Itinerary Overview screen with day selector chips and timeline layout (`/itinerary/:id`).
+  - Stop details modal with opening hours, directions link, notes, and pricing tag.
+  - History / Saved Itineraries tab (`/tabs/history` or Tab 3) showing active, upcoming, and past trips.
+  - Edit action opening saved custom itineraries in `/custom-builder/:id`.
+  - Delete itinerary action with confirmation modal and optimistic local/server removal.
+  - Cross-tab reactive synchronization (`ItineraryService.itineraries$`).
 
 ---
 
 ## 4. Features Not Yet Implemented
 
-- **Milestone 8**: Day timeline view, stop detail cards, and cross-tab reactive persistence.
 - **Milestone 9**: Rate limiting via SlowAPI and backup/restore drills.
 - **Milestone 10**: End-to-end 24-point acceptance checklist verification.
 
@@ -152,14 +165,14 @@ This document serves as the primary handoff reference for developers and coding 
 ## 5. Verification Records & Passing Proof
 
 1. **Backend Automated Tests**:
-   - Command: `python -m pytest backend/tests/ -v`
-   - Result: `3 passed, 1 warning in 3.77s [100%]` (`test_foundation.py`, `test_auth.py`, `test_itineraries.py`).
+   - Command: `python -m pytest backend/tests/ -v` (with `BypassSandbox: true` on Windows)
+   - Result: `4 passed, 1 warning in 2.36s [100%]` (`test_foundation.py`, `test_auth.py`, `test_itineraries.py` with `test_suggested_itinerary_engine`).
 2. **Mobile Client Unit Tests**:
    - Command: `npm run test:unit` in `Project/`
-   - Result: `11 test files passed, 51 tests passed in 19.82s [100%]` (includes 11 `place.service.spec.ts`, 13 `itinerary.service.spec.ts`, 6 `custom-builder.page.spec.ts`, 6 `home.page.spec.ts`, 9 `map.page.spec.ts`).
+   - Result: `12 test files passed, 63 tests passed in 21.16s [100%]` (includes 11 `place.service.spec.ts`, 15 `itinerary.service.spec.ts`, 6 `custom-builder.page.spec.ts`, 10 `suggested-wizard.page.spec.ts`, 6 `home.page.spec.ts`, 9 `map.page.spec.ts`).
 3. **Mobile Client Compilation**:
    - Command: `npm run build` in `Project/`
-   - Result: `Application bundle generation complete [0 errors, 0 warnings]` (Artifacts in `Project/www`).
+   - Result: `Application bundle generation complete [0 errors, 0 warnings]` (Artifacts in `Project/www`, styles strictly under 10kB budget).
 4. **TypeScript Strict Type Check**:
    - Command: `npm run typecheck:e2e` in `Project/`
    - Result: `0 errors`.
@@ -168,9 +181,10 @@ This document serves as the primary handoff reference for developers and coding 
 
 ## 6. Immediate Next Development Task
 
-Proceed to **Milestone 7 — Deterministic Suggested Itinerary Engine**:
-1. Implement clustering algorithms and preference scoring engine in `backend/app/algorithms/itinerary_generator.py`.
-2. Expose `POST /api/v1/itineraries/suggest` endpoint with transparent assumptions.
-3. Build the Suggested Itinerary questionnaire flow.
+Proceed to **Milestone 8 — Itinerary Management, Day-by-Day Timeline View & Cross-Tab Synchronization**:
+1. Build the Itinerary Details / Day Timeline page (`Project/src/app/features/itinerary/itinerary-detail/`).
+2. Update the History Tab (`Project/src/app/tabs/tab3/` or `/tabs/history`) to display traveler itineraries with status badges.
+3. Wire delete, edit, and cross-tab reactive persistence.
+
 
 

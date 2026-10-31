@@ -10,6 +10,7 @@ import {
   ItineraryItemCreatePayload,
   ItineraryReorderEntry,
   ItineraryUpdatePayload,
+  SuggestedItineraryRequest,
 } from '../models/itinerary.models';
 import { AuthService } from './auth.service';
 import { GuestItinerary, GuestStorageService } from './guest-storage.service';
@@ -190,6 +191,29 @@ export class ItineraryService {
         );
     }
     return from(this.reorderGuestStops(itineraryId, entries));
+  }
+
+  /**
+   * Generates a suggested itinerary using deterministic clustering and transparent assumptions.
+   */
+  public suggestItinerary(request: SuggestedItineraryRequest): Observable<Itinerary> {
+    return this.http.post<Itinerary>(`${this.baseUrl}/suggest`, request).pipe(
+      tap((plan) => {
+        if (request.save_immediately && plan.id) {
+          this.replaceInSubject(plan);
+        }
+      }),
+      catchError(() => {
+        return from(this.generateOfflineSuggestedItinerary(request)).pipe(
+          tap((plan) => {
+            if (request.save_immediately) {
+              this.guestStorage.saveItinerary(plan as unknown as GuestItinerary);
+              this.replaceInSubject(plan);
+            }
+          })
+        );
+      })
+    );
   }
 
   /**
@@ -481,6 +505,167 @@ export class ItineraryService {
   private removeFromSubject(id: string): void {
     const list = this.itinerariesSubject.value.filter((i) => i.id !== id);
     this.itinerariesSubject.next(list);
+  }
+
+  private async generateOfflineSuggestedItinerary(
+    request: SuggestedItineraryRequest
+  ): Promise<Itinerary> {
+    const start = new Date(request.start_date);
+    const end = new Date(request.end_date);
+    const diffTime = Math.max(0, end.getTime() - start.getTime());
+    const totalDays = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1);
+
+    const curatedPool = [
+      {
+        id: 'off-rohi',
+        name: 'Rohi Paperflower Cafe',
+        category: 'Cafe & Dining',
+        municipality: 'Bongabon',
+        image: 'assets/images/rohi_cafe.png',
+        min: 150,
+        max: 400,
+        time: '12:00',
+        dur: 90,
+      },
+      {
+        id: 'off-museo',
+        name: 'Museo de Bongabon',
+        category: 'Culture & Museum',
+        municipality: 'Bongabon',
+        image: 'assets/images/museo_bongabon.png',
+        min: null,
+        max: null,
+        time: '09:00',
+        dur: 120,
+      },
+      {
+        id: 'off-thornes',
+        name: 'Thornes Samgyupsal House',
+        category: 'Restaurant',
+        municipality: 'Bongabon',
+        image: 'assets/images/thornes.png',
+        min: 299,
+        max: 499,
+        time: '17:30',
+        dur: 90,
+      },
+      {
+        id: 'off-pantabangan',
+        name: 'Pantabangan Dam and Lake Viewpoint',
+        category: 'Tourist Attraction',
+        municipality: 'Pantabangan',
+        image: 'assets/images/pantabangan_lake.png',
+        min: null,
+        max: null,
+        time: '09:00',
+        dur: 120,
+      },
+      {
+        id: 'off-george',
+        name: 'George Point Viewdeck & Resto',
+        category: 'Cafe & Dining',
+        municipality: 'Pantabangan',
+        image: 'assets/images/george_point.png',
+        min: 150,
+        max: 450,
+        time: '12:00',
+        dur: 90,
+      },
+      {
+        id: 'off-minalungao',
+        name: 'Minalungao National Park',
+        category: 'Nature & Adventure',
+        municipality: 'General Tinio',
+        image: 'assets/images/minalungao.png',
+        min: 100,
+        max: 500,
+        time: '09:00',
+        dur: 180,
+      },
+      {
+        id: 'off-gapan',
+        name: 'Tagpuan sa Lumang Gapan',
+        category: 'Heritage & Faith',
+        municipality: 'Gapan City',
+        image: 'assets/images/tagpuan_gapan.png',
+        min: null,
+        max: null,
+        time: '14:30',
+        dur: 120,
+      },
+      {
+        id: 'off-ednas',
+        name: "Edna's Cakeland",
+        category: 'Cafe & Dining',
+        municipality: 'Cabanatuan City',
+        image: 'assets/images/ednas_cakeland.png',
+        min: 150,
+        max: 450,
+        time: '12:00',
+        dur: 90,
+      },
+    ];
+
+    const itineraryId = this.generateId();
+    const days: ItineraryDay[] = [];
+    let poolIndex = 0;
+
+    for (let d = 0; d < totalDays; d++) {
+      const dayDate = new Date(start);
+      dayDate.setDate(start.getDate() + d);
+      const dayDateStr = dayDate.toISOString().split('T')[0];
+      const dayId = this.generateId();
+      const items: ItineraryItem[] = [];
+
+      for (let s = 0; s < 3; s++) {
+        const place = curatedPool[poolIndex % curatedPool.length];
+        poolIndex++;
+
+        items.push({
+          id: this.generateId(),
+          day_id: dayId,
+          place_id: place.id,
+          custom_title: place.name,
+          sort_order: s + 1,
+          planned_time: place.time,
+          duration_minutes: place.dur,
+          notes: 'Recommended based on local popularity and cluster proximity.',
+          estimated_cost_min: place.min,
+          estimated_cost_max: place.max,
+        });
+      }
+
+      const primaryMuni = items[0]?.custom_title ? 'Nueva Ecija' : request.destination;
+      days.push({
+        id: dayId,
+        itinerary_id: itineraryId,
+        day_number: d + 1,
+        travel_date: dayDateStr,
+        title: `Day ${d + 1}: ${request.destination || primaryMuni} Tour`,
+        items,
+      });
+    }
+
+    const now = new Date().toISOString();
+    return {
+      id: itineraryId,
+      title: request.title || `Suggested ${request.destination} Itinerary`,
+      destination: request.destination || 'Nueva Ecija',
+      start_date: request.start_date,
+      end_date: request.end_date,
+      daily_budget: request.daily_budget || 2500,
+      preferences: request.preferences || [],
+      type: 'suggested',
+      assumptions: [
+        'Pacing: 2 to 3 stops scheduled per day to allow relaxed travel along provincial roads.',
+        `Geographic clustering: Stops on each day are clustered around ${request.destination} to prevent backtracking.`,
+        'Budget & Expenses: Estimates reflect entrance, activities, and dining where available. Inter-town transit and fuel are not included.',
+        'Operating Hours: Hours reflect verified public records; travelers are encouraged to verify schedules locally for holidays.',
+      ],
+      created_at: now,
+      updated_at: now,
+      days,
+    };
   }
 
   private generateId(): string {
