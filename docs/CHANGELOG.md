@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [0.4.14-alpha] - 2026-10-31
+### Fixed & Improved
+- **Destination Detail Modal Layout & Image Alignment (`Project/src/app/tabs/home`)**:
+  - Restored `.destination-modal` SCSS styling to prevent unconstrained full-resolution photography from pushing modal content below the visible fold.
+  - Constrained modal hero photo container to 240px height with `object-fit: cover` and preserved responsive rounded sheet aesthetics.
+  - Added `-webkit-overflow-scrolling: touch` and `max-height: 85vh; overflow-y: auto` to `.modal-detail-content` ensuring verified operating hours, honest cost bounds, tags, description, and external Google Maps buttons remain accessible across all screen sizes.
+  - Optimized component SCSS selectors to strictly comply with Angular's 10 kB style budget without warnings.
+
+---
+
 ## [0.4.13-alpha] - 2026-10-31
 ### Added & Changed
 - **Home Tab Local Search, Dynamic Featured Places & Saved Itineraries (`Milestone 4`)**:

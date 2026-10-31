@@ -8,13 +8,12 @@
   margin: 0 auto;
 }
 
-/* Header: Title and Notification Bell */
+/* Header */
 .home-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-top: 1.25rem;
-  margin-bottom: 1.25rem;
+  margin: 1.25rem 0;
 }
 
 .header-title {
@@ -43,7 +42,7 @@
   }
 }
 
-/* Search bar matching exact Figma design */
+/* Search bar */
 .search-container {
   display: flex;
   align-items: center;
@@ -96,7 +95,7 @@
   margin-left: 0.5rem;
 }
 
-/* Planner Cards Grid (2-Column side-by-side) */
+/* Planner Cards Grid */
 .planner-cards-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -113,22 +112,34 @@
   justify-content: flex-start;
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
-  -webkit-tap-highlight-color: transparent;
 
   &:active {
     transform: scale(0.97);
   }
-}
-
-/* Suggested Card (Dark Navy Gradient) */
-.suggested-card {
-  background: linear-gradient(180deg, #091338 0%, #03081e 100%);
-  color: #ffffff;
-  box-shadow: 0 10px 25px -5px rgba(5, 12, 40, 0.25);
 
   .card-icon-wrap {
     margin-bottom: 0.85rem;
   }
+
+  .card-heading {
+    font-size: 1.05rem;
+    font-weight: 800;
+    line-height: 1.2;
+    margin: 0 0 0.65rem;
+    letter-spacing: -0.015em;
+  }
+
+  .card-copy {
+    font-size: 0.72rem;
+    line-height: 1.4;
+    margin: 0;
+  }
+}
+
+.suggested-card {
+  background: linear-gradient(180deg, #091338 0%, #03081e 100%);
+  color: #ffffff;
+  box-shadow: 0 10px 25px -5px rgba(5, 12, 40, 0.25);
 
   .sparkles-svg {
     width: 26px;
@@ -138,32 +149,19 @@
   }
 
   .card-heading {
-    font-size: 1.05rem;
-    font-weight: 800;
     color: #ffffff;
-    line-height: 1.2;
-    margin: 0 0 0.65rem;
-    letter-spacing: -0.015em;
   }
 
   .card-copy {
-    font-size: 0.72rem;
     color: #94a3b8;
-    line-height: 1.4;
-    margin: 0;
   }
 }
 
-/* Custom Card (White with Sky-Blue outline) */
 .custom-card {
   background: #ffffff;
   border: 1.5px solid #38bdf8;
   color: #0f172a;
   box-shadow: 0 4px 16px rgba(56, 189, 248, 0.08);
-
-  .card-icon-wrap {
-    margin-bottom: 0.85rem;
-  }
 
   .custom-plan-svg {
     width: 26px;
@@ -172,23 +170,15 @@
   }
 
   .card-heading {
-    font-size: 1.05rem;
-    font-weight: 800;
     color: #000000;
-    line-height: 1.2;
-    margin: 0 0 0.65rem;
-    letter-spacing: -0.015em;
   }
 
   .card-copy {
-    font-size: 0.72rem;
     color: #475569;
-    line-height: 1.4;
-    margin: 0;
   }
 }
 
-/* Section Shared Top Row */
+/* Sections Top Row */
 .section-top-row {
   display: flex;
   justify-content: space-between;
@@ -212,14 +202,23 @@
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.15s;
 
   &:active {
     opacity: 0.7;
   }
 }
 
-/* Popular Destinations Section */
+/* Shared image styles */
+.dest-img,
+.result-img,
+.modal-hero-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Popular Destinations Track */
 .popular-section {
   margin-top: 0.25rem;
   margin-bottom: 2rem;
@@ -261,33 +260,29 @@
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.06);
 }
 
-.dest-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.dest-title {
-  font-size: 0.8rem;
+.dest-title,
+.result-title {
   font-weight: 700;
-  color: #000000;
   line-height: 1.25;
-  margin: 0 0 0.2rem;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
+.dest-title {
+  font-size: 0.8rem;
+  color: #000000;
+  margin: 0 0 0.2rem;
+}
+
 .dest-municipality {
   font-size: 0.72rem;
   color: #64748b;
-  font-weight: 400;
   margin: 0;
 }
 
-/* Dynamic Search Results Section */
+/* Search Results Section */
 .search-results-section {
   margin-top: 0.5rem;
   margin-bottom: 2rem;
@@ -323,7 +318,7 @@
   overflow: hidden;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.15s ease;
 
   &:active {
     transform: scale(0.97);
@@ -335,12 +330,6 @@
   width: 100%;
   height: 110px;
   background: #e2e8f0;
-}
-
-.result-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
 }
 
 .result-category-badge {
@@ -365,14 +354,8 @@
 
 .result-title {
   font-size: 0.82rem;
-  font-weight: 700;
   color: #0f172a;
-  line-height: 1.25;
   margin: 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 
 .result-muni {
@@ -435,7 +418,6 @@
     font-size: 0.82rem;
     font-weight: 700;
     cursor: pointer;
-    transition: opacity 0.15s;
 
     &:active {
       opacity: 0.85;
@@ -443,7 +425,7 @@
   }
 }
 
-/* Saved Itineraries Section */
+/* Saved Itineraries */
 .saved-section {
   margin-top: 1rem;
   margin-bottom: 2rem;
@@ -591,4 +573,173 @@
   color: #94a3b8;
   font-size: 1.1rem;
   flex-shrink: 0;
+}
+
+/* Destination Detail Modal */
+.destination-modal {
+  --border-radius: 24px 24px 0 0;
+
+  .modal-detail-content {
+    background: #ffffff;
+    padding-bottom: 2rem;
+    max-height: 85vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .modal-handle-bar {
+    width: 36px;
+    height: 4px;
+    background: #cbd5e1;
+    border-radius: 9999px;
+    margin: 12px auto 8px;
+  }
+
+  .modal-image-wrap {
+    position: relative;
+    width: 100%;
+    height: 240px;
+    background: #0f172a;
+    overflow: hidden;
+  }
+
+  .modal-close-btn {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: rgba(15, 23, 42, 0.6);
+    color: #ffffff;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 1.25rem;
+    z-index: 10;
+  }
+
+  .modal-category-badge {
+    position: absolute;
+    bottom: 14px;
+    left: 14px;
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(4px);
+    color: #ffffff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.3rem 0.75rem;
+    border-radius: 8px;
+  }
+
+  .modal-body-content {
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .modal-muni-tag {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    color: #0084ff;
+    font-size: 0.82rem;
+    font-weight: 700;
+
+    ion-icon {
+      font-size: 1rem;
+    }
+  }
+
+  .modal-title {
+    font-size: 1.45rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0;
+    line-height: 1.2;
+  }
+
+  .modal-meta-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-top: -0.25rem;
+  }
+
+  .modal-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #334155;
+    background: #f1f5f9;
+    padding: 0.35rem 0.65rem;
+    border-radius: 8px;
+
+    ion-icon {
+      font-size: 0.95rem;
+      color: #0084ff;
+    }
+  }
+
+  .modal-full-desc {
+    font-size: 0.92rem;
+    color: #475569;
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  .modal-tags-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.25rem;
+  }
+
+  .tag-chip {
+    background: #f1f5f9;
+    color: #334155;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+  }
+
+  .modal-actions-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    margin-top: 1rem;
+  }
+
+  .external-map-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background: #ffffff;
+    border: 1.5px solid #0084ff;
+    color: #0084ff;
+    border-radius: 12px;
+    padding: 0.85rem;
+    font-size: 0.92rem;
+    font-weight: 700;
+    cursor: pointer;
+
+    ion-icon {
+      font-size: 1.15rem;
+    }
+  }
+
+  .plan-with-dest-btn {
+    --background: #0084ff;
+    --border-radius: 12px;
+    font-weight: 700;
+    margin: 0;
+    height: 48px;
+  }
 }

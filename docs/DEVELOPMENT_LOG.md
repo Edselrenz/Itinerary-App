@@ -514,13 +514,26 @@ This log records chronological development sessions, detailing objectives, execu
 - **Next Steps**:
   - Proceed to Milestone 5: Leaflet Map implementation with 16 category filter pills and POI bottom sheet.
 
+---
 
-
-
-
-
-
-
-
-
+## Session 21: Destination Detail Modal Layout & Image Alignment Fix
+- **Date & Time**: 2026-10-31 10:12:00 (Local)
+- **Objective**: Identify and resolve the UI/rendering bug in `Project/src/app/tabs/home/` where clicking a popular destination card opens a detail modal that lacks visible text/action items and displays misaligned image assets.
+- **Root Cause Analysis**:
+  - During the SCSS budget reduction in Session 20, the `.destination-modal { ... }` block was unintentionally deleted from `Project/src/app/tabs/home/home.page.scss`.
+  - In Ionic 9 / Angular 22, sheet modals rely on explicit styling on the modal host and wrapper. Without `.destination-modal`, `<div class="modal-image-wrap">` lost its constrained dimensions (`height: 240px; position: relative; overflow: hidden`) and `<img class="modal-hero-img">` lost `width: 100%; height: 100%; object-fit: cover`.
+  - As a result, high-definition bundled photos (up to 2400x1600) rendered at full natural resolution, blowing out the flex layout and pushing all place details (titles, badges, opening hours, honest cost bounds, description, tag chips, and Google Maps action buttons) thousands of pixels below the modal sheet's visible viewport fold.
+- **Key Implementation Details**:
+  - Restored full `.destination-modal` SCSS definitions in `Project/src/app/tabs/home/home.page.scss`.
+  - Re-anchored `.modal-image-wrap` at 240px height with `object-fit: cover` on `.modal-hero-img` to properly constrain photography.
+  - Added `max-height: 85vh; overflow-y: auto; -webkit-overflow-scrolling: touch` to `.modal-detail-content` to ensure complete scrollability on smaller screens.
+  - Grouped and shared common selector declarations across `.dest-img, .result-img, .modal-hero-img` and headings to guarantee the compiled CSS remains strictly under Angular's 10 kB component style budget (`maximumWarning: 10kB`).
+- **Files Modified**:
+  - `Project/src/app/tabs/home/home.page.scss`
+- **Verification**:
+  - `npm run test:unit`: 8 test files, 23/23 tests passed in 18.48s [100%].
+  - `npm run build`: Exit code 0, 0 budget warnings, production bundle compiled cleanly in 7.48s.
+- **Next Steps**:
+  - Commit and push to `origin/main` to update the GitHub Pages live deployment.
+  - Proceed to Milestone 5: Leaflet Map implementation with 16 category filter pills and POI bottom sheet.
 

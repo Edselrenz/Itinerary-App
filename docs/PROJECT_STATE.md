@@ -105,6 +105,7 @@ This document serves as the primary handoff reference for developers and coding 
   - Search results view with 2-column cards, loading spinner, category badges, and empty-state guidance.
   - Popular Destinations carousel populated dynamically via `PlaceService.getFeaturedPlaces()`.
   - Destination Detail Modal sheet with verified operating hours, honest cost bounds (`₱min - ₱max` or "Cost not provided"), and keyless Google Maps external URL directions.
+  - Fixed modal hero image overflow (240px cover constraint) and added touch scrollability to modal content.
   - Saved Itineraries card list connected to `GuestStorageService.itineraries$` with clean trip cards and empty-state planner prompt.
   - 6 passing unit tests in `home.page.spec.ts`.
 - [x] **Production Build**: Verified with `npm run build` (0 errors, 0 warnings).
