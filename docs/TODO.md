@@ -160,7 +160,7 @@ This checklist tracks completed, active, and pending tasks across all developmen
 
 ---
 
-## Phase 10: QA & Pilot Acceptance Gate (NEXT FOCUS)
-- [ ] Walk through full 24-point MVP acceptance checklist.
-- [ ] End-to-end automated verification run.
+## Phase 10: QA & Pilot Acceptance Gate (COMPLETED)
+- [x] Walk through full 24-point MVP acceptance checklist (`scripts/verify_acceptance_gate.py` passing 24/24 checks, 100%).
+- [x] End-to-end automated verification run (Backend pytest 6/6, Frontend Vitest 98/98, ESLint & Prettier 0 warnings).
 
