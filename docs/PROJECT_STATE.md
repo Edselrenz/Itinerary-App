@@ -94,6 +94,12 @@ This document serves as the primary handoff reference for developers and coding 
   - Icon-only tab bar with 4 solid blue icons (`home`, `location-sharp`, `time-outline`, `person-circle-outline`) in `#0084ff`.
   - Seamless navigation to Home (`/tabs/home`), Map (`/tabs/map`), History (`/tabs/history`), and Profile (`/tabs/profile`).
 - [x] **Figma Theme Tokens**: Configured Inter font, Travel Azure Blue (`#2563eb`), and Leaflet CSS.
+- [x] **Place Service & Models (`Project/src/app/core/`)**:
+  - `Place`, `Municipality`, `PaginatedPlaces`, and `PlaceSearchParams` TypeScript interfaces matching backend schemas.
+  - `PlaceService` with `searchPlaces()`, `getFeaturedPlaces()`, `getPlaceById()`, and `getMunicipalities()`.
+  - Curated high-resolution image fallback resolver `getPlaceImage()`.
+  - Canonical category display formatter `formatCategoryName()`.
+  - 11 passing Angular unit tests in `place.service.spec.ts`.
 - [x] **Production Build**: Verified with `npm run build` (0 errors, 0 warnings).
 - [x] **Live GitHub Pages Deployment**: Fully deployed and verified live at [https://edselrenz.github.io/Itinerary-App/](https://edselrenz.github.io/Itinerary-App/) (HTTP 200 OK).
 
@@ -102,10 +108,10 @@ This document serves as the primary handoff reference for developers and coding 
 ## 3. Features Currently Being Developed
 
 - **Milestone 4: Home Tab & Local Place Search**:
-  - Implementation of Angular `PlaceService` to communicate with `GET /api/v1/places`.
-  - Connecting the Home tab search bar with RxJS 300ms debounce and query cancellation.
-  - Populating the Popular Destinations section with curated cards.
-  - Displaying the Saved Itineraries card list.
+  - [x] Implementation of Angular `PlaceService` and models.
+  - [ ] Connecting the Home tab search bar with RxJS 300ms debounce and query cancellation (`switchMap`).
+  - [ ] Connecting Popular Destinations carousel to live `PlaceService.getFeaturedPlaces()`.
+  - [ ] Displaying the Saved Itineraries card list (`GuestStorageService` for guests, `/api/v1/itineraries` for registered users).
 
 ---
 
@@ -124,11 +130,14 @@ This document serves as the primary handoff reference for developers and coding 
 
 1. **Backend Automated Tests**:
    - Command: `python -m pytest backend/tests/ -v`
-   - Result: `2 passed, 1 warning in 5.48s [100%]` (`test_foundation.py` and `test_auth.py`).
-2. **Mobile Client Compilation**:
+   - Result: `2 passed, 1 warning in 1.99s [100%]` (`test_foundation.py` and `test_auth.py`).
+2. **Mobile Client Unit Tests**:
+   - Command: `npm run test:unit` in `Project/`
+   - Result: `7 test files passed, 17 tests passed in 14.11s [100%]` (includes 11 `place.service.spec.ts` tests).
+3. **Mobile Client Compilation**:
    - Command: `npm run build` in `Project/`
    - Result: `Application bundle generation complete [0 errors]` (Artifacts in `Project/www`).
-3. **TypeScript Strict Type Check**:
+4. **TypeScript Strict Type Check**:
    - Command: `npm run typecheck:e2e` in `Project/`
    - Result: `0 errors`.
 
@@ -136,11 +145,9 @@ This document serves as the primary handoff reference for developers and coding 
 
 ## 6. Immediate Next Development Task
 
-Proceed to **Milestone 4 — Implement the Home Tab & Local Place Search**:
-1. Create `Project/src/app/core/services/place.service.ts`.
-2. Update `Project/src/app/tabs/home/` with:
-   - Search input connected to `FormControl` with 300ms debounce.
-   - Popular Destinations horizontal carousel displaying the 17 seeded curated places.
-   - Saved Itineraries section connected to `GuestStorageService` and `GET /api/v1/itineraries`.
-3. Verify search debounce cancels in-flight stale requests and Nominatim is never queried.
+Complete the remaining parts of **Milestone 4 — Home Tab Integration**:
+1. Connect Home search input to an RxJS `FormControl` with `debounceTime(300)` and `distinctUntilChanged()`.
+2. Connect `home.page.ts` to `PlaceService.getFeaturedPlaces()` to populate the Popular Destinations horizontal carousel.
+3. Wire Saved Itineraries card list to `GuestStorageService` and `GET /api/v1/itineraries`.
+4. Verify search cancellation and zero-Nominatim network calls.
 

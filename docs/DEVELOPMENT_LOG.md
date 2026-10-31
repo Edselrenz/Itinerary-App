@@ -424,26 +424,36 @@ This log records chronological development sessions, detailing objectives, execu
 
 ---
 
-## Session 18: Gray Out Apple Social Auth Buttons (Login & Signup)
-- **Date & Time**: 2026-10-31 08:54:00 (Local)
-- **Objective**: Visually gray out the Apple Sign-In / Sign-Up buttons on both `/login` and `/signup` with disabled styling and informational guidance to indicate that Apple authentication is unavailable in this version.
-- **Key Visual Changes**:
-  - **Apple Button Disabled State**:
-    - Added `.unavailable-btn` styling to the Apple pill button on both login and signup pages.
-    - Set muted background (`#f1f5f9`), subtle border (`#e2e8f0`), and reduced opacity (`0.6`).
-    - Styled Apple icon and text in muted slate (`#94a3b8`).
-    - Set cursor to `not-allowed` and removed active scale transform.
-    - Retained click feedback toast informing users that Apple Sign-In/Sign-Up is disabled in the pilot build.
-- **Files Modified**:
-  - `Project/src/app/features/auth/login/login.page.html`
-  - `Project/src/app/features/auth/login/login.page.scss`
-  - `Project/src/app/features/auth/signup/signup.page.html`
-  - `Project/src/app/features/auth/signup/signup.page.scss`
+## Session 19: PlaceService Implementation, Type Definitions & Unit Test Suite
+- **Date & Time**: 2026-10-31 09:12:00 (Local)
+- **Objective**: Implement Milestone 4 Step 1: Create the Angular client `PlaceService` and associated TypeScript interfaces to connect with the backend `/api/v1/places` and `/api/v1/municipalities` endpoints, complete with local photography fallback resolution and full unit testing.
+- **Key Implementation Details**:
+  - **TypeScript Interfaces (`Project/src/app/core/models/place.models.ts`)**:
+    - `Municipality`: Matching `MunicipalityOut` schema.
+    - `Place`: Full typing matching backend `PlaceOut`, including provincial provenance, external `directions_url`, honest cost boundaries, and tags.
+    - `PaginatedPlaces`: Matching `PaginatedPlacesOut` wrapper (`total`, `limit`, `offset`, `items`).
+    - `PlaceSearchParams`: Strong query parameter contract (`q`, `categories`, `municipality_id`, `featured`, bounding box, `limit`, `offset`).
+  - **Core Service (`Project/src/app/core/services/place.service.ts`)**:
+    - `searchPlaces(params)`: Reactive HTTP client GET querying `/api/v1/places` with dynamic `HttpParams`.
+    - `getFeaturedPlaces(limit)`: Filtered query for curated highlights (`is_featured=true`).
+    - `getPlaceById(id)`: Direct lookup for place details and provenance.
+    - `getMunicipalities(query)`: Searchable municipality list from `/api/v1/municipalities`.
+    - `getPlaceImage(name, remoteUrl)`: Fallback resolver prioritizing remote URLs and mapping recognized venues to local high-resolution assets (`assets/images/*.png`).
+    - `formatCategoryName(categoryKey)`: Friendly formatting mapping canonical category tags to readable display names.
+  - **Unit Test Suite (`Project/src/app/core/services/place.service.spec.ts`)**:
+    - 11 unit tests covering all methods, parameter serialization, array category joining, and image fallback logic using Angular `provideHttpClientTesting()` and `HttpTestingController`.
+- **Files Created**:
+  - `Project/src/app/core/models/place.models.ts`
+  - `Project/src/app/core/services/place.service.ts`
+  - `Project/src/app/core/services/place.service.spec.ts`
 - **Verification**:
-  - `npm run build`: Exit code 0, bundle generated in 5.01s.
-  - `python -m pytest backend/tests`: 2 passed in 2.03s [100%].
+  - `npm run test:unit`: 7 test files, 17 tests passed (including all 11 `place.service.spec.ts` tests) in 14.11s.
+  - `python -m pytest backend/tests -v`: 2 passed in 1.99s [100%].
+  - `npm run typecheck:e2e`: Exit code 0, 0 TypeScript errors.
+  - `npm run build`: Exit code 0, production bundle compiled cleanly.
 - **Next Steps**:
-  - Commit and push to `origin/main` to trigger automated GitHub Pages deployment.
+  - Wire `PlaceService` into `home.page.ts` for 300ms debounced destination search and live featured places carousel.
+
 
 
 

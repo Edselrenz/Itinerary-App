@@ -39,15 +39,48 @@ The project employs a multi-tiered verification strategy designed to prevent reg
   8. Refresh token exchange at `/api/v1/auth/refresh` succeeds and issues new access token.
   9. Apple Sign-In returns `501 Not Implemented` with truthful explanation when `enableAppleAuth = false`.
 
-### 2.3 Mobile Client Compilation Suite
+### 2.3 Mobile Client Unit Test Suite (`Project/src/app/core/services/place.service.spec.ts`)
+- **`PlaceService` Suite**:
+  1. Creation: Verifies service instantiation via Angular `TestBed`.
+  2. `searchPlaces` with params: Verifies URL composition, query string params (`q`, comma-separated `categories`, `featured`, `limit`, `offset`), and HTTP GET method.
+  3. `searchPlaces` without params: Verifies default endpoint querying.
+  4. `getFeaturedPlaces`: Verifies `featured=true` filter and item array mapping.
+  5. `getPlaceById`: Verifies lookup by UUID.
+  6. `getMunicipalities`: Verifies `/municipalities` query with `q` search parameter.
+  7. `getPlaceImage` (remote): Verifies passthrough of external image URLs.
+  8. `getPlaceImage` (local curated): Verifies case-insensitive matching for Minalungao, Lumang Gapan, Pantabangan, etc.
+  9. `getPlaceImage` (fallback): Verifies fallback image for unmapped venues.
+  10. `formatCategoryName` (canonical): Verifies human-readable formatting.
+  11. `formatCategoryName` (unmapped): Verifies underscore replacement fallback.
+
+### 2.4 Mobile Client Compilation Suite
 - `npm run build` in `Project/`: Production Angular AOT compiler and bundler.
 - `npm run typecheck:e2e`: TypeScript strict compilation.
+- `npm run test:unit`: Vitest Angular unit test runner.
 
 ---
 
 ## 3. Actual Verified Test Results
 
-### 3.1 Backend Pytest Run
+### 3.1 Mobile Client Unit Tests (`npm run test:unit`)
+```text
+ RUN  v5.0.5 C:/Users/Edward/Desktop/CaseStudy/Project
+
+ ✓  app  src/app/explore-container/explore-container.component.spec.ts (1 test) 123ms
+ ✓  app  src/app/core/services/place.service.spec.ts (11 tests) 93ms
+ ✓  app  src/app/tab1/tab1.page.spec.ts (1 test) 327ms
+ ✓  app  src/app/tab3/tab3.page.spec.ts (1 test) 336ms
+ ✓  app  src/app/tab2/tab2.page.spec.ts (1 test) 349ms
+ ✓  app  src/app/app.component.spec.ts (1 test) 362ms
+ ✓  app  src/app/tabs/tabs.page.spec.ts (1 test) 382ms
+
+ Test Files  7 passed (7)
+      Tests  17 passed (17)
+   Start at  09:26:05
+   Duration  14.11s
+```
+
+### 3.2 Backend Pytest Run
 ```text
 ============================= test session starts =============================
 platform win32 -- Python 3.14.3, pytest-9.2.0, pluggy-1.7.0
@@ -58,10 +91,10 @@ collected 2 items
 backend/tests/test_auth.py::test_auth_lifecycle PASSED                   [ 50%]
 backend/tests/test_foundation.py::test_health_and_featured_places_pipeline PASSED [100%]
 
-======================== 2 passed, 1 warning in 5.48s =========================
+======================== 2 passed, 1 warning in 1.99s =========================
 ```
 
-### 3.2 Mobile Production Build Run
+### 3.3 Mobile Production Build Run
 ```text
 > Project@0.0.1 build
 > ng build

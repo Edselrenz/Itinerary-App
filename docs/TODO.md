@@ -79,12 +79,17 @@ This checklist tracks completed, active, and pending tasks across all developmen
 ---
 
 ## Phase 4: Home Tab & Local Place Search (CURRENT FOCUS)
-- [ ] Implement `PlaceService` in `Project/src/app/core/services/place.service.ts`:
-  - [ ] `searchPlaces(query, limit, offset, categories)`
-  - [ ] `getFeaturedPlaces(limit)`
-  - [ ] `getMunicipalities()`
+- [x] Implement `PlaceService` in `Project/src/app/core/services/place.service.ts`:
+  - [x] `searchPlaces(params)` (query, categories, bounding box, municipality, limit, offset)
+  - [x] `getFeaturedPlaces(limit)`
+  - [x] `getPlaceById(id)`
+  - [x] `getMunicipalities(query)`
+  - [x] `getPlaceImage(name, remoteUrl)` local photography fallback resolver
+  - [x] `formatCategoryName(categoryKey)`
+  - [x] Unit test suite (`place.service.spec.ts`) with 11 passing tests
 - [ ] Connect Home tab search bar with RxJS 300ms debounce to live `PlaceService` backend.
 - [x] Render Popular Destinations carousel with verified imagery, descriptions, and category tags.
+- [ ] Connect Popular Destinations carousel to live `PlaceService.getFeaturedPlaces()`.
 - [ ] Render Saved Itineraries card list (API for signed-in users, `GuestStorageService` for guests).
 - [ ] Verify search response times and zero-Nominatim network calls.
 

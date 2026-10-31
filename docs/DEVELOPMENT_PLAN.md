@@ -61,10 +61,10 @@ This plan tracks the 11 sequential milestones defined in the **End-to-End Engine
 - [x] Build 4-Tab Shell (`tabs.routes.ts`) for Home, Map, History (placeholder), and Profile (account status / guest notice).
 - [x] Fix Angular Ionic 9 import resolution (`@ionic/angular`) and verify clean `npm run build`.
 
-### Milestone 4: Home Tab & Local Place Search (Next)
-- [ ] Implement Place service (`place.service.ts`) in Angular client.
+### Milestone 4: Home Tab & Local Place Search (In Progress)
+- [x] Implement Place service (`place.service.ts`) and models (`place.models.ts`) in Angular client with 11 passing unit tests.
 - [ ] Connect Home tab search bar to `GET /api/v1/places` using 300ms RxJS debounce.
-- [ ] Build Popular Destinations horizontal carousel / grid with verified imagery and category tags.
+- [ ] Connect Popular Destinations horizontal carousel to live `PlaceService.getFeaturedPlaces()`.
 - [ ] Build Saved Itineraries card list fetching from API (logged-in) or `GuestStorageService` (guests).
 
 ### Milestones 5–10: (Pending Milestone 4 completion)
