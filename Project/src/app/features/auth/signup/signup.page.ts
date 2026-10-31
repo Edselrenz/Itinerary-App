@@ -11,27 +11,21 @@ import {
 } from '@angular/forms';
 import { Router } from '@angular/router';
 import {
-  IonBackButton,
-  IonButton,
-  IonButtons,
   IonContent,
-  IonHeader,
   IonIcon,
-  IonInput,
-  IonItem,
-  IonLabel,
   IonSpinner,
-  IonToolbar,
+  ToastController,
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import {
   alertCircleOutline,
   arrowBackOutline,
+  checkmarkCircle,
   eyeOffOutline,
   eyeOutline,
-  lockClosedOutline,
+  keyOutline,
+  logoApple,
   mailOutline,
-  personOutline,
 } from 'ionicons/icons';
 import { AuthService } from '../../../core/services/auth.service';
 
@@ -54,15 +48,7 @@ export const passwordMatchValidator: ValidatorFn = (
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    IonHeader,
-    IonToolbar,
-    IonButtons,
-    IonBackButton,
     IonContent,
-    IonLabel,
-    IonItem,
-    IonInput,
-    IonButton,
     IonIcon,
     IonSpinner,
   ],
@@ -78,11 +64,6 @@ export class SignupPage {
       firstName: new FormControl('', [Validators.required]),
       middleInitial: new FormControl(''),
       lastName: new FormControl('', [Validators.required]),
-      username: new FormControl('', [
-        Validators.required,
-        Validators.minLength(3),
-        Validators.maxLength(50),
-      ]),
       email: new FormControl('', [Validators.required, Validators.email]),
       password: new FormControl('', [
         Validators.required,
@@ -95,15 +76,17 @@ export class SignupPage {
 
   constructor(
     private router: Router,
-    private authService: AuthService
+    private authService: AuthService,
+    private toastController: ToastController
   ) {
     addIcons({
       arrowBackOutline,
-      personOutline,
       mailOutline,
-      lockClosedOutline,
+      keyOutline,
+      checkmarkCircle,
       eyeOutline,
       eyeOffOutline,
+      logoApple,
       alertCircleOutline,
     });
   }
@@ -116,6 +99,14 @@ export class SignupPage {
     this.showConfirmPassword = !this.showConfirmPassword;
   }
 
+  public goBack(): void {
+    this.router.navigate(['/welcome']);
+  }
+
+  public goToLogin(): void {
+    this.router.navigate(['/login']);
+  }
+
   public onSubmit(): void {
     if (this.signupForm.invalid) {
       this.signupForm.markAllAsTouched();
@@ -126,12 +117,21 @@ export class SignupPage {
     this.errorMessage = null;
 
     const val = this.signupForm.value;
+    const emailStr = (val.email || '').trim();
+    const rawUsername = (
+      emailStr.split('@')[0] || `${val.firstName || ''}${val.lastName || ''}`
+    ).replace(/[^a-zA-Z0-9_]/g, '');
+    const username =
+      rawUsername.length >= 3
+        ? rawUsername.slice(0, 50)
+        : `${rawUsername}usr`.slice(0, 50);
+
     this.authService
       .register({
-        first_name: val.firstName!.trim(),
-        last_name: val.lastName!.trim(),
-        username: val.username!.trim(),
-        email: val.email!.trim(),
+        first_name: (val.firstName || '').trim(),
+        last_name: (val.lastName || '').trim(),
+        username,
+        email: emailStr,
         password: val.password!,
       })
       .subscribe({
@@ -148,8 +148,21 @@ export class SignupPage {
       });
   }
 
-  public goToLogin(): void {
-    this.router.navigate(['/login']);
+  public async onGoogleSignup(): Promise<void> {
+    const toast = await this.toastController.create({
+      message: 'Google Sign-Up is configured for production credentials.',
+      duration: 2500,
+      position: 'top',
+    });
+    await toast.present();
+  }
+
+  public async onAppleSignup(): Promise<void> {
+    const toast = await this.toastController.create({
+      message: 'Apple Sign-Up is disabled in this pilot build.',
+      duration: 2500,
+      position: 'top',
+    });
+    await toast.present();
   }
 }
-

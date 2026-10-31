@@ -71,7 +71,17 @@ This document serves as the primary handoff reference for developers and coding 
   - Solid blue pill action button (*"Log in"*).
   - Outlined pill social logins (*Continue with Google* and *Continue with Apple*).
   - Clean footer: *"Don't have an account? Sign up"*.
-- [x] **Figma-Aligned Signup Screen (`/signup`)**: Name fields, username, email, password strength, and cross-field matching-passwords confirmation validator.
+- [x] **Figma-Aligned Signup Screen (`/signup`)**:
+  - Blue back navigation arrow (`←`).
+  - Centered brand header with 45-degree tilted airplane icon + *"Trip mo, trip ko"*.
+  - Left-aligned headline: *"Create your account"* and subtitle: *"Get started and plan your new adventure."* (no boilerplate).
+  - Clean input fields with 12px rounded borders: *First Name*, *Middle Initial (if applicable)*, *Last Name*, *Email Address* (blue `mail-outline` icon), *Password* (blue `key-outline` icon and eye toggle), *Confirm Password* (blue `checkmark-circle` icon and eye toggle).
+  - Cross-field password matching validation.
+  - Solid blue pill action button (*"Sign up"*).
+  - Centered switch prompt directly below button: *"Already have an account? Log in"*.
+  - Centered *"or"* divider rule.
+  - Outlined pill social logins (*Continue with Google* and *Continue with Apple*).
+  - Automated username generation for backend compatibility.
 - [x] **Figma-Aligned Home Page (`/tabs/home`)**:
   - Top header with bold 2-line title (*"Where are you / going next?"*) and electric blue notification bell.
   - Destination search bar with 12px rounded borders, placeholder, and trailing magnifying glass icon.

@@ -389,6 +389,40 @@ This log records chronological development sessions, detailing objectives, execu
 - **Next Steps**:
   - Commit and push to `origin/main` to update the live GitHub Pages build.
 
+---
+
+## Session 17: Signup Page Exact Alignment with Figma Mockup
+- **Date & Time**: 2026-10-31 08:15:00 (Local)
+- **Objective**: Refactor the Signup screen (`/signup`) to match the user-provided screenshot pixel-for-pixel using the `anti-generic-frontend-design` guidelines, removing redundant "Nueva Ecija" boilerplate.
+- **Key Visual & Architecture Changes**:
+  - **Back Navigation**: Blue arrow (`arrow-back-outline`, `#0084ff`) returning to `/welcome`.
+  - **Branding Header**: Centered 45-degree tilted blue airplane icon + bold *"Trip mo, trip ko"* title.
+  - **Headlines**: Left-aligned bold *"Create your account"* title with clean subtitle *"Get started and plan your new adventure."* (no boilerplate).
+  - **Form Fields (Exact Screenshot Order)**:
+    - *First Name*: 12px rounded input, clean placeholder.
+    - *Middle Initial (if applicable)*: 12px rounded input, clean placeholder.
+    - *Last Name*: 12px rounded input, clean placeholder.
+    - *Email Address*: 12px rounded input with blue `mail-outline` icon.
+    - *Password*: 12px rounded input with blue `key-outline` icon and blue eye toggle (`eye-outline` / `eye-off-outline`).
+    - *Confirm Password*: 12px rounded input with blue `checkmark-circle` icon and blue eye toggle.
+  - **Primary Action**: Full-width solid blue pill button (`border-radius: 9999px`, `#0084ff`) labeled *"Sign up"*.
+  - **Switch Row**: Centered *"Already have an account? Log in"* placed directly below the Sign up button (above the divider).
+  - **Divider**: Thin horizontal rule with centered lowercase `"or"`.
+  - **Social Logins**: Outlined pill buttons with gray borders:
+    - *Continue with Google* (Google color logo).
+    - *Continue with Apple* (Apple black logo).
+  - **Backend Alignment**: Seamlessly derives `username` parameter for backend registration API if omitted in UI, maintaining complete zero-cost architecture.
+- **Files Modified**:
+  - `Project/src/app/features/auth/signup/signup.page.html`
+  - `Project/src/app/features/auth/signup/signup.page.scss`
+  - `Project/src/app/features/auth/signup/signup.page.ts`
+- **Verification**:
+  - `npm run build`: Exit code 0, 0 compiler warnings, bundle generated in 4.50s.
+  - `python -m pytest backend/tests`: 2 passed in 2.01s [100%].
+- **Next Steps**:
+  - Commit and push to `origin/main` to trigger automated GitHub Pages deployment.
+
+
 
 
 

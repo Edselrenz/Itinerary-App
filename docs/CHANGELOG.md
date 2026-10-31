@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [0.4.10-alpha] - 2026-10-31
+### Changed & Fixed
+- **Signup Screen Exact Figma Alignment & Clean Typography**:
+  - Refactored Signup screen layout to match exact Figma mockup with top blue back arrow, centered tilted airplane branding, left-aligned *"Create your account"*, and *"Get started and plan your new adventure."* subtitle.
+  - Aligned input fields in exact screenshot sequence: First Name, Middle Initial (if applicable), Last Name, Email with mail icon, Password with key icon and eye toggle, and Confirm Password with checkmark-circle icon and eye toggle.
+  - Implemented solid blue pill button (*"Sign up"*), switch row (*"Already have an account? Log in"*), centered *"or"* divider, and outlined social buttons (*Continue with Google*, *Continue with Apple*).
+  - Derived username automatically to preserve backend registration schema integrity without cluttering the UI.
+
+---
+
 ## [0.4.9-alpha] - 2026-10-31
 ### Changed & Fixed
 - **Login Screen Figma Alignment & Boilerplate Cleanup**:
