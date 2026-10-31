@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, map } from 'rxjs';
+import { Observable, catchError, map, of } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   Municipality,
@@ -51,6 +51,269 @@ export class PlaceService {
     public_facility: 'Public Facility',
   };
 
+  private readonly curatedOfflinePlaces: Place[] = [
+    {
+      id: 'dest-minalungao',
+      name: 'Minalungao National Park',
+      category: 'nature_park',
+      latitude: 15.2981,
+      longitude: 121.1223,
+      municipality_name: 'General Tinio',
+      address_text: 'General Tinio, Nueva Ecija',
+      description: 'Towering 16-meter limestone cliffs, emerald-green Peñaranda River bamboo rafting, and subterranean caves.',
+      phone: null,
+      website: null,
+      opening_hours: '07:00-17:00',
+      estimated_cost_min: 100,
+      estimated_cost_max: 500,
+      cost_currency: 'PHP',
+      image_url: 'assets/images/minalungao.png',
+      image_license: null,
+      source_name: 'CuratedNuevaEcijaMVP',
+      source_record_id: 'curated/minalungao',
+      source_url: null,
+      imported_at: '2026-10-30T00:00:00Z',
+      verified_at: '2026-10-30T00:00:00Z',
+      is_featured: true,
+      tags: ['Balsa Rafting', 'Cliff Diving', 'Caving'],
+      directions_url: 'https://www.google.com/maps/dir/?api=1&destination=15.2981,121.1223',
+    },
+    {
+      id: 'dest-tagpuan-gapan',
+      name: 'Tagpuan sa Lumang Gapan',
+      category: 'church_religious',
+      latitude: 15.3065,
+      longitude: 120.9461,
+      municipality_name: 'Gapan City',
+      address_text: 'Gapan City, Nueva Ecija',
+      description: 'The "Little Vigan" of Nueva Ecija featuring restored Spanish colonial street lamps, historic brick facades, and night food stalls.',
+      phone: null,
+      website: null,
+      opening_hours: '06:00-20:00',
+      estimated_cost_min: null,
+      estimated_cost_max: null,
+      cost_currency: 'PHP',
+      image_url: 'assets/images/tagpuan_gapan.png',
+      image_license: null,
+      source_name: 'CuratedNuevaEcijaMVP',
+      source_record_id: 'curated/tagpuan_gapan',
+      source_url: null,
+      imported_at: '2026-10-30T00:00:00Z',
+      verified_at: '2026-10-30T00:00:00Z',
+      is_featured: true,
+      tags: ['Colonial Walk', 'Night Market', 'Historic Street'],
+      directions_url: 'https://www.google.com/maps/dir/?api=1&destination=15.3065,120.9461',
+    },
+    {
+      id: 'dest-pantabangan-lake',
+      name: 'Pantabangan Dam and Lake Viewpoint',
+      category: 'tourist_attraction',
+      latitude: 15.8126,
+      longitude: 121.1098,
+      municipality_name: 'Pantabangan',
+      address_text: 'Pantabangan, Nueva Ecija',
+      description: "One of Southeast Asia's largest clean water reservoirs, framed by scenic Sierra Madre mountain ridges and bass fishing spots.",
+      phone: null,
+      website: null,
+      opening_hours: '06:00-18:00',
+      estimated_cost_min: null,
+      estimated_cost_max: null,
+      cost_currency: 'PHP',
+      image_url: 'assets/images/pantabangan_lake.png',
+      image_license: null,
+      source_name: 'CuratedNuevaEcijaMVP',
+      source_record_id: 'curated/pantabangan_lake',
+      source_url: null,
+      imported_at: '2026-10-30T00:00:00Z',
+      verified_at: '2026-10-30T00:00:00Z',
+      is_featured: true,
+      tags: ['Bass Fishing', 'Scenic View', 'Dam Site'],
+      directions_url: 'https://www.google.com/maps/dir/?api=1&destination=15.8126,121.1098',
+    },
+    {
+      id: 'dest-george-point',
+      name: 'George Point',
+      category: 'cafe',
+      latitude: 15.82,
+      longitude: 121.115,
+      municipality_name: 'Pantabangan',
+      address_text: 'Pantabangan, Nueva Ecija',
+      description: 'Scenic panoramic hilltop overlooking Pantabangan Lake, ideal for sunset views, relaxing lakeside dining, and coffee.',
+      phone: null,
+      website: null,
+      opening_hours: '08:00-20:00',
+      estimated_cost_min: 150,
+      estimated_cost_max: 450,
+      cost_currency: 'PHP',
+      image_url: 'assets/images/george_point.png',
+      image_license: null,
+      source_name: 'CuratedNuevaEcijaMVP',
+      source_record_id: 'curated/george_point',
+      source_url: null,
+      imported_at: '2026-10-30T00:00:00Z',
+      verified_at: '2026-10-30T00:00:00Z',
+      is_featured: true,
+      tags: ['Sunset View', 'Lakeside Coffee', 'Photography'],
+      directions_url: 'https://www.google.com/maps/dir/?api=1&destination=15.8200,121.1150',
+    },
+    {
+      id: 'dest-highland-bali',
+      name: 'Highland Bali Villas Resort and Spa',
+      category: 'hotel_accommodation',
+      latitude: 15.818,
+      longitude: 121.121,
+      municipality_name: 'Pantabangan',
+      address_text: 'Pantabangan, Nueva Ecija',
+      description: 'Balinese-inspired lakefront retreat with water sports, exotic villas, and breathtaking vistas across the water.',
+      phone: null,
+      website: null,
+      opening_hours: '24 Hours',
+      estimated_cost_min: 3500,
+      estimated_cost_max: 8000,
+      cost_currency: 'PHP',
+      image_url: 'assets/images/highland_bali.png',
+      image_license: null,
+      source_name: 'CuratedNuevaEcijaMVP',
+      source_record_id: 'curated/highland_bali',
+      source_url: null,
+      imported_at: '2026-10-30T00:00:00Z',
+      verified_at: '2026-10-30T00:00:00Z',
+      is_featured: true,
+      tags: ['Water Sports', 'Resort Villas', 'Spa'],
+      directions_url: 'https://www.google.com/maps/dir/?api=1&destination=15.8180,121.1210',
+    },
+    {
+      id: 'dest-farm-villaronte',
+      name: 'Farm Villaronte',
+      category: 'tourist_attraction',
+      latitude: 15.785,
+      longitude: 120.998,
+      municipality_name: 'San Jose City',
+      address_text: 'San Jose City, Nueva Ecija',
+      description: 'Vibrant flower farm, organic produce picking, rustic pavilions, and family-friendly agro-tourism trails.',
+      phone: null,
+      website: null,
+      opening_hours: '08:00-17:00',
+      estimated_cost_min: 50,
+      estimated_cost_max: 200,
+      cost_currency: 'PHP',
+      image_url: 'assets/images/farm_villaronte.png',
+      image_license: null,
+      source_name: 'CuratedNuevaEcijaMVP',
+      source_record_id: 'curated/farm_villaronte',
+      source_url: null,
+      imported_at: '2026-10-30T00:00:00Z',
+      verified_at: '2026-10-30T00:00:00Z',
+      is_featured: true,
+      tags: ['Sunflower Fields', 'Organic Produce', 'Agri-Tour'],
+      directions_url: 'https://www.google.com/maps/dir/?api=1&destination=15.7850,120.9980',
+    },
+    {
+      id: 'dest-casa-batik',
+      name: 'Casa Batik',
+      category: 'museum_cultural',
+      latitude: 15.485,
+      longitude: 120.968,
+      municipality_name: 'Cabanatuan City',
+      address_text: 'Cabanatuan City, Nueva Ecija',
+      description: 'Artisan craft space celebrating Philippine textile traditions, local handcrafted coffee, and homegrown culinary heritage.',
+      phone: null,
+      website: null,
+      opening_hours: '09:00-19:00',
+      estimated_cost_min: 100,
+      estimated_cost_max: 300,
+      cost_currency: 'PHP',
+      image_url: 'assets/images/casa_batik.png',
+      image_license: null,
+      source_name: 'CuratedNuevaEcijaMVP',
+      source_record_id: 'curated/casa_batik',
+      source_url: null,
+      imported_at: '2026-10-30T00:00:00Z',
+      verified_at: '2026-10-30T00:00:00Z',
+      is_featured: true,
+      tags: ['Handcrafted Goods', 'Art Cafe', 'Local Heritage'],
+      directions_url: 'https://www.google.com/maps/dir/?api=1&destination=15.4850,120.9680',
+    },
+    {
+      id: 'dest-pavillion-farm',
+      name: "D' Pavilion Farm and Resort",
+      category: 'resort_swimming',
+      latitude: 15.584,
+      longitude: 120.892,
+      municipality_name: 'Muñoz Science City',
+      address_text: 'Muñoz Science City, Nueva Ecija',
+      description: 'Relaxing agricultural nature resort with refreshing swimming pools, family pavilions, and quiet orchard walks.',
+      phone: null,
+      website: null,
+      opening_hours: '08:00-21:00',
+      estimated_cost_min: 200,
+      estimated_cost_max: 600,
+      cost_currency: 'PHP',
+      image_url: 'assets/images/pavillion_farm.png',
+      image_license: null,
+      source_name: 'CuratedNuevaEcijaMVP',
+      source_record_id: 'curated/pavillion_farm',
+      source_url: null,
+      imported_at: '2026-10-30T00:00:00Z',
+      verified_at: '2026-10-30T00:00:00Z',
+      is_featured: true,
+      tags: ['Swimming Pool', 'Nature Farm', 'Cabanas'],
+      directions_url: 'https://www.google.com/maps/dir/?api=1&destination=15.5840,120.8920',
+    },
+    {
+      id: 'dest-lake-farm-marre',
+      name: 'Lake Farm de La Marre',
+      category: 'hotel_accommodation',
+      latitude: 15.772,
+      longitude: 120.985,
+      municipality_name: 'San Jose City',
+      address_text: 'San Jose City, Nueva Ecija',
+      description: 'Tranquil countryside lakefront farm estate with boating, peaceful nature retreats, and farm-to-table culinary dining.',
+      phone: null,
+      website: null,
+      opening_hours: '08:00-20:00',
+      estimated_cost_min: 500,
+      estimated_cost_max: 2500,
+      cost_currency: 'PHP',
+      image_url: 'assets/images/lake_farm_marre.png',
+      image_license: null,
+      source_name: 'CuratedNuevaEcijaMVP',
+      source_record_id: 'curated/lake_farm_marre',
+      source_url: null,
+      imported_at: '2026-10-30T00:00:00Z',
+      verified_at: '2026-10-30T00:00:00Z',
+      is_featured: true,
+      tags: ['Lakeside Retreat', 'Nature Farm', 'Boating'],
+      directions_url: 'https://www.google.com/maps/dir/?api=1&destination=15.7720,120.9850',
+    },
+    {
+      id: 'dest-la-casa-prime',
+      name: 'La Casa Prime Cabins',
+      category: 'hotel_accommodation',
+      latitude: 15.628,
+      longitude: 121.152,
+      municipality_name: 'Bongabon',
+      address_text: 'Bongabon, Nueva Ecija',
+      description: 'Serene mountain cabin sanctuary with overlooking views of Pantabangan Lake and modern glamping amenities.',
+      phone: null,
+      website: null,
+      opening_hours: '24 Hours',
+      estimated_cost_min: 2500,
+      estimated_cost_max: 6000,
+      cost_currency: 'PHP',
+      image_url: 'assets/images/la_casa_prime.png',
+      image_license: null,
+      source_name: 'CuratedNuevaEcijaMVP',
+      source_record_id: 'curated/la_casa_prime',
+      source_url: null,
+      imported_at: '2026-10-30T00:00:00Z',
+      verified_at: '2026-10-30T00:00:00Z',
+      is_featured: true,
+      tags: ['Mountain Cabins', 'Lake View', 'Glamping'],
+      directions_url: 'https://www.google.com/maps/dir/?api=1&destination=15.6280,121.1520',
+    },
+  ];
+
   constructor(private http: HttpClient) {}
 
   /**
@@ -96,7 +359,40 @@ export class PlaceService {
       }
     }
 
-    return this.http.get<PaginatedPlaces>(this.baseUrl, { params: httpParams });
+    return this.http.get<PaginatedPlaces>(this.baseUrl, { params: httpParams }).pipe(
+      catchError(() => of(this.getFallbackPaginatedPlaces(params)))
+    );
+  }
+
+  private getFallbackPaginatedPlaces(params?: PlaceSearchParams): PaginatedPlaces {
+    let items = [...this.curatedOfflinePlaces];
+
+    if (params?.q?.trim()) {
+      const q = params.q.trim().toLowerCase();
+      items = items.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          (p.municipality_name && p.municipality_name.toLowerCase().includes(q)) ||
+          (p.description && p.description.toLowerCase().includes(q))
+      );
+    }
+
+    if (params?.categories) {
+      const cats = Array.isArray(params.categories)
+        ? params.categories
+        : params.categories.split(',');
+      items = items.filter((p) => cats.includes(p.category));
+    }
+
+    const limit = params?.limit || 20;
+    const offset = params?.offset || 0;
+
+    return {
+      total: items.length,
+      limit,
+      offset,
+      items: items.slice(offset, offset + limit),
+    };
   }
 
   /**
@@ -112,7 +408,15 @@ export class PlaceService {
    * Retrieves full details and provenance for a single place.
    */
   public getPlaceById(id: string): Observable<Place> {
-    return this.http.get<Place>(`${this.baseUrl}/${id}`);
+    return this.http.get<Place>(`${this.baseUrl}/${id}`).pipe(
+      catchError(() => {
+        const found = this.curatedOfflinePlaces.find((p) => p.id === id);
+        if (found) {
+          return of(found);
+        }
+        throw new Error('Place not found');
+      })
+    );
   }
 
   /**

@@ -15,6 +15,7 @@ import {
 import { addIcons } from 'ionicons';
 import {
   arrowBack,
+  arrowForwardOutline,
   calendarOutline,
   cashOutline,
   checkmarkCircle,
@@ -22,10 +23,11 @@ import {
   createOutline,
   informationCircleOutline,
   locationOutline,
+  searchOutline,
   sparkles,
   timeOutline,
 } from 'ionicons/icons';
-import { Itinerary, ItineraryBudgetSummary } from '../../../core/models/itinerary.models';
+import { Itinerary, ItineraryBudgetSummary, ItineraryDay } from '../../../core/models/itinerary.models';
 import { ItineraryService } from '../../../core/services/itinerary.service';
 import { PlaceService } from '../../../core/services/place.service';
 
@@ -62,23 +64,21 @@ export class SuggestedWizardPage implements OnInit {
   public budgetSummary: ItineraryBudgetSummary | null = null;
 
   public quickDestinations = [
-    'Nueva Ecija',
     'Bongabon',
     'Pantabangan',
     'Cabanatuan City',
     'Gapan City',
     'General Tinio',
+    'Nueva Ecija',
   ];
 
   public budgetPresets = [1500, 2500, 4000, 6000];
 
   public preferenceOptions: PreferenceOption[] = [
-    { key: 'nature', label: 'Nature & Adventure' },
-    { key: 'heritage', label: 'Heritage & Faith' },
-    { key: 'food', label: 'Food & Dining' },
-    { key: 'relaxation', label: 'Resorts & Swimming' },
-    { key: 'culture', label: 'Culture & Museum' },
-    { key: 'scenic', label: 'Scenic Viewpoints' },
+    { key: 'nature', label: 'Nature & Parks' },
+    { key: 'food', label: 'Food Trip' },
+    { key: 'culture', label: 'Culture & History' },
+    { key: 'shopping', label: 'Shopping' },
   ];
 
   public selectedPreferences: Set<string> = new Set(['nature', 'food']);
@@ -92,7 +92,9 @@ export class SuggestedWizardPage implements OnInit {
   ) {
     addIcons({
       arrowBack,
+      arrowForwardOutline,
       sparkles,
+      searchOutline,
       locationOutline,
       calendarOutline,
       cashOutline,
@@ -281,6 +283,32 @@ export class SuggestedWizardPage implements OnInit {
       return min === max ? `₱${min}` : `₱${min} - ₱${max}`;
     }
     return 'Price not listed';
+  }
+
+  public getDayLocationName(day: ItineraryDay | undefined): string {
+    if (!day || !day.items || day.items.length === 0) {
+      return this.generatedPlan?.destination || 'Nueva Ecija';
+    }
+    const itemWithMuni = day.items.find((it) => it.place?.municipality_name);
+    return itemWithMuni?.place?.municipality_name || this.generatedPlan?.destination || 'Nueva Ecija';
+  }
+
+  public getDaySubtitle(day: ItineraryDay | undefined): string {
+    const muni = this.getDayLocationName(day);
+    return `Food spots, local culture, and historic sites in ${muni}!`;
+  }
+
+  public formatStopTiming(stop: any): string {
+    if (stop.planned_time && stop.duration_minutes) {
+      const durHours = Math.round(stop.duration_minutes / 60);
+      const durText = durHours >= 1 ? `${durHours} hrs` : `${stop.duration_minutes} mins`;
+      return `${stop.planned_time} (${durText})`;
+    }
+    if (stop.duration_minutes) {
+      const durHours = Math.round(stop.duration_minutes / 60);
+      return durHours >= 1 ? `(${durHours} hrs)` : `(${stop.duration_minutes} mins)`;
+    }
+    return '';
   }
 }
 

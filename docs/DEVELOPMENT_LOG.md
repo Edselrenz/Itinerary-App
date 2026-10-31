@@ -789,3 +789,39 @@ This log records chronological development sessions, detailing objectives, execu
 
 
 
+
+---
+
+## Session 28: Redesign Custom & Suggested Itinerary Flows Matching Figma & Anti-Generic Frontend Design
+- **Date & Time**: 2026-10-31 13:20:00 (Local)
+- **Objective**: Implement comprehensive visual and UX redesign of both the Suggested Itinerary Wizard and the Custom Itinerary Builder strictly matching the Figma specification (`Travel Itinerary App.fig` Flow 2) following the `anti-generic-frontend-design` standards and zero-cost, zero-warning constraints.
+- **Key Enhancements & Design Alignment**:
+  - **Figma Architecture Extraction**:
+    - Decompressed Kiwi schema chunk from `Travel Itinerary App.fig` using Python `zstandard` and `zipfile`.
+    - Extracted exact screen hierarchies, layouts, copy, and icons for Flow 2:
+      - Suggested Itinerary: Screen 1 ("Tell us your travel details") & Screen 2 ("Your Itinerary").
+      - Custom Itinerary: Two-view flow — View 1 ("Add the places you want to visit") & View 2 ("Your Custom Itinerary" timeline builder).
+  - **Place Service Curated Offline Fallback (`Project/src/app/core/services/place.service.ts`)**:
+    - Added comprehensive bundled fallback data `curatedOfflinePlaces` containing 10 verified Nueva Ecija destinations with high-resolution local assets, categories, municipalities, coordinates, and realistic estimated budgets.
+    - Updated `searchPlaces()` and `getPlaceById()` with seamless offline fallback if backend API is unreachable or returns empty results, ensuring static GitHub Pages users can browse and select places immediately.
+    - Added safe null-checking for `p.municipality_name` to prevent TypeScript compilation errors.
+  - **Suggested Itinerary Wizard Redesign (`Project/src/app/features/itinerary/suggested-wizard/`)**:
+    - `suggested-wizard.page.ts`: Aligned travel preferences with Figma pills (`Nature & Parks`, `Food Trip`, `Culture & History`, `Shopping`), added helpers `getDayLocationName()`, `getDaySubtitle()`, and `formatStopTiming()`.
+    - `suggested-wizard.page.html`:
+      - Screen 1 ("Tell us your travel details"): Header with back button, destination input with `location-outline`, date range with `calendar-outline`, daily budget with `cash-outline`, 4 preference pills, and prominent "Find Itinerary" CTA.
+      - Screen 2 ("Your Itinerary"): Edit pencil button, hero destination card with duration, budget, and preference tags, segmented day switcher tabs (`Day 1 Bongabon`, `Day 2 Cabanatuan City`), day headline & subtitle, vertical timeline stop cards with duration/time badges (`12:00 PM - 2:00 PM (2 hrs)`), cost estimates, transparent assumptions box, and action buttons ("Accept & Save Itinerary", "Customize in Builder", "Back to Edit Preferences").
+    - `suggested-wizard.page.scss`: Clean typography, authentic badge palettes, mobile-first spacing under 7 kB (well under the 10.00 kB budget).
+  - **Custom Itinerary Builder Redesign (`Project/src/app/features/itinerary/custom-builder/`)**:
+    - `custom-builder.page.ts`: Added view state switcher (`activeView: 'browse' | 'timeline'`), search filter query, category filter pills (`All`, `Tourist Spots`, `Food`, `Shopping`, `Other`), helper methods `isPlaceInActiveDay()`, `togglePlaceInActiveDay()`, `getDayLocation()`, and `formatStopTiming()`.
+    - `custom-builder.page.html`:
+      - Segmented top mode switcher: `[ Add Places ]` and `[ Your Itinerary (N) ]`.
+      - View 1 ("Add the places you want to visit"): Day target chips (`Day 1`, `Day 2`, `+`), search bar with clear button, category filter chips scroll, responsive 2-column place cards grid with image, municipality, category tag, cost badge, and toggleable `Add / Added` action button, plus sticky bottom CTA `"View my Itinerary (N places)"`.
+      - View 2 ("Your Custom Itinerary"): Trip settings form (title, dates, destination, daily budget), verified budget summary card, segmented day switcher tabs, day headline banner, ordered vertical timeline cards with reorder up/down and remove controls, "Add More Places" & "Add Off-Grid Custom Venue" action buttons, and full save CTA.
+    - `custom-builder.page.scss` & `Project/src/global.scss`:
+      - Extracted global modal and verified budget rules into `global.scss` to prevent style duplication.
+      - Compacted SCSS to compile to <= 10.00 kB, completely eliminating the Angular style budget warning.
+- **Verification & Test Results**:
+  - `npm --prefix Project run build`: **0 compilation errors, 0 style budget warnings, production bundle successfully generated [100%]**.
+  - `npm --prefix Project run test:unit`: **12/12 test files, 63/63 unit tests passed in 19.12s [100%]**.
+  - `npm --prefix Project run typecheck:e2e`: **0 TypeScript errors [100%]**.
+  - `python -m pytest backend/tests/ -v`: **4/4 backend pytest suites passed in 2.94s [100%]**.

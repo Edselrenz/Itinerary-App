@@ -6,44 +6,47 @@
     <ion-title class="wizard-title">
       {{ generatedPlan ? 'Your Itinerary' : 'Suggested Itinerary' }}
     </ion-title>
+    @if (generatedPlan) {
+      <ion-button fill="clear" slot="end" class="edit-btn" (click)="backToForm()" aria-label="Edit travel details">
+        <ion-icon name="create-outline"></ion-icon>
+      </ion-button>
+    }
   </ion-toolbar>
 </ion-header>
 
 <ion-content class="wizard-content" [fullscreen]="true">
   <div class="wizard-container">
     @if (!generatedPlan) {
-      <!-- Questionnaire View -->
-      <div class="intro-card">
-        <div class="sparkles-badge">
-          <ion-icon name="sparkles"></ion-icon>
-        </div>
-        <h2 class="intro-title">Tell us your travel details</h2>
-        <p class="intro-desc">
-          Let us plan your trip based on your preferences and local proximity.
+      <!-- Questionnaire View ("Tell us your travel details") -->
+      <div class="intro-heading-block">
+        <h1 class="main-heading">Tell us your travel details</h1>
+        <p class="sub-heading">
+          Let us plan your trip based on your preferences.
         </p>
       </div>
 
       <form [formGroup]="form" class="wizard-form">
-        <!-- Destination Picker -->
-        <div class="form-section">
-          <label for="destination-input" class="section-label">Where do you want to explore?</label>
-          <div class="input-with-icon">
-            <ion-icon name="location-outline"></ion-icon>
+        <!-- Destination Field -->
+        <div class="form-group">
+          <label for="destination-input" class="group-label">Destination</label>
+          <div class="search-style-input">
+            <ion-icon name="location-outline" class="input-icon"></ion-icon>
             <input
               id="destination-input"
               type="text"
               formControlName="destination"
-              class="form-input"
-              placeholder="e.g. Bongabon, Pantabangan, Cabanatuan..."
+              class="core-input"
+              placeholder="Choose a destination"
+              aria-label="Choose a destination"
             />
           </div>
 
-          <div class="quick-chips-track">
+          <div class="chips-scroll-row">
             @for (dest of quickDestinations; track dest) {
               <button
                 type="button"
-                class="quick-chip"
-                [class.selected]="form.get('destination')?.value === dest"
+                class="choice-chip"
+                [class.active]="form.get('destination')?.value === dest"
                 (click)="setDestination(dest)"
               >
                 {{ dest }}
@@ -52,68 +55,86 @@
           </div>
         </div>
 
-        <!-- Date Range -->
-        <div class="form-section">
-          <div class="section-label-row">
-            <label class="section-label">When are you traveling?</label>
-            <span class="trip-duration-pill">{{ computedTripDays }} {{ computedTripDays === 1 ? 'Day' : 'Days' }}</span>
+        <!-- Travel Dates Field -->
+        <div class="form-group">
+          <div class="label-with-meta">
+            <label class="group-label">Travel Dates</label>
+            <span class="meta-pill">{{ computedTripDays }} {{ computedTripDays === 1 ? 'day' : 'days' }}</span>
           </div>
 
-          <div class="dates-row">
-            <div class="date-field">
-              <span class="field-caption">Start Date</span>
-              <input type="date" formControlName="start_date" class="form-input date-input" />
+          <div class="date-inputs-grid">
+            <div class="date-box">
+              <span class="box-caption">Start Date</span>
+              <div class="date-input-wrap">
+                <ion-icon name="calendar-outline" class="date-icon"></ion-icon>
+                <input
+                  type="date"
+                  formControlName="start_date"
+                  class="date-native-input"
+                  aria-label="Start Date"
+                />
+              </div>
             </div>
-            <div class="date-field">
-              <span class="field-caption">End Date</span>
-              <input type="date" formControlName="end_date" class="form-input date-input" />
+
+            <div class="date-box">
+              <span class="box-caption">End Date</span>
+              <div class="date-input-wrap">
+                <ion-icon name="calendar-outline" class="date-icon"></ion-icon>
+                <input
+                  type="date"
+                  formControlName="end_date"
+                  class="date-native-input"
+                  aria-label="End Date"
+                />
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- Daily Target Budget -->
-        <div class="form-section">
-          <label for="daily-budget-input" class="section-label">Daily Budget per person (₱)</label>
-          <div class="input-with-icon">
-            <ion-icon name="cash-outline"></ion-icon>
+        <!-- Daily Budget Field -->
+        <div class="form-group">
+          <label for="daily-budget-input" class="group-label">Daily Budget</label>
+          <div class="search-style-input">
+            <ion-icon name="cash-outline" class="input-icon"></ion-icon>
             <input
               id="daily-budget-input"
               type="number"
               formControlName="daily_budget"
-              class="form-input"
+              class="core-input"
               min="0"
               step="500"
-              placeholder="2500"
+              placeholder="Amount per day"
+              aria-label="Amount per day"
             />
           </div>
 
-          <div class="quick-chips-track">
+          <div class="chips-scroll-row">
             @for (b of budgetPresets; track b) {
               <button
                 type="button"
-                class="quick-chip"
-                [class.selected]="form.get('daily_budget')?.value === b"
+                class="choice-chip"
+                [class.active]="form.get('daily_budget')?.value === b"
                 (click)="setBudgetPreset(b)"
               >
-                ₱{{ b | number }}
+                ₱{{ b | number }}/day
               </button>
             }
           </div>
         </div>
 
-        <!-- Preferences Selector -->
-        <div class="form-section">
-          <label class="section-label">What do you enjoy? (Optional)</label>
-          <div class="preferences-grid">
+        <!-- Preferences (optional) -->
+        <div class="form-group">
+          <label class="group-label">Preferences (optional)</label>
+          <div class="preferences-pill-row">
             @for (pref of preferenceOptions; track pref.key) {
               <button
                 type="button"
-                class="preference-chip"
-                [class.active]="isPreferenceSelected(pref.key)"
+                class="pref-pill-btn"
+                [class.selected]="isPreferenceSelected(pref.key)"
                 (click)="togglePreference(pref.key)"
               >
                 @if (isPreferenceSelected(pref.key)) {
-                  <ion-icon name="checkmark-circle" class="check-icon"></ion-icon>
+                  <ion-icon name="checkmark-circle" class="pref-check"></ion-icon>
                 }
                 <span>{{ pref.label }}</span>
               </button>
@@ -121,10 +142,10 @@
           </div>
         </div>
 
-        <!-- Generate Button -->
+        <!-- Action Button (Figma: "Find Itinerary") -->
         <button
           type="button"
-          class="generate-btn"
+          class="find-itinerary-btn"
           [disabled]="isGenerating || form.invalid"
           (click)="generateItinerary()"
         >
@@ -132,119 +153,120 @@
             <ion-spinner name="crescent" class="btn-spinner"></ion-spinner>
             <span>Clustering recommendations...</span>
           } @else {
-            <ion-icon name="sparkles"></ion-icon>
-            <span>Generate Itinerary</span>
+            <ion-icon name="search-outline"></ion-icon>
+            <span>Find Itinerary</span>
           }
         </button>
       </form>
     } @else {
-      <!-- Generated Plan Preview -->
-      <div class="plan-summary-card">
-        <div class="plan-meta-row">
-          <span class="plan-tag">Suggested Plan</span>
-          <span class="plan-dest-badge">
-            <ion-icon name="location-outline"></ion-icon>
-            <span>{{ generatedPlan.destination }}</span>
-          </span>
+      <!-- Generated Plan Preview ("Your Itinerary") -->
+      <div class="itinerary-summary-card">
+        <div class="summary-top-row">
+          <h2 class="destination-hero-title">{{ generatedPlan.destination }}</h2>
+          <span class="plan-type-pill">Suggested</span>
         </div>
-        <h2 class="plan-title">{{ generatedPlan.title }}</h2>
-        <div class="plan-stats-bar">
-          <div class="stat-item">
+
+        <div class="summary-meta-badges">
+          <span class="meta-badge">
             <ion-icon name="calendar-outline"></ion-icon>
-            <span>{{ generatedPlan.start_date }} &rarr; {{ generatedPlan.end_date }}</span>
-          </div>
-          <div class="stat-item">
+            <span>{{ computedTripDays }} {{ computedTripDays === 1 ? 'day' : 'days' }}</span>
+          </span>
+          <span class="meta-badge">
             <ion-icon name="cash-outline"></ion-icon>
-            <span>Target: ₱{{ generatedPlan.daily_budget | number }}/day</span>
-          </div>
+            <span>₱{{ generatedPlan.daily_budget | number }}/day</span>
+          </span>
+          @for (pref of generatedPlan.preferences; track pref) {
+            <span class="pref-tag-badge">{{ pref | titlecase }}</span>
+          }
         </div>
       </div>
 
-      <!-- Budget Summary Banner -->
+      <!-- Budget Verification Banner -->
       @if (budgetSummary) {
-        <div class="budget-banner">
-          <div class="budget-icon">
-            <ion-icon name="cash-outline"></ion-icon>
-          </div>
-          <div class="budget-details">
-            <div class="budget-title">Estimated Activity & Dining Costs</div>
-            <div class="budget-num">{{ budgetSummary.displayText }}</div>
+        <div class="verified-budget-banner">
+          <ion-icon name="cash-outline" class="budget-icon"></ion-icon>
+          <div class="budget-text-stack">
+            <span class="budget-title">Verified Estimated Costs</span>
+            <span class="budget-amount">{{ budgetSummary.displayText }}</span>
             @if (budgetSummary.unverifiedCount > 0) {
-              <p class="budget-note">
-                * Excludes {{ budgetSummary.unverifiedCount }} stop(s) with unlisted entrance or public dining costs.
-              </p>
+              <span class="budget-note">
+                * {{ budgetSummary.unverifiedCount }} stop(s) do not list verified pricing in public records.
+              </span>
             }
           </div>
         </div>
       }
 
-      <!-- Day Tabs -->
-      <div class="days-nav-track">
+      <!-- Day Segmented Switcher Tabs -->
+      <div class="day-switcher-bar">
         @for (day of generatedPlan.days; track day.id; let idx = $index) {
           <button
             type="button"
-            class="day-pill"
+            class="day-segment-btn"
             [class.active]="activeDayIndex === idx"
             (click)="selectDay(idx)"
           >
-            <span class="pill-title">Day {{ day.day_number }}</span>
-            <span class="pill-count">{{ day.items.length }} stops</span>
+            <span class="seg-day">Day {{ day.day_number }}</span>
+            <span class="seg-muni">{{ getDayLocationName(day) }}</span>
           </button>
         }
       </div>
 
       <!-- Active Day Stops Timeline -->
-      @if (generatedPlan.days[activeDayIndex]) {
-        <div class="day-schedule-card">
-          <h3 class="day-schedule-title">{{ generatedPlan.days[activeDayIndex].title }}</h3>
-          <p class="day-schedule-date">
-            <ion-icon name="calendar-outline"></ion-icon>
-            <span>{{ generatedPlan.days[activeDayIndex].travel_date }}</span>
-          </p>
+      @if (generatedPlan.days[activeDayIndex]; as curDay) {
+        <div class="day-schedule-wrapper">
+          <div class="day-theme-banner">
+            <h3 class="day-main-title">Day {{ curDay.day_number }} - {{ getDayLocationName(curDay) }}</h3>
+            <p class="day-subtitle">{{ getDaySubtitle(curDay) }}</p>
+          </div>
 
-          <div class="stops-list">
-            @for (stop of generatedPlan.days[activeDayIndex].items; track stop.id; let sIdx = $index) {
-              <div class="stop-item">
-                <div class="stop-timeline-col">
-                  <div class="stop-circle">{{ sIdx + 1 }}</div>
-                  @if (sIdx < generatedPlan.days[activeDayIndex].items.length - 1) {
-                    <div class="timeline-line"></div>
+          <div class="timeline-stops-list">
+            @for (stop of curDay.items; track stop.id; let sIdx = $index) {
+              <div class="timeline-stop-node">
+                <!-- Timeline indicator line -->
+                <div class="timeline-marker-col">
+                  <div class="stop-step-circle">{{ sIdx + 1 }}</div>
+                  @if (sIdx < curDay.items.length - 1) {
+                    <div class="timeline-track-line"></div>
                   }
                 </div>
 
-                <div class="stop-card">
-                  <div class="stop-thumb-wrap">
+                <!-- Stop Card Content -->
+                <div class="stop-venue-card">
+                  <div class="venue-thumb-wrap">
                     <img
                       [src]="placeService.getPlaceImage(stop.place?.name || stop.custom_title || '', stop.place?.image_url)"
                       [alt]="stop.place?.name || stop.custom_title || 'Destination'"
-                      class="stop-thumb"
+                      class="venue-thumb-img"
                       loading="lazy"
                     />
                   </div>
 
-                  <div class="stop-body">
-                    <div class="stop-top-badge-row">
-                      <span class="stop-cat">
+                  <div class="venue-info-stack">
+                    <div class="venue-badge-row">
+                      <span class="category-pill">
                         {{ stop.place ? placeService.formatCategoryName(stop.place.category) : 'Featured Stop' }}
                       </span>
-                      <span class="stop-cost">{{ formatPlaceCost(stop) }}</span>
+                      @if (formatStopTiming(stop)) {
+                        <span class="timing-pill">
+                          {{ formatStopTiming(stop) }}
+                        </span>
+                      }
                     </div>
 
-                    <h4 class="stop-name">{{ stop.place?.name || stop.custom_title }}</h4>
-                    <p class="stop-muni">
+                    <h4 class="venue-name">{{ stop.place?.name || stop.custom_title }}</h4>
+
+                    <p class="venue-location">
                       <ion-icon name="location-outline"></ion-icon>
                       <span>{{ stop.place?.municipality_name || stop.place?.address_text || generatedPlan.destination }}</span>
                     </p>
 
-                    @if (stop.planned_time) {
-                      <p class="stop-time">
-                        <ion-icon name="time-outline"></ion-icon>
-                        <span>Planned Time: {{ stop.planned_time }} ({{ stop.duration_minutes }} mins)</span>
-                      </p>
-                    }
+                    <div class="venue-cost-row">
+                      <span class="cost-tag">{{ formatPlaceCost(stop) }}</span>
+                    </div>
 
                     @if (stop.notes) {
-                      <p class="stop-note">{{ stop.notes }}</p>
+                      <p class="venue-notes">{{ stop.notes }}</p>
                     }
                   </div>
                 </div>
@@ -254,14 +276,14 @@
         </div>
       }
 
-      <!-- Transparent Assumptions Card -->
+      <!-- Transparent Trip Assumptions -->
       @if (generatedPlan.assumptions && generatedPlan.assumptions.length > 0) {
-        <div class="assumptions-card">
-          <div class="assumptions-header">
+        <div class="assumptions-box">
+          <div class="assumptions-title-row">
             <ion-icon name="information-circle-outline"></ion-icon>
-            <h4 class="assumptions-title">Transparent Trip Assumptions</h4>
+            <h4>Transparent Trip Assumptions</h4>
           </div>
-          <ul class="assumptions-list">
+          <ul class="assumptions-bullets">
             @for (item of generatedPlan.assumptions; track item) {
               <li>{{ item }}</li>
             }
@@ -269,11 +291,11 @@
         </div>
       }
 
-      <!-- Bottom Action CTAs -->
-      <div class="action-buttons-group">
+      <!-- Bottom CTAs -->
+      <div class="itinerary-actions-footer">
         <button
           type="button"
-          class="accept-save-btn"
+          class="primary-save-btn"
           [disabled]="isSaving"
           (click)="acceptAndSave()"
         >
@@ -288,7 +310,7 @@
 
         <button
           type="button"
-          class="customize-builder-btn"
+          class="secondary-builder-btn"
           [disabled]="isSaving"
           (click)="customizeInBuilder()"
         >
@@ -296,11 +318,10 @@
           <span>Customize in Builder</span>
         </button>
 
-        <button type="button" class="back-edit-btn" (click)="backToForm()">
+        <button type="button" class="tertiary-back-btn" (click)="backToForm()">
           Back to Edit Preferences
         </button>
       </div>
     }
   </div>
 </ion-content>
-

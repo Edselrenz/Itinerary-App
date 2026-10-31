@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [0.8.0-alpha] - 2026-10-31
+### Changed
+- **Suggested Itinerary & Custom Itinerary Redesign (Figma Flow 2 & Anti-Generic Frontend Design)**:
+  - **Figma Design Precision**: Rebuilt both itinerary workflows to mirror Figma `Travel Itinerary App.fig` Flow 2 layouts, typography, and copy without generic templates.
+  - **Suggested Itinerary Wizard**:
+    - Re-architected Screen 1 ("Tell us your travel details") with prominent search-style destination input, calendar date range selector, daily budget field, and 4 specific preference pills (`Nature & Parks`, `Food Trip`, `Culture & History`, `Shopping`).
+    - Re-architected Screen 2 ("Your Itinerary") with top edit button, trip summary hero card, segmented day selector tabs, day location headlines, vertical timeline cards with duration/time pills (`12:00 PM - 2:00 PM (2 hrs)`), cost estimates, transparent assumptions box, and dual save actions ("Accept & Save Itinerary" / "Customize in Builder").
+  - **Custom Itinerary Builder**:
+    - Introduced Figma's two-view architecture toggled via a top segmented bar (`Add Places` vs `Your Itinerary (N)`).
+    - View 1 ("Add the places you want to visit"): Day target chips, search bar with clear button, category filter chips (`All`, `Tourist Spots`, `Food`, `Shopping`, `Other`), responsive 2-column cards grid with instant `Add / Added` toggle, and sticky bottom CTA `"View my Itinerary (N places)"`.
+    - View 2 ("Your Custom Itinerary"): Trip settings form (title, dates, destination, daily budget), verified budget summary card, day tabs, vertical timeline with reorder controls, "Add More Places", and "Add Off-Grid Custom Venue" modal sheet.
+  - **Offline Place Fallback**:
+    - Enhanced `PlaceService` with comprehensive offline curated fallback for 10 verified bundled Nueva Ecija destinations, guaranteeing seamless place catalog browsing on static GitHub Pages.
+  - **Style Optimization & Zero Budget Warnings**:
+    - Consolidated SCSS rules and centralized global modal/budget styles in `Project/src/global.scss`, reducing `custom-builder.page.scss` to <= 10.00 kB to achieve 0 Angular build warnings.
+
+---
+
 ## [0.7.1-alpha] - 2026-10-31
 ### Fixed
 - **Suggested Itinerary Offline & GitHub Pages Reliability**:

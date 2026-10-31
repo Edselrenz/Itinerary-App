@@ -1,12 +1,14 @@
 <ion-header class="ion-no-border app-header">
   <ion-toolbar class="builder-toolbar">
-    <ion-button fill="clear" slot="start" class="back-btn" (click)="onCancel()" aria-label="Go back">
+    <ion-button fill="clear" slot="start" class="nav-btn" (click)="onCancel()" aria-label="Go back">
       <ion-icon name="arrow-back"></ion-icon>
     </ion-button>
-    <ion-title class="builder-title">{{ isEditMode ? 'Edit Itinerary' : 'Custom Itinerary' }}</ion-title>
+    <ion-title class="builder-title">
+      {{ activeView === 'browse' ? 'Custom Itinerary' : 'Your Custom Itinerary' }}
+    </ion-title>
     <ion-button
       slot="end"
-      class="save-nav-btn"
+      class="header-save-btn"
       (click)="saveItinerary()"
       [disabled]="isSaving"
       aria-label="Save itinerary"
@@ -19,406 +21,533 @@
       }
     </ion-button>
   </ion-toolbar>
+
+  <!-- Top View Mode Switcher Segment -->
+  <div class="view-mode-bar">
+    <button
+      type="button"
+      class="view-mode-tab"
+      [class.active]="activeView === 'browse'"
+      (click)="switchToBrowse()"
+    >
+      <ion-icon name="add-outline"></ion-icon>
+      <span>Add Places</span>
+    </button>
+    <button
+      type="button"
+      class="view-mode-tab"
+      [class.active]="activeView === 'timeline'"
+      (click)="switchToTimeline()"
+    >
+      <ion-icon name="calendar-outline"></ion-icon>
+      <span>Your Itinerary ({{ totalStopsCount }})</span>
+    </button>
+  </div>
 </ion-header>
 
 <ion-content class="builder-content" [fullscreen]="true">
   <div class="builder-container">
-    <!-- Trip Metadata Form Card -->
-    <form [formGroup]="form" class="trip-meta-card">
-      <div class="field-group">
-        <label for="trip-title" class="field-label">Trip Title</label>
+    @if (activeView === 'browse') {
+      <!-- ========================================================
+           VIEW 1: ADD PLACES ("Add the places you want to visit")
+           ======================================================== -->
+      <div class="browse-header-block">
+        <h1 class="browse-main-heading">Add the places you want to visit</h1>
+        <div class="day-target-selector">
+          <span class="scheduling-label">Scheduling for:</span>
+          <div class="day-pill-chips">
+            @for (day of days; track day.id; let dIdx = $index) {
+              <button
+                type="button"
+                class="target-day-chip"
+                [class.active]="activeDayIndex === dIdx"
+                (click)="selectDay(dIdx)"
+              >
+                Day {{ day.day_number }} ({{ day.items.length }})
+              </button>
+            }
+            <button type="button" class="add-day-micro-btn" (click)="addDay()" aria-label="Add day">
+              <ion-icon name="add-outline"></ion-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Search Bar -->
+      <div class="search-bar-wrap">
+        <ion-icon name="search-outline" class="search-icon"></ion-icon>
         <input
-          id="trip-title"
           type="text"
-          formControlName="title"
-          class="field-input"
-          placeholder="e.g. Nueva Ecija Heritage & Nature Tour"
+          class="search-input-field"
+          placeholder="Search destination (e.g. Cabanatuan, Gapan, etc.)"
+          [value]="browseSearchTerm"
+          (input)="onBrowseSearch($event)"
+          aria-label="Search destination"
         />
-      </div>
-
-      <div class="fields-row">
-        <div class="field-group flex-1">
-          <label for="start-date" class="field-label">Start Date</label>
-          <input
-            id="start-date"
-            type="date"
-            formControlName="start_date"
-            class="field-input"
-          />
-        </div>
-        <div class="field-group flex-1">
-          <label for="end-date" class="field-label">End Date</label>
-          <input
-            id="end-date"
-            type="date"
-            formControlName="end_date"
-            class="field-input"
-          />
-        </div>
-      </div>
-
-      <div class="fields-row">
-        <div class="field-group flex-1">
-          <label for="trip-dest" class="field-label">Destination</label>
-          <input
-            id="trip-dest"
-            type="text"
-            formControlName="destination"
-            class="field-input"
-            placeholder="Nueva Ecija"
-          />
-        </div>
-        <div class="field-group flex-1">
-          <label for="daily-budget" class="field-label">Daily Budget (₱)</label>
-          <input
-            id="daily-budget"
-            type="number"
-            formControlName="daily_budget"
-            class="field-input"
-            min="0"
-            step="100"
-            placeholder="2500"
-          />
-        </div>
-      </div>
-    </form>
-
-    <!-- Honest Budget & Price Summary Card -->
-    <div class="budget-summary-banner">
-      <div class="budget-icon-wrap">
-        <ion-icon name="cash-outline"></ion-icon>
-      </div>
-      <div class="budget-info">
-        <div class="budget-header-row">
-          <span class="budget-label">Verified Estimated Cost</span>
-          <span class="budget-target">Target: ₱{{ form.get('daily_budget')?.value || 0 }}/day</span>
-        </div>
-        <div class="budget-value">{{ budgetSummary.displayText }}</div>
-        @if (budgetSummary.unverifiedCount > 0) {
-          <p class="budget-disclaimer">
-            * {{ budgetSummary.unverifiedCount }} stop(s) do not list verified pricing in open public records.
-          </p>
-        }
-      </div>
-    </div>
-
-    <!-- Day Navigation Pills Carousel -->
-    <div class="day-tabs-wrapper">
-      <div class="day-tabs-track">
-        @for (day of days; track day.id; let idx = $index) {
-          <button
-            type="button"
-            class="day-tab-pill"
-            [class.active]="activeDayIndex === idx"
-            (click)="selectDay(idx)"
-          >
-            <span class="pill-number">Day {{ day.day_number }}</span>
-            <span class="pill-stops-count">{{ day.items.length }} {{ day.items.length === 1 ? 'stop' : 'stops' }}</span>
+        @if (browseSearchTerm) {
+          <button type="button" class="clear-search-btn" (click)="clearBrowseSearch()" aria-label="Clear search">
+            <ion-icon name="close-outline"></ion-icon>
           </button>
         }
-        <button type="button" class="add-day-pill" (click)="addDay()" aria-label="Add day">
-          <ion-icon name="add-outline"></ion-icon>
-          <span>Add Day</span>
-        </button>
       </div>
-    </div>
 
-    <!-- Active Day Schedule Content -->
-    @if (currentDay) {
-      <div class="active-day-section">
-        <div class="day-header-row">
-          <div>
-            <h2 class="day-heading">{{ currentDay.title }}</h2>
-            <p class="day-date-text">
-              <ion-icon name="calendar-outline"></ion-icon>
-              <span>{{ currentDay.travel_date }}</span>
-            </p>
+      <!-- Category Filter Pills (Figma: All, Tourist Spots, Food, Shopping, Other) -->
+      <div class="category-pills-scroll">
+        @for (cat of browseCategories; track cat) {
+          <button
+            type="button"
+            class="category-pill-btn"
+            [class.active]="selectedCategory === cat"
+            (click)="setBrowseCategory(cat)"
+          >
+            {{ cat }}
+          </button>
+        }
+      </div>
+
+      <!-- Places List Grid -->
+      <div class="places-grid-container">
+        @if (isBrowseLoading) {
+          <div class="places-loading-box">
+            <ion-spinner name="crescent" color="primary"></ion-spinner>
+            <p>Loading destinations...</p>
           </div>
-          @if (days.length > 1) {
-            <button
-              type="button"
-              class="delete-day-btn"
-              (click)="removeDay(activeDayIndex)"
-              aria-label="Delete this day"
-            >
-              <ion-icon name="trash-outline"></ion-icon>
-              <span>Delete Day</span>
-            </button>
-          }
-        </div>
-
-        <!-- Stops Timeline List -->
-        @if (currentDay.items.length > 0) {
-          <div class="stops-timeline">
-            @for (stop of currentDay.items; track stop.id; let sIdx = $index) {
-              <div class="stop-card">
-                <div class="stop-badge-column">
-                  <div class="stop-number">{{ stop.sort_order }}</div>
-                  @if (sIdx < currentDay.items.length - 1) {
-                    <div class="stop-connector-line"></div>
-                  }
+        } @else if (displayedPlaces.length > 0) {
+          <div class="places-cards-grid">
+            @for (place of displayedPlaces; track place.id) {
+              <div class="place-browser-card">
+                <div class="place-card-thumb">
+                  <img
+                    [src]="placeService.getPlaceImage(place.name, place.image_url)"
+                    [alt]="place.name"
+                    class="thumb-img"
+                    loading="lazy"
+                  />
+                  <span class="card-category-tag">
+                    {{ placeService.formatCategoryName(place.category) }}
+                  </span>
                 </div>
 
-                <div class="stop-card-content">
-                  <div class="stop-image-wrap">
-                    <img [src]="stop.image" [alt]="stop.name" class="stop-thumb" loading="lazy" />
-                  </div>
-                  <div class="stop-details">
-                    <div class="stop-top-row">
-                      <span class="stop-category-tag">{{ stop.category }}</span>
-                      <span class="stop-cost-tag">
-                        {{
-                          stop.estimated_cost_min != null || stop.estimated_cost_max != null
-                            ? (stop.estimated_cost_min === stop.estimated_cost_max
-                                ? '₱' + stop.estimated_cost_min
-                                : '₱' + stop.estimated_cost_min + ' - ₱' + stop.estimated_cost_max)
-                            : 'Price not listed'
-                        }}
-                      </span>
-                    </div>
+                <div class="place-card-body">
+                  <h4 class="card-place-title">{{ place.name }}</h4>
+                  <p class="card-place-muni">
+                    <ion-icon name="location-outline"></ion-icon>
+                    <span>{{ place.municipality_name }}, Nueva Ecija</span>
+                  </p>
 
-                    <h4 class="stop-title">{{ stop.name }}</h4>
-                    <p class="stop-muni">
-                      <ion-icon name="location-outline"></ion-icon>
-                      <span>{{ stop.municipality }}</span>
-                    </p>
+                  <div class="card-meta-row">
+                    <span class="card-cost-tag">
+                      {{
+                        place.estimated_cost_min != null || place.estimated_cost_max != null
+                          ? (place.estimated_cost_min === place.estimated_cost_max
+                              ? '₱' + place.estimated_cost_min
+                              : '₱' + place.estimated_cost_min + ' - ₱' + place.estimated_cost_max)
+                          : 'Price not listed'
+                      }}
+                    </span>
 
-                    @if (stop.notes) {
-                      <p class="stop-notes">"{{ stop.notes }}"</p>
-                    }
-
-                    <div class="stop-controls">
-                      <div class="reorder-btns">
-                        <button
-                          type="button"
-                          class="order-btn"
-                          [disabled]="sIdx === 0"
-                          (click)="moveStopUp(sIdx)"
-                          aria-label="Move stop earlier"
-                        >
-                          <ion-icon name="arrow-up-outline"></ion-icon>
-                        </button>
-                        <button
-                          type="button"
-                          class="order-btn"
-                          [disabled]="sIdx === currentDay.items.length - 1"
-                          (click)="moveStopDown(sIdx)"
-                          aria-label="Move stop later"
-                        >
-                          <ion-icon name="arrow-down-outline"></ion-icon>
-                        </button>
-                      </div>
-
-                      <button
-                        type="button"
-                        class="remove-stop-btn"
-                        (click)="removeStop(sIdx)"
-                        aria-label="Remove stop"
-                      >
-                        <ion-icon name="trash-outline"></ion-icon>
-                        <span>Remove</span>
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      class="add-toggle-btn"
+                      [class.added]="isPlaceInActiveDay(place.id)"
+                      (click)="togglePlaceInActiveDay(place)"
+                      [attr.aria-label]="isPlaceInActiveDay(place.id) ? 'Remove stop' : 'Add stop'"
+                    >
+                      @if (isPlaceInActiveDay(place.id)) {
+                        <ion-icon name="checkmark"></ion-icon>
+                        <span>Added</span>
+                      } @else {
+                        <ion-icon name="add-outline"></ion-icon>
+                        <span>Add</span>
+                      }
+                    </button>
                   </div>
                 </div>
               </div>
             }
           </div>
         } @else {
-          <!-- Empty Stops State -->
-          <div class="empty-stops-box">
-            <div class="empty-stops-icon">
-              <ion-icon name="location-outline"></ion-icon>
+          <div class="places-empty-box">
+            <ion-icon name="search-outline"></ion-icon>
+            <h4>No destinations found</h4>
+            <p>Try searching for another municipality or category.</p>
+            <button type="button" class="reset-filter-link" (click)="clearBrowseSearch()">Reset Filters</button>
+          </div>
+        }
+      </div>
+
+      <!-- Sticky Bottom Action Bar (Figma: "View my Itinerary") -->
+      <div class="sticky-footer-bar">
+        <button
+          type="button"
+          class="view-my-itinerary-btn"
+          (click)="switchToTimeline()"
+        >
+          <span>View my Itinerary ({{ totalStopsCount }} {{ totalStopsCount === 1 ? 'place' : 'places' }})</span>
+          <ion-icon name="arrow-forward-outline"></ion-icon>
+        </button>
+      </div>
+
+    } @else {
+      <!-- ========================================================
+           VIEW 2: TIMELINE BUILDER ("Your Custom Itinerary")
+           ======================================================== -->
+      <div class="timeline-view-wrapper">
+        <!-- Trip Form Settings Card -->
+        <form [formGroup]="form" class="trip-settings-card">
+          <div class="settings-title-row">
+            <div class="field-wrap flex-2">
+              <label for="trip-title" class="micro-label">Trip Title</label>
+              <input
+                id="trip-title"
+                type="text"
+                formControlName="title"
+                class="settings-input"
+                placeholder="e.g. Nueva Ecija Getaway"
+              />
             </div>
-            <h4 class="empty-stops-title">No stops scheduled yet</h4>
-            <p class="empty-stops-desc">
-              Add curated attractions, local dining, or your own off-grid custom places to Day {{ currentDay.day_number }}.
-            </p>
+            <div class="field-wrap flex-1">
+              <label for="daily-budget" class="micro-label">Daily Budget (₱)</label>
+              <input
+                id="daily-budget"
+                type="number"
+                formControlName="daily_budget"
+                class="settings-input"
+                min="0"
+                step="500"
+                placeholder="2500"
+              />
+            </div>
+          </div>
+
+          <div class="settings-dates-row">
+            <div class="field-wrap flex-1">
+              <label for="start-date" class="micro-label">Start Date</label>
+              <input
+                id="start-date"
+                type="date"
+                formControlName="start_date"
+                class="settings-input date"
+              />
+            </div>
+            <div class="field-wrap flex-1">
+              <label for="end-date" class="micro-label">End Date</label>
+              <input
+                id="end-date"
+                type="date"
+                formControlName="end_date"
+                class="settings-input date"
+              />
+            </div>
+            <div class="field-wrap flex-1">
+              <label for="trip-dest" class="micro-label">Destination</label>
+              <input
+                id="trip-dest"
+                type="text"
+                formControlName="destination"
+                class="settings-input"
+                placeholder="Nueva Ecija"
+              />
+            </div>
+          </div>
+        </form>
+
+        <!-- Verified Estimated Costs Summary -->
+        <div class="verified-budget-card">
+          <ion-icon name="cash-outline" class="budget-card-icon"></ion-icon>
+          <div class="budget-card-text">
+            <div class="budget-card-header">
+              <span class="budget-card-label">Verified Estimated Costs</span>
+              <span class="budget-card-target">Budget: ₱{{ form.get('daily_budget')?.value || 0 }}/day</span>
+            </div>
+            <div class="budget-card-amount">{{ budgetSummary.displayText }}</div>
+            @if (budgetSummary.unverifiedCount > 0) {
+              <p class="budget-card-note">
+                * {{ budgetSummary.unverifiedCount }} stop(s) do not list verified pricing in open public records.
+              </p>
+            }
+          </div>
+        </div>
+
+        <!-- Day Switcher Segmented Tabs (Figma: Day 1 - Cabanatuan, Day 1 - Bongabon) -->
+        <div class="timeline-day-tabs-bar">
+          @for (day of days; track day.id; let idx = $index) {
+            <button
+              type="button"
+              class="timeline-day-tab"
+              [class.active]="activeDayIndex === idx"
+              (click)="selectDay(idx)"
+            >
+              <span class="tab-day-number">Day {{ day.day_number }}</span>
+              <span class="tab-muni-name">{{ getDayLocation(day) }}</span>
+            </button>
+          }
+          <button type="button" class="timeline-add-day-btn" (click)="addDay()" aria-label="Add day">
+            <ion-icon name="add-outline"></ion-icon>
+            <span>Add Day</span>
+          </button>
+        </div>
+
+        <!-- Active Day Stops Timeline -->
+        @if (currentDay; as curDay) {
+          <div class="active-day-timeline-card">
+            <div class="day-header-banner">
+              <div>
+                <h3 class="day-headline">Day {{ curDay.day_number }} - {{ getDayLocation(curDay) }}</h3>
+                <p class="day-date-caption">
+                  <ion-icon name="calendar-outline"></ion-icon>
+                  <span>{{ curDay.travel_date }} ({{ curDay.items.length }} {{ curDay.items.length === 1 ? 'stop' : 'stops' }})</span>
+                </p>
+              </div>
+
+              @if (days.length > 1) {
+                <button
+                  type="button"
+                  class="delete-day-action-btn"
+                  (click)="removeDay(activeDayIndex)"
+                  aria-label="Delete this day"
+                >
+                  <ion-icon name="trash-outline"></ion-icon>
+                  <span>Delete Day</span>
+                </button>
+              }
+            </div>
+
+            <!-- Scheduled Stops List -->
+            @if (curDay.items.length > 0) {
+              <div class="stops-ordered-timeline">
+                @for (stop of curDay.items; track stop.id; let sIdx = $index) {
+                  <div class="timeline-item-row">
+                    <div class="timeline-marker">
+                      <div class="step-badge">{{ stop.sort_order }}</div>
+                      @if (sIdx < curDay.items.length - 1) {
+                        <div class="step-connector"></div>
+                      }
+                    </div>
+
+                    <div class="stop-content-card">
+                      <div class="stop-thumb-box">
+                        <img [src]="stop.image" [alt]="stop.name" class="stop-thumb" loading="lazy" />
+                      </div>
+
+                      <div class="stop-details-stack">
+                        <div class="stop-tag-row">
+                          <span class="stop-category">{{ stop.category }}</span>
+                          <span class="stop-timing">{{ formatStopTiming(stop) }}</span>
+                        </div>
+
+                        <h4 class="stop-name-heading">{{ stop.name }}</h4>
+
+                        <p class="stop-muni-text">
+                          <ion-icon name="location-outline"></ion-icon>
+                          <span>{{ stop.municipality }}</span>
+                        </p>
+
+                        <div class="stop-cost-display">
+                          {{
+                            stop.estimated_cost_min != null || stop.estimated_cost_max != null
+                              ? (stop.estimated_cost_min === stop.estimated_cost_max
+                                  ? '₱' + stop.estimated_cost_min
+                                  : '₱' + stop.estimated_cost_min + ' - ₱' + stop.estimated_cost_max)
+                              : 'Price not listed'
+                          }}
+                        </div>
+
+                        @if (stop.notes) {
+                          <p class="stop-note-bubble">{{ stop.notes }}</p>
+                        }
+
+                        <div class="stop-action-controls">
+                          <div class="reorder-button-group">
+                            <button
+                              type="button"
+                              class="order-ctrl-btn"
+                              [disabled]="sIdx === 0"
+                              (click)="moveStopUp(sIdx)"
+                              aria-label="Move stop up"
+                            >
+                              <ion-icon name="arrow-up-outline"></ion-icon>
+                            </button>
+                            <button
+                              type="button"
+                              class="order-ctrl-btn"
+                              [disabled]="sIdx === curDay.items.length - 1"
+                              (click)="moveStopDown(sIdx)"
+                              aria-label="Move stop down"
+                            >
+                              <ion-icon name="arrow-down-outline"></ion-icon>
+                            </button>
+                          </div>
+
+                          <button
+                            type="button"
+                            class="delete-stop-btn"
+                            (click)="removeStop(sIdx)"
+                            aria-label="Remove stop"
+                          >
+                            <ion-icon name="trash-outline"></ion-icon>
+                            <span>Remove</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+            } @else {
+              <!-- Empty Day State -->
+              <div class="day-empty-stops-box">
+                <ion-icon name="location-outline" class="empty-icon"></ion-icon>
+                <h4 class="empty-title">No stops scheduled yet</h4>
+                <p class="empty-copy">
+                  Add places from the destination catalog or add your own off-grid custom venue.
+                </p>
+                <button type="button" class="browse-places-cta" (click)="switchToBrowse()">
+                  <ion-icon name="add-outline"></ion-icon>
+                  <span>Browse & Add Places to Day {{ curDay.day_number }}</span>
+                </button>
+              </div>
+            }
+
+            <!-- Add More Actions -->
+            <div class="day-add-actions-group">
+              <button type="button" class="add-more-places-btn" (click)="switchToBrowse()">
+                <ion-icon name="add-outline"></ion-icon>
+                <span>Browse & Add Places to Day {{ curDay.day_number }}</span>
+              </button>
+
+              <button type="button" class="add-custom-venue-btn" (click)="openPlacePicker()">
+                <ion-icon name="business-outline"></ion-icon>
+                <span>Add Off-Grid Custom Venue</span>
+              </button>
+            </div>
           </div>
         }
 
-        <!-- Add Stop Call-to-Action -->
-        <button type="button" class="add-stop-cta-btn" (click)="openPlacePicker()">
-          <ion-icon name="add-outline"></ion-icon>
-          <span>Add Stop to Day {{ currentDay.day_number }}</span>
-        </button>
+        <!-- Save CTA Bar (Figma: "View Full Itinerary" / "Save Itinerary") -->
+        <div class="save-footer-action-bar">
+          <button
+            type="button"
+            class="save-itinerary-full-btn"
+            [disabled]="isSaving"
+            (click)="saveItinerary()"
+          >
+            @if (isSaving) {
+              <ion-spinner name="crescent" class="btn-spinner"></ion-spinner>
+              <span>Saving itinerary...</span>
+            } @else {
+              <ion-icon name="save-outline"></ion-icon>
+              <span>View Full Itinerary / Save Trip</span>
+            }
+          </button>
+        </div>
       </div>
     }
   </div>
 
-  <!-- Place Picker Modal -->
+  <!-- Custom Venue / Off-Grid Modal -->
   <ion-modal
     [isOpen]="isPlacePickerOpen"
     (didDismiss)="closePlacePicker()"
     class="place-picker-modal"
-    [initialBreakpoint]="0.9"
-    [breakpoints]="[0, 0.9, 1.0]"
+    [initialBreakpoint]="0.85"
+    [breakpoints]="[0, 0.85, 1.0]"
   >
     <ng-template>
       <div class="picker-modal-sheet">
         <div class="modal-handle-bar"></div>
 
         <div class="picker-header">
-          <h3 class="picker-title">Add Stop</h3>
-          <button type="button" class="picker-close-btn" (click)="closePlacePicker()" aria-label="Close">
+          <h3 class="picker-title">Add Off-Grid Custom Venue</h3>
+          <button type="button" class="picker-close-btn" (click)="closePlacePicker()" aria-label="Close modal">
             <ion-icon name="close-outline"></ion-icon>
           </button>
         </div>
 
-        <!-- Picker Segment Tabs -->
-        <div class="picker-tabs-nav">
-          <button
-            type="button"
-            class="picker-nav-tab"
-            [class.active]="pickerTab === 'browse'"
-            (click)="setPickerTab('browse')"
-          >
-            <ion-icon name="sparkles"></ion-icon>
-            <span>Curated Places</span>
-          </button>
-          <button
-            type="button"
-            class="picker-nav-tab"
-            [class.active]="pickerTab === 'custom'"
-            (click)="setPickerTab('custom')"
-          >
-            <ion-icon name="business-outline"></ion-icon>
-            <span>Custom Off-Grid Venue</span>
-          </button>
-        </div>
+        <div class="custom-venue-form-box">
+          <p class="custom-intro">
+            Have a personal favorite farm, campsite, or local food stop not in our catalog? Add it directly to Day {{ currentDay?.day_number }}.
+          </p>
 
-        @if (pickerTab === 'browse') {
-          <!-- Search input -->
-          <div class="picker-search-bar">
-            <ion-icon name="search-outline"></ion-icon>
+          <div class="form-group-item">
+            <label for="custom-name" class="modal-field-label">Place or Venue Name *</label>
             <input
+              id="custom-name"
               type="text"
-              class="picker-search-input"
-              placeholder="Search Nueva Ecija destinations..."
-              [value]="pickerSearchTerm"
-              (input)="onPickerSearchChange($event)"
+              class="modal-input"
+              [(ngModel)]="customVenueTitle"
+              placeholder="e.g. Lola's Mango Orchard & Picnic Farm"
             />
           </div>
 
-          <!-- Places List -->
-          <div class="picker-places-scroll">
-            @if (pickerSearching) {
-              <div class="picker-loading">
-                <ion-spinner name="crescent" color="primary"></ion-spinner>
-                <p>Loading destinations...</p>
-              </div>
-            } @else if (pickerSearchResults.length > 0) {
-              <div class="picker-results-list">
-                @for (place of pickerSearchResults; track place.id) {
-                  <div class="picker-item-card" (click)="selectPlaceFromPicker(place)" role="button" tabindex="0">
-                    <img
-                      [src]="placeService.getPlaceImage(place.name, place.image_url)"
-                      [alt]="place.name"
-                      class="picker-item-thumb"
-                      loading="lazy"
-                    />
-                    <div class="picker-item-info">
-                      <div class="picker-item-top">
-                        <span class="picker-cat-badge">{{ placeService.formatCategoryName(place.category) }}</span>
-                        <span class="picker-cost-badge">{{ formatPlaceCost(place) }}</span>
-                      </div>
-                      <h4 class="picker-item-name">{{ place.name }}</h4>
-                      <p class="picker-item-muni">
-                        <ion-icon name="location-outline"></ion-icon>
-                        <span>{{ place.municipality_name || 'Nueva Ecija' }}</span>
-                      </p>
-                    </div>
-                    <button type="button" class="select-place-btn" aria-label="Select place">
-                      <ion-icon name="add-outline"></ion-icon>
-                    </button>
-                  </div>
-                }
-              </div>
-            } @else {
-              <div class="picker-empty-results">
-                <ion-icon name="search-outline"></ion-icon>
-                <p>No places found matching "{{ pickerSearchTerm }}".</p>
-                <button type="button" class="switch-to-custom-btn" (click)="setPickerTab('custom')">
-                  Add as Custom Venue Instead
-                </button>
-              </div>
-            }
+          <div class="form-group-item">
+            <label for="custom-address" class="modal-field-label">Municipality or Address</label>
+            <input
+              id="custom-address"
+              type="text"
+              class="modal-input"
+              [(ngModel)]="customVenueAddress"
+              placeholder="e.g. Bongabon, Nueva Ecija"
+            />
           </div>
-        } @else {
-          <!-- Custom Off-Grid Venue Form -->
-          <div class="custom-venue-form">
-            <p class="custom-intro">
-              Add family farms, private campsites, or unlisted roadside dining to your itinerary.
-            </p>
 
-            <div class="custom-field">
-              <label for="venue-name">Venue or Activity Name *</label>
+          <div class="modal-two-col">
+            <div class="form-group-item">
+              <label for="custom-min" class="modal-field-label">Est. Min Cost (₱)</label>
               <input
-                id="venue-name"
-                type="text"
-                [(ngModel)]="customVenueTitle"
-                class="custom-input"
-                placeholder="e.g. Lola's Mango Orchard & Picnic Area"
+                id="custom-min"
+                type="number"
+                class="modal-input"
+                [(ngModel)]="customVenueCostMin"
+                placeholder="100"
               />
             </div>
-
-            <div class="custom-field">
-              <label for="venue-address">Municipality or Address</label>
+            <div class="form-group-item">
+              <label for="custom-max" class="modal-field-label">Est. Max Cost (₱)</label>
               <input
-                id="venue-address"
-                type="text"
-                [(ngModel)]="customVenueAddress"
-                class="custom-input"
-                placeholder="e.g. Bongabon, Nueva Ecija"
+                id="custom-max"
+                type="number"
+                class="modal-input"
+                [(ngModel)]="customVenueCostMax"
+                placeholder="300"
               />
             </div>
-
-            <div class="custom-row">
-              <div class="custom-field flex-1">
-                <label for="cost-min">Estimated Min (₱)</label>
-                <input
-                  id="cost-min"
-                  type="number"
-                  [(ngModel)]="customVenueCostMin"
-                  class="custom-input"
-                  placeholder="100"
-                />
-              </div>
-              <div class="custom-field flex-1">
-                <label for="cost-max">Estimated Max (₱)</label>
-                <input
-                  id="cost-max"
-                  type="number"
-                  [(ngModel)]="customVenueCostMax"
-                  class="custom-input"
-                  placeholder="300"
-                />
-              </div>
-            </div>
-
-            <div class="custom-field">
-              <label for="venue-notes">Notes or Reminders</label>
-              <textarea
-                id="venue-notes"
-                [(ngModel)]="customVenueNotes"
-                class="custom-textarea"
-                rows="2"
-                placeholder="e.g. Call ahead for gate code or pack cash"
-              ></textarea>
-            </div>
-
-            <button
-              type="button"
-              class="add-custom-submit-btn"
-              [disabled]="!customVenueTitle.trim()"
-              (click)="addCustomVenueStop()"
-            >
-              Add Custom Stop to Day {{ currentDay?.day_number }}
-            </button>
           </div>
-        }
+
+          <div class="form-group-item">
+            <label for="custom-dur" class="modal-field-label">Duration (minutes)</label>
+            <input
+              id="custom-dur"
+              type="number"
+              class="modal-input"
+              [(ngModel)]="customVenueDuration"
+              step="30"
+              placeholder="90"
+            />
+          </div>
+
+          <div class="form-group-item">
+            <label for="custom-notes" class="modal-field-label">Personal Travel Notes</label>
+            <textarea
+              id="custom-notes"
+              class="modal-textarea"
+              [(ngModel)]="customVenueNotes"
+              rows="3"
+              placeholder="e.g. Best mango shakes in town, friendly hosts."
+            ></textarea>
+          </div>
+
+          <button
+            type="button"
+            class="submit-custom-venue-btn"
+            [disabled]="!customVenueTitle.trim()"
+            (click)="addCustomVenueStop()"
+          >
+            <ion-icon name="add-outline"></ion-icon>
+            <span>Add to Day {{ currentDay?.day_number }}</span>
+          </button>
+        </div>
       </div>
     </ng-template>
   </ion-modal>
 </ion-content>
-

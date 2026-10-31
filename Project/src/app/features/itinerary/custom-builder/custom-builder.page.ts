@@ -20,12 +20,15 @@ import {
   alertCircleOutline,
   arrowBack,
   arrowDownOutline,
+  arrowForwardOutline,
   arrowUpOutline,
   businessOutline,
   calendarOutline,
   cashOutline,
+  checkmark,
   checkmarkCircle,
   closeOutline,
+  createOutline,
   locationOutline,
   saveOutline,
   searchOutline,
@@ -94,6 +97,17 @@ export class CustomBuilderPage implements OnInit, OnDestroy {
   public isSaving = false;
   public hasUnsavedChanges = false;
 
+  // View Mode: 'browse' ("Add the places you want to visit") vs 'timeline' ("Your Custom Itinerary")
+  public activeView: 'browse' | 'timeline' = 'browse';
+
+  // Category Filter Pills (Figma: All, Tourist Spots, Food, Shopping, Other)
+  public browseCategories = ['All', 'Tourist Spots', 'Food', 'Shopping', 'Other'];
+  public selectedCategory = 'All';
+  public browseSearchTerm = '';
+  public allCuratedPlaces: Place[] = [];
+  public displayedPlaces: Place[] = [];
+  public isBrowseLoading = false;
+
   // Budget summary
   public budgetSummary: ItineraryBudgetSummary = {
     verifiedMin: 0,
@@ -102,7 +116,7 @@ export class CustomBuilderPage implements OnInit, OnDestroy {
     displayText: 'No stops added',
   };
 
-  // Place Picker Modal state
+  // Place Picker Modal state (for adding custom off-grid venue or modal search)
   public isPlacePickerOpen = false;
   public pickerSearchTerm = '';
   public pickerSearchResults: Place[] = [];
@@ -130,6 +144,7 @@ export class CustomBuilderPage implements OnInit, OnDestroy {
   ) {
     addIcons({
       arrowBack,
+      arrowForwardOutline,
       addOutline,
       trashOutline,
       arrowUpOutline,
@@ -139,11 +154,13 @@ export class CustomBuilderPage implements OnInit, OnDestroy {
       locationOutline,
       calendarOutline,
       saveOutline,
+      checkmark,
       checkmarkCircle,
       alertCircleOutline,
       closeOutline,
       searchOutline,
       sparkles,
+      createOutline,
       businessOutline,
     });
 
@@ -165,10 +182,13 @@ export class CustomBuilderPage implements OnInit, OnDestroy {
 
     if (this.itineraryId) {
       this.isEditMode = true;
+      this.activeView = 'timeline';
       this.loadItinerary(this.itineraryId);
     } else {
       this.initDefaultDays();
     }
+
+    this.loadBrowsePlaces();
 
     this.subscriptions.add(
       this.form.valueChanges.subscribe(() => {
@@ -377,6 +397,113 @@ export class CustomBuilderPage implements OnInit, OnDestroy {
     day.items.forEach((item, idx) => {
       item.sort_order = idx + 1;
     });
+  }
+
+  // --- Figma Custom Itinerary Browse & Add Places View ---
+
+  public get totalStopsCount(): number {
+    return this.days.reduce((acc, d) => acc + d.items.length, 0);
+  }
+
+  public switchToTimeline(): void {
+    this.activeView = 'timeline';
+  }
+
+  public switchToBrowse(): void {
+    this.activeView = 'browse';
+  }
+
+  public loadBrowsePlaces(): void {
+    this.isBrowseLoading = true;
+    this.placeService.getFeaturedPlaces(50).subscribe({
+      next: (places) => {
+        this.allCuratedPlaces = places;
+        this.applyBrowseFilter();
+        this.isBrowseLoading = false;
+      },
+      error: () => {
+        this.allCuratedPlaces = [];
+        this.displayedPlaces = [];
+        this.isBrowseLoading = false;
+      },
+    });
+  }
+
+  public setBrowseCategory(cat: string): void {
+    this.selectedCategory = cat;
+    this.applyBrowseFilter();
+  }
+
+  public onBrowseSearch(event: Event): void {
+    this.browseSearchTerm = (event.target as HTMLInputElement).value || '';
+    this.applyBrowseFilter();
+  }
+
+  public clearBrowseSearch(): void {
+    this.browseSearchTerm = '';
+    this.applyBrowseFilter();
+  }
+
+  public applyBrowseFilter(): void {
+    let list = [...this.allCuratedPlaces];
+
+    if (this.browseSearchTerm.trim()) {
+      const q = this.browseSearchTerm.trim().toLowerCase();
+      list = list.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          (p.municipality_name && p.municipality_name.toLowerCase().includes(q)) ||
+          (p.description && p.description.toLowerCase().includes(q))
+      );
+    }
+
+    if (this.selectedCategory !== 'All') {
+      const catMap: Record<string, string[]> = {
+        'Tourist Spots': ['tourist_attraction', 'nature_park'],
+        Food: ['restaurant', 'cafe'],
+        Shopping: ['shopping_market'],
+        Other: ['hotel_accommodation', 'resort_swimming', 'church_religious', 'museum_cultural'],
+      };
+      const allowed = catMap[this.selectedCategory] || [];
+      list = list.filter((p) => allowed.includes(p.category));
+    }
+
+    this.displayedPlaces = list;
+  }
+
+  public isPlaceInActiveDay(placeId: string): boolean {
+    const cur = this.currentDay;
+    if (!cur) return false;
+    return cur.items.some((it) => it.place_id === placeId);
+  }
+
+  public togglePlaceInActiveDay(place: Place): void {
+    const cur = this.currentDay;
+    if (!cur) return;
+
+    const existingIdx = cur.items.findIndex((it) => it.place_id === place.id);
+    if (existingIdx >= 0) {
+      this.removeStop(existingIdx);
+    } else {
+      this.addPlaceStop(place);
+    }
+  }
+
+  public getDayLocation(day: BuilderDay | undefined): string {
+    if (!day || !day.items || day.items.length === 0) {
+      return this.form.get('destination')?.value || 'Nueva Ecija';
+    }
+    const itemWithMuni = day.items.find((it) => it.municipality && it.municipality !== 'Nueva Ecija');
+    return itemWithMuni?.municipality || day.items[0]?.municipality || this.form.get('destination')?.value || 'Nueva Ecija';
+  }
+
+  public formatStopTiming(stop: BuilderStop): string {
+    const durHours = Math.round(stop.duration_minutes / 60);
+    const durText = durHours >= 1 ? `${durHours} hrs` : `${stop.duration_minutes} mins`;
+    if (stop.planned_time) {
+      return `${stop.planned_time} (${durText})`;
+    }
+    return `(${durText})`;
   }
 
   // --- Place Picker & Duplicate Guard ---

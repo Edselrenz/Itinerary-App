@@ -32,3 +32,172 @@ body {
   background-color: var(--ion-background-color);
   color: var(--ion-text-color);
 }
+
+/* Verified Budget Banner */
+.verified-budget-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 12px;
+  padding: 10px 12px;
+
+  .budget-card-icon {
+    font-size: 20px;
+    color: #059669;
+    flex-shrink: 0;
+  }
+  .budget-card-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex-grow: 1;
+  }
+  .budget-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .budget-card-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #065f46;
+    text-transform: uppercase;
+  }
+  .budget-card-target {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #047857;
+  }
+  .budget-card-amount {
+    font-size: 0.9rem;
+    font-weight: 800;
+    color: #047857;
+  }
+  .budget-card-note {
+    font-size: 0.7rem;
+    color: #065f46;
+    margin: 1px 0 0;
+  }
+}
+
+/* Sticky Bottom Action Bar */
+.sticky-footer-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  border-top: 1px solid #e2e8f0;
+  padding: 10px 16px;
+  display: flex;
+  justify-content: center;
+  z-index: 100;
+}
+
+/* Custom Venue Modal Sheet */
+.picker-modal-sheet {
+  background: #fff;
+  border-radius: 18px 18px 0 0;
+  padding: 10px 14px 28px;
+
+  .modal-handle-bar {
+    width: 32px;
+    height: 4px;
+    background: #cbd5e1;
+    border-radius: 2px;
+    margin: 0 auto 10px;
+  }
+
+  .picker-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+
+    .picker-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #0f172a;
+      margin: 0;
+    }
+
+    .picker-close-btn {
+      background: transparent;
+      border: none;
+      font-size: 22px;
+      color: #64748b;
+      cursor: pointer;
+    }
+  }
+
+  .custom-venue-form-box {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .custom-intro {
+    font-size: 0.8rem;
+    color: #64748b;
+    margin: 0 0 4px;
+  }
+
+  .form-group-item {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .modal-field-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+  }
+
+  .modal-input,
+  .modal-textarea {
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 7px 9px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #0f172a;
+    outline: none;
+    font-family: inherit;
+
+    &:focus {
+      border-color: #0284c7;
+    }
+  }
+
+  .modal-two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .submit-custom-venue-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: #0284c7;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 11px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 4px;
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+}
