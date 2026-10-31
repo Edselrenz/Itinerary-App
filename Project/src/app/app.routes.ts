@@ -22,6 +22,20 @@ export const routes: Routes = [
       import('./features/auth/guest/guest.page').then((m) => m.GuestPage),
   },
   {
+    path: 'custom-builder',
+    loadComponent: () =>
+      import('./features/itinerary/custom-builder/custom-builder.page').then(
+        (m) => m.CustomBuilderPage
+      ),
+  },
+  {
+    path: 'custom-builder/:id',
+    loadComponent: () =>
+      import('./features/itinerary/custom-builder/custom-builder.page').then(
+        (m) => m.CustomBuilderPage
+      ),
+  },
+  {
     path: 'tabs',
     loadChildren: () => import('./tabs/tabs.routes').then((m) => m.routes),
   },

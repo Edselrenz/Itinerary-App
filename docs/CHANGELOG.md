@@ -6,6 +6,42 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [0.6.0-alpha] - 2026-10-31
+### Added
+- **Backend Custom Itinerary CRUD & BOLA Architecture (`Milestone 6`)**:
+  - Implemented Pydantic v2 schemas in `backend/app/schemas/itinerary.py` (`ItineraryCreate`, `ItineraryUpdate`, `ItineraryOut`, `ItineraryDayCreate`, `ItineraryItemCreate`, `ItineraryReorderIn`).
+  - Added `place: Mapped["Place | None"] = relationship()` on `ItineraryItem` in `backend/app/models/entities.py` with eager `selectinload` loading.
+  - Implemented FastAPI CRUD and sub-resource endpoints in `backend/app/api/v1/itineraries.py` with strict Broken Object Level Authorization (BOLA), returning 404 for unowned resources.
+  - Added same-day duplicate POI check returning HTTP 400 when attempting to add an identical destination on the same day.
+  - Added batch reorder endpoint `POST /api/v1/itineraries/{id}/reorder`.
+  - Authored automated pytest suite in `backend/tests/test_itineraries.py` testing BOLA enforcement, full CRUD lifecycle, duplicate checks, and reordering.
+- **Frontend Itinerary Service & Dual-Mode Persistence (`Milestone 6`)**:
+  - Created TypeScript models in `Project/src/app/core/models/itinerary.models.ts`.
+  - Implemented `ItineraryService` in `Project/src/app/core/services/itinerary.service.ts` supporting authenticated API persistence and seamless offline `GuestStorageService` fallback.
+  - Implemented `calculateBudgetSummary()` computing honest verified cost ranges (`₱min - ₱max`) and flagging unverified stops.
+  - Authored 13 unit tests in `itinerary.service.spec.ts` (100% passing).
+- **Custom Itinerary Builder UI (`Project/src/app/features/itinerary/custom-builder`)**:
+  - Built multi-day itinerary builder with trip title, dates, destination, and daily budget controls.
+  - Added day tabs carousel with active highlight and dynamic "+ Add Day" and "Delete Day" actions.
+  - Implemented chronological stop cards with order badge, category tag, verified cost tag, duration, and notes.
+  - Added stop reordering controls (Move Up / Move Down) and delete stop actions.
+  - Built Place Picker Modal with live database search (`PlaceService.searchPlaces`) and off-grid custom venue form.
+  - Added duplicate stop confirmation dialog when a place is already scheduled for that day.
+  - Implemented honest budget summary banner comparing verified costs against daily target budgets.
+  - Implemented unsaved changes exit/cancel alert guard.
+  - Authored 6 unit tests in `custom-builder.page.spec.ts` (100% passing).
+- **Home Tab Integration**:
+  - Connected "Custom Itinerary" action card and empty-state card to navigate to `/custom-builder`.
+  - Subscribed Home tab's saved itineraries to `ItineraryService.itineraries$` so custom plans sync reactively.
+- **Routing**:
+  - Registered `/custom-builder` and `/custom-builder/:id` in `Project/src/app/app.routes.ts`.
+
+### Technical Improvements
+- Optimized `custom-builder.page.scss` to strictly stay under Angular's 10 kB style budget without warnings.
+- Expanded project unit test suite from 32 tests to 51 tests (100% passing).
+
+---
+
 ## [0.5.2-alpha] - 2026-10-31
 ### Fixed
 - **GitHub Pages Deep-Linking & Base HREF (`.github/workflows/deploy.yml`)**:

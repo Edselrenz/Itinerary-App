@@ -86,3 +86,48 @@ This document records key technical decisions, their context, alternatives evalu
 - **Consequences**:
   - Production build compiles cleanly with zero unresolved imports.
 
+---
+
+## ADR-007: Broken Object Level Authorization (BOLA) Defense on Itinerary Endpoints
+
+- **Date**: 2026-10-31
+- **Context**: User itineraries contain private travel plans, notes, dates, and venue stops. Malicious actors could guess or enumerate UUIDs to access, modify, or delete another user's itinerary.
+- **Problem**: How to prevent unauthorized access and ID enumeration across all itinerary operations.
+- **Selected Approach**:
+  - In all database queries for itineraries and child resources (days, stops, reorder operations), the query filter explicitly mandates `where(Itinerary.id == itinerary_id, Itinerary.user_id == current_user.id)`.
+  - If no record matches the combined ID and ownership check, the endpoint returns `404 Not Found` rather than `403 Forbidden`.
+- **Consequences**:
+  - *Advantages*: Complete mitigation of OWASP API Security Top 10 BOLA vulnerabilities. Returning 404 ensures attackers cannot determine whether an itinerary ID exists or belongs to another user.
+  - *Disadvantages*: Requires passing `current_user` into every sub-resource query helper.
+
+---
+
+## ADR-008: Dual-Mode Client Persistence (Authenticated API + GuestStorage Fallback)
+
+- **Date**: 2026-10-31
+- **Context**: Travelers in Nueva Ecija may experience sporadic mobile data connectivity, switch between Guest Mode and logged-in accounts, or plan offline trips.
+- **Problem**: Frontend components shouldn't need duplicate code paths to handle online vs offline or guest vs authenticated states.
+- **Selected Approach**:
+  - Encapsulate storage switching inside `ItineraryService`.
+  - If `AuthService.isAuthenticated()` is true, operations route to `HttpClient` against `/api/v1/itineraries`. If an HTTP error occurs (e.g. backend offline), the service transparently falls back to local `@ionic/storage-angular`.
+  - If unauthenticated, operations directly persist to `GuestStorageService`.
+  - A unified `BehaviorSubject<Itinerary[]>` broadcasts updates so components (Home tab, Builder, History) update reactively without polling.
+- **Consequences**:
+  - *Advantages*: Clean separation of concerns; UI pages work identically regardless of authentication or connectivity status.
+  - *Disadvantages*: Custom client-side UUID generation required for guest itineraries.
+
+---
+
+## ADR-009: Component Style Budget Optimization (<10kB)
+
+- **Date**: 2026-10-31
+- **Context**: Angular CLI enforces a strict production build budget on component stylesheets (`maximumWarning: 10kB`).
+- **Problem**: Rich pages (like Custom Builder with modals, day tracks, timelines, and forms) can easily exceed 10kB when nested SCSS generates repetitive selectors.
+- **Selected Approach**:
+  - Consolidate common form controls (`.field-input, .custom-input, .custom-textarea`).
+  - Share layout rules (`.fields-row, .custom-row`) and avoid deeply nested element chains.
+  - Rely on CSS variables (`--background`, `--color`) for Ionic components rather than duplicate selector overrides.
+- **Consequences**:
+  - *Advantages*: Zero build warnings, faster stylesheet parsing, and consistent component aesthetics.
+
+

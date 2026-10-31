@@ -640,6 +640,62 @@ This log records chronological development sessions, detailing objectives, execu
   - Push commit to `origin/main` to trigger the GitHub Actions deployment workflow.
   - Proceed to Milestone 6: Custom Itinerary Builder.
 
+---
+
+## Session 25: Milestone 6 — Custom Itinerary Builder: Full-Stack Implementation
+- **Date & Time**: 2026-10-31 11:35:00 (Local)
+- **Objective**: Implement Milestone 6: Custom Itinerary Builder end-to-end across backend and frontend, including BOLA-protected CRUD endpoints, same-day duplicate stop guards, batch reordering, dual-mode client persistence (API + Guest storage), multi-day custom builder UI, place picker modal, off-grid custom venue support, and honest budget calculation.
+- **Backend Implementation**:
+  - **Pydantic v2 Schemas (`backend/app/schemas/itinerary.py`)**:
+    - Created `ItineraryItemCreate`, `ItineraryItemUpdate`, `ItineraryItemOut`.
+    - Created `ItineraryDayCreate`, `ItineraryDayOut`.
+    - Created `ItineraryCreate`, `ItineraryUpdate`, `ItineraryOut`.
+    - Created `ItineraryReorderIn`, `ItineraryReorderItem`.
+  - **ORM Relationship (`backend/app/models/entities.py`)**:
+    - Added `place: Mapped["Place | None"] = relationship()` on `ItineraryItem` to enable eager loading (`selectinload(ItineraryItem.place)`) without N+1 query overhead.
+  - **FastAPI Endpoints (`backend/app/api/v1/itineraries.py`)**:
+    - `POST /api/v1/itineraries`: Creates multi-day custom itineraries with user ownership.
+    - `GET /api/v1/itineraries`: Returns only itineraries belonging to the authenticated user.
+    - `GET /api/v1/itineraries/{id}`: BOLA-protected lookup returning 404 if not owned by caller.
+    - `PATCH /api/v1/itineraries/{id}`: BOLA-protected partial updates of title, destination, dates, budget.
+    - `DELETE /api/v1/itineraries/{id}`: Cascading deletion of itinerary, days, and stops.
+    - `POST /api/v1/itineraries/{id}/days`: Appends a new travel day.
+    - `POST /api/v1/itineraries/{id}/days/{day_id}/items`: Adds POI or custom stop with duplicate place check for the day.
+    - `DELETE /api/v1/itineraries/{id}/days/{day_id}/items/{item_id}`: Removes a stop and re-indexes `sort_order`.
+    - `POST /api/v1/itineraries/{id}/reorder`: Validates item ownership and batch updates `day_id` and `sort_order`.
+  - **Router Registration (`backend/app/main.py`)**:
+    - Included `itineraries_router` under `/api/v1`.
+  - **Backend Test Suite (`backend/tests/test_itineraries.py`)**:
+    - Tested User A vs User B BOLA isolation (User A cannot view, update, delete, or reorder User B's itinerary).
+    - Tested duplicate stop rejection (HTTP 400 when adding same POI twice on same day).
+    - Tested stop deletion and reordering.
+- **Frontend Implementation**:
+  - **Models & Interfaces (`Project/src/app/core/models/itinerary.models.ts`)**:
+    - Defined `Itinerary`, `ItineraryDay`, `ItineraryItem`, `ItineraryCreatePayload`, `ItineraryUpdatePayload`, `ItineraryReorderEntry`.
+  - **Dual-Mode Client Service (`Project/src/app/core/services/itinerary.service.ts`)**:
+    - Built `ItineraryService` supporting both authenticated HTTP sessions and offline fallback via `GuestStorageService`.
+    - Implemented `calculateBudgetSummary()` returning verified cost ranges and count of unverified stops without treating missing costs as zero.
+    - Authored unit test suite in `itinerary.service.spec.ts` (13 Vitest tests, 100% passing).
+  - **Custom Itinerary Builder UI (`Project/src/app/features/itinerary/custom-builder/`)**:
+    - `custom-builder.page.ts`: Form management, reactive date calculation, day tabs, stop reordering (move up/down), place picker modal with live database search (`PlaceService.searchPlaces`), off-grid custom venue form, duplicate stop alert dialog, budget banner, and unsaved changes route/exit guard.
+    - `custom-builder.page.html`: Responsive multi-day view, day pills carousel, stop cards with sort badges and pricing tags, place picker sheet with search and custom tab.
+    - `custom-builder.page.scss`: Streamlined SCSS under 10kB meeting Angular budget constraint.
+    - `custom-builder.page.spec.ts`: 6 Vitest tests verifying initialization, day additions, stop reordering, remove stop, save flow, and cancel guard (100% passing).
+  - **Home Tab Integration**:
+    - Updated `home.page.html`: Custom Itinerary card and empty-state card route to `/custom-builder`.
+    - Updated `home.page.ts`: Subscribes to `ItineraryService.itineraries$` so saved itineraries appear on Home and open in Custom Builder if custom type.
+    - Updated `home.page.spec.ts`: Provided `ItineraryService` mock.
+  - **Routing (`Project/src/app/app.routes.ts`)**:
+    - Added `/custom-builder` and `/custom-builder/:id`.
+- **Verification & Test Results**:
+  - `python -m pytest backend/tests/ -v`: **3 passed, 1 warning in 3.77s [100%]**.
+  - `npm --prefix Project run test:unit`: **11 test files, 51 passed (100%) in 19.82s**.
+  - `npm --prefix Project run build`: **0 errors, 0 warnings (styles within 10kB budget)**.
+- **Next Recommended Steps**:
+  - Commit Milestone 6 changes and push to `origin/main`.
+  - Proceed to Milestone 7: Suggested Itinerary Engine (Deterministic Haversine clustering, preference scoring, and transparent assumptions).
+
+
 
 
 

@@ -1,0 +1,423 @@
+<ion-header class="ion-no-border app-header">
+  <ion-toolbar class="builder-toolbar">
+    <ion-button fill="clear" slot="start" class="back-btn" (click)="onCancel()" aria-label="Go back">
+      <ion-icon name="arrow-back"></ion-icon>
+    </ion-button>
+    <ion-title class="builder-title">{{ isEditMode ? 'Edit Itinerary' : 'Custom Itinerary' }}</ion-title>
+    <ion-button
+      slot="end"
+      class="save-nav-btn"
+      (click)="saveItinerary()"
+      [disabled]="isSaving"
+      aria-label="Save itinerary"
+    >
+      @if (isSaving) {
+        <ion-spinner name="crescent" class="save-spinner"></ion-spinner>
+      } @else {
+        <ion-icon name="checkmark-circle" class="save-icon"></ion-icon>
+        <span class="save-text">Save</span>
+      }
+    </ion-button>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="builder-content" [fullscreen]="true">
+  <div class="builder-container">
+    <!-- Trip Metadata Form Card -->
+    <form [formGroup]="form" class="trip-meta-card">
+      <div class="field-group">
+        <label for="trip-title" class="field-label">Trip Title</label>
+        <input
+          id="trip-title"
+          type="text"
+          formControlName="title"
+          class="field-input"
+          placeholder="e.g. Nueva Ecija Heritage & Nature Tour"
+        />
+      </div>
+
+      <div class="fields-row">
+        <div class="field-group flex-1">
+          <label for="start-date" class="field-label">Start Date</label>
+          <input
+            id="start-date"
+            type="date"
+            formControlName="start_date"
+            class="field-input"
+          />
+        </div>
+        <div class="field-group flex-1">
+          <label for="end-date" class="field-label">End Date</label>
+          <input
+            id="end-date"
+            type="date"
+            formControlName="end_date"
+            class="field-input"
+          />
+        </div>
+      </div>
+
+      <div class="fields-row">
+        <div class="field-group flex-1">
+          <label for="trip-dest" class="field-label">Destination</label>
+          <input
+            id="trip-dest"
+            type="text"
+            formControlName="destination"
+            class="field-input"
+            placeholder="Nueva Ecija"
+          />
+        </div>
+        <div class="field-group flex-1">
+          <label for="daily-budget" class="field-label">Daily Budget (₱)</label>
+          <input
+            id="daily-budget"
+            type="number"
+            formControlName="daily_budget"
+            class="field-input"
+            min="0"
+            step="100"
+            placeholder="2500"
+          />
+        </div>
+      </div>
+    </form>
+
+    <!-- Honest Budget & Price Summary Card -->
+    <div class="budget-summary-banner">
+      <div class="budget-icon-wrap">
+        <ion-icon name="cash-outline"></ion-icon>
+      </div>
+      <div class="budget-info">
+        <div class="budget-header-row">
+          <span class="budget-label">Verified Estimated Cost</span>
+          <span class="budget-target">Target: ₱{{ form.get('daily_budget')?.value || 0 }}/day</span>
+        </div>
+        <div class="budget-value">{{ budgetSummary.displayText }}</div>
+        @if (budgetSummary.unverifiedCount > 0) {
+          <p class="budget-disclaimer">
+            * {{ budgetSummary.unverifiedCount }} stop(s) do not list verified pricing in open public records.
+          </p>
+        }
+      </div>
+    </div>
+
+    <!-- Day Navigation Pills Carousel -->
+    <div class="day-tabs-wrapper">
+      <div class="day-tabs-track">
+        @for (day of days; track day.id; let idx = $index) {
+          <button
+            type="button"
+            class="day-tab-pill"
+            [class.active]="activeDayIndex === idx"
+            (click)="selectDay(idx)"
+          >
+            <span class="pill-number">Day {{ day.day_number }}</span>
+            <span class="pill-stops-count">{{ day.items.length }} {{ day.items.length === 1 ? 'stop' : 'stops' }}</span>
+          </button>
+        }
+        <button type="button" class="add-day-pill" (click)="addDay()" aria-label="Add day">
+          <ion-icon name="add-outline"></ion-icon>
+          <span>Add Day</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Active Day Schedule Content -->
+    @if (currentDay) {
+      <div class="active-day-section">
+        <div class="day-header-row">
+          <div>
+            <h2 class="day-heading">{{ currentDay.title }}</h2>
+            <p class="day-date-text">
+              <ion-icon name="calendar-outline"></ion-icon>
+              <span>{{ currentDay.travel_date }}</span>
+            </p>
+          </div>
+          @if (days.length > 1) {
+            <button
+              type="button"
+              class="delete-day-btn"
+              (click)="removeDay(activeDayIndex)"
+              aria-label="Delete this day"
+            >
+              <ion-icon name="trash-outline"></ion-icon>
+              <span>Delete Day</span>
+            </button>
+          }
+        </div>
+
+        <!-- Stops Timeline List -->
+        @if (currentDay.items.length > 0) {
+          <div class="stops-timeline">
+            @for (stop of currentDay.items; track stop.id; let sIdx = $index) {
+              <div class="stop-card">
+                <div class="stop-badge-column">
+                  <div class="stop-number">{{ stop.sort_order }}</div>
+                  @if (sIdx < currentDay.items.length - 1) {
+                    <div class="stop-connector-line"></div>
+                  }
+                </div>
+
+                <div class="stop-card-content">
+                  <div class="stop-image-wrap">
+                    <img [src]="stop.image" [alt]="stop.name" class="stop-thumb" loading="lazy" />
+                  </div>
+                  <div class="stop-details">
+                    <div class="stop-top-row">
+                      <span class="stop-category-tag">{{ stop.category }}</span>
+                      <span class="stop-cost-tag">
+                        {{
+                          stop.estimated_cost_min != null || stop.estimated_cost_max != null
+                            ? (stop.estimated_cost_min === stop.estimated_cost_max
+                                ? '₱' + stop.estimated_cost_min
+                                : '₱' + stop.estimated_cost_min + ' - ₱' + stop.estimated_cost_max)
+                            : 'Price not listed'
+                        }}
+                      </span>
+                    </div>
+
+                    <h4 class="stop-title">{{ stop.name }}</h4>
+                    <p class="stop-muni">
+                      <ion-icon name="location-outline"></ion-icon>
+                      <span>{{ stop.municipality }}</span>
+                    </p>
+
+                    @if (stop.notes) {
+                      <p class="stop-notes">"{{ stop.notes }}"</p>
+                    }
+
+                    <div class="stop-controls">
+                      <div class="reorder-btns">
+                        <button
+                          type="button"
+                          class="order-btn"
+                          [disabled]="sIdx === 0"
+                          (click)="moveStopUp(sIdx)"
+                          aria-label="Move stop earlier"
+                        >
+                          <ion-icon name="arrow-up-outline"></ion-icon>
+                        </button>
+                        <button
+                          type="button"
+                          class="order-btn"
+                          [disabled]="sIdx === currentDay.items.length - 1"
+                          (click)="moveStopDown(sIdx)"
+                          aria-label="Move stop later"
+                        >
+                          <ion-icon name="arrow-down-outline"></ion-icon>
+                        </button>
+                      </div>
+
+                      <button
+                        type="button"
+                        class="remove-stop-btn"
+                        (click)="removeStop(sIdx)"
+                        aria-label="Remove stop"
+                      >
+                        <ion-icon name="trash-outline"></ion-icon>
+                        <span>Remove</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        } @else {
+          <!-- Empty Stops State -->
+          <div class="empty-stops-box">
+            <div class="empty-stops-icon">
+              <ion-icon name="location-outline"></ion-icon>
+            </div>
+            <h4 class="empty-stops-title">No stops scheduled yet</h4>
+            <p class="empty-stops-desc">
+              Add curated attractions, local dining, or your own off-grid custom places to Day {{ currentDay.day_number }}.
+            </p>
+          </div>
+        }
+
+        <!-- Add Stop Call-to-Action -->
+        <button type="button" class="add-stop-cta-btn" (click)="openPlacePicker()">
+          <ion-icon name="add-outline"></ion-icon>
+          <span>Add Stop to Day {{ currentDay.day_number }}</span>
+        </button>
+      </div>
+    }
+  </div>
+
+  <!-- Place Picker Modal -->
+  <ion-modal
+    [isOpen]="isPlacePickerOpen"
+    (didDismiss)="closePlacePicker()"
+    class="place-picker-modal"
+    [initialBreakpoint]="0.9"
+    [breakpoints]="[0, 0.9, 1.0]"
+  >
+    <ng-template>
+      <div class="picker-modal-sheet">
+        <div class="modal-handle-bar"></div>
+
+        <div class="picker-header">
+          <h3 class="picker-title">Add Stop</h3>
+          <button type="button" class="picker-close-btn" (click)="closePlacePicker()" aria-label="Close">
+            <ion-icon name="close-outline"></ion-icon>
+          </button>
+        </div>
+
+        <!-- Picker Segment Tabs -->
+        <div class="picker-tabs-nav">
+          <button
+            type="button"
+            class="picker-nav-tab"
+            [class.active]="pickerTab === 'browse'"
+            (click)="setPickerTab('browse')"
+          >
+            <ion-icon name="sparkles"></ion-icon>
+            <span>Curated Places</span>
+          </button>
+          <button
+            type="button"
+            class="picker-nav-tab"
+            [class.active]="pickerTab === 'custom'"
+            (click)="setPickerTab('custom')"
+          >
+            <ion-icon name="business-outline"></ion-icon>
+            <span>Custom Off-Grid Venue</span>
+          </button>
+        </div>
+
+        @if (pickerTab === 'browse') {
+          <!-- Search input -->
+          <div class="picker-search-bar">
+            <ion-icon name="search-outline"></ion-icon>
+            <input
+              type="text"
+              class="picker-search-input"
+              placeholder="Search Nueva Ecija destinations..."
+              [value]="pickerSearchTerm"
+              (input)="onPickerSearchChange($event)"
+            />
+          </div>
+
+          <!-- Places List -->
+          <div class="picker-places-scroll">
+            @if (pickerSearching) {
+              <div class="picker-loading">
+                <ion-spinner name="crescent" color="primary"></ion-spinner>
+                <p>Loading destinations...</p>
+              </div>
+            } @else if (pickerSearchResults.length > 0) {
+              <div class="picker-results-list">
+                @for (place of pickerSearchResults; track place.id) {
+                  <div class="picker-item-card" (click)="selectPlaceFromPicker(place)" role="button" tabindex="0">
+                    <img
+                      [src]="placeService.getPlaceImage(place.name, place.image_url)"
+                      [alt]="place.name"
+                      class="picker-item-thumb"
+                      loading="lazy"
+                    />
+                    <div class="picker-item-info">
+                      <div class="picker-item-top">
+                        <span class="picker-cat-badge">{{ placeService.formatCategoryName(place.category) }}</span>
+                        <span class="picker-cost-badge">{{ formatPlaceCost(place) }}</span>
+                      </div>
+                      <h4 class="picker-item-name">{{ place.name }}</h4>
+                      <p class="picker-item-muni">
+                        <ion-icon name="location-outline"></ion-icon>
+                        <span>{{ place.municipality_name || 'Nueva Ecija' }}</span>
+                      </p>
+                    </div>
+                    <button type="button" class="select-place-btn" aria-label="Select place">
+                      <ion-icon name="add-outline"></ion-icon>
+                    </button>
+                  </div>
+                }
+              </div>
+            } @else {
+              <div class="picker-empty-results">
+                <ion-icon name="search-outline"></ion-icon>
+                <p>No places found matching "{{ pickerSearchTerm }}".</p>
+                <button type="button" class="switch-to-custom-btn" (click)="setPickerTab('custom')">
+                  Add as Custom Venue Instead
+                </button>
+              </div>
+            }
+          </div>
+        } @else {
+          <!-- Custom Off-Grid Venue Form -->
+          <div class="custom-venue-form">
+            <p class="custom-intro">
+              Add family farms, private campsites, or unlisted roadside dining to your itinerary.
+            </p>
+
+            <div class="custom-field">
+              <label for="venue-name">Venue or Activity Name *</label>
+              <input
+                id="venue-name"
+                type="text"
+                [(ngModel)]="customVenueTitle"
+                class="custom-input"
+                placeholder="e.g. Lola's Mango Orchard & Picnic Area"
+              />
+            </div>
+
+            <div class="custom-field">
+              <label for="venue-address">Municipality or Address</label>
+              <input
+                id="venue-address"
+                type="text"
+                [(ngModel)]="customVenueAddress"
+                class="custom-input"
+                placeholder="e.g. Bongabon, Nueva Ecija"
+              />
+            </div>
+
+            <div class="custom-row">
+              <div class="custom-field flex-1">
+                <label for="cost-min">Estimated Min (₱)</label>
+                <input
+                  id="cost-min"
+                  type="number"
+                  [(ngModel)]="customVenueCostMin"
+                  class="custom-input"
+                  placeholder="100"
+                />
+              </div>
+              <div class="custom-field flex-1">
+                <label for="cost-max">Estimated Max (₱)</label>
+                <input
+                  id="cost-max"
+                  type="number"
+                  [(ngModel)]="customVenueCostMax"
+                  class="custom-input"
+                  placeholder="300"
+                />
+              </div>
+            </div>
+
+            <div class="custom-field">
+              <label for="venue-notes">Notes or Reminders</label>
+              <textarea
+                id="venue-notes"
+                [(ngModel)]="customVenueNotes"
+                class="custom-textarea"
+                rows="2"
+                placeholder="e.g. Call ahead for gate code or pack cash"
+              ></textarea>
+            </div>
+
+            <button
+              type="button"
+              class="add-custom-submit-btn"
+              [disabled]="!customVenueTitle.trim()"
+              (click)="addCustomVenueStop()"
+            >
+              Add Custom Stop to Day {{ currentDay?.day_number }}
+            </button>
+          </div>
+        }
+      </div>
+    </ng-template>
+  </ion-modal>
+</ion-content>

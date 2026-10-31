@@ -7,8 +7,8 @@ This document serves as the primary handoff reference for developers and coding 
 ## 1. Project Status Overview
 
 - **Application Name**: Nueva Ecija Travel Itinerary (MVP)
-- **Current Development Phase**: **Milestone 6 — Custom Itinerary Builder**
-- **Last Verified Working State**: **Milestone 5 (Leaflet Map & 16 Category Filters)** completely implemented and verified with automated test suites (32/32 unit tests across 9 test files, 2/2 backend tests) and clean production bundle generation (0 errors, 0 warnings).
+- **Current Development Phase**: **Milestone 7 — Suggested Itinerary Engine**
+- **Last Verified Working State**: **Milestone 6 (Custom Itinerary Builder)** completely implemented and verified with automated test suites (51/51 unit tests across 11 test files, 3/3 backend pytest suites) and clean production bundle generation (0 errors, 0 warnings).
 - **Current Blockers**: **None**.
 
 ---
@@ -118,25 +118,31 @@ This document serves as the primary handoff reference for developers and coding 
   - Floating Recenter button and live destination counter pill.
   - 9 passing unit tests in `map.page.spec.ts`.
 - [x] **Production Build**: Verified with `npm run build` (0 errors, 0 warnings, allowedCommonJsDependencies configured).
+- [x] **Custom Itinerary Builder (`Milestone 6`)**:
+  - Backend CRUD endpoints in `backend/app/api/v1/itineraries.py` with Broken Object Level Authorization (BOLA).
+  - Stop management: add stop with same-day duplicate check, delete stop, and batch reorder (`POST /api/v1/itineraries/{id}/reorder`).
+  - Frontend dual-mode service in `Project/src/app/core/services/itinerary.service.ts` with transparent budget math.
+  - Multi-day Custom Builder UI (`Project/src/app/features/itinerary/custom-builder`) with day tabs, stop cards, place picker modal, off-grid venues, duplicate alerts, and unsaved changes exit guard.
+  - Home tab integration with custom builder navigation and reactive saved itinerary cards.
+  - 19 automated tests (3 backend, 13 itinerary service, 6 custom builder) passing with 100% coverage.
 - [x] **Live GitHub Pages Deployment**: Fully deployed and verified live at [https://edselrenz.github.io/Itinerary-App/](https://edselrenz.github.io/Itinerary-App/) (HTTP 200 OK with `--base-href /Itinerary-App/` deep linking enabled).
 
 ---
 
 ## 3. Features Currently Being Developed
 
-- **Milestone 6: Custom Itinerary Builder**:
-  - Backend CRUD endpoints in `backend/app/api/v1/itineraries.py` with strict BOLA checks.
-  - Multi-day custom creator with day tabs and stop reordering (`POST /api/v1/itineraries/{id}/reorder`).
-  - Place picker modal and manual off-grid stop entry.
-  - Same-day duplicate stop guard dialog.
-  - Honest budget calculation helper.
-  - Unsaved changes route guard.
+- **Milestone 7: Suggested Itinerary Engine**:
+  - Deterministic Haversine geographic clustering backend engine (`POST /api/v1/itineraries/suggest`).
+  - Preference scoring matrix (nature, culture, dining, leisure).
+  - Same-day proximity clustering to avoid backtracking across provincial borders.
+  - 2-3 stops per day pacing with lunch/dining window slotting.
+  - Transparent assumptions list (admission fees, travel window, fuel/transit exclusions).
+  - Suggested Itinerary wizard questionnaire UI.
 
 ---
 
 ## 4. Features Not Yet Implemented
 
-- **Milestone 7**: Deterministic Haversine clustering recommendation engine.
 - **Milestone 8**: Day timeline view, stop detail cards, and cross-tab reactive persistence.
 - **Milestone 9**: Rate limiting via SlowAPI and backup/restore drills.
 - **Milestone 10**: End-to-end 24-point acceptance checklist verification.
@@ -147,10 +153,10 @@ This document serves as the primary handoff reference for developers and coding 
 
 1. **Backend Automated Tests**:
    - Command: `python -m pytest backend/tests/ -v`
-   - Result: `2 passed, 1 warning in 3.46s [100%]` (`test_foundation.py` and `test_auth.py`).
+   - Result: `3 passed, 1 warning in 3.77s [100%]` (`test_foundation.py`, `test_auth.py`, `test_itineraries.py`).
 2. **Mobile Client Unit Tests**:
    - Command: `npm run test:unit` in `Project/`
-   - Result: `9 test files passed, 32 tests passed in 25.80s [100%]` (includes 11 `place.service.spec.ts`, 6 `home.page.spec.ts`, and 9 `map.page.spec.ts` tests).
+   - Result: `11 test files passed, 51 tests passed in 19.82s [100%]` (includes 11 `place.service.spec.ts`, 13 `itinerary.service.spec.ts`, 6 `custom-builder.page.spec.ts`, 6 `home.page.spec.ts`, 9 `map.page.spec.ts`).
 3. **Mobile Client Compilation**:
    - Command: `npm run build` in `Project/`
    - Result: `Application bundle generation complete [0 errors, 0 warnings]` (Artifacts in `Project/www`).
@@ -162,8 +168,9 @@ This document serves as the primary handoff reference for developers and coding 
 
 ## 6. Immediate Next Development Task
 
-Proceed to **Milestone 6 — Custom Itinerary Builder**:
-1. Implement backend CRUD endpoints in `backend/app/api/v1/itineraries.py` with strict BOLA checks.
-2. Build frontend custom itinerary planner modal with multi-day tabs, stop reordering, and duplicate stop guards.
+Proceed to **Milestone 7 — Deterministic Suggested Itinerary Engine**:
+1. Implement clustering algorithms and preference scoring engine in `backend/app/algorithms/itinerary_generator.py`.
+2. Expose `POST /api/v1/itineraries/suggest` endpoint with transparent assumptions.
+3. Build the Suggested Itinerary questionnaire flow.
 
 

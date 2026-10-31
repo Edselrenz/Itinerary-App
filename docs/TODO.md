@@ -108,18 +108,29 @@ This checklist tracks completed, active, and pending tasks across all developmen
 
 ---
 
-## Phase 6: Custom Itinerary Builder (NEXT FOCUS)
-- [ ] Backend CRUD endpoints in `backend/app/api/v1/itineraries.py` with strict BOLA ownership checks.
-- [ ] Reorder endpoint `POST /api/v1/itineraries/{id}/reorder`.
-- [ ] Frontend Custom Itinerary creator with day tabs.
-- [ ] Place picker modal and manual custom off-grid stop modal.
-- [ ] Same-day duplicate stop guard dialog.
-- [ ] Honest budget calculation helper (never treating null cost as zero).
-- [ ] Unsaved changes route guard (`CanDeactivateFn`).
+## Phase 6: Custom Itinerary Builder (COMPLETED)
+- [x] Backend CRUD endpoints in `backend/app/api/v1/itineraries.py` with strict BOLA ownership checks.
+- [x] Sub-resource endpoints for adding days, adding stops, removing stops, and reordering (`POST /api/v1/itineraries/{id}/reorder`).
+- [x] Automated test suite in `backend/tests/test_itineraries.py` (BOLA isolation, duplicate checks, reordering).
+- [x] Frontend `ItineraryService` and models in `itinerary.models.ts` and `itinerary.service.ts` with dual-mode API + Guest fallback.
+- [x] Comprehensive unit tests in `itinerary.service.spec.ts` (13 tests passing).
+- [x] Multi-day Custom Itinerary creator UI (`Project/src/app/features/itinerary/custom-builder/`):
+  - [x] Day tabs and "+ Add Day" action.
+  - [x] Stop cards with sort badges, reorder buttons (move up/down), and delete stop.
+  - [x] Place picker modal with live database search (`PlaceService.searchPlaces`).
+  - [x] Off-grid custom venue support (title, municipality/address, cost range, notes).
+  - [x] Same-day duplicate stop guard dialog.
+  - [x] Honest budget calculation helper (`calculateBudgetSummary`).
+  - [x] Unsaved changes route/exit guard.
+  - [x] Unit test suite in `custom-builder.page.spec.ts` (6 tests passing).
+- [x] Home tab integration:
+  - [x] Connected Custom Itinerary action card and empty-state card to `/custom-builder`.
+  - [x] Wired `savedItineraries` to `ItineraryService.itineraries$` for instant reactivity.
+- [x] Angular build budgets passing with 0 warnings (<10kB per component style).
 
 ---
 
-## Phase 7: Deterministic Suggested Itinerary Engine
+## Phase 7: Deterministic Suggested Itinerary Engine (NEXT FOCUS)
 - [ ] Implement `backend/app/algorithms/itinerary_generator.py`:
   - [ ] Haversine distance clustering anchor.
   - [ ] Configurable weights (preference, proximity, featured status, diversity penalty).

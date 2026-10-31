@@ -3,6 +3,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.auth import router as auth_router
+from app.api.v1.itineraries import router as itineraries_router
 from app.api.v1.places import router as places_router
 from app.core.config import settings
 
@@ -23,6 +24,7 @@ app.add_middleware(
 
 app.include_router(auth_router, prefix=settings.api_v1_prefix)
 app.include_router(places_router, prefix=settings.api_v1_prefix)
+app.include_router(itineraries_router, prefix=settings.api_v1_prefix)
 
 
 @app.get(f"{settings.api_v1_prefix}/health", tags=["system"])

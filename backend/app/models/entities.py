@@ -224,3 +224,4 @@ class ItineraryItem(Base):
     )
 
     day: Mapped["ItineraryDay"] = relationship(back_populates="items")
+    place: Mapped["Place | None"] = relationship()

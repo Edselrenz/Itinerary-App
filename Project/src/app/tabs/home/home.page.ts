@@ -33,6 +33,8 @@ import { Subscription, catchError, debounceTime, distinctUntilChanged, finalize,
 import { GuestItinerary, GuestStorageService } from '../../core/services/guest-storage.service';
 import { PlaceService } from '../../core/services/place.service';
 import { Place } from '../../core/models/place.models';
+import { Itinerary } from '../../core/models/itinerary.models';
+import { ItineraryService } from '../../core/services/itinerary.service';
 
 export interface DestinationItem {
   id: string;
@@ -76,7 +78,7 @@ export class HomePage implements OnInit, OnDestroy {
   public isSearching = false;
   public searchLoading = false;
 
-  public savedItineraries: GuestItinerary[] = [];
+  public savedItineraries: Itinerary[] = [];
 
   private subscriptions = new Subscription();
 
@@ -226,6 +228,7 @@ export class HomePage implements OnInit, OnDestroy {
 
   constructor(
     private guestStorage: GuestStorageService,
+    private itineraryService: ItineraryService,
     private placeService: PlaceService,
     private router: Router,
     private toastController: ToastController
@@ -258,9 +261,9 @@ export class HomePage implements OnInit, OnDestroy {
       })
     );
 
-    // 2. Subscribe to Saved Itineraries
+    // 2. Subscribe to Saved Itineraries (Dual-mode: Backend + Guest fallback)
     this.subscriptions.add(
-      this.guestStorage.itineraries$.subscribe((items) => {
+      this.itineraryService.itineraries$.subscribe((items) => {
         this.savedItineraries = items || [];
       })
     );
@@ -430,9 +433,13 @@ export class HomePage implements OnInit, OnDestroy {
     });
   }
 
-  public openItinerary(itinerary: GuestItinerary): void {
-    this.router.navigate(['/tabs/history'], {
-      queryParams: { id: itinerary.id },
-    });
+  public openItinerary(itinerary: Itinerary): void {
+    if (itinerary.type === 'custom') {
+      this.router.navigate(['/custom-builder', itinerary.id]);
+    } else {
+      this.router.navigate(['/tabs/history'], {
+        queryParams: { id: itinerary.id },
+      });
+    }
   }
 }

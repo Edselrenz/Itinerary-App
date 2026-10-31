@@ -8,6 +8,7 @@ import { HomePage } from './home.page';
 import { PlaceService } from '../../core/services/place.service';
 import { GuestItinerary, GuestStorageService } from '../../core/services/guest-storage.service';
 import { Place } from '../../core/models/place.models';
+import { ItineraryService } from '../../core/services/itinerary.service';
 
 describe('HomePage', () => {
   let component: HomePage;
@@ -41,6 +42,11 @@ describe('HomePage', () => {
     itineraries$: itinerariesSub.asObservable(),
   };
 
+  const mockItineraryService = {
+    itineraries$: new BehaviorSubject<any[]>([]).asObservable(),
+    calculateBudgetSummary: vi.fn(),
+  };
+
   const mockPlaceService = {
     getFeaturedPlaces: vi.fn().mockReturnValue(of([mockPlace])),
     searchPlaces: vi.fn().mockReturnValue(of({ total: 1, limit: 20, offset: 0, items: [mockPlace] })),
@@ -63,6 +69,7 @@ describe('HomePage', () => {
         provideHttpClientTesting(),
         { provide: PlaceService, useValue: mockPlaceService },
         { provide: GuestStorageService, useValue: mockGuestStorage },
+        { provide: ItineraryService, useValue: mockItineraryService },
       ],
     }).compileComponents();
 

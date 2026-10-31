@@ -39,29 +39,34 @@ The project employs a multi-tiered verification strategy designed to prevent reg
   8. Refresh token exchange at `/api/v1/auth/refresh` succeeds and issues new access token.
   9. Apple Sign-In returns `501 Not Implemented` with truthful explanation when `enableAppleAuth = false`.
 
-### 2.3 Mobile Client Unit Test Suite
-- **`PlaceService` Suite (`Project/src/app/core/services/place.service.spec.ts`)**:
-  1. Creation: Verifies service instantiation via Angular `TestBed`.
-  2. `searchPlaces` with params: Verifies URL composition, query string params (`q`, comma-separated `categories`, `featured`, `limit`, `offset`), and HTTP GET method.
-  3. `searchPlaces` without params: Verifies default endpoint querying.
-  4. `getFeaturedPlaces`: Verifies `featured=true` filter and item array mapping.
-  5. `getPlaceById`: Verifies lookup by UUID.
-  6. `getMunicipalities`: Verifies `/municipalities` query with `q` search parameter.
-  7. `getPlaceImage` (remote): Verifies passthrough of external image URLs.
-  8. `getPlaceImage` (local curated): Verifies case-insensitive matching for Minalungao, Lumang Gapan, Pantabangan, etc.
-  9. `getPlaceImage` (fallback): Verifies fallback image for unmapped venues.
-  10. `formatCategoryName` (canonical): Verifies human-readable formatting.
-  11. `formatCategoryName` (unmapped): Verifies underscore replacement fallback.
+### 2.3 Backend Itineraries Suite (`backend/tests/test_itineraries.py`)
+- **`test_itinerary_lifecycle_and_bola_protection`**:
+  1. Multi-day custom itinerary creation with nested day and stop structures (status `201 Created`).
+  2. Owner listing and single retrieval (status `200 OK`).
+  3. **BOLA Enforcement**: Second authenticated user cannot view, modify (`PATCH`), or delete (`DELETE`) User A's itinerary (returns status `404 Not Found`).
+  4. Same-day duplicate stop guard: Attempting to add the same POI to the same day returns status `400 Bad Request`.
+  5. Cross-day and within-day stop reordering with sort order re-indexing (status `200 OK`).
+  6. Stop deletion (status `200 OK`) and cascade itinerary deletion (status `204 No Content`).
 
-- **`HomePage` Suite (`Project/src/app/tabs/home/home.page.spec.ts`)**:
-  1. Creation: Verifies component initialization.
-  2. Featured Destinations: Verifies that `getFeaturedPlaces()` is invoked on init to populate destination cards.
-  3. Debounced Search: Verifies that typing into `searchControl` waits 300ms before querying `searchPlaces({ q: ... })` and displays matching results.
-  4. Clear Search: Verifies resetting `searchControl` empties results and restores normal view.
-  5. Detail Modal: Verifies opening and closing the destination detail modal sheet.
-  6. Honest Cost Mapping: Verifies formatted price ranges (e.g. `₱100 - ₱500`) and unverified cost fallback (`"Cost not provided"`).
+### 2.4 Mobile Client Unit Test Suite
+- **`PlaceService` Suite (`Project/src/app/core/services/place.service.spec.ts`)**: 11 passing tests.
+- **`ItineraryService` Suite (`Project/src/app/core/services/itinerary.service.spec.ts`)**: 13 passing tests.
+  1. Initial constructor fetch and state emission via `itineraries$`.
+  2. Honest budget calculations (verified cost range calculation and unpriced stop counting).
+  3. Authenticated API operations (single fetch, creation, update, deletion, stop addition, stop deletion, stop reordering).
+  4. Guest/offline fallback operations (local storage persistence, same-day duplicate stop guard).
+- **`CustomBuilderPage` Suite (`Project/src/app/features/itinerary/custom-builder/custom-builder.page.spec.ts`)**: 6 passing tests.
+  1. Component creation and initial multi-day date calculation.
+  2. Day addition and selection.
+  3. Stop addition and reordering (move up/down).
+  4. Stop deletion.
+  5. Save flow execution and redirection to `/tabs/home`.
+  6. Cancel exit without unsaved changes.
+- **`MapPage` Suite (`Project/src/app/tabs/map/map.page.spec.ts`)**: 9 passing tests.
+- **`HomePage` Suite (`Project/src/app/tabs/home/home.page.spec.ts`)**: 6 passing tests.
+- **Other Tab Suites (`tab1`, `tab2`, `tab3`, `tabs`, `app`)**: 6 passing tests.
 
-### 2.4 Mobile Client Compilation Suite
+### 2.5 Mobile Client Compilation Suite
 - `npm run build` in `Project/`: Production Angular AOT compiler and bundler.
 - `npm run typecheck:e2e`: TypeScript strict compilation.
 - `npm run test:unit`: Vitest Angular unit test runner.
@@ -74,53 +79,55 @@ The project employs a multi-tiered verification strategy designed to prevent reg
 ```text
  RUN  v5.0.5 C:/Users/Edward/Desktop/CaseStudy/Project
 
- ✓  app  src/app/explore-container/explore-container.component.spec.ts (1 test) 125ms
- ✓  app  src/app/core/services/place.service.spec.ts (11 tests) 99ms
- ✓  app  src/app/tab2/tab2.page.spec.ts (1 test) 227ms
- ✓  app  src/app/tab1/tab1.page.spec.ts (1 test) 233ms
- ✓  app  src/app/tab3/tab3.page.spec.ts (1 test) 234ms
- ✓  app  src/app/app.component.spec.ts (1 test) 282ms
- ✓  app  src/app/tabs/tabs.page.spec.ts (1 test) 297ms
- ✓  app  src/app/tabs/home/home.page.spec.ts (6 tests) 661ms
+ ✓  app  src/app/explore-container/explore-container.component.spec.ts (1 test) 155ms
+ ✓  app  src/app/core/services/place.service.spec.ts (11 tests) 117ms
+ ✓  app  src/app/core/services/itinerary.service.spec.ts (13 tests) 191ms
+ ✓  app  src/app/tab2/tab2.page.spec.ts (1 test) 287ms
+ ✓  app  src/app/tab3/tab3.page.spec.ts (1 test) 287ms
+ ✓  app  src/app/tab1/tab1.page.spec.ts (1 test) 306ms
+ ✓  app  src/app/app.component.spec.ts (1 test) 349ms
+ ✓  app  src/app/tabs/tabs.page.spec.ts (1 test) 367ms
+ ✓  app  src/app/tabs/home/home.page.spec.ts (6 tests) 928ms
+ ✓  app  src/app/features/itinerary/custom-builder/custom-builder.page.spec.ts (6 tests) 1167ms
+ ✓  app  src/app/tabs/map/map.page.spec.ts (9 tests) 1248ms
 
- Test Files  8 passed (8)
-      Tests  23 passed (23)
-   Start at  09:55:15
-   Duration  14.91s
+ Test Files  11 passed (11)
+      Tests  51 passed (51)
+   Duration  19.82s
 ```
 
-### 3.2 Backend Pytest Run
+### 3.2 Backend Pytest Run (`python -m pytest backend/tests/ -v`)
 ```text
-============================= test session starts =============================
-platform win32 -- Python 3.14.3, pytest-9.2.0, pluggy-1.7.0
-rootdir: C:\Users\Edward\Desktop\CaseStudy
-plugins: anyio-4.13.0
-collected 2 items
+backend/tests/test_auth.py::test_auth_lifecycle PASSED                   [ 33%]
+backend/tests/test_foundation.py::test_health_and_featured_places_pipeline PASSED [ 66%]
+backend/tests/test_itineraries.py::test_itinerary_lifecycle_and_bola_protection PASSED [100%]
 
-backend/tests/test_auth.py::test_auth_lifecycle PASSED                   [ 50%]
-backend/tests/test_foundation.py::test_health_and_featured_places_pipeline PASSED [100%]
-
-======================== 2 passed, 1 warning in 1.99s =========================
+======================== 3 passed, 1 warning in 3.77s =========================
 ```
 
-### 3.3 Mobile Production Build Run
+### 3.3 Mobile Production Build Run (`npm run build`)
 ```text
 > Project@0.0.1 build
 > ng build
 
 √ Building...
-Initial total  | 827.04 kB | 186.78 kB transfer
+Initial chunk files | Names   | Raw size  | Transfer size
+main-LOAM4BHC.js    | main    | 642.11 kB |     149.00 kB
+styles-54SWNLJA.css | styles  |  65.58 kB |       8.01 kB
+Initial total       |         | 769.49 kB |     179.79 kB
+
 Lazy chunk files:
-  chunk-BrlJGmfL.js (login-page)
-  chunk-BUF0x-PC.js (signup-page)
-  chunk-BDDiel8w.js (welcome-page)
-  chunk-OxupxWYB.js (tabs-routes)
-  chunk-GIN5YfVD.js (home-page)
-  chunk-DgGNJ41a.js (map-page)
-  chunk-BQGgx5QT.js (history-page)
-  chunk-F6MWumre.js (profile-page)
-Application bundle generation complete. [16.968 seconds]
+  custom-builder-page (38.00 kB)
+  map-page            (203.80 kB)
+  home-page           (34.17 kB)
+  signup-page         (13.43 kB)
+  login-page          (12.18 kB)
+  profile-page        (6.36 kB)
+  welcome-page        (5.10 kB)
+  guest-page          (4.38 kB)
+Application bundle generation complete. [7.063 seconds]
 Output location: C:\Users\Edward\Desktop\CaseStudy\Project\www
+Budget Warnings: 0
 Exit Code: 0
 ```
 
@@ -128,8 +135,8 @@ Exit Code: 0
 
 ## 4. Pending Tests for Upcoming Milestones
 
-- [ ] Milestone 4: RxJS debounce and query cancellation tests for Home search bar.
-- [ ] Milestone 5: Leaflet bounds and marker clustering integration tests.
-- [ ] Milestone 6: BOLA authorization tests (attempting cross-user itinerary PATCH/DELETE to assert `404 Not Found`).
-- [ ] Milestone 7: Haversine recommendation scoring unit tests (preference weighting, category diversity penalty, sparse-data fallback).
+- [ ] Milestone 7: Deterministic Haversine clustering algorithms, preference weight scoring matrix, 2-3 stops/day pacing, and category diversity penalty tests.
+- [ ] Milestone 8: Cross-tab reactive persistence and guest-to-account itinerary migration synchronization.
+- [ ] Milestone 9: SlowAPI rate limiting under concurrent load and laptop-sleep offline interceptor recovery.
+- [ ] Milestone 10: 24-point pilot acceptance verification matrix.
 

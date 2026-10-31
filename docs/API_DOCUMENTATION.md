@@ -190,3 +190,148 @@ Interactive OpenAPI / Swagger documentation is available in development mode at:
     }
     ```
 
+---
+
+## 4. Itinerary Management Endpoints (`/api/v1/itineraries`)
+
+All itinerary endpoints require Bearer authentication:
+`Authorization: Bearer <jwt_access_token>`
+
+All operations enforce strict Broken Object Level Authorization (BOLA): querying resources owned by other users returns `404 Not Found` to prevent account reconnaissance or ID enumeration.
+
+### 4.1 Create Itinerary
+- **Endpoint**: `POST /api/v1/itineraries`
+- **Request Body**:
+  ```json
+  {
+    "title": "Nueva Ecija Heritage & Nature Tour",
+    "destination": "Nueva Ecija",
+    "start_date": "2026-11-01",
+    "end_date": "2026-11-03",
+    "daily_budget": 3500.0,
+    "preferences": ["nature", "culture"],
+    "type": "custom",
+    "assumptions": ["Budget excludes inter-city transit"],
+    "days": [
+      {
+        "day_number": 1,
+        "travel_date": "2026-11-01",
+        "title": "Day 1: Nature Exploration",
+        "items": [
+          {
+            "place_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+            "sort_order": 1,
+            "duration_minutes": 120,
+            "notes": "Bring cash for balsa rafting"
+          }
+        ]
+      }
+    ]
+  }
+  ```
+- **Responses**:
+  - `201 Created`: Full `ItineraryOut` model with generated day IDs and nested items.
+  - `401 Unauthorized`: Missing or invalid bearer token.
+  - `422 Unprocessable Content`: Validation failure (end date before start date, negative budget).
+
+### 4.2 List User Itineraries
+- **Endpoint**: `GET /api/v1/itineraries`
+- **Responses**:
+  - `200 OK`: Array of `ItineraryOut` objects belonging exclusively to the authenticated user.
+
+### 4.3 Get Single Itinerary
+- **Endpoint**: `GET /api/v1/itineraries/{id}`
+- **Responses**:
+  - `200 OK`: Full `ItineraryOut` model including all days and eagerly loaded POI places.
+  - `404 Not Found`: Itinerary does not exist or belongs to another user (BOLA protected).
+
+### 4.4 Update Itinerary Metadata
+- **Endpoint**: `PATCH /api/v1/itineraries/{id}`
+- **Request Body**:
+  ```json
+  {
+    "title": "Updated Trip Title",
+    "daily_budget": 4000.0
+  }
+  ```
+- **Responses**:
+  - `200 OK`: Updated `ItineraryOut`.
+  - `404 Not Found`: BOLA gate failure.
+
+### 4.5 Delete Itinerary
+- **Endpoint**: `DELETE /api/v1/itineraries/{id}`
+- **Responses**:
+  - `204 No Content`: Successfully deleted itinerary and cascaded all associated days and items.
+  - `404 Not Found`: BOLA gate failure.
+
+### 4.6 Add Day to Itinerary
+- **Endpoint**: `POST /api/v1/itineraries/{id}/days`
+- **Request Body**:
+  ```json
+  {
+    "day_number": 2,
+    "travel_date": "2026-11-02",
+    "title": "Day 2: Historical Gapan"
+  }
+  ```
+- **Responses**:
+  - `201 Created`: Updated `ItineraryOut` with new day appended.
+  - `404 Not Found`: BOLA gate failure.
+
+### 4.7 Add Stop to Day
+- **Endpoint**: `POST /api/v1/itineraries/{id}/days/{day_id}/items`
+- **Request Body**:
+  ```json
+  {
+    "place_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "duration_minutes": 90,
+    "notes": "Afternoon coffee stop"
+  }
+  ```
+  *Or for custom off-grid venue:*
+  ```json
+  {
+    "custom_title": "Lola's Mango Orchard & Campsite",
+    "custom_lat": 15.632,
+    "custom_lng": 121.144,
+    "duration_minutes": 180,
+    "estimated_cost_min": 100.0,
+    "estimated_cost_max": 250.0
+  }
+  ```
+- **Responses**:
+  - `201 Created`: Updated `ItineraryOut`.
+  - `400 Bad Request`: `"This destination has already been added to this day."` (duplicate stop guard).
+  - `404 Not Found`: Itinerary or day not found or BOLA violation.
+
+### 4.8 Delete Stop
+- **Endpoint**: `DELETE /api/v1/itineraries/{id}/days/{day_id}/items/{item_id}`
+- **Responses**:
+  - `200 OK`: Updated `ItineraryOut` with re-indexed item `sort_order` values.
+  - `404 Not Found`: Stop not found or BOLA violation.
+
+### 4.9 Batch Reorder Stops
+- **Endpoint**: `POST /api/v1/itineraries/{id}/reorder`
+- **Request Body**:
+  ```json
+  {
+    "items": [
+      {
+        "id": "item-uuid-2",
+        "day_id": "day-uuid-1",
+        "sort_order": 1
+      },
+      {
+        "id": "item-uuid-1",
+        "day_id": "day-uuid-1",
+        "sort_order": 2
+      }
+    ]
+  }
+  ```
+- **Responses**:
+  - `200 OK`: Updated `ItineraryOut`.
+  - `400 Bad Request`: If any item ID does not belong to the target itinerary.
+  - `404 Not Found`: BOLA gate failure.
+
+

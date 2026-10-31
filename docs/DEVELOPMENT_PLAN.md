@@ -14,8 +14,8 @@ This plan tracks the 11 sequential milestones defined in the **End-to-End Engine
 | **3** | **Auth & Ionic App Shell** | Argon2id auth, JWT, Google OAuth verify, Guest storage, 4-tab shell. | Pytest 100% pass; Angular build succeeds. | **COMPLETED** |
 | **4** | **Home Tab & Debounced Search** | 300ms RxJS search, popular destinations carousel, saved cards. | Local database search, 0 Nominatim calls. | **COMPLETED** |
 | **5** | **Leaflet Map & 16 Filters** | Bounded Leaflet map, category filters, marker cluster, bottom sheet. | Responsive map, external directions handoff. | **COMPLETED** |
-| **6** | **Custom Itinerary Builder** | Multi-day custom creator, stop reordering, honest budget math. | BOLA ownership checks, duplicate guards. | **NEXT** |
-| **7** | **Suggested Itinerary Engine** | Deterministic Haversine clustering, preference scoring, diversity. | Transparent assumptions, no hallucinated venues. | **PENDING** |
+| **6** | **Custom Itinerary Builder** | Multi-day custom creator, stop reordering, honest budget math. | BOLA ownership checks, duplicate guards. | **COMPLETED** |
+| **7** | **Suggested Itinerary Engine** | Deterministic Haversine clustering, preference scoring, diversity. | Transparent assumptions, no hallucinated venues. | **NEXT** |
 | **8** | **Overview, Day View & Sync** | Timeline view, stop detail cards, reactive cross-tab persistence. | Home cards sync immediately after edit. | **PENDING** |
 | **9** | **Pilot Security & Tunneling** | Rate limiting (SlowAPI), offline interceptor, backup/restore drills. | Cross-device LAN testing, isolated DB port. | **PENDING** |
 | **10** | **QA & Pilot Acceptance** | Full automated verification matrix, 24-point acceptance checklist. | 100% pass across all 24 acceptance criteria. | **PENDING** |
@@ -79,11 +79,22 @@ This plan tracks the 11 sequential milestones defined in the **End-to-End Engine
 - [x] Implement 9 Vitest unit tests in `map.page.spec.ts` (100% passing).
 - [x] Eliminate CommonJS optimization warnings via `allowedCommonJsDependencies` in `angular.json`.
 
-### Milestone 6: Custom Itinerary Builder (Next)
-- [ ] Backend CRUD endpoints in `backend/app/api/v1/itineraries.py` with strict BOLA checks.
-- [ ] Multi-day custom creator with day tabs and stop reordering (`POST /api/v1/itineraries/{id}/reorder`).
-- [ ] Place picker modal and manual off-grid stop entry.
-- [ ] Same-day duplicate stop guard dialog.
-- [ ] Honest budget calculation helper.
-- [ ] Unsaved changes route guard.
+### Milestone 6: Custom Itinerary Builder
+- [x] Backend CRUD endpoints in `backend/app/api/v1/itineraries.py` with strict BOLA checks.
+- [x] Multi-day custom creator with day tabs and stop reordering (`POST /api/v1/itineraries/{id}/reorder`).
+- [x] Place picker modal with live database search and manual off-grid venue entry.
+- [x] Same-day duplicate stop guard dialog.
+- [x] Honest budget calculation helper (`ItineraryService.calculateBudgetSummary`).
+- [x] Dual-mode client persistence with `GuestStorageService` fallback.
+- [x] Unsaved changes route/exit guard.
+- [x] 19 automated tests (3 backend pytest, 13 itinerary service vitest, 6 custom builder vitest).
+
+### Milestone 7: Suggested Itinerary Engine (Next)
+- [ ] Backend generation endpoint `POST /api/v1/itineraries/suggest` with deterministic Haversine geographic clustering.
+- [ ] User preference questionnaire and scoring matrix (nature, heritage, food, leisure).
+- [ ] Same-day municipality proximity clustering to prevent cross-province backtracking.
+- [ ] 2-3 stops per day pacing with lunch/dining window slotting.
+- [ ] Transparent assumptions list (admission costs, travel window, fuel/transit exclusions).
+- [ ] Automated pytest suite verifying clustering radius, category diversity, and zero hallucinated venues.
+- [ ] Suggested Itinerary wizard frontend and preview sheet.
 
