@@ -17,11 +17,16 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const isApiRequest = req.url.startsWith(environment.apiBaseUrl);
 
   // CR-012: Attach Bearer token strictly to requests matching apiBaseUrl
-  if (token && isApiRequest && !req.headers.has('Authorization')) {
+  // ngrok: Set 'ngrok-skip-browser-warning': 'true' to bypass interstitial page on free tunnels
+  if (isApiRequest) {
+    const headersConfig: Record<string, string> = {
+      'ngrok-skip-browser-warning': 'true',
+    };
+    if (token && !req.headers.has('Authorization')) {
+      headersConfig['Authorization'] = `Bearer ${token}`;
+    }
     authReq = req.clone({
-      setHeaders: {
-        Authorization: `Bearer ${token}`,
-      },
+      setHeaders: headersConfig,
     });
   }
 
@@ -62,11 +67,13 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
             switchMap((tokenResponse) => {
               isRefreshing = false;
               refreshTokenSubject.next(tokenResponse.access_token);
+              const retryHeaders: Record<string, string> = {
+                'ngrok-skip-browser-warning': 'true',
+                Authorization: `Bearer ${tokenResponse.access_token}`,
+              };
               return next(
                 req.clone({
-                  setHeaders: {
-                    Authorization: `Bearer ${tokenResponse.access_token}`,
-                  },
+                  setHeaders: retryHeaders,
                 })
               );
             }),
@@ -82,11 +89,13 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
             filter((newToken) => newToken !== null),
             take(1),
             switchMap((newToken) => {
+              const retryHeaders: Record<string, string> = {
+                'ngrok-skip-browser-warning': 'true',
+                Authorization: `Bearer ${newToken}`,
+              };
               return next(
                 req.clone({
-                  setHeaders: {
-                    Authorization: `Bearer ${newToken}`,
-                  },
+                  setHeaders: retryHeaders,
                 })
               );
             })

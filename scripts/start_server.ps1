@@ -40,102 +40,128 @@ if ($LASTEXITCODE -ne 0) {
     Write-Host "[WARNING] Database setup returned non-zero code. Proceeding with server start..." -ForegroundColor Yellow
 }
 
-# 3. Locate or Install Cloudflare Tunnel
+# 3. Locate and Launch Persistent Tunnel (ngrok permanent tunnel with Cloudflare fallback)
 $tunnelProcess = $null
 $tunnelUrl = $null
+$toolsDir = Join-Path $ProjectRoot "tools"
 
 if (-not $NoTunnel) {
-    Write-Host "`n[3/4] Preparing Cloudflare Tunnel for GitHub Pages..." -ForegroundColor Cyan
-
-    $cloudflaredBin = $null
-    $systemCloudflared = Get-Command cloudflared -ErrorAction SilentlyContinue
-    if ($systemCloudflared) {
-        $cloudflaredBin = $systemCloudflared.Source
-    }
-
-    $toolsDir = Join-Path $ProjectRoot "tools"
-    $localCloudflared = Join-Path $toolsDir "cloudflared.exe"
-
-    if (-not $cloudflaredBin -and (Test-Path $localCloudflared)) {
-        $cloudflaredBin = $localCloudflared
-    }
-
-    # If not found, attempt automatic download of portable cloudflared.exe
-    if (-not $cloudflaredBin) {
-        Write-Host "Cloudflared not found on system. Downloading portable binary to tools/..." -ForegroundColor Yellow
-        try {
-            if (-not (Test-Path $toolsDir)) {
-                New-Item -ItemType Directory -Path $toolsDir -Force | Out-Null
-            }
-            $downloadUrl = "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe"
-            Invoke-WebRequest -Uri $downloadUrl -OutFile $localCloudflared -UseBasicParsing -TimeoutSec 30
-            if (Test-Path $localCloudflared) {
-                $cloudflaredBin = $localCloudflared
-                Write-Host "[OK] Downloaded portable cloudflared.exe successfully!" -ForegroundColor Green
-            }
-        } catch {
-            Write-Host "[!] Auto-download failed: $($_.Exception.Message)" -ForegroundColor Yellow
-            Write-Host "Trying winget install..." -ForegroundColor Gray
-            Start-Process winget -ArgumentList "install Cloudflare.cloudflared --accept-package-agreements --accept-source-agreements" -Wait -NoNewWindow
-            $systemCloudflared = Get-Command cloudflared -ErrorAction SilentlyContinue
-            if ($systemCloudflared) {
-                $cloudflaredBin = $systemCloudflared.Source
+    # Check for ngrok permanent domain
+    $ngrokDomain = "anybody-cube-surprise.ngrok-free.dev"
+    if (Test-Path (Join-Path $ProjectRoot ".env")) {
+        $envLines = Get-Content (Join-Path $ProjectRoot ".env")
+        foreach ($line in $envLines) {
+            if ($line -match '^NGROK_DOMAIN\s*=\s*(.+)$') {
+                $ngrokDomain = $matches[1].Trim()
             }
         }
     }
 
-    if ($cloudflaredBin) {
-        Write-Host "Launching Cloudflare Tunnel..." -ForegroundColor Gray
-        $tunnelLog = Join-Path $env:TEMP "ne_cloudflared.log"
+    $ngrokBin = Join-Path $toolsDir "ngrok.exe"
+    if (-not (Test-Path $ngrokBin)) {
+        $systemNgrok = Get-Command ngrok -ErrorAction SilentlyContinue
+        if ($systemNgrok) {
+            $ngrokBin = $systemNgrok.Source
+        }
+    }
+
+    if ($ngrokBin -and (Test-Path $ngrokBin) -and $ngrokDomain) {
+        Write-Host "`n[3/4] Launching Permanent ngrok Tunnel ($ngrokDomain)..." -ForegroundColor Cyan
+        $tunnelLog = Join-Path $env:TEMP "ne_ngrok.log"
         if (Test-Path $tunnelLog) {
             Remove-Item $tunnelLog -Force -ErrorAction SilentlyContinue
         }
 
-        $tunnelProcess = Start-Process -FilePath $cloudflaredBin `
-            -ArgumentList "tunnel --url http://127.0.0.1:8000 --no-autoupdate" `
+        $tunnelProcess = Start-Process -FilePath $ngrokBin `
+            -ArgumentList "http --domain=$ngrokDomain 8000" `
             -RedirectStandardError $tunnelLog `
             -PassThru -NoNewWindow
 
-        Write-Host "Connecting to Cloudflare edge network..." -ForegroundColor Gray
-        for ($i = 0; $i -lt 30; $i++) {
-            Start-Sleep -Milliseconds 500
+        Start-Sleep -Seconds 2
+        $tunnelUrl = "https://$ngrokDomain"
+
+        Write-Host "`n+----------------------------------------------------------------------+" -ForegroundColor Green
+        Write-Host "|  PERMANENT NGROK HTTPS TUNNEL ACTIVE!                                |" -ForegroundColor Green
+        Write-Host "+----------------------------------------------------------------------+" -ForegroundColor Green
+        Write-Host "  Fixed Backend URL: $tunnelUrl/api/v1" -ForegroundColor Cyan
+        Write-Host "  Live GitHub Pages: https://edselrenz.github.io/Itinerary-App/" -ForegroundColor Cyan
+        Write-Host ""
+        Write-Host "  AUTOMATIC CONNECTION: ACTIVE" -ForegroundColor Green
+        Write-Host "  GitHub Pages and mobile devices connect automatically without" -ForegroundColor Green
+        Write-Host "  copying or pasting any URLs!" -ForegroundColor Green
+        Write-Host "+----------------------------------------------------------------------+`n" -ForegroundColor Green
+    } else {
+        Write-Host "`n[3/4] Preparing Cloudflare Tunnel fallback for GitHub Pages..." -ForegroundColor Cyan
+
+        $cloudflaredBin = $null
+        $systemCloudflared = Get-Command cloudflared -ErrorAction SilentlyContinue
+        if ($systemCloudflared) {
+            $cloudflaredBin = $systemCloudflared.Source
+        }
+
+        $localCloudflared = Join-Path $toolsDir "cloudflared.exe"
+        if (-not $cloudflaredBin -and (Test-Path $localCloudflared)) {
+            $cloudflaredBin = $localCloudflared
+        }
+
+        if (-not $cloudflaredBin) {
+            Write-Host "Downloading portable cloudflared.exe to tools/..." -ForegroundColor Yellow
+            try {
+                if (-not (Test-Path $toolsDir)) {
+                    New-Item -ItemType Directory -Path $toolsDir -Force | Out-Null
+                }
+                $downloadUrl = "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe"
+                Invoke-WebRequest -Uri $downloadUrl -OutFile $localCloudflared -UseBasicParsing -TimeoutSec 30
+                if (Test-Path $localCloudflared) {
+                    $cloudflaredBin = $localCloudflared
+                }
+            } catch {
+                Write-Host "[!] Auto-download failed: $($_.Exception.Message)" -ForegroundColor Yellow
+            }
+        }
+
+        if ($cloudflaredBin) {
+            Write-Host "Launching Cloudflare Tunnel..." -ForegroundColor Gray
+            $tunnelLog = Join-Path $env:TEMP "ne_cloudflared.log"
             if (Test-Path $tunnelLog) {
-                $logContent = Get-Content $tunnelLog -Raw -ErrorAction SilentlyContinue
-                if ($logContent -match '(https://[a-zA-Z0-9-]+\.trycloudflare\.com)') {
-                    $tunnelUrl = $matches[1]
+                Remove-Item $tunnelLog -Force -ErrorAction SilentlyContinue
+            }
+
+            $tunnelProcess = Start-Process -FilePath $cloudflaredBin `
+                -ArgumentList "tunnel --url http://127.0.0.1:8000 --no-autoupdate" `
+                -RedirectStandardError $tunnelLog `
+                -PassThru -NoNewWindow
+
+            Write-Host "Connecting to Cloudflare edge network..." -ForegroundColor Gray
+            for ($i = 0; $i -lt 30; $i++) {
+                Start-Sleep -Milliseconds 500
+                if (Test-Path $tunnelLog) {
+                    $logContent = Get-Content $tunnelLog -Raw -ErrorAction SilentlyContinue
+                    if ($logContent -match '(https://[a-zA-Z0-9-]+\.trycloudflare\.com)') {
+                        $tunnelUrl = $matches[1]
+                        break
+                    }
+                }
+                if ($tunnelProcess.HasExited) {
                     break
                 }
             }
-            if ($tunnelProcess.HasExited) {
-                break
+
+            if ($tunnelUrl) {
+                try {
+                    Set-Clipboard -Value $tunnelUrl
+                    $copiedMsg = " [COPIED TO CLIPBOARD]"
+                } catch {
+                    $copiedMsg = ""
+                }
+
+                Write-Host "`n+----------------------------------------------------------------------+" -ForegroundColor Green
+                Write-Host "|  CLOUDFLARE PUBLIC HTTPS TUNNEL CREATED!                             |" -ForegroundColor Green
+                Write-Host "+----------------------------------------------------------------------+" -ForegroundColor Green
+                Write-Host "  Public URL: $tunnelUrl$copiedMsg" -ForegroundColor Cyan
+                Write-Host "+----------------------------------------------------------------------+`n" -ForegroundColor Green
             }
         }
-
-        if ($tunnelUrl) {
-            try {
-                Set-Clipboard -Value $tunnelUrl
-                $copiedMsg = " [COPIED TO CLIPBOARD]"
-            } catch {
-                $copiedMsg = ""
-            }
-
-            Write-Host "`n+----------------------------------------------------------------------+" -ForegroundColor Green
-            Write-Host "|  CLOUDFLARE PUBLIC HTTPS TUNNEL CREATED!                             |" -ForegroundColor Green
-            Write-Host "+----------------------------------------------------------------------+" -ForegroundColor Green
-            Write-Host "  Public URL: $tunnelUrl$copiedMsg" -ForegroundColor Cyan
-            Write-Host ""
-            Write-Host "  To connect GitHub Pages to this machine:" -ForegroundColor Yellow
-            Write-Host "  1. Open your live app: https://edselrenz.github.io/Itinerary-App/" -ForegroundColor Yellow
-            Write-Host "  2. In the top offline banner, click: [Set Server]" -ForegroundColor Yellow
-            Write-Host "  3. Paste: $tunnelUrl (or press Ctrl+V)" -ForegroundColor Green
-            Write-Host "+----------------------------------------------------------------------+`n" -ForegroundColor Green
-        } else {
-            Write-Host "[WARNING] Could not parse Cloudflare tunnel URL yet. Check $tunnelLog" -ForegroundColor Yellow
-        }
-    } else {
-        Write-Host "`n[!] Notice: cloudflared is not installed." -ForegroundColor Yellow
-        Write-Host "To enable remote HTTPS tunneling, run:" -ForegroundColor Yellow
-        Write-Host "  winget install Cloudflare.cloudflared`n" -ForegroundColor Cyan
     }
 } else {
     Write-Host "`n[3/4] Tunnel disabled (-NoTunnel passed)." -ForegroundColor Gray
@@ -161,7 +187,7 @@ try {
     python -m uvicorn app.main:app --app-dir backend --host 0.0.0.0 --port 8000 --reload
 } finally {
     if ($tunnelProcess -and -not $tunnelProcess.HasExited) {
-        Write-Host "`nStopping Cloudflare Tunnel..." -ForegroundColor Gray
+        Write-Host "`nStopping Tunnel process..." -ForegroundColor Gray
         Stop-Process -Id $tunnelProcess.Id -Force -ErrorAction SilentlyContinue
     }
 }
