@@ -174,7 +174,17 @@ This plan tracks the 11 sequential milestones defined in the **End-to-End Engine
   - [x] **DEF-09**: Add keyboard focus/dismissal to splash overlay and `role="button"` / `aria-label` to custom Leaflet pins.
   - [x] **SEC-02**: Document Architectural Decision Record (ADR-010) and migration roadmap for refresh tokens to HttpOnly cookies / native keychain.
   - [x] Automate Pytest and Vitest gates in GitHub Actions deploy workflow (`.github/workflows/deploy.yml`).
-
-
-
+### Milestone 16: Release Candidate Deployment & Post-MVP Evolution (Active)
+- **Phase 16.1: Release Deployment & Pipeline Verification (Immediate)**:
+  - [ ] Commit all staged and modified Phase 15 files to Git (`v0.15.4-rc.10`).
+  - [ ] Push to `origin/main` to trigger automated GitHub Actions CI deployment.
+  - [ ] Live smoke verification on `https://edselrenz.github.io/Itinerary-App/` and ngrok tunnel.
+- **Phase 16.2: Native Mobile Binary Packaging (Capacitor)**:
+  - [ ] Scaffold Capacitor Android project (`npx cap add android`).
+  - [ ] Integrate `@capacitor-community/secure-storage-plugin` for hardware-backed token storage (`SEC-02`).
+  - [ ] Build and verify Android APK build.
+- **Phase 16.3: Offline Map Pre-Caching (PWA)**:
+  - [ ] Configure Service Worker caching for OSM tiles within Nueva Ecija bounds.
+- **Phase 16.4: Export & Sharing**:
+  - [ ] Implement client-side PDF and `.ics` itinerary export.
 

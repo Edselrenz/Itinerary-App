@@ -290,7 +290,27 @@ This checklist tracks completed, active, and pending tasks across all developmen
 - [x] **DEF-09 (Accessibility Attributes)**: Add `tabindex="0"`, `role="button"`, and `aria-label` to custom Leaflet pins in `map.page.ts`, and enable Escape key dismissal on the splash screen overlay.
 - [x] **SEC-02 (Secure Token Storage)**: Formulate Architectural Decision Record (ADR-010) and migration roadmap for refresh tokens from `localStorage` to `HttpOnly; Secure; SameSite=Strict` cookies for web and native keychain for Capacitor mobile.
 - [x] **CI Automation**: Add Pytest (`pytest backend/tests/`) and Vitest (`npm run test:unit`) test runs to `.github/workflows/deploy.yml` before building GitHub Pages assets.
+---
 
+## Phase 16: Release Candidate Deployment & Post-MVP Evolution (ACTIVE / PLANNED)
 
+### Phase 16.1: Release Candidate Deployment & Live Verification (Immediate)
+- [ ] Commit all Phase 15 remediation changes, tests, and documentation to Git with message `release: v0.15.4-rc.10 QA/QC audit remediation complete`.
+- [ ] Push to `origin/main` to trigger automated GitHub Actions CI pipeline (`deploy.yml`) running backend Pytest and frontend Vitest suites before deploying to GitHub Pages.
+- [ ] Smoke-test live production URL (`https://edselrenz.github.io/Itinerary-App/`) connected to the persistent tunnel (`https://anybody-cube-surprise.ngrok-free.dev/api/v1`) across desktop and mobile screen viewports.
 
+### Phase 16.2: Native Mobile Binary Packaging (Capacitor)
+- [ ] Initialize Capacitor Android platform (`npx cap add android`) in `Project/`.
+- [ ] Synchronize web assets, plugins, and app icons (`npx cap sync android`).
+- [ ] Implement `SEC-02` Capacitor hardware enclave storage using `@capacitor-community/secure-storage-plugin` for biometrics and hardware Keystore.
+- [ ] Build and verify unsigned debug APK on Android emulator or physical test device.
+
+### Phase 16.3: Offline Map Tile Pre-Caching (PWA Service Worker)
+- [ ] Implement Service Worker caching for OpenStreetMap raster tiles within Nueva Ecija bounds (`15.15 <= lat <= 16.15`, `120.70 <= lng <= 121.40`).
+- [ ] Support zero-signal offline map browsing when travelers visit remote locations (Minalungao National Park, Pantabangan trails).
+
+### Phase 16.4: Itinerary Export & Sharing
+- [ ] Client-side PDF export for printing or offline travel documentation.
+- [ ] Downloadable `.ics` (iCalendar) schedule generator for Google Calendar, Apple Calendar, and Outlook.
+- [ ] Shareable read-only itinerary link with QR code generator.
 

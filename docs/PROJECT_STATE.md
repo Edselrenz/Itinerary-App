@@ -204,6 +204,23 @@ All 16 audit findings from [CODE_REVIEW_AUDIT.md](file:///c:/Users/Edward/Deskto
    - Formulated Architectural Decision Record (`ADR-010`) and migration roadmap for refresh tokens to HttpOnly cookies and Capacitor native keychain (`SEC-02`).
    - Added automated Pytest and Vitest gates in GitHub Actions deploy workflow (`.github/workflows/deploy.yml`).
 
+---
+
+## 6. Next Immediate Tasks (Phase 16 Execution Roadmap)
+
+1. **Phase 16.1 (Release Deployment & Live CI Pipeline Verification)**:
+   - Commit all staged and modified Phase 15 remediation files to Git (`v0.15.4-rc.10`).
+   - Push to `origin/main` to trigger automated GitHub Actions CI pipeline executing Pytest backend (14 tests) and Vitest frontend (120 tests) before deploying to GitHub Pages.
+   - Live smoke verification on `https://edselrenz.github.io/Itinerary-App/` and ngrok backend.
+2. **Phase 16.2 (Native Mobile Binary Packaging — Capacitor)**:
+   - Scaffold Capacitor Android platform (`npx cap add android`).
+   - Integrate `@capacitor-community/secure-storage-plugin` for hardware enclave keystore token storage (`SEC-02`).
+   - Build and test unsigned debug Android APK.
+3. **Phase 16.3 (Offline Map Pre-Caching — PWA Service Worker)**:
+   - Configure Service Worker tile pre-caching for Nueva Ecija bounding box coordinates.
+4. **Phase 16.4 (Itinerary Export & Sharing)**:
+   - Implement client-side PDF export and downloadable `.ics` calendar schedules.
+
 
 
 
