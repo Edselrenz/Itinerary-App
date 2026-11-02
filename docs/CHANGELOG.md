@@ -6,6 +6,55 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [0.13.0-rc.4] - 2026-11-02
+### Removed
+- **CR-014**: Deleted 16 dead starter files from initial Ionic template generation (`tab1/`, `tab2/`, `tab3/`, `explore-container/`).
+- **CR-014**: Deleted destructive root scaffolding script `setup_steps_0_to_2.py`.
+- **CR-015**: Pruned 44 unused SHA-1 hash image files from `Project/src/assets/images/`.
+
+### Fixed
+- **CR-014**: Replaced 7 tautological checks in `scripts/verify_acceptance_gate.py` with real assertions.
+- **CR-015**: Fixed observable memory leak in `ProfilePage` (`Project/src/app/tabs/profile/profile.page.ts`) by implementing `OnDestroy` and storing/unsubscribing `userSub`. Added `profile.page.spec.ts`.
+- **CR-015**: Corrected UI copy typos in `welcome.page.html`, `guest.page.html`, and `login.page.html`.
+- **CR-015**: Dynamically resolved nearby places by municipality in `PlaceService.getNearbyPlaces()`.
+
+---
+
+## [0.12.0-rc.3] - 2026-11-02
+### Added
+- **CR-006 & CR-012**: Token refresh rotation in `Project/src/app/core/services/auth.service.ts` and 401 retry queueing in `auth.interceptor.ts`.
+- **CR-007**: Centralized timezone-agnostic date utility `Project/src/app/core/utils/date.utils.ts` with local calendar arithmetic.
+- **CR-010**: Single-stop update endpoint `PATCH /api/v1/itineraries/{id}/days/{day_id}/items/{item_id}`.
+- **CR-011**: Query parameter navigation from Home to Map tab and non-blocking `tileerror` banner.
+- **CR-013 (F.4)**: Clean drop-before-create flags (`--clean --if-exists`) in `scripts/db_backup_restore.py`.
+
+### Fixed
+- **CR-008**: Enforced `default_dest_radius_km` (25km) and cumulative daily budget tracking in `itinerary_generator.py`; escaped SQL wildcards in `places.py`.
+- **CR-009**: Connected online guests to suggested generator and dynamically bound wizard budget presets.
+- **CR-010**: Fixed sort-order auto-increment starting index bug and added 404 validation for nonexistent `place_id` foreign keys.
+
+---
+
+## [0.11.0-rc.2] - 2026-11-01
+### Security
+- **CR-001**: Fixed cross-itinerary BOLA in `POST /api/v1/itineraries/{id}/reorder` by verifying day membership.
+- **CR-002**: Fixed cross-itinerary BOLA/IDOR in `DELETE /api/v1/itineraries/{id}/days/{day_id}/items/{item_id}`.
+- **CR-004**: Blocked default JWT secret in non-development environments; enforced `google_oauth_client_id` audience validation; tightened CORS regex to explicit GitHub Pages origin.
+- **CR-005**: Enforced `email_verified is True` on Google OAuth account linking and blocked deactivated users (`is_active=False`).
+
+### Fixed
+- **CR-003**: Fixed silent data loss when saving edited itineraries by extending `ItineraryUpdate` to accept `days`.
+
+---
+
+## [0.10.0-rc.1] - 2026-10-31
+### Added
+- **Phase 10: Pilot Acceptance Gate**:
+  - Implemented 24-point automated acceptance verification runner `scripts/verify_acceptance_gate.py` with 100% pass rate.
+  - End-to-end regression validation: 100% test pass rate across backend pytest, frontend vitest, and production build.
+
+---
+
 ## [0.9.0-alpha] - 2026-10-31
 ### Added
 - **Phase 9: Pilot Security, Connectivity Resilience & Disaster Recovery**:

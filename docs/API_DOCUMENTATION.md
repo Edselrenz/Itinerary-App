@@ -245,18 +245,57 @@ All operations enforce strict Broken Object Level Authorization (BOLA): querying
   - `200 OK`: Full `ItineraryOut` model including all days and eagerly loaded POI places.
   - `404 Not Found`: Itinerary does not exist or belongs to another user (BOLA protected).
 
-### 4.4 Update Itinerary Metadata
+### 4.4 Update Itinerary (Metadata & Multi-Day Synchronized Save)
 - **Endpoint**: `PATCH /api/v1/itineraries/{id}`
+- **Authentication**: `Bearer <access_token>`
 - **Request Body**:
   ```json
   {
     "title": "Updated Trip Title",
-    "daily_budget": 4000.0
+    "destination": "Nueva Ecija",
+    "start_date": "2026-11-01",
+    "end_date": "2026-11-03",
+    "daily_budget": 4000.0,
+    "preferences": ["nature", "food"],
+    "assumptions": ["Travel by private vehicle"],
+    "days": [
+      {
+        "day_number": 1,
+        "travel_date": "2026-11-01",
+        "title": "Day 1: Nature Exploration",
+        "items": [
+          {
+            "place_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+            "sort_order": 1,
+            "duration_minutes": 120,
+            "notes": "Bring cash for balsa rafting"
+          }
+        ]
+      }
+    ]
+  }
+  ```
+  *(Note: `days`, `preferences`, and `assumptions` are optional; when `days` is provided, nested days and stops are synchronized transactionally without data loss.)*
+- **Responses**:
+  - `200 OK`: Updated `ItineraryOut` model with synchronized days and stops.
+  - `404 Not Found`: Itinerary not found or BOLA authorization failure.
+
+### 4.5 Update Single Stop
+- **Endpoint**: `PATCH /api/v1/itineraries/{id}/days/{day_id}/items/{item_id}`
+- **Authentication**: `Bearer <access_token>`
+- **Request Body**:
+  ```json
+  {
+    "notes": "Updated visit instructions",
+    "planned_time": "14:30:00",
+    "duration_minutes": 120,
+    "estimated_cost_min": 150.0,
+    "estimated_cost_max": 300.0
   }
   ```
 - **Responses**:
-  - `200 OK`: Updated `ItineraryOut`.
-  - `404 Not Found`: BOLA gate failure.
+  - `200 OK`: Updated `ItineraryOut` model.
+  - `404 Not Found`: Itinerary, day, or stop not found, or BOLA authorization failure.
 
 ### 4.5 Delete Itinerary
 - **Endpoint**: `DELETE /api/v1/itineraries/{id}`

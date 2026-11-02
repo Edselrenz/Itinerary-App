@@ -79,30 +79,40 @@ The project employs a multi-tiered verification strategy designed to prevent reg
 ```text
  RUN  v5.0.5 C:/Users/Edward/Desktop/CaseStudy/Project
 
- ✓  app  src/app/explore-container/explore-container.component.spec.ts (1 test) 155ms
- ✓  app  src/app/core/services/place.service.spec.ts (11 tests) 117ms
- ✓  app  src/app/core/services/itinerary.service.spec.ts (13 tests) 191ms
- ✓  app  src/app/tab2/tab2.page.spec.ts (1 test) 287ms
- ✓  app  src/app/tab3/tab3.page.spec.ts (1 test) 287ms
- ✓  app  src/app/tab1/tab1.page.spec.ts (1 test) 306ms
- ✓  app  src/app/app.component.spec.ts (1 test) 349ms
- ✓  app  src/app/tabs/tabs.page.spec.ts (1 test) 367ms
- ✓  app  src/app/tabs/home/home.page.spec.ts (6 tests) 928ms
- ✓  app  src/app/features/itinerary/custom-builder/custom-builder.page.spec.ts (6 tests) 1167ms
- ✓  app  src/app/tabs/map/map.page.spec.ts (9 tests) 1248ms
+ ✓  app  src/app/core/utils/date.utils.spec.ts (5 tests) 140ms
+ ✓  app  src/app/core/services/connectivity.service.spec.ts (5 tests) 125ms
+ ✓  app  src/app/core/services/place.service.spec.ts (13 tests) 215ms
+ ✓  app  src/app/core/services/itinerary.service.spec.ts (16 tests) 261ms
+ ✓  app  src/app/core/services/guest-migration.service.spec.ts (5 tests) 49ms
+ ✓  app  src/app/tabs/tabs.page.spec.ts (1 test) 442ms
+ ✓  app  src/app/tabs/profile/profile.page.spec.ts (3 tests) 747ms
+ ✓  app  src/app/app.component.spec.ts (5 tests) 746ms
+ ✓  app  src/app/tabs/history/history.page.spec.ts (4 tests) 904ms
+ ✓  app  src/app/tabs/home/home.page.spec.ts (9 tests) 1322ms
+ ✓  app  src/app/features/itinerary/itinerary-detail/itinerary-detail.page.spec.ts (9 tests) 1425ms
+ ✓  app  src/app/features/itinerary/suggested-wizard/suggested-wizard.page.spec.ts (12 tests) 1493ms
+ ✓  app  src/app/features/itinerary/custom-builder/custom-builder.page.spec.ts (10 tests) 1582ms
+ ✓  app  src/app/tabs/map/map.page.spec.ts (10 tests) 1635ms
 
- Test Files  11 passed (11)
-      Tests  51 passed (51)
-   Duration  19.82s
+ Test Files  14 passed (14)
+      Tests  107 passed (107)
+   Duration  23.39s
 ```
 
 ### 3.2 Backend Pytest Run (`python -m pytest backend/tests/ -v`)
 ```text
-backend/tests/test_auth.py::test_auth_lifecycle PASSED                   [ 33%]
-backend/tests/test_foundation.py::test_health_and_featured_places_pipeline PASSED [ 66%]
-backend/tests/test_itineraries.py::test_itinerary_lifecycle_and_bola_protection PASSED [100%]
+backend/tests/test_auth.py::test_auth_lifecycle PASSED                   [ 10%]
+backend/tests/test_auth.py::test_auth_rate_limiting PASSED              [ 20%]
+backend/tests/test_auth.py::test_google_oauth_security_gates PASSED     [ 30%]
+backend/tests/test_auth.py::test_jwt_secret_startup_validation PASSED   [ 40%]
+backend/tests/test_backup_restore.py::test_backup_restore_drill PASSED   [ 50%]
+backend/tests/test_foundation.py::test_health_and_featured_places_pipeline PASSED [ 60%]
+backend/tests/test_itineraries.py::test_itinerary_lifecycle_and_bola_protection PASSED [ 70%]
+backend/tests/test_itineraries.py::test_suggested_itinerary_engine PASSED [ 80%]
+backend/tests/test_itineraries.py::test_single_stop_patch_and_place_validation PASSED [ 90%]
+backend/tests/test_itineraries.py::test_suggested_generator_radius_and_budget_clustering PASSED [100%]
 
-======================== 3 passed, 1 warning in 3.77s =========================
+======================== 10 passed, 5 warnings in 3.18s ========================
 ```
 
 ### 3.3 Mobile Production Build Run (`npm run build`)
@@ -151,24 +161,26 @@ Exit Code: 0
 
 ---
 
-## 5. Planned Security & Hardening Tests (Phases 11–14)
+## 5. Verified Security & Hardening Tests (Phases 11–14)
 > Ref: [CODE_REVIEW_AUDIT.md](file:///c:/Users/Edward/Desktop/CaseStudy/docs/CODE_REVIEW_AUDIT.md) & [TODO.md](file:///c:/Users/Edward/Desktop/CaseStudy/docs/TODO.md)
 
-- [ ] **BOLA Negative Security Tests (`CR-001`, `CR-002`)**:
+- [x] **BOLA Negative Security Tests (`CR-001`, `CR-002`)**:
   - Test cross-itinerary reorder rejection (`POST /api/v1/itineraries/{id}/reorder` with foreign item ID returns 400).
   - Test cross-itinerary item deletion rejection (`DELETE /api/v1/itineraries/{id}/days/{day_id}/items/{item_id}` returns 404).
-- [ ] **Itinerary Edit Mode Data Retention Test (`CR-003`)**:
+- [x] **Itinerary Edit Mode Data Retention Test (`CR-003`)**:
   - Test that updating an itinerary via `PATCH` with new days and modified stops preserves all days and stops in both PostgreSQL and guest IndexedDB.
-- [ ] **Auth Hardening Tests (`CR-004`, `CR-005`)**:
-  - Assert backend startup fails with default JWT secret in staging/production environments.
-  - Test that Google OAuth login rejects unverified emails (`email_verified is not True`) and deactivated accounts (`is_active = False`).
-- [ ] **Token Refresh & Interceptor Queue Tests (`CR-006`)**:
-  - Test that 401 response triggers `/auth/refresh` and retries pending requests without downgrading user to guest mode.
-- [ ] **Timezone-Agnostic Date Utility Tests (`CR-007`)**:
-  - Unit test suite verifying date calculations behave identically across UTC+8, UTC, and UTC-8 without off-by-one shifts.
-- [ ] **Clustering Radius & Budget Bounds Tests (`CR-008`)**:
-  - Unit tests verifying no POI farther than `default_dest_radius_km` (25km) is recommended and cumulative daily budget is respected.
+- [x] **Auth Hardening Tests (`CR-004`, `CR-005`)**:
+  - Startup validation rejects default JWT secret outside development mode (`test_jwt_secret_startup_validation`).
+  - Google OAuth login rejects unverified emails (`email_verified is not True`) and deactivated accounts (`is_active = False`).
+- [x] **Token Refresh & Interceptor Queue Tests (`CR-006`)**:
+  - 401 response queues requests, refreshes token via `/auth/refresh`, and resumes requests without guest downgrade.
+- [x] **Timezone-Agnostic Date Utility Tests (`CR-007`)**:
+  - Unit test suite (`date.utils.spec.ts`) verifying calendar arithmetic behaves identically across UTC+8, UTC, and UTC-8 without off-by-one shifts.
+- [x] **Clustering Radius & Budget Bounds Tests (`CR-008`)**:
+  - Unit tests (`test_suggested_generator_radius_and_budget_clustering`) verifying no POI farther than `default_dest_radius_km` (25km) is recommended and cumulative daily budget is tracked.
+- [x] **Single-Stop Update & Place Validation Tests (`CR-010`)**:
+  - Unit tests (`test_single_stop_patch_and_place_validation`) verifying `PATCH /api/v1/itineraries/{id}/days/{day_id}/items/{item_id}` and 404 rejection on nonexistent `place_id`.
 - [ ] **End-to-End User Journey Tests (`CR-014`)**:
-  - Modern E2E spec verifying `/welcome` -> `/guest` -> `/tabs/home` -> `/tabs/map` -> `/custom-builder` flows.
+  - Modern Playwright E2E spec verifying `/welcome` -> `/guest` -> `/tabs/home` -> `/tabs/map` -> `/custom-builder` flows (Active in Phase 14).
 
 
