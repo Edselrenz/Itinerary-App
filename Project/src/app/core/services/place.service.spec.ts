@@ -199,5 +199,18 @@ describe('PlaceService', () => {
       );
     });
   });
+  describe('getNearbyPlaces', () => {
+    it('should return curated nearby places for Bongabon by default', () => {
+      const places = service.getNearbyPlaces();
+      expect(places.length).toBeGreaterThanOrEqual(10);
+      expect(places.some((p) => p.municipality === 'Bongabon')).toBe(true);
+    });
+
+    it('should dynamically adapt nearby places to specified municipality', () => {
+      const places = service.getNearbyPlaces('Gapan');
+      expect(places.length).toBeGreaterThanOrEqual(1);
+      expect(places.every((p) => p.municipality.toLowerCase().includes('gapan'))).toBe(true);
+    });
+  });
 });
 

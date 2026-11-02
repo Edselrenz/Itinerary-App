@@ -19,9 +19,9 @@ This plan tracks the 11 sequential milestones defined in the **End-to-End Engine
 | **8** | **Overview, Day View & Sync** | Timeline view, stop detail cards, reactive cross-tab persistence. | Home cards sync immediately after edit. | **COMPLETED** |
 | **9** | **Pilot Security & Tunneling** | Rate limiting (SlowAPI), offline interceptor, backup/restore drills. | Cross-device LAN testing, isolated DB port. | **COMPLETED** |
 | **10** | **QA & Pilot Acceptance** | Full automated verification matrix, 24-point acceptance checklist. | 100% pass across all 24 acceptance criteria. | **COMPLETED** |
-| **11** | **Priority 1: Security & Data-Loss** | Fix BOLA/IDOR (CR-001, CR-002), edit-mode data loss (CR-003), JWT/OAuth hardening (CR-004, CR-005). | Negative BOLA tests pass; edit preserves days; strong secrets enforced. | **ACTIVE** |
-| **12** | **Priority 2: Core Reliability** | Token refresh (CR-006), timezone calendar fixes (CR-007), generator radius/budget (CR-008, CR-009), PATCH stop (CR-010), map routing (CR-011), URL safety (CR-012). | Zero timezone shift; 25km radius bound; auth refresh works seamlessly. | **PENDING** |
-| **13** | **Priority 3: Maintainability** | Clean dead starter files, remove destructive scripts, fix acceptance tautologies (CR-014), memory leaks & typos (CR-015), doc sync (CR-016). | Clean codebase; 0 memory leaks; exact test assertions. | **PENDING** |
+| **11** | **Priority 1: Security & Data-Loss** | Fix BOLA/IDOR (CR-001, CR-002), edit-mode data loss (CR-003), JWT/OAuth hardening (CR-004, CR-005). | Negative BOLA tests pass; edit preserves days; strong secrets enforced. | **COMPLETED** |
+| **12** | **Priority 2: Core Reliability** | Token refresh (CR-006), timezone calendar fixes (CR-007), generator radius/budget (CR-008, CR-009), PATCH stop (CR-010), map routing (CR-011), URL safety (CR-012). | Zero timezone shift; 25km radius bound; auth refresh works seamlessly. | **COMPLETED** |
+| **13** | **Priority 3: Maintainability** | Clean dead starter files, remove destructive scripts, fix acceptance tautologies (CR-014), memory leaks & typos (CR-015), doc sync (CR-016). | Clean codebase; 0 memory leaks; exact test assertions. | **COMPLETED** |
 | **14** | **Priority 4: Performance & E2E** | Cloudflare Tunnel IP rate limiting, SQL generator pre-filtering, OSM batching (CR-013), rewrite modern E2E test suite (CR-014). | Independent remote rate limiting; sub-100ms generation; passing E2E spec. | **PENDING** |
 
 ---
@@ -127,29 +127,29 @@ This plan tracks the 11 sequential milestones defined in the **End-to-End Engine
 
 ## Post-Acceptance Hardening & Optimization Roadmap
 
-### Milestone 11: Priority 1 — Critical Security & Data-Loss Fixes (Active)
-- [ ] **CR-001**: Fix cross-itinerary BOLA in `POST /api/v1/itineraries/{id}/reorder` (`backend/app/api/v1/itineraries.py`). Scope item lookup to `itinerary.days`.
-- [ ] **CR-002**: Fix cross-itinerary BOLA in `DELETE /api/v1/itineraries/{id}/days/{day_id}/items/{item_id}`. Verify `day.itinerary_id == itinerary.id` and `item.day_id == day.id`.
-- [ ] **CR-003**: Fix edit-mode itinerary saving dropping all days and stops (`CustomBuilderPage.saveItinerary()`, `ItineraryService.updateItinerary()`, `PATCH /api/v1/itineraries/{id}`). Extend `ItineraryUpdate` to accept `days`.
-- [ ] **CR-004**: Reject default JWT secret outside development/test mode; enforce `google_oauth_client_id` in token verification; restrict CORS regex to `https://edselrenz.github.io`.
-- [ ] **CR-005**: Require `email_verified is True` in Google OAuth account linking; enforce `user.is_active` check in `authenticate_google_user()`.
+### Milestone 11: Priority 1 — Critical Security & Data-Loss Fixes (Completed)
+- [x] **CR-001**: Fix cross-itinerary BOLA in `POST /api/v1/itineraries/{id}/reorder` (`backend/app/api/v1/itineraries.py`). Scope item lookup to `itinerary.days`.
+- [x] **CR-002**: Fix cross-itinerary BOLA in `DELETE /api/v1/itineraries/{id}/days/{day_id}/items/{item_id}`. Verify `day.itinerary_id == itinerary.id` and `item.day_id == day.id`.
+- [x] **CR-003**: Fix edit-mode itinerary saving dropping all days and stops (`CustomBuilderPage.saveItinerary()`, `ItineraryService.updateItinerary()`, `PATCH /api/v1/itineraries/{id}`). Extend `ItineraryUpdate` to accept `days`.
+- [x] **CR-004**: Reject default JWT secret outside development/test mode; enforce `google_oauth_client_id` in token verification; restrict CORS regex to `https://edselrenz.github.io`.
+- [x] **CR-005**: Require `email_verified is True` in Google OAuth account linking; enforce `user.is_active` check in `authenticate_google_user()`.
 
-### Milestone 12: Priority 2 — Core Reliability & Functional Accuracy
-- [ ] **CR-006**: Implement refresh token rotation in `authInterceptor` and `AuthService.refreshSession()`; prevent silent guest storage fallback on 401.
-- [ ] **CR-007**: Fix timezone off-by-one shifting by creating local calendar date helpers (`toLocalIsoDate`, `parseLocalIsoDate`, `addDaysLocal`).
-- [ ] **CR-008**: Enforce `settings.default_dest_radius_km` (25km) and cumulative daily budget in `backend/app/algorithms/itinerary_generator.py`; escape `%`/`_` in SQL queries.
-- [ ] **CR-009**: Connect online guests to `/api/v1/itineraries/suggest`; filter curated pool by destination/preferences in offline generator; bind wizard chips dynamically.
-- [ ] **CR-010**: Implement `PATCH /api/v1/itineraries/{id}/days/{day_id}/items/{item_id}`; fix `sort_order` default=1 bug; validate `place_id` foreign key.
-- [ ] **CR-011**: Support route queryParams in `MapPage` from Home tab; add `tileerror` listener; render honest pricing & provenance badges in bottom sheet.
-- [ ] **CR-012**: Validate custom API URL; scope Bearer token injection strictly to `environment.apiBaseUrl`.
-- [ ] **CR-013 (F.4)**: Add `--clean --if-exists` to PostgreSQL backup/restore script.
+### Milestone 12: Priority 2 — Core Reliability & Functional Accuracy (Completed)
+- [x] **CR-006**: Implement refresh token rotation in `authInterceptor` and `AuthService.refreshSession()`; prevent silent guest storage fallback on 401.
+- [x] **CR-007**: Fix timezone off-by-one shifting by creating local calendar date helpers (`toLocalIsoDate`, `parseLocalIsoDate`, `addDaysLocal`).
+- [x] **CR-008**: Enforce `settings.default_dest_radius_km` (25km) and cumulative daily budget in `backend/app/algorithms/itinerary_generator.py`; escape `%`/`_` in SQL queries.
+- [x] **CR-009**: Connect online guests to `/api/v1/itineraries/suggest`; filter curated pool by destination/preferences in offline generator; bind wizard chips dynamically.
+- [x] **CR-010**: Implement `PATCH /api/v1/itineraries/{id}/days/{day_id}/items/{item_id}`; fix `sort_order` default=1 bug; validate `place_id` foreign key.
+- [x] **CR-011**: Support route queryParams in `MapPage` from Home tab; add `tileerror` listener; render honest pricing & provenance badges in bottom sheet.
+- [x] **CR-012**: Validate custom API URL; scope Bearer token injection strictly to `environment.apiBaseUrl`.
+- [x] **CR-013 (F.4)**: Add `--clean --if-exists` to PostgreSQL backup/restore script.
 
-### Milestone 13: Priority 3 — Maintainability & Code Quality Cleanup
-- [ ] **CR-014**: Delete 16 dead starter files and remove destructive `setup_steps_0_to_2.py`; replace 7 tautological checks in `verify_acceptance_gate.py`.
-- [ ] **CR-015**: Fix memory leak in `ProfilePage`; wire non-functional buttons; dynamically query nearby places; fix UI copy typos; prune 44 unused image files.
-- [ ] **CR-016**: Synchronize all documentation files (`docs/KNOWN_ISSUES.md`, `docs/DEVELOPMENT_PLAN.md`, `docs/TESTING_DOCUMENTATION.md`).
+### Milestone 13: Priority 3 — Maintainability & Code Quality Cleanup (Completed)
+- [x] **CR-014**: Delete 16 dead starter files and remove destructive `setup_steps_0_to_2.py`; replace 7 tautological checks in `verify_acceptance_gate.py`.
+- [x] **CR-015**: Fix memory leak in `ProfilePage`; wire non-functional buttons; dynamically query nearby places; fix UI copy typos; prune 44 unused image files.
+- [x] **CR-016**: Synchronize all documentation files (`docs/KNOWN_ISSUES.md`, `docs/DEVELOPMENT_PLAN.md`, `docs/TESTING_DOCUMENTATION.md`).
 
-### Milestone 14: Priority 4 — Long-Term Performance & Comprehensive E2E Testing
+### Milestone 14: Priority 4 — Long-Term Performance & Comprehensive E2E Testing (Active)
 - [ ] **CR-013**: Key SlowAPI rate limits by `CF-Connecting-IP` for Cloudflare Tunnel traffic; pre-filter places in SQL; batch OSM imports.
 - [ ] **CR-014**: Rewrite `Project/e2e/app.spec.ts` to test actual user journeys.
 

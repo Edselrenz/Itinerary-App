@@ -232,23 +232,23 @@ This checklist tracks completed, active, and pending tasks across all developmen
 
 ---
 
-## Phase 13: Priority 3 — Maintainability & Code Quality Cleanup (PENDING)
+## Phase 13: Priority 3 — Maintainability & Code Quality Cleanup (COMPLETED)
 > Ref: [CODE_REVIEW_AUDIT.md](file:///c:/Users/Edward/Desktop/CaseStudy/docs/CODE_REVIEW_AUDIT.md) — Starter Files, Quality & Documentation
 
-- [ ] **CR-014**: Clean up dead starter code & strengthen test suite:
-  - [ ] Delete 16 unused starter files from initial Ionic template (`tab1/`, `tab2/`, `tab3/`, `explore-container/`).
-  - [ ] Remove destructive script `scripts/setup_steps_0_to_2.py`.
-  - [ ] Replace 7 tautological checks (`True` or `or True`) in `scripts/verify_acceptance_gate.py` with real assertions.
-- [ ] **CR-015**: Fix UI bugs, memory leaks, typos & unused assets:
-  - [ ] Fix unsubscribed observable memory leak in `ProfilePage` (`Project/src/app/features/profile/profile.page.ts`) by unsubscribing in `ngOnDestroy`.
-  - [ ] Add click handlers or disabled indicators to "Continue with Google" and "Forgot password?" in `login.page.html`.
-  - [ ] Dynamically query nearby places based on destination coordinates in `PlaceService.getNearbyPlaces()`.
-  - [ ] Correct typos: "iternaries" in `welcome.page.html:15`, "won't be save" in `guest.page.html:16`, "Remeber me" in `login.page.html:36`.
-  - [ ] Prune 44 unused SHA-1 hash image files in `Project/src/assets/images/`.
-- [ ] **CR-016**: Synchronize documentation suite:
-  - [ ] Update `docs/KNOWN_ISSUES.md` to reflect completed milestones and track audit findings.
-  - [ ] Update `docs/DEVELOPMENT_PLAN.md` to mark Milestones 7-10 completed and append Phases 11-14.
-  - [ ] Update `docs/PROJECT_STATE.md` with audit status and active roadmap.
+- [x] **CR-014**: Clean up dead starter code & strengthen test suite:
+  - [x] Delete 16 unused starter files from initial Ionic template (`tab1/`, `tab2/`, `tab3/`, `explore-container/`).
+  - [x] Remove destructive script `setup_steps_0_to_2.py`.
+  - [x] Replace 7 tautological checks (`True` or `or True`) in `scripts/verify_acceptance_gate.py` with real assertions.
+- [x] **CR-015**: Fix UI bugs, memory leaks, typos & unused assets:
+  - [x] Fix unsubscribed observable memory leak in `ProfilePage` (`Project/src/app/tabs/profile/profile.page.ts`) by unsubscribing in `ngOnDestroy`.
+  - [x] Add click handlers or disabled indicators to "Continue with Google" and "Forgot password?" in `login.page.html`.
+  - [x] Dynamically query nearby places based on destination coordinates in `PlaceService.getNearbyPlaces()`.
+  - [x] Correct typos: "iternaries" in `welcome.page.html:15`, "won't be save" in `guest.page.html:16`, "Remeber me" in `login.page.html:36`.
+  - [x] Prune 44 unused SHA-1 hash image files in `Project/src/assets/images/`.
+- [x] **CR-016**: Synchronize documentation suite:
+  - [x] Update `docs/KNOWN_ISSUES.md` to reflect completed milestones and track audit findings.
+  - [x] Update `docs/DEVELOPMENT_PLAN.md` to mark Milestones 7-10 completed and append Phases 11-14.
+  - [x] Update `docs/PROJECT_STATE.md` with audit status and active roadmap.
 
 ---
 

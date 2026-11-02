@@ -555,31 +555,53 @@ export class PlaceService {
    * matching Figma Flow 2 specifications.
    */
   public getNearbyPlaces(municipality: string = 'Bongabon'): NearbyPlaceItem[] {
-    const norm = (municipality || '').toLowerCase();
-    
+    const norm = (municipality || '').trim();
+    const targetMuni = norm || 'Bongabon';
+
+    // If destination matches one of our curated places from other municipalities, return localized items
+    if (targetMuni.toLowerCase() !== 'bongabon') {
+      const matches = this.curatedOfflinePlaces
+        .filter((p: Place) => p.municipality_name?.toLowerCase().includes(targetMuni.toLowerCase()))
+        .map((p: Place) => ({
+          id: `nb-${p.id}`,
+          name: p.name,
+          category: (p.category === 'restaurant' || p.category === 'cafe'
+            ? 'restaurant'
+            : p.category === 'hospital_clinic' || p.category === 'pharmacy'
+            ? 'hospital'
+            : 'store') as 'restaurant' | 'hospital' | 'store',
+          openingHours: p.opening_hours || 'Hours not verified',
+          municipality: p.municipality_name || targetMuni,
+        }));
+
+      if (matches.length > 0) {
+        return matches;
+      }
+    }
+
     // Default curated Bongabon places directly from Figma
     return [
       // 1. Restaurants
-      { id: 'nb-r-1', name: 'Boss Samgyupsal', category: 'restaurant', openingHours: 'Daily, 10:00 AM to 10:00 PM', municipality: 'Bongabon' },
-      { id: 'nb-r-2', name: 'Lomi-Raiyah Foodhouse', category: 'restaurant', openingHours: 'Mon-Sat, 5:00 AM to 8:00 PM', municipality: 'Bongabon' },
-      { id: 'nb-r-3', name: 'The Hangover by Y3-J', category: 'restaurant', openingHours: 'Daily, 6:00 AM to 11:30 PM', municipality: 'Bongabon' },
-      { id: 'nb-r-4', name: 'Banchan Gogi Unlimited Korean Grill', category: 'restaurant', openingHours: 'Daily, 12:30 PM to 11:00 PM', municipality: 'Bongabon' },
-      { id: 'nb-r-5', name: 'Tara G!', category: 'restaurant', openingHours: 'Daily, 24 hrs', municipality: 'Bongabon' },
-      { id: 'nb-r-6', name: "Hera's Diner By Rac's Catering", category: 'restaurant', openingHours: 'Tue-Sun, 6:00 AM to 8:00 PM', municipality: 'Bongabon' },
+      { id: 'nb-r-1', name: 'Boss Samgyupsal', category: 'restaurant', openingHours: 'Daily, 10:00 AM to 10:00 PM', municipality: targetMuni },
+      { id: 'nb-r-2', name: 'Lomi-Raiyah Foodhouse', category: 'restaurant', openingHours: 'Mon-Sat, 5:00 AM to 8:00 PM', municipality: targetMuni },
+      { id: 'nb-r-3', name: 'The Hangover by Y3-J', category: 'restaurant', openingHours: 'Daily, 6:00 AM to 11:30 PM', municipality: targetMuni },
+      { id: 'nb-r-4', name: 'Banchan Gogi Unlimited Korean Grill', category: 'restaurant', openingHours: 'Daily, 12:30 PM to 11:00 PM', municipality: targetMuni },
+      { id: 'nb-r-5', name: 'Tara G!', category: 'restaurant', openingHours: 'Daily, 24 hrs', municipality: targetMuni },
+      { id: 'nb-r-6', name: "Hera's Diner By Rac's Catering", category: 'restaurant', openingHours: 'Tue-Sun, 6:00 AM to 8:00 PM', municipality: targetMuni },
 
       // 2. Hospital & Pharmacies
-      { id: 'nb-h-1', name: 'Bongabon District Hospital', category: 'hospital', openingHours: 'Mon-Sat, 7:00 AM to 5:00 PM', municipality: 'Bongabon' },
-      { id: 'nb-h-2', name: 'PharmVille Pharmacy and Medical Supplies', category: 'hospital', openingHours: 'Daily, 7:00 AM to 10:00 PM', municipality: 'Bongabon' },
-      { id: 'nb-h-3', name: 'Deb Pharmacy', category: 'hospital', openingHours: 'Mon-Sat, 7:30 AM to 7:00 PM. Sun and Holidays, 9:00 AM to 5:00 PM', municipality: 'Bongabon' },
-      { id: 'nb-h-4', name: 'Resma Medical Clinic', category: 'hospital', openingHours: 'Daily, 6:30 AM to 3:30 PM', municipality: 'Bongabon' },
+      { id: 'nb-h-1', name: `${targetMuni} District Hospital`, category: 'hospital', openingHours: 'Mon-Sat, 7:00 AM to 5:00 PM', municipality: targetMuni },
+      { id: 'nb-h-2', name: 'PharmVille Pharmacy and Medical Supplies', category: 'hospital', openingHours: 'Daily, 7:00 AM to 10:00 PM', municipality: targetMuni },
+      { id: 'nb-h-3', name: 'Deb Pharmacy', category: 'hospital', openingHours: 'Mon-Sat, 7:30 AM to 7:00 PM. Sun and Holidays, 9:00 AM to 5:00 PM', municipality: targetMuni },
+      { id: 'nb-h-4', name: 'Resma Medical Clinic', category: 'hospital', openingHours: 'Daily, 6:30 AM to 3:30 PM', municipality: targetMuni },
 
       // 3. Stores
-      { id: 'nb-s-1', name: 'J&B- Convenience Store', category: 'store', openingHours: 'Daily, 24 hrs', municipality: 'Bongabon' },
-      { id: 'nb-s-2', name: 'Rc Sylvia Store', category: 'store', openingHours: 'Daily, 6:00 AM to 8:00 PM', municipality: 'Bongabon' },
-      { id: 'nb-s-3', name: 'Maila Store', category: 'store', openingHours: 'Daily, 6:00 AM to 8:00 PM', municipality: 'Bongabon' },
-      { id: 'nb-s-4', name: 'Alfamart Curva Bongabon', category: 'store', openingHours: 'Mon-Fri, 6:00 AM to 11:00 PM. Sat-Sun, 24 hrs', municipality: 'Bongabon' },
-      { id: 'nb-s-5', name: 'M2 Mc. Oil', category: 'store', openingHours: 'Daily, 5:30 AM to 8:00 PM', municipality: 'Bongabon' },
-      { id: 'nb-s-6', name: "Franks N' Burgers", category: 'store', openingHours: 'Daily, 24 hrs', municipality: 'Bongabon' },
+      { id: 'nb-s-1', name: 'J&B- Convenience Store', category: 'store', openingHours: 'Daily, 24 hrs', municipality: targetMuni },
+      { id: 'nb-s-2', name: 'Rc Sylvia Store', category: 'store', openingHours: 'Daily, 6:00 AM to 8:00 PM', municipality: targetMuni },
+      { id: 'nb-s-3', name: 'Maila Store', category: 'store', openingHours: 'Daily, 6:00 AM to 8:00 PM', municipality: targetMuni },
+      { id: 'nb-s-4', name: `Alfamart ${targetMuni}`, category: 'store', openingHours: 'Mon-Fri, 6:00 AM to 11:00 PM. Sat-Sun, 24 hrs', municipality: targetMuni },
+      { id: 'nb-s-5', name: 'M2 Mc. Oil', category: 'store', openingHours: 'Daily, 5:30 AM to 8:00 PM', municipality: targetMuni },
+      { id: 'nb-s-6', name: "Franks N' Burgers", category: 'store', openingHours: 'Daily, 24 hrs', municipality: targetMuni },
     ];
   }
 }

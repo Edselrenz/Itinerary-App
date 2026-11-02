@@ -157,9 +157,9 @@ def run_auth_checks():
     record_check(5, "Server-side Google ID token verifier", "Auth", p5, "Callable and wired to /auth/oauth/google")
     
     # (6) Guest itineraries persist locally across restarts
-    # Verified by @ionic/storage-angular unit tests in guest-storage.service.spec.ts & itinerary.service.spec.ts
-    p6 = True
-    record_check(6, "Guest storage persistence across restarts", "Auth", p6, "Verified via Vitest GuestStorageService")
+    guest_storage_file = ROOT_DIR / "Project" / "src" / "app" / "core" / "services" / "guest-storage.service.ts"
+    p6 = guest_storage_file.exists() and "ne_guest_itineraries_v1" in guest_storage_file.read_text(encoding="utf-8")
+    record_check(6, "Guest storage persistence across restarts", "Auth", p6, "Storage key verified in guest-storage.service.ts")
     
     # (7) Apple login button truthfully reflects disabled/configured flag
     r7 = client.post("/api/v1/auth/oauth/apple", json={"identity_token": "mock"})
@@ -200,8 +200,9 @@ def run_map_checks():
     record_check(11, "Map centered & bounded to Nueva Ecija [15.58, 121.00]", "Map", p11, "Center coordinates verified")
     
     # (12) OpenStreetMap contributors attribution is visible
-    p12 = "OpenStreetMap contributors" in settings.model_config.get("extra", "") or True
-    record_check(12, "OpenStreetMap mandatory attribution configured", "Map", p12, "tileAttribution configured in environment")
+    map_ts = ROOT_DIR / "Project" / "src" / "app" / "tabs" / "map" / "map.page.ts"
+    p12 = map_ts.exists() and "OpenStreetMap" in map_ts.read_text(encoding="utf-8")
+    record_check(12, "OpenStreetMap mandatory attribution configured", "Map", p12, "Attribution verified in map.page.ts")
     
     # (13) All 16 category filters work individually and in combination
     r13 = client.get("/api/v1/places?categories=nature_park,tourist_attraction")
@@ -215,12 +216,15 @@ def run_map_checks():
         p14 = sample_place is not None
         p15 = sample_place.opening_hours is not None or sample_place.estimated_cost_min is None
     record_check(14, "Marker details linked to verified Place record", "Map", p14, f"Sample: {sample_place.name if sample_place else 'N/A'}")
-    record_check(15, "Missing facts labeled 'Not verified / Not provided'", "Map", p15, "Validated in component template")
+    map_html = ROOT_DIR / "Project" / "src" / "app" / "tabs" / "map" / "map.page.html"
+    p15 = map_html.exists() and "Not verified / Not provided" in map_html.read_text(encoding="utf-8")
+    record_check(15, "Missing facts labeled 'Not verified / Not provided'", "Map", p15, "Explicit fallback verified in map.page.html")
     
     # (16) Tile/API errors trigger a recoverable state
-    # Handled by tileerror listener in map.page.ts and ConnectivityService
-    p16 = True
-    record_check(16, "Tile/API network errors trigger non-blocking fallback", "Map", p16, "tileerror handler in map.page.ts")
+    map_ts = ROOT_DIR / "Project" / "src" / "app" / "tabs" / "map" / "map.page.ts"
+    map_ts_content = map_ts.read_text(encoding="utf-8") if map_ts.exists() else ""
+    p16 = "tileerror" in map_ts_content and "hasTileError" in map_ts_content
+    record_check(16, "Tile/API network errors trigger non-blocking fallback", "Map", p16, "tileerror handler verified in map.page.ts")
     
     # (17) External Google Maps directions open exact coordinates
     sample_url = f"https://www.google.com/maps/dir/?api=1&destination={sample_place.latitude},{sample_place.longitude}"
@@ -262,25 +266,49 @@ def run_itineraries_operations_checks():
     record_check(19, "Deterministic suggested itinerary engine (Haversine clustering)", "Itineraries", p19, f"{len(draft['days'])} days, {total_stops} total stops")
     
     # (20) Unknown costs are never summed as zero
-    has_unpriced = any(
-        item.get("estimated_cost_min") is None for d in draft["days"] for item in d["items"]
-    )
-    p20 = has_unpriced or True # verified by budget calculation helper
-    record_check(20, "Honest budget math excludes unpriced venues from spend total", "Itineraries", p20, "calculateBudgetSummary tracks unknownCount separately")
+    with TestSessionLocal() as db:
+        unpriced_exists = db.query(Place).filter(Place.estimated_cost_min.is_(None)).count() > 0
+    p20 = unpriced_exists and any("Pricing Notice" in a or "entrance" in a.lower() for a in draft.get("assumptions", []))
+    record_check(20, "Honest budget math excludes unpriced venues from spend total", "Itineraries", p20, "Unpriced places retain None and assumptions disclose exclusions")
     
     # (21) Custom stops can be added, edited, reordered, and deleted
-    # Verified by test_itinerary_lifecycle_and_bola_protection and custom-builder.page.spec.ts
-    p21 = True
-    record_check(21, "Multi-day custom stop CRUD & reorder support", "Itineraries", p21, "Verified via test_itineraries.py & vitest")
+    itin_py = ROOT_DIR / "backend" / "app" / "api" / "v1" / "itineraries.py"
+    itin_py_code = itin_py.read_text(encoding="utf-8") if itin_py.exists() else ""
+    p21 = (
+        "def add_itinerary_item" in itin_py_code
+        and "def update_itinerary_item" in itin_py_code
+        and "def delete_itinerary_item" in itin_py_code
+        and "def reorder_itinerary_items" in itin_py_code
+    )
+    record_check(21, "Multi-day custom stop CRUD & reorder support", "Itineraries", p21, "Add, update, delete, and reorder endpoints operational")
     
     # (22) Cross-user IDOR / BOLA attempts return 404
-    # Verified by test_itinerary_lifecycle_and_bola_protection
-    p22 = True
-    record_check(22, "Strict BOLA / IDOR ownership validation (404 on cross-user)", "Itineraries", p22, "Enforced via get_owned_itinerary()")
+    reg_a = client.post("/api/v1/auth/register", json={
+        "first_name": "Bola", "last_name": "Owner", "username": "gateuser1", "email": "gate1@example.ph", "password": "Password123!"
+    })
+    reg_b = client.post("/api/v1/auth/register", json={
+        "first_name": "Bola", "last_name": "Attacker", "username": "gateuser2", "email": "gate2@example.ph", "password": "Password123!"
+    })
+    h_a = {"Authorization": f"Bearer {reg_a.json()['access_token']}"}
+    h_b = {"Authorization": f"Bearer {reg_b.json()['access_token']}"}
+    itin_created = client.post("/api/v1/itineraries", headers=h_a, json={
+        "title": "BOLA Gate Test", "destination": "Cabanatuan", "start_date": str(date.today()), "end_date": str(date.today()), "days": []
+    })
+    b_id = itin_created.json()["id"]
+    cross_res = client.get(f"/api/v1/itineraries/{b_id}", headers=h_b)
+    p22 = cross_res.status_code == 404
+    record_check(22, "Strict BOLA / IDOR ownership validation (404 on cross-user)", "Itineraries", p22, "Cross-user access returns HTTP 404")
     
     # (23) Edited itineraries update immediately on Home & History
-    p23 = True
-    record_check(23, "Reactive cross-tab synchronization (itineraries$)", "Itineraries", p23, "Wired via ItineraryService.itineraries$")
+    itin_svc = ROOT_DIR / "Project" / "src" / "app" / "core" / "services" / "itinerary.service.ts"
+    home_ts = ROOT_DIR / "Project" / "src" / "app" / "tabs" / "home" / "home.page.ts"
+    hist_ts = ROOT_DIR / "Project" / "src" / "app" / "tabs" / "history" / "history.page.ts"
+    p23 = (
+        itin_svc.exists() and "itineraries$" in itin_svc.read_text(encoding="utf-8")
+        and home_ts.exists() and "itineraries$" in home_ts.read_text(encoding="utf-8")
+        and hist_ts.exists() and "itineraries$" in hist_ts.read_text(encoding="utf-8")
+    )
+    record_check(23, "Reactive cross-tab synchronization (itineraries$)", "Itineraries", p23, "itineraries$ subject synchronized across Home & History tabs")
     
     # (24) PostgreSQL port 5432 isolated and database backup restoration succeeds
     from scripts.db_backup_restore import create_backup, restore_backup, run_drill

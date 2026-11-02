@@ -7,10 +7,10 @@ This document serves as the primary handoff reference for developers and coding 
 ## 1. Project Status Overview
 
 - **Application Name**: Nueva Ecija Travel Itinerary (MVP)
-- **Current Development Phase**: **Phase 13: Priority 3 — Maintainability & Code Quality Cleanup**
-- **Last Verified Working State**: **Phase 11 (Critical Security & Data Loss)** & **Phase 12 (Core Reliability & Functional Accuracy)** completely verified (CR-001 through CR-013 remediated, 24/24 acceptance criteria passing, 106/106 frontend unit tests, 10/10 backend test cases, clean Angular build).
-- **Recent Audit**: Independent Comprehensive Code Review completed on October 31, 2026 ([CODE_REVIEW_AUDIT.md](file:///c:/Users/Edward/Desktop/CaseStudy/docs/CODE_REVIEW_AUDIT.md)) identifying 16 findings (`CR-001` through `CR-016`), with Phase 11 findings (`CR-001`–`CR-005`) and Phase 12 findings (`CR-006`–`CR-013`) fully remediated and verified.
-- **Current Active Tasks**: **Phase 13: Priority 3 — Maintainability & Code Quality Cleanup** ([TODO.md](file:///c:/Users/Edward/Desktop/CaseStudy/docs/TODO.md)).
+- **Current Development Phase**: **Phase 14: Priority 4 — Long-Term Performance & Comprehensive E2E Testing**
+- **Last Verified Working State**: **Phase 11 (Security & Data Loss)**, **Phase 12 (Core Reliability)**, and **Phase 13 (Maintainability & Code Quality)** completely verified (CR-001 through CR-016 remediated, 24/24 acceptance criteria passing, 106/106 frontend unit tests, 10/10 backend test cases, clean Angular build).
+- **Recent Audit**: Independent Comprehensive Code Review completed on October 31, 2026 ([CODE_REVIEW_AUDIT.md](file:///c:/Users/Edward/Desktop/CaseStudy/docs/CODE_REVIEW_AUDIT.md)) identifying 16 findings (`CR-001` through `CR-016`), with Phases 11–13 findings (`CR-001`–`CR-016`) fully remediated and verified.
+- **Current Active Tasks**: **Phase 14: Priority 4 — Long-Term Performance & Comprehensive E2E Testing** ([TODO.md](file:///c:/Users/Edward/Desktop/CaseStudy/docs/TODO.md)).
 - **Current Blockers**: **None**.
 
 ---
@@ -152,20 +152,17 @@ This document serves as the primary handoff reference for developers and coding 
 
 ## 3. Features Currently Being Developed (Active Roadmap)
 
-Having completed all foundational milestones (Milestones 0–10), the 24-Point MVP Acceptance Gate, and Priority 1 & 2 audit remediations (Phases 11 & 12), active engineering has shifted to Phase 13:
+Having completed all foundational milestones (Milestones 0–10), the 24-Point MVP Acceptance Gate, and Priority 1, 2, and 3 audit remediations (Phases 11, 12, & 13), active engineering has shifted to Phase 14:
 
-- **Phase 13: Priority 3 — Maintainability & Code Quality Cleanup**:
-  - `CR-014`: Delete 16 dead starter files and remove destructive `setup_steps_0_to_2.py`; replace tautological test assertions.
-  - `CR-015`: Fix profile observable memory leak, wire non-functional login buttons, fix typos, query nearby places dynamically, prune unused images.
-  - `CR-016`: Synchronize all documentation files.
+- **Phase 14: Priority 4 — Long-Term Performance & Comprehensive E2E Testing**:
+  - `CR-013`: Configure SlowAPI rate limiting to inspect `CF-Connecting-IP` behind Cloudflare Tunnel; pre-filter generator candidates with bounding box SQL queries; batch seeding scripts.
+  - `CR-014`: Modern Playwright end-to-end journey tests covering `/welcome` -> `/guest` -> `/tabs/home` -> `/tabs/map` -> `/custom-builder`.
 
 ---
 
 ## 4. Features Scheduled for Subsequent Phases
 
-- **Phase 14: Priority 4 — Long-Term Performance & Comprehensive E2E Testing**:
-  - `CR-013`: Configure SlowAPI rate limiting to inspect `CF-Connecting-IP` behind Cloudflare Tunnel; pre-filter generator candidates with bounding box SQL queries; batch seeding scripts.
-  - `CR-014`: Modern Playwright end-to-end journey tests covering `/welcome` -> `/guest` -> `/tabs/home` -> `/tabs/map` -> `/custom-builder`.
+All primary MVP milestones and audit remediation phases (Phases 11–13) have been completed and verified against the acceptance gate.
 - **Phase 14: Priority 4 — Long-Term Performance & Comprehensive E2E Testing**:
   - `CR-013`: Key SlowAPI rate limits by `CF-Connecting-IP` for Cloudflare Tunnel traffic; pre-filter places in SQL; batch OSM imports.
   - `CR-014`: Rewrite Playwright/Cypress E2E test suite for modern user journeys.

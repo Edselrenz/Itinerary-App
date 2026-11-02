@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { CommonModule, DatePipe } from '@angular/common';
 import { Router } from '@angular/router';
 import {
@@ -42,10 +43,11 @@ import { GuestMigrationService } from '../../core/services/guest-migration.servi
     IonSpinner,
   ],
 })
-export class ProfilePage implements OnInit {
+export class ProfilePage implements OnInit, OnDestroy {
   public currentUser: User | null = null;
   public guestItineraryCount = 0;
   public isMigrating = false;
+  private userSub?: Subscription;
 
   constructor(
     private router: Router,
@@ -65,10 +67,14 @@ export class ProfilePage implements OnInit {
   }
 
   public ngOnInit(): void {
-    this.authService.currentUser$.subscribe((user) => {
+    this.userSub = this.authService.currentUser$.subscribe((user) => {
       this.currentUser = user;
       this.refreshGuestCount();
     });
+  }
+
+  public ngOnDestroy(): void {
+    this.userSub?.unsubscribe();
   }
 
   public ionViewWillEnter(): void {
