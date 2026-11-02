@@ -48,80 +48,81 @@ All original core MVP milestones (Milestones 0 through 10) have been successfull
 
 ---
 
-## 4. Code Review Audit Findings & Pending Remediations
+## 4. Code Review Audit Findings & Remediation Status
 
-An independent code review conducted on October 31, 2026 identified 16 findings across security, data integrity, core functionality, and code quality. Full analysis is documented in [CODE_REVIEW_AUDIT.md](file:///c:/Users/Edward/Desktop/CaseStudy/docs/CODE_REVIEW_AUDIT.md) and tracked in [TODO.md](file:///c:/Users/Edward/Desktop/CaseStudy/docs/TODO.md).
+An independent code review conducted on October 31, 2026 identified 16 findings across security, data integrity, core functionality, and code quality. Full analysis is documented in [CODE_REVIEW_AUDIT.md](file:///c:/Users/Edward/Desktop/CaseStudy/docs/CODE_REVIEW_AUDIT.md) and tracked in [TODO.md](file:///c:/Users/Edward/Desktop/CaseStudy/docs/TODO.md). All 16 findings have been remediated and verified across Phases 11–14:
 
-### 4.1 Critical Severity
+### 4.1 Critical Severity (Remediated in Phase 11)
 - **CR-001 (BOLA in Itinerary Reorder)**:
-  - **Issue**: `POST /api/v1/itineraries/{id}/reorder` does not verify `item.day_id` belongs to `itinerary.days`.
-  - **Target**: Phase 11 (`backend/app/api/v1/itineraries.py`).
-  - **Status**: Pending Fix.
+  - **Issue**: `POST /api/v1/itineraries/{id}/reorder` did not verify `item.day_id` belongs to `itinerary.days`.
+  - **Resolution**: Scoped item query to `itinerary.days`; returns HTTP 400 Bad Request on foreign items with regression test.
+  - **Status**: **Resolved & Verified (Phase 11)**.
 - **CR-002 (BOLA / IDOR in Stop Deletion)**:
-  - **Issue**: `DELETE /api/v1/itineraries/{id}/days/{day_id}/items/{item_id}` deletes item without scoping to `day_id` or `itinerary_id`.
-  - **Target**: Phase 11 (`backend/app/api/v1/itineraries.py`).
-  - **Status**: Pending Fix.
+  - **Issue**: `DELETE /api/v1/itineraries/{id}/days/{day_id}/items/{item_id}` deleted item without scoping to `day_id` or `itinerary_id`.
+  - **Resolution**: Added verification `day.itinerary_id == itinerary.id` and `item.day_id == day.id`; returns HTTP 404 with negative test.
+  - **Status**: **Resolved & Verified (Phase 11)**.
 
-### 4.2 High Severity
+### 4.2 High Severity (Remediated in Phases 11 & 12)
 - **CR-003 (Silent Data Loss in Itinerary Edit Mode)**:
-  - **Issue**: `CustomBuilderPage.saveItinerary()` in edit mode calls `updateItinerary()` without `days`, dropping all day additions, removals, and stop edits upon save.
-  - **Target**: Phase 11 (`Project/src/app/features/itinerary/custom-builder/custom-builder.page.ts`, `backend/app/api/v1/itineraries.py`, `backend/app/schemas/itinerary.py`).
-  - **Status**: Pending Fix.
+  - **Issue**: `CustomBuilderPage.saveItinerary()` in edit mode called `updateItinerary()` without `days`, dropping all days and stops.
+  - **Resolution**: Extended backend `ItineraryUpdate` to accept `days`; updated builder, service, and PATCH endpoint to synchronize days/stops transactionally.
+  - **Status**: **Resolved & Verified (Phase 11)**.
 - **CR-004 (JWT Secret Fallback, OAuth Audience & CORS Scope)**:
-  - **Issue**: Default JWT secret not blocked in non-dev environments; `google_oauth_client_id` empty allows arbitrary token audiences (`audience=None`); wildcard CORS regex `r"^https://.*\.github\.io$"`.
-  - **Target**: Phase 11 (`backend/app/core/config.py`, `backend/app/services/auth_service.py`).
-  - **Status**: Pending Fix.
+  - **Issue**: Default JWT secret not blocked in non-dev environments; `google_oauth_client_id` allowed arbitrary token audiences; wildcard CORS regex.
+  - **Resolution**: Added startup check rejecting default JWT secret; enforced `google_oauth_client_id` presence; tightened CORS to `https://edselrenz.github.io`.
+  - **Status**: **Resolved & Verified (Phase 11)**.
 - **CR-005 (Google OAuth Account Takeover & Deactivated User Bypass)**:
-  - **Issue**: Google account links by email without verifying `email_verified is True`; deactivated users (`is_active=False`) can authenticate via Google OAuth.
-  - **Target**: Phase 11 (`backend/app/services/auth_service.py`).
-  - **Status**: Pending Fix.
+  - **Issue**: Google account linked by email without verifying `email_verified is True`; deactivated users could authenticate via Google OAuth.
+  - **Resolution**: Enforced `payload.get("email_verified") is True`; added `user.is_active` check returning HTTP 403 on inactive accounts.
+  - **Status**: **Resolved & Verified (Phase 11)**.
 - **CR-006 (Missing Token Refresh & Silent Guest Downgrade)**:
-  - **Issue**: Client never calls `/auth/refresh`; 401 triggers `ItineraryService` catchError which silently downgrades the user to guest storage instead of refreshing session.
-  - **Target**: Phase 12 (`Project/src/app/core/interceptors/auth.interceptor.ts`, `Project/src/app/core/services/itinerary.service.ts`, `auth.service.ts`).
-  - **Status**: Pending Fix.
+  - **Issue**: Client never called `/auth/refresh`; 401 triggered silent downgrade to guest storage.
+  - **Resolution**: Implemented token refresh queuing in `authInterceptor`; added `refreshSession()` and JWT expiration check; restricted guest fallback strictly to network outages.
+  - **Status**: **Resolved & Verified (Phase 12)**.
 - **CR-007 (Timezone Off-by-One Shifting in Date Parsing)**:
-  - **Issue**: `new Date("YYYY-MM-DD")` UTC midnight parsing and `toISOString().split('T')[0]` shifts dates in UTC+8 (Philippine Time).
-  - **Target**: Phase 12 (`Project/src/app/core/utils/date.utils.ts`, wizard, builder, detail pages).
-  - **Status**: Pending Fix.
+  - **Issue**: `new Date("YYYY-MM-DD")` UTC midnight parsing shifted dates in UTC+8 (Philippine Time).
+  - **Resolution**: Created centralized date utilities (`Project/src/app/core/utils/date.utils.ts`) with unit test suite across timezones.
+  - **Status**: **Resolved & Verified (Phase 12)**.
 
-### 4.3 Medium Severity
+### 4.3 Medium Severity (Remediated in Phases 12 & 14)
 - **CR-008 (Generator Ignores Dest Radius, Budget Flaws & Unescaped SQL)**:
-  - **Issue**: `default_dest_radius_km` (25km) not enforced; budget filter checks cost per stop instead of cumulative daily budget; SQL `.ilike()` does not escape `%`/`_`.
-  - **Target**: Phase 12 (`backend/app/algorithms/itinerary_generator.py`, `backend/app/api/v1/places.py`).
-  - **Status**: Pending Fix.
+  - **Issue**: `default_dest_radius_km` (25km) not enforced; budget filter checked cost per stop; SQL `.ilike()` did not escape `%`/`_`.
+  - **Resolution**: Enforced 25km cluster radius; maintained cumulative daily budget tracker; added `escape_like()` helper.
+  - **Status**: **Resolved & Verified (Phase 12)**.
 - **CR-009 (Offline Suggested Generator Ignores Inputs & Hardcoded UI Chips)**:
-  - **Issue**: Guests bypass backend generator even when online; offline generator ignores destination/budget/preferences; wizard template has hardcoded chips.
-  - **Target**: Phase 12 (`Project/src/app/core/services/itinerary.service.ts`, `suggested-wizard.page.html`).
-  - **Status**: Pending Fix.
+  - **Issue**: Guests bypassed backend generator when online; offline generator ignored destination/preferences; wizard template had hardcoded chips.
+  - **Resolution**: Connected online guests to `/api/v1/itineraries/suggest`; filtered curated pool by destination/preferences; dynamically bound wizard chips.
+  - **Status**: **Resolved & Verified (Phase 12)**.
 - **CR-010 (Missing Single-Stop PATCH, Sort Order Bug & Missing Place Check)**:
-  - **Issue**: No PATCH endpoint for single stop notes/cost; `add_itinerary_item` sort_order default bug; `create_itinerary` missing `place_id` foreign key check.
-  - **Target**: Phase 12 (`backend/app/api/v1/itineraries.py`, `backend/app/schemas/itinerary.py`).
-  - **Status**: Pending Fix.
+  - **Issue**: No PATCH endpoint for single stop; `add_itinerary_item` sort_order default bug; `create_itinerary` missing `place_id` foreign key check.
+  - **Resolution**: Implemented `PATCH /days/{day_id}/items/{item_id}`; fixed sort_order auto-increment; added foreign key 404 validation.
+  - **Status**: **Resolved & Verified (Phase 12)**.
 - **CR-011 (Map Page Ignores Query Params, Tile Error & Bottom Sheet Honesty)**:
-  - **Issue**: Route queryParams from Home tab ignored by map; no `tileerror` listener; bottom sheet lacks explicit "Not verified / Not provided" labels.
-  - **Target**: Phase 12 (`Project/src/app/features/map/map.page.ts`, `map.page.html`).
-  - **Status**: Pending Fix.
+  - **Issue**: Route queryParams from Home tab ignored; no tileerror listener; bottom sheet lacked explicit "Not verified / Not provided" labels.
+  - **Resolution**: Injected `ActivatedRoute` in `MapPage` to center on coordinates; added Leaflet tileerror banner; rendered honest pricing & provenance badges.
+  - **Status**: **Resolved & Verified (Phase 12)**.
 - **CR-012 (Unvalidated Custom API URL & Bearer Token Exfiltration Risk)**:
-  - **Issue**: `ConnectivityService.setCustomApiUrl()` accepts unvalidated URLs; `authInterceptor` attaches Bearer token without checking origin starts with `apiBaseUrl`.
-  - **Target**: Phase 12 (`Project/src/app/core/services/connectivity.service.ts`, `Project/src/app/core/interceptors/auth.interceptor.ts`).
-  - **Status**: Pending Fix.
-- **CR-013 (Cloudflare Tunnel Rate Limiting, Generator Pre-Filtering & N+1 Queries)**:
-  - **Issue**: SlowAPI keys on `127.0.0.1` for all tunnel users; `itinerary_generator` loads all 4,400+ places into memory; $N+1$ queries in seeding; `db_backup_restore.py` restore lacks `--clean --if-exists`.
-  - **Target**: Phase 12 (backup restore) & Phase 14 (`backend/app/api/v1/auth.py`, `itinerary_generator.py`, `scripts/`).
-  - **Status**: Pending Fix.
+  - **Issue**: `ConnectivityService.setCustomApiUrl()` accepted unvalidated URLs; `authInterceptor` attached Bearer token without checking origin starts with `apiBaseUrl`.
+  - **Resolution**: Validated URL protocol (`https://` or `http://localhost`); scoped Bearer token injection strictly to `environment.apiBaseUrl`.
+  - **Status**: **Resolved & Verified (Phase 12)**.
+- **CR-013 (Cloudflare Tunnel Rate Limiting, Generator Pre-Filtering & Seeding Optimization)**:
+  - **Issue**: SlowAPI keyed on `127.0.0.1` for all tunnel users; `itinerary_generator` loaded all 4,400+ places into memory; N+1 queries in seeding; `pg_dump` lacked `--clean --if-exists`.
+  - **Resolution**: Added `--clean --if-exists` to backup script; SlowAPI keys on `CF-Connecting-IP` / `X-Forwarded-For`; generator pre-filters candidates via SQL coordinate bounding box; seeding scripts batch lookups with `in_()`.
+  - **Status**: **Resolved & Verified (Phases 12 & 14)**.
 
-### 4.4 Low & Informational Severity
+### 4.4 Low & Informational Severity (Remediated in Phases 13 & 14)
 - **CR-014 (Outdated E2E Test, Dead Starter Code & Tautological Checks)**:
-  - **Issue**: E2E spec tests for Tab 1; 16 dead starter files in `Project/src/app/`; 7 tautological checks in `verify_acceptance_gate.py`; destructive `setup_steps_0_to_2.py`.
-  - **Target**: Phase 13 & Phase 14.
-  - **Status**: Pending Fix.
+  - **Issue**: E2E spec tested for Tab 1; 16 dead starter files; 7 tautological checks in `verify_acceptance_gate.py`; destructive `setup_steps_0_to_2.py`.
+  - **Resolution**: Deleted 16 dead starter files and destructive script; replaced 7 tautological checks with genuine assertions; rewrote `Project/e2e/app.spec.ts` with modern Playwright user journeys (`/welcome` -> `/guest` -> `/tabs/home` -> `/tabs/map` -> `/custom-builder`).
+  - **Status**: **Resolved & Verified (Phases 13 & 14)**.
 - **CR-015 (Profile Memory Leak, Non-Functional Buttons, Typos & Unused Images)**:
   - **Issue**: Unsubscribed observable in `ProfilePage`; non-functional buttons on login page; Bongabon-only nearby places; UI copy typos; 44 unused image files.
-  - **Target**: Phase 13.
-  - **Status**: Pending Fix.
+  - **Resolution**: Added `ngOnDestroy` unsubscription; parameterized `PlaceService.getNearbyPlaces()`; fixed copy typos; pruned 44 unused SHA-1 images.
+  - **Status**: **Resolved & Verified (Phase 13)**.
 - **CR-016 (Documentation Discrepancies)**:
   - **Issue**: Stale documentation showing completed milestones as pending.
-  - **Target**: Phase 13 (`docs/`).
-  - **Status**: Addressed / In Sync.
+  - **Resolution**: Synchronized complete documentation suite (`KNOWN_ISSUES.md`, `DEVELOPMENT_PLAN.md`, `DEVELOPMENT_LOG.md`, `CHANGELOG.md`, `PROJECT_STATE.md`, `TODO.md`, `TESTING_DOCUMENTATION.md`).
+  - **Status**: **Resolved & Verified (Phases 13 & 14)**.
+
 
 

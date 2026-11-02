@@ -217,28 +217,37 @@ def import_osm_payload(
     inserted = 0
     updated = 0
     if not dry_run:
-        for rec in validated_records:
-            existing = db.scalar(
-                select(Place).where(
-                    Place.source_name == rec["source_name"],
-                    Place.source_record_id == rec["source_record_id"],
-                )
-            )
-            if existing:
-                existing.name = rec["name"]
-                existing.category = rec["category"]
-                existing.latitude = rec["latitude"]
-                existing.longitude = rec["longitude"]
-                existing.municipality_id = rec["municipality_id"]
-                existing.address_text = rec["address_text"] or existing.address_text
-                existing.phone = rec["phone"] or existing.phone
-                existing.website = rec["website"] or existing.website
-                existing.opening_hours = rec["opening_hours"] or existing.opening_hours
-                existing.imported_at = rec["imported_at"]
-                updated += 1
-            else:
-                db.add(Place(**rec))
-                inserted += 1
+        # CR-013: Batch query existing records in chunks of 500 to eliminate N+1 round trips
+        chunk_size = 500
+        for i in range(0, len(validated_records), chunk_size):
+            chunk = validated_records[i : i + chunk_size]
+            record_ids = [r["source_record_id"] for r in chunk]
+            existing_map = {
+                p.source_record_id: p
+                for p in db.scalars(
+                    select(Place).where(
+                        Place.source_name == "OpenStreetMap",
+                        Place.source_record_id.in_(record_ids),
+                    )
+                ).all()
+            }
+            for rec in chunk:
+                existing = existing_map.get(rec["source_record_id"])
+                if existing:
+                    existing.name = rec["name"]
+                    existing.category = rec["category"]
+                    existing.latitude = rec["latitude"]
+                    existing.longitude = rec["longitude"]
+                    existing.municipality_id = rec["municipality_id"]
+                    existing.address_text = rec["address_text"] or existing.address_text
+                    existing.phone = rec["phone"] or existing.phone
+                    existing.website = rec["website"] or existing.website
+                    existing.opening_hours = rec["opening_hours"] or existing.opening_hours
+                    existing.imported_at = rec["imported_at"]
+                    updated += 1
+                else:
+                    db.add(Place(**rec))
+                    inserted += 1
         db.commit()
 
     return {

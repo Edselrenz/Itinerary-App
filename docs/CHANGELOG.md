@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [0.14.0-rc.5] - 2026-11-02
+### Added
+- **CR-013**: Configured SlowAPI rate-limiting key function `get_client_ip` in `backend/app/core/limiter.py` to inspect `CF-Connecting-IP` and `X-Forwarded-For` when requests arrive from local proxies or Cloudflare Tunnel (`127.0.0.1`, `localhost`, `::1`, `testclient`). Added test coverage in `test_auth.py`.
+- **CR-014**: Modern Playwright E2E journey test suite in `Project/e2e/app.spec.ts` covering root redirection, guest authentication, tab switching between Home and Map, and the Custom Itinerary Builder travel questionnaire. Verified with `npm run typecheck:e2e`.
+
+### Optimized
+- **CR-013**: Implemented SQL coordinate bounding box pre-filtering in `backend/app/algorithms/itinerary_generator.py` to filter candidates at the database query level instead of loading all 4,400+ POIs into Python memory.
+- **CR-013**: Batch queried existing records using `Place.source_record_id.in_()` in chunks of 500 in `scripts/import_osm.py` and `scripts/seed_featured_places.py`, eliminating N+1 round trips.
+
+---
+
 ## [0.13.0-rc.4] - 2026-11-02
 ### Removed
 - **CR-014**: Deleted 16 dead starter files from initial Ionic template generation (`tab1/`, `tab2/`, `tab3/`, `explore-container/`).

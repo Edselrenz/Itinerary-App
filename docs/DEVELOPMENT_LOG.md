@@ -1131,3 +1131,35 @@ This log records chronological development sessions, detailing objectives, execu
   - `python scripts/verify_acceptance_gate.py`: **24/24 checks passed [100.0%]** with real assertions.
   - `npm --prefix Project run test:unit`: **14/14 test files, 107/107 unit tests passed [100%]**.
   - `npm --prefix Project run build`: **0 compilation errors, production build successful [100%]**.
+
+---
+
+## Session 40: Phase 14 - Priority 4: Long-Term Performance & Comprehensive E2E Testing
+- **Date & Time**: 2026-11-02 08:45:00 (Local)
+- **Objective**: Implement Cloudflare Tunnel rate limiting, generator SQL candidate bounding box pre-filtering, batch seeding queries, and modern Playwright E2E test suite (`CR-013` & `CR-014`).
+- **Key Enhancements**:
+  - **CR-013 (Cloudflare Tunnel Rate Limiting Key Function)**:
+    - Implemented custom `get_client_ip(request: Request)` in `backend/app/core/limiter.py` that extracts `CF-Connecting-IP` (or first IP of `X-Forwarded-For`) when `request.client.host` is local (`127.0.0.1`, `localhost`, `::1`, `testclient`), while direct remote sockets continue to key on `client_host` to prevent spoofing.
+    - Wired `Limiter(key_func=get_client_ip, ...)` in `limiter.py`.
+    - Added unit test cases `test_cloudflare_tunnel_ip_resolution()` and `test_auth_rate_limiting_isolated_by_cloudflare_ip()` in `backend/tests/test_auth.py`, proving isolated rate limit buckets per tunnel client.
+  - **CR-013 (Generator SQL Bounding Box Candidate Pre-Filtering)**:
+    - Updated `backend/app/algorithms/itinerary_generator.py` in `generate_suggested_itinerary_data()`: when a specific destination is resolved, candidate places are pre-filtered in SQL via `Place.latitude.between(...)` and `Place.longitude.between(...)` using `cluster_radius_km` + 10km buffer.
+    - Eliminates fetching the entire 4,400+ POI database table into Python memory on every generator call.
+    - Added unit test `test_generator_sql_bounding_box_pre_filtering()` in `backend/tests/test_itineraries.py`.
+  - **CR-013 (Batch Place Lookups in Seeding Scripts)**:
+    - Updated `scripts/import_osm.py` to chunk records into batches of 500 and query existing places with `Place.source_record_id.in_(record_ids)` and `Place.source_name == "OpenStreetMap"`.
+    - Updated `scripts/seed_featured_places.py` to batch query existing municipalities and curated places using `in_()`.
+  - **CR-014 (Modern Playwright E2E Test Suite)**:
+    - Replaced outdated `Tab 1 page` test in `Project/e2e/app.spec.ts` with comprehensive user journeys:
+      1. Root url redirect to `/welcome` with brand and action elements.
+      2. Guest journey from `/welcome` through `/guest` to `/tabs/home`.
+      3. Seamless tab navigation between `/tabs/home` and `/tabs/map` with map canvas assertion.
+      4. Custom Itinerary Builder navigation from Home action card to `/custom-builder` verifying the travel questionnaire.
+      5. Direct deep-linking navigation to `/tabs/map` and `/custom-builder`.
+    - Verified compilation with `npm run typecheck:e2e` (`tsc -p tsconfig.e2e.json` exiting with code 0).
+- **Verification & Test Results**:
+  - `python -m pytest backend/tests/ -v`: **13/13 backend test cases passed [100%]**.
+  - `python scripts/verify_acceptance_gate.py`: **24/24 checks passed [100.0%]**.
+  - `npm --prefix Project run test:unit`: **14/14 test suites, 107/107 unit tests passed [100%]**.
+  - `npm --prefix Project run build`: **0 compilation errors, production build successful [100%]** (`styles` transfer size 9.69 kB).
+

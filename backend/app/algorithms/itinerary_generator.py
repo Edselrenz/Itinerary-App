@@ -169,29 +169,51 @@ def generate_suggested_itinerary_data(
     anchor_lat, anchor_lng, resolved_area = resolve_geographic_anchor(db, request.destination)
     preferred_categories = resolve_preference_categories(request.preferences)
 
-    # 3. Fetch all active POIs within Nueva Ecija
-    candidate_places: list[Place] = list(
-        db.scalars(
-            select(Place)
-            .where(Place.is_active == True)
-            .options(selectinload(Place.municipality))
-        ).all()
-    )
-
-    if not candidate_places:
-        raise ValueError("No active destinations found in Nueva Ecija database.")
-
-    # Enforce default destination radius when a specific destination is resolved
+    # 3. Fetch candidate POIs (CR-013: SQL bounding-box pre-filtering)
     cluster_radius_km = settings.default_dest_radius_km
+    candidate_places: list[Place] = []
+
     if resolved_area != "Nueva Ecija":
+        # Pre-filter candidates in SQL using coordinate bounding box around target anchor
+        lat_buffer = (cluster_radius_km + 10.0) / 111.0
+        lng_cos = max(0.1, math.cos(math.radians(anchor_lat)))
+        lng_buffer = (cluster_radius_km + 10.0) / (111.0 * lng_cos)
+
+        bbox_query = (
+            select(Place)
+            .where(
+                Place.is_active == True,
+                Place.latitude.between(anchor_lat - lat_buffer, anchor_lat + lat_buffer),
+                Place.longitude.between(anchor_lng - lng_buffer, anchor_lng + lng_buffer),
+            )
+            .options(selectinload(Place.municipality))
+        )
+        candidates = list(db.scalars(bbox_query).all())
+
+        # Refine candidates with exact haversine distance within cluster radius
         within_radius = [
             p
-            for p in candidate_places
+            for p in candidates
             if haversine_distance_km(anchor_lat, anchor_lng, p.latitude, p.longitude)
             <= cluster_radius_km
         ]
         if len(within_radius) >= min(total_days * 2, 3):
             candidate_places = within_radius
+        elif len(candidates) >= min(total_days * 2, 3):
+            candidate_places = candidates
+
+    # Fall back to loading full active catalog if province-wide or insufficient bounding box matches
+    if not candidate_places:
+        candidate_places = list(
+            db.scalars(
+                select(Place)
+                .where(Place.is_active == True)
+                .options(selectinload(Place.municipality))
+            ).all()
+        )
+
+    if not candidate_places:
+        raise ValueError("No active destinations found in Nueva Ecija database.")
 
     # Track already scheduled places across the entire trip
     scheduled_place_ids: set[uuid.UUID] = set()

@@ -101,18 +101,21 @@ The project employs a multi-tiered verification strategy designed to prevent reg
 
 ### 3.2 Backend Pytest Run (`python -m pytest backend/tests/ -v`)
 ```text
-backend/tests/test_auth.py::test_auth_lifecycle PASSED                   [ 10%]
-backend/tests/test_auth.py::test_auth_rate_limiting PASSED              [ 20%]
-backend/tests/test_auth.py::test_google_oauth_security_gates PASSED     [ 30%]
-backend/tests/test_auth.py::test_jwt_secret_startup_validation PASSED   [ 40%]
-backend/tests/test_backup_restore.py::test_backup_restore_drill PASSED   [ 50%]
-backend/tests/test_foundation.py::test_health_and_featured_places_pipeline PASSED [ 60%]
-backend/tests/test_itineraries.py::test_itinerary_lifecycle_and_bola_protection PASSED [ 70%]
-backend/tests/test_itineraries.py::test_suggested_itinerary_engine PASSED [ 80%]
-backend/tests/test_itineraries.py::test_single_stop_patch_and_place_validation PASSED [ 90%]
-backend/tests/test_itineraries.py::test_suggested_generator_radius_and_budget_clustering PASSED [100%]
+backend/tests/test_auth.py::test_auth_lifecycle PASSED                   [  7%]
+backend/tests/test_auth.py::test_auth_rate_limiting PASSED              [ 15%]
+backend/tests/test_cloudflare_tunnel_ip_resolution PASSED               [ 23%]
+backend/tests/test_auth_rate_limiting_isolated_by_cloudflare_ip PASSED   [ 30%]
+backend/tests/test_settings_secret_validation_in_production PASSED       [ 38%]
+backend/tests/test_google_oauth_security_gates PASSED                   [ 46%]
+backend/tests/test_backup_restore.py::test_backup_restore_drill PASSED   [ 53%]
+backend/tests/test_foundation.py::test_health_and_featured_places_pipeline PASSED [ 61%]
+backend/tests/test_itineraries.py::test_itinerary_lifecycle_and_bola_protection PASSED [ 69%]
+backend/tests/test_itineraries.py::test_suggested_itinerary_engine PASSED [ 76%]
+backend/tests/test_itineraries.py::test_single_stop_patch_and_place_validation PASSED [ 84%]
+backend/tests/test_itineraries.py::test_suggested_generator_radius_and_budget_clustering PASSED [ 92%]
+backend/tests/test_itineraries.py::test_generator_sql_bounding_box_pre_filtering PASSED [100%]
 
-======================== 10 passed, 5 warnings in 3.18s ========================
+======================= 13 passed, 5 warnings in 3.42s ========================
 ```
 
 ### 3.3 Mobile Production Build Run (`npm run build`)
@@ -180,7 +183,7 @@ Exit Code: 0
   - Unit tests (`test_suggested_generator_radius_and_budget_clustering`) verifying no POI farther than `default_dest_radius_km` (25km) is recommended and cumulative daily budget is tracked.
 - [x] **Single-Stop Update & Place Validation Tests (`CR-010`)**:
   - Unit tests (`test_single_stop_patch_and_place_validation`) verifying `PATCH /api/v1/itineraries/{id}/days/{day_id}/items/{item_id}` and 404 rejection on nonexistent `place_id`.
-- [ ] **End-to-End User Journey Tests (`CR-014`)**:
-  - Modern Playwright E2E spec verifying `/welcome` -> `/guest` -> `/tabs/home` -> `/tabs/map` -> `/custom-builder` flows (Active in Phase 14).
+- [x] **End-to-End User Journey Tests (`CR-014`)**:
+  - Modern Playwright E2E spec verifying `/welcome` -> `/guest` -> `/tabs/home` -> `/tabs/map` -> `/custom-builder` flows in `Project/e2e/app.spec.ts` (100% verified with `npm run typecheck:e2e`).
 
 

@@ -823,3 +823,98 @@ def test_suggested_generator_radius_and_budget_clustering():
     assert "Bongabon Onion Cafe" in scheduled_names
     assert "Cuyapo Far Heritage House" not in scheduled_names
     assert "Cuyapo Distant Restaurant" not in scheduled_names
+
+
+def test_generator_sql_bounding_box_pre_filtering():
+    """CR-013: Verifies candidate POIs are pre-filtered via SQL bounding box."""
+    from datetime import date
+    from app.algorithms.itinerary_generator import generate_suggested_itinerary_data
+    from app.schemas.itinerary import SuggestedItineraryRequest
+
+    TestingSessionLocal = make_test_session()
+    db = TestingSessionLocal()
+    try:
+        # Create Bongabon municipality and 3 local POIs
+        muni = Municipality(
+            name="Bongabon",
+            slug="bongabon",
+            is_city=False,
+            center_lat=15.6319,
+            center_lng=121.1444,
+        )
+        db.add(muni)
+        db.flush()
+
+        p1 = Place(
+            name="Bongabon Mountain Peak",
+            category="nature_park",
+            latitude=15.6350,
+            longitude=121.1450,
+            municipality_id=muni.id,
+            source_name="BBoxTest",
+            source_record_id="bbt1",
+            is_active=True,
+            is_featured=True,
+            estimated_cost_min=50.0,
+            estimated_cost_max=100.0,
+        )
+        p2 = Place(
+            name="Bongabon Cozy Cafe",
+            category="cafe",
+            latitude=15.6325,
+            longitude=121.1440,
+            municipality_id=muni.id,
+            source_name="BBoxTest",
+            source_record_id="bbt2",
+            is_active=True,
+            is_featured=True,
+            estimated_cost_min=100.0,
+            estimated_cost_max=200.0,
+        )
+        p3 = Place(
+            name="Bongabon Local Grill",
+            category="restaurant",
+            latitude=15.6310,
+            longitude=121.1460,
+            municipality_id=muni.id,
+            source_name="BBoxTest",
+            source_record_id="bbt3",
+            is_active=True,
+            is_featured=True,
+            estimated_cost_min=150.0,
+            estimated_cost_max=300.0,
+        )
+        # Distant place in Lupao (>50km away)
+        p_far = Place(
+            name="Lupao Distant Falls",
+            category="nature_park",
+            latitude=15.8750,
+            longitude=120.8980,
+            source_name="BBoxTest",
+            source_record_id="bbt_far",
+            is_active=True,
+            is_featured=True,
+        )
+        db.add_all([p1, p2, p3, p_far])
+        db.commit()
+
+        req = SuggestedItineraryRequest(
+            title="Bongabon BBox Clustered Tour",
+            destination="Bongabon",
+            start_date=date(2026, 12, 1),
+            end_date=date(2026, 12, 1),
+            daily_budget=2000.0,
+            preferences=["nature_park", "restaurant", "cafe"],
+            save_immediately=False,
+        )
+        data = generate_suggested_itinerary_data(db, req)
+        assert len(data["days"]) == 1
+        items = data["days"][0]["items"]
+        assert len(items) >= 2
+        for it in items:
+            p = it["place"]
+            assert "Lupao" not in p.name
+            assert "Bongabon" in p.name
+    finally:
+        db.close()
+

@@ -7,10 +7,10 @@ This document serves as the primary handoff reference for developers and coding 
 ## 1. Project Status Overview
 
 - **Application Name**: Nueva Ecija Travel Itinerary (MVP)
-- **Current Development Phase**: **Phase 14: Priority 4 — Long-Term Performance & Comprehensive E2E Testing**
-- **Last Verified Working State**: **Phase 11 (Security & Data Loss)**, **Phase 12 (Core Reliability)**, and **Phase 13 (Maintainability & Code Quality)** completely verified (CR-001 through CR-016 remediated, 24/24 acceptance criteria passing, 106/106 frontend unit tests, 10/10 backend test cases, clean Angular build).
-- **Recent Audit**: Independent Comprehensive Code Review completed on October 31, 2026 ([CODE_REVIEW_AUDIT.md](file:///c:/Users/Edward/Desktop/CaseStudy/docs/CODE_REVIEW_AUDIT.md)) identifying 16 findings (`CR-001` through `CR-016`), with Phases 11–13 findings (`CR-001`–`CR-016`) fully remediated and verified.
-- **Current Active Tasks**: **Phase 14: Priority 4 — Long-Term Performance & Comprehensive E2E Testing** ([TODO.md](file:///c:/Users/Edward/Desktop/CaseStudy/docs/TODO.md)).
+- **Current Development Phase**: **Production Pilot Ready (Phases 1–14 Completed & Verified)**
+- **Last Verified Working State**: **Phases 11, 12, 13, and 14** completely verified (all 16 findings `CR-001` through `CR-016` remediated, 24/24 acceptance criteria passing, 107/107 frontend unit tests, 13/13 backend test cases, Playwright modern E2E spec verified, clean Angular production build).
+- **Recent Audit**: Independent Comprehensive Code Review completed on October 31, 2026 ([CODE_REVIEW_AUDIT.md](file:///c:/Users/Edward/Desktop/CaseStudy/docs/CODE_REVIEW_AUDIT.md)) identifying 16 findings (`CR-001` through `CR-016`), with all 16 findings across Phases 11–14 fully remediated and verified.
+- **Current Active Tasks**: Pilot Deployment & User Testing Readiness.
 - **Current Blockers**: **None**.
 
 ---
@@ -150,55 +150,45 @@ This document serves as the primary handoff reference for developers and coding 
 
 ---
 
-## 3. Features Currently Being Developed (Active Roadmap)
+## 3. Audit Remediation & Performance Enhancements (Phases 11–14 Completed)
 
-Having completed all foundational milestones (Milestones 0–10), the 24-Point MVP Acceptance Gate, and Priority 1, 2, and 3 audit remediations (Phases 11, 12, & 13), active engineering has shifted to Phase 14:
-
-- **Phase 14: Priority 4 — Long-Term Performance & Comprehensive E2E Testing**:
-  - `CR-013`: Configure SlowAPI rate limiting to inspect `CF-Connecting-IP` behind Cloudflare Tunnel; pre-filter generator candidates with bounding box SQL queries; batch seeding scripts.
-  - `CR-014`: Modern Playwright end-to-end journey tests covering `/welcome` -> `/guest` -> `/tabs/home` -> `/tabs/map` -> `/custom-builder`.
-
----
-
-## 4. Features Scheduled for Subsequent Phases
-
-All primary MVP milestones and audit remediation phases (Phases 11–13) have been completed and verified against the acceptance gate.
-- **Phase 14: Priority 4 — Long-Term Performance & Comprehensive E2E Testing**:
-  - `CR-013`: Key SlowAPI rate limits by `CF-Connecting-IP` for Cloudflare Tunnel traffic; pre-filter places in SQL; batch OSM imports.
-  - `CR-014`: Rewrite Playwright/Cypress E2E test suite for modern user journeys.
+All 16 audit findings from [CODE_REVIEW_AUDIT.md](file:///c:/Users/Edward/Desktop/CaseStudy/docs/CODE_REVIEW_AUDIT.md) have been remediated across four phased cycles:
+- **Phase 11 (Critical Security & Data Loss)**: Remediated `CR-001` (BOLA reorder), `CR-002` (BOLA stop delete), `CR-003` (itinerary update silent stop drop), `CR-004` (JWT secret & CORS scope hardening), and `CR-005` (Google OAuth email_verified assertion).
+- **Phase 12 (Core Reliability & Accuracy)**: Remediated `CR-006` / `CR-012` (token refresh interceptor & scope), `CR-007` (timezone calendar date utilities), `CR-008` (generator 25km radius & budget tracking), `CR-009` (suggested wizard dynamic inputs & guest API binding), `CR-010` (single stop PATCH & sort_order bug), `CR-011` (Map queryParams & tileerror banner), and `CR-013` part 4 (pg_dump `--clean --if-exists`).
+- **Phase 13 (Maintainability & Quality)**: Remediated `CR-014` (deleted 16 dead starter files and destructive script; strengthened 7 tautological acceptance checks), `CR-015` (ProfilePage memory leak, UI typos, Bongabon nearby places parameterization, 44 unused image asset pruning), and `CR-016` (full doc suite synchronization).
+- **Phase 14 (Performance & E2E Testing)**: Remediated `CR-013` (SlowAPI Cloudflare Tunnel `CF-Connecting-IP` resolution, generator SQL coordinate bounding box pre-filtering, and batch seeding script queries) and `CR-014` (modern Playwright E2E journey spec covering `/welcome` -> `/guest` -> `/tabs/home` -> `/tabs/map` -> `/custom-builder`).
 
 ---
 
-## 5. Verification Records & Passing Proof
+## 4. Verification Records & Passing Proof
 
 1. **24-Point MVP Acceptance Gate**:
    - Command: `python scripts/verify_acceptance_gate.py` (with `BypassSandbox: true` on Windows)
-   - Result: `All 24/24 acceptance checks passed (100.0%)`.
+   - Result: `All 24/24 acceptance checks passed (100.0%)` with zero tautologies.
 2. **Backend Automated Tests**:
    - Command: `python -m pytest backend/tests/ -v` (with `BypassSandbox: true` on Windows)
-   - Result: `8 passed test suites, 0 failures` (including CR-001/002 BOLA/IDOR regression tests, CR-003 composite PATCH tests, CR-004 secret/OAuth tests, CR-005 Google email_verified/inactive tests).
+   - Result: `13/13 passed test cases, 0 failures` (including Cloudflare rate-limiting tests, generator bounding box pre-filtering tests, and BOLA/IDOR regression tests).
 3. **Mobile Client Unit Tests**:
    - Command: `npm run test:unit` in `Project/`
-   - Result: `16 test files passed, 100 tests passed in 20.83s [100%]` (includes new CR-003 edit-mode retention tests in `itinerary.service.spec.ts` and `custom-builder.page.spec.ts`).
-4. **Mobile Client Compilation**:
+   - Result: `14 test suites passed, 107 tests passed (100%)`.
+4. **Playwright E2E Test Suite**:
+   - Command: `npm run typecheck:e2e` in `Project/`
+   - Result: `tsc -p tsconfig.e2e.json` succeeded with code 0 (modern user journey coverage).
+5. **Mobile Client Production Build**:
    - Command: `npm run build` in `Project/`
-   - Result: `Application bundle generation complete [0 errors, 0 warnings]` (Artifacts in `Project/www`, component styles strictly under 10kB budget).
-5. **Code Quality & Style**:
+   - Result: `Application bundle generation complete [0 errors, 0 warnings]` (Artifacts in `Project/www`, global styles 9.69 kB transfer size strictly under 10kB budget).
+6. **Code Quality & Style**:
    - Command: `npm run lint` and `npm run prettier -- --check` in `Project/`
    - Result: `0 ESLint errors, 0 Prettier formatting warnings`.
 
 ---
 
-## 6. Immediate Next Development Task
+## 5. Immediate Next Steps
 
-Begin execution of **Phase 12: Priority 2 — Core Reliability & Functional Accuracy** ([TODO.md](file:///c:/Users/Edward/Desktop/CaseStudy/docs/TODO.md)):
-1. Implement refresh token rotation & resilient interceptor (`CR-006`).
-2. Fix timezone off-by-one shifting in date parsing & generation (`CR-007`).
-3. Fix itinerary generator radius enforcement, budget tracking & SQL wildcard escaping (`CR-008`).
-4. Fix offline suggested generator dynamic inputs & UI chips binding (`CR-009`).
-5. Wire single-stop PATCH endpoint & fix sort order default bug (`CR-010`).
-6. Fix Map page route queryParams & tile error handling (`CR-011`).
-7. Validate custom API URL & scope Bearer token injection (`CR-012`).
+1. Conduct user acceptance testing (UAT) on mobile devices (Android / iOS Capacitor shells).
+2. Finalize staging deployment with Cloudflare Tunnel reverse proxy.
+3. Monitor pilot usage and collect feedback for post-MVP enhancements.
+
 
 
 

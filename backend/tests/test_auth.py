@@ -151,6 +151,71 @@ def test_auth_rate_limiting():
     assert "Rate limit exceeded" in responses[5].text
 
 
+def test_cloudflare_tunnel_ip_resolution():
+    """CR-013: Verifies get_client_ip extracts CF-Connecting-IP and X-Forwarded-For behind tunnels."""
+    from starlette.datastructures import Address, Headers
+    from starlette.requests import Request
+    from app.core.limiter import get_client_ip
+
+    def make_mock_request(client_ip: str | None, headers: dict[str, str]) -> Request:
+        scope = {
+            "type": "http",
+            "client": Address(client_ip, 12345) if client_ip else None,
+            "headers": [(k.lower().encode(), v.encode()) for k, v in headers.items()],
+        }
+        return Request(scope)
+
+    # 1. Cloudflare Tunnel with CF-Connecting-IP
+    req_cf = make_mock_request("127.0.0.1", {"CF-Connecting-IP": "203.0.113.42"})
+    assert get_client_ip(req_cf) == "203.0.113.42"
+
+    # 2. Localhost reverse proxy with X-Forwarded-For chain
+    req_xff = make_mock_request("localhost", {"X-Forwarded-For": "198.51.100.9, 10.0.0.1"})
+    assert get_client_ip(req_xff) == "198.51.100.9"
+
+    # 3. Direct external client cannot spoof CF-Connecting-IP
+    req_direct = make_mock_request("192.0.2.1", {"CF-Connecting-IP": "203.0.113.99"})
+    assert get_client_ip(req_direct) == "192.0.2.1"
+
+    # 4. Fallback when no client address is provided
+    req_none = make_mock_request(None, {})
+    assert get_client_ip(req_none) == "127.0.0.1"
+
+
+def test_auth_rate_limiting_isolated_by_cloudflare_ip():
+    """CR-013: Verifies distinct Cloudflare IPs have isolated rate limit buckets behind tunnel."""
+    from app.core.limiter import limiter
+
+    limiter.reset()
+    client = TestClient(app)
+
+    # 5 attempts from User A behind Cloudflare
+    for i in range(5):
+        res = client.post(
+            "/api/v1/auth/login",
+            json={"email": f"usera_{i}@example.ph", "password": "WrongPassword!"},
+            headers={"CF-Connecting-IP": "203.0.113.100"},
+        )
+        assert res.status_code == 401
+
+    # 6th attempt from User A is throttled (429)
+    res_a_blocked = client.post(
+        "/api/v1/auth/login",
+        json={"email": "usera_blocked@example.ph", "password": "WrongPassword!"},
+        headers={"CF-Connecting-IP": "203.0.113.100"},
+    )
+    assert res_a_blocked.status_code == 429
+
+    # First attempt from User B with different CF-Connecting-IP must succeed (401 credentials check, not 429)
+    res_b = client.post(
+        "/api/v1/auth/login",
+        json={"email": "userb@example.ph", "password": "WrongPassword!"},
+        headers={"CF-Connecting-IP": "203.0.113.200"},
+    )
+    assert res_b.status_code == 401
+
+
+
 def test_settings_secret_validation_in_production():
     """CR-004: Verifies Settings rejects default JWT secret key outside development."""
     import pytest

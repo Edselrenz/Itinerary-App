@@ -252,14 +252,17 @@ This checklist tracks completed, active, and pending tasks across all developmen
 
 ---
 
-## Phase 14: Priority 4 — Long-Term Performance & Comprehensive E2E Testing (PENDING)
+## Phase 14: Priority 4 — Long-Term Performance & Comprehensive E2E Testing (COMPLETED)
 > Ref: [CODE_REVIEW_AUDIT.md](file:///c:/Users/Edward/Desktop/CaseStudy/docs/CODE_REVIEW_AUDIT.md) — Scalability & End-to-End Test Suite
 
-- [ ] **CR-013**: Cloudflare Tunnel rate limiting & query optimizations:
-  - [ ] Configure SlowAPI key function in `backend/app/api/v1/auth.py` to inspect `CF-Connecting-IP` when `request.client.host == "127.0.0.1"`.
-  - [ ] Pre-filter candidate places by bounding box or municipality in `itinerary_generator.py` instead of loading entire 4,400+ table into Python memory.
-  - [ ] Batch place lookups in `scripts/import_osm.py` and `scripts/seed_featured_places.py`.
-- [ ] **CR-014**: Rewrite modern Playwright/Cypress E2E test suite:
-  - [ ] Replace outdated `Project/e2e/app.spec.ts` with end-to-end journey tests covering `/welcome` -> `/guest` -> `/tabs/home` -> `/tabs/map` -> `/custom-builder`.
+- [x] **CR-013**: Cloudflare Tunnel rate limiting & query optimizations:
+  - [x] Configure SlowAPI key function in `backend/app/core/limiter.py` to inspect `CF-Connecting-IP` and `X-Forwarded-For` when `request.client.host` is local/tunnel.
+  - [x] Pre-filter candidate places by bounding box in `itinerary_generator.py` instead of loading entire 4,400+ table into Python memory.
+  - [x] Batch place lookups in `scripts/import_osm.py` and `scripts/seed_featured_places.py` using `in_()`.
+  - [x] Add unit tests in `backend/tests/test_auth.py` and `backend/tests/test_itineraries.py`.
+- [x] **CR-014**: Rewrite modern Playwright/Cypress E2E test suite:
+  - [x] Replace outdated `Project/e2e/app.spec.ts` with end-to-end journey tests covering `/welcome` -> `/guest` -> `/tabs/home` -> `/tabs/map` -> `/custom-builder`.
+  - [x] Verify Playwright TypeScript compilation with `npm run typecheck:e2e`.
+
 
 

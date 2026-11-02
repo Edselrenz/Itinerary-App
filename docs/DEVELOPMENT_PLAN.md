@@ -149,8 +149,9 @@ This plan tracks the 11 sequential milestones defined in the **End-to-End Engine
 - [x] **CR-015**: Fix memory leak in `ProfilePage`; wire non-functional buttons; dynamically query nearby places; fix UI copy typos; prune 44 unused image files.
 - [x] **CR-016**: Synchronize all documentation files (`docs/KNOWN_ISSUES.md`, `docs/DEVELOPMENT_PLAN.md`, `docs/TESTING_DOCUMENTATION.md`).
 
-### Milestone 14: Priority 4 — Long-Term Performance & Comprehensive E2E Testing (Active)
-- [ ] **CR-013**: Key SlowAPI rate limits by `CF-Connecting-IP` for Cloudflare Tunnel traffic; pre-filter places in SQL; batch OSM imports.
-- [ ] **CR-014**: Rewrite `Project/e2e/app.spec.ts` to test actual user journeys.
+### Milestone 14: Priority 4 — Long-Term Performance & Comprehensive E2E Testing (Completed)
+- [x] **CR-013**: Key SlowAPI rate limits by `CF-Connecting-IP` / `X-Forwarded-For` for Cloudflare Tunnel traffic; pre-filter places in SQL bounding box; batch OSM & curated place imports.
+- [x] **CR-014**: Rewrite `Project/e2e/app.spec.ts` with comprehensive user journeys (`/welcome` -> `/guest` -> `/tabs/home` -> `/tabs/map` -> `/custom-builder`).
+
 
 

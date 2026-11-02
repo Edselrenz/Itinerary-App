@@ -388,8 +388,18 @@ def seed_municipalities_and_featured(db: Session) -> dict[str, int]:
     muni_map: dict[str, Municipality] = {}
     muni_created = 0
 
+    # CR-013: Batch fetch existing municipalities to avoid per-row SELECT queries
+    existing_munis = {
+        m.slug: m
+        for m in db.scalars(
+            select(Municipality).where(
+                Municipality.slug.in_([m["slug"] for m in NUEVA_ECIJA_MUNICIPALITIES])
+            )
+        ).all()
+    }
+
     for m in NUEVA_ECIJA_MUNICIPALITIES:
-        existing = db.scalar(select(Municipality).where(Municipality.slug == m["slug"]))
+        existing = existing_munis.get(m["slug"])
         if existing:
             existing.name = m["name"]
             existing.is_city = m["is_city"]
@@ -407,14 +417,21 @@ def seed_municipalities_and_featured(db: Session) -> dict[str, int]:
     places_created = 0
     places_updated = 0
 
+    # CR-013: Batch fetch existing curated places using source_record_id in_()
+    curated_source_ids = [item["source_record_id"] for item in CURATED_FEATURED_PLACES]
+    existing_places_map = {
+        p.source_record_id: p
+        for p in db.scalars(
+            select(Place).where(
+                Place.source_name == "CuratedNuevaEcijaMVP",
+                Place.source_record_id.in_(curated_source_ids),
+            )
+        ).all()
+    }
+
     for item in CURATED_FEATURED_PLACES:
         muni = muni_map.get(item["municipality_slug"])
-        existing_place = db.scalar(
-            select(Place).where(
-                Place.source_name == item["source_name"],
-                Place.source_record_id == item["source_record_id"],
-            )
-        )
+        existing_place = existing_places_map.get(item["source_record_id"])
         payload = {
             "name": item["name"],
             "category": item["category"],
