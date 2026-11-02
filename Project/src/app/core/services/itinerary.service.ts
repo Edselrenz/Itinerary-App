@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, catchError, from, map, of, switchMap, tap, timeout } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, from, map, of, switchMap, tap, throwError, timeout } from 'rxjs';
+import { addDaysLocal, diffDaysLocal, parseLocalIsoDate, toLocalIsoDate } from '../utils/date.utils';
 import { environment } from '../../../environments/environment';
 import {
   Itinerary,
@@ -28,6 +29,17 @@ export class ItineraryService {
 
   private readonly itinerariesSubject = new BehaviorSubject<Itinerary[]>([]);
   public itineraries$: Observable<Itinerary[]> = this.itinerariesSubject.asObservable();
+
+  private isNetworkError(err: any): boolean {
+    const status = err?.status;
+    return (
+      status === 0 ||
+      status === 502 ||
+      status === 503 ||
+      status === 504 ||
+      err?.name === 'TimeoutError'
+    );
+  }
 
   constructor(
     private http: HttpClient,
@@ -83,13 +95,16 @@ export class ItineraryService {
           const current = this.itinerariesSubject.value;
           this.itinerariesSubject.next([created, ...current]);
         }),
-        catchError(() => {
-          return from(this.createGuestItinerary(payload)).pipe(
-            tap((created) => {
-              const current = this.itinerariesSubject.value;
-              this.itinerariesSubject.next([created, ...current]);
-            })
-          );
+        catchError((err) => {
+          if (this.isNetworkError(err)) {
+            return from(this.createGuestItinerary(payload)).pipe(
+              tap((created) => {
+                const current = this.itinerariesSubject.value;
+                this.itinerariesSubject.next([created, ...current]);
+              })
+            );
+          }
+          return throwError(() => err);
         })
       );
     }
@@ -109,7 +124,12 @@ export class ItineraryService {
     if (this.authService.isAuthenticated()) {
       return this.http.patch<Itinerary>(`${this.baseUrl}/${id}`, payload).pipe(
         tap((updated) => this.replaceInSubject(updated)),
-        catchError(() => from(this.updateGuestItinerary(id, payload)))
+        catchError((err) => {
+          if (this.isNetworkError(err)) {
+            return from(this.updateGuestItinerary(id, payload));
+          }
+          return throwError(() => err);
+        })
       );
     }
     return from(this.updateGuestItinerary(id, payload));
@@ -122,11 +142,14 @@ export class ItineraryService {
     if (this.authService.isAuthenticated()) {
       return this.http.delete<void>(`${this.baseUrl}/${id}`).pipe(
         tap(() => this.removeFromSubject(id)),
-        catchError(() =>
-          from(this.guestStorage.deleteItinerary(id)).pipe(
-            tap(() => this.removeFromSubject(id))
-          )
-        )
+        catchError((err) => {
+          if (this.isNetworkError(err)) {
+            return from(this.guestStorage.deleteItinerary(id)).pipe(
+              tap(() => this.removeFromSubject(id))
+            );
+          }
+          return throwError(() => err);
+        })
       );
     }
 
@@ -148,7 +171,12 @@ export class ItineraryService {
         .post<Itinerary>(`${this.baseUrl}/${itineraryId}/days/${dayId}/items`, itemPayload)
         .pipe(
           tap((updated) => this.replaceInSubject(updated)),
-          catchError(() => from(this.addGuestStop(itineraryId, dayId, itemPayload)))
+          catchError((err) => {
+            if (this.isNetworkError(err)) {
+              return from(this.addGuestStop(itineraryId, dayId, itemPayload));
+            }
+            return throwError(() => err);
+          })
         );
     }
     return from(this.addGuestStop(itineraryId, dayId, itemPayload));
@@ -167,7 +195,12 @@ export class ItineraryService {
         .delete<Itinerary>(`${this.baseUrl}/${itineraryId}/days/${dayId}/items/${itemId}`)
         .pipe(
           tap((updated) => this.replaceInSubject(updated)),
-          catchError(() => from(this.deleteGuestStop(itineraryId, dayId, itemId)))
+          catchError((err) => {
+            if (this.isNetworkError(err)) {
+              return from(this.deleteGuestStop(itineraryId, dayId, itemId));
+            }
+            return throwError(() => err);
+          })
         );
     }
     return from(this.deleteGuestStop(itineraryId, dayId, itemId));
@@ -185,7 +218,12 @@ export class ItineraryService {
         .post<Itinerary>(`${this.baseUrl}/${itineraryId}/reorder`, { items: entries })
         .pipe(
           tap((updated) => this.replaceInSubject(updated)),
-          catchError(() => from(this.reorderGuestStops(itineraryId, entries)))
+          catchError((err) => {
+            if (this.isNetworkError(err)) {
+              return from(this.reorderGuestStops(itineraryId, entries));
+            }
+            return throwError(() => err);
+          })
         );
     }
     return from(this.reorderGuestStops(itineraryId, entries));
@@ -196,22 +234,16 @@ export class ItineraryService {
    * If in guest mode (e.g. static GitHub Pages), immediately generates locally for instant response.
    */
   public suggestItinerary(request: SuggestedItineraryRequest): Observable<Itinerary> {
-    if (!this.authService.isAuthenticated()) {
-      return from(this.generateOfflineSuggestedItinerary(request)).pipe(
-        tap((plan) => {
-          if (request.save_immediately) {
-            this.guestStorage.saveItinerary(plan as unknown as GuestItinerary);
-            this.replaceInSubject(plan);
-          }
-        })
-      );
-    }
-
     return this.http.post<Itinerary>(`${this.baseUrl}/suggest`, request).pipe(
       timeout(4000),
       tap((plan) => {
         if (request.save_immediately && plan.id) {
-          this.replaceInSubject(plan);
+          if (this.authService.isAuthenticated()) {
+            this.replaceInSubject(plan);
+          } else {
+            this.guestStorage.saveItinerary(plan as unknown as GuestItinerary);
+            this.replaceInSubject(plan);
+          }
         }
       }),
       catchError(() => {
@@ -345,6 +377,37 @@ export class ItineraryService {
       throw new Error('Itinerary not found');
     }
 
+    let updatedDays = target.days;
+    if (payload.days) {
+      updatedDays = payload.days.map((d, dIdx) => {
+        const dayId = this.generateId();
+        const dayItems: ItineraryItem[] = (d.items || []).map((it, itIdx) => ({
+          id: this.generateId(),
+          day_id: dayId,
+          place_id: it.place_id,
+          custom_title: it.custom_title,
+          custom_lat: it.custom_lat,
+          custom_lng: it.custom_lng,
+          sort_order: it.sort_order ?? itIdx + 1,
+          planned_time: it.planned_time,
+          duration_minutes: it.duration_minutes ?? 90,
+          notes: it.notes,
+          estimated_cost_min: it.estimated_cost_min,
+          estimated_cost_max: it.estimated_cost_max,
+          place: it.place || null,
+        }));
+
+        return {
+          id: dayId,
+          itinerary_id: id,
+          day_number: d.day_number ?? dIdx + 1,
+          travel_date: d.travel_date,
+          title: d.title,
+          items: dayItems,
+        };
+      });
+    }
+
     const updated: GuestItinerary = {
       ...target,
       title: payload.title ?? target.title,
@@ -354,6 +417,7 @@ export class ItineraryService {
       daily_budget: payload.daily_budget ?? target.daily_budget,
       preferences: payload.preferences ?? target.preferences,
       assumptions: payload.assumptions ?? target.assumptions,
+      days: updatedDays,
       updated_at: new Date().toISOString(),
     };
 
@@ -522,10 +586,8 @@ export class ItineraryService {
   private async generateOfflineSuggestedItinerary(
     request: SuggestedItineraryRequest
   ): Promise<Itinerary> {
-    const start = new Date(request.start_date);
-    const end = new Date(request.end_date);
-    const diffTime = Math.max(0, end.getTime() - start.getTime());
-    const totalDays = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1);
+    const totalDays = diffDaysLocal(request.start_date, request.end_date);
+    const start = parseLocalIsoDate(request.start_date);
 
     const curatedPool = [
       {
@@ -782,7 +844,30 @@ export class ItineraryService {
       },
     ];
 
-    const targetDest = (request.destination || '').toLowerCase();
+    const targetDest = (request.destination || '').toLowerCase().trim();
+    const prefs = (request.preferences || []).map((p) => p.toLowerCase());
+
+    // Dynamically filter or prioritize pool based on destination municipality and category preferences (CR-009)
+    let matchedPool = curatedPool;
+    if (targetDest && !targetDest.includes('nueva ecija')) {
+      const muniMatches = curatedPool.filter((p) => p.municipality.toLowerCase().includes(targetDest));
+      if (muniMatches.length > 0) {
+        matchedPool = muniMatches;
+      }
+    }
+
+    if (prefs.length > 0) {
+      matchedPool = [...matchedPool].sort((a, b) => {
+        const aMatches = prefs.some(
+          (pr) => a.categoryKey.toLowerCase().includes(pr) || a.tags.some((t) => t.toLowerCase().includes(pr))
+        ) ? 1 : 0;
+        const bMatches = prefs.some(
+          (pr) => b.categoryKey.toLowerCase().includes(pr) || b.tags.some((t) => t.toLowerCase().includes(pr))
+        ) ? 1 : 0;
+        return bMatches - aMatches;
+      });
+    }
+
     const isProvincialOrBongabon = !targetDest || targetDest.includes('nueva') || targetDest.includes('ecija') || targetDest.includes('bongabon');
 
     // Clustered day-by-day presets matching Figma Flow 2 specifications
@@ -822,9 +907,8 @@ export class ItineraryService {
     const now = new Date().toISOString();
 
     for (let d = 0; d < totalDays; d++) {
-      const dayDate = new Date(start);
-      dayDate.setDate(start.getDate() + d);
-      const dayDateStr = dayDate.toISOString().split('T')[0];
+      const dayDate = addDaysLocal(start, d);
+      const dayDateStr = toLocalIsoDate(dayDate);
       const dayId = this.generateId();
       const items: ItineraryItem[] = [];
 

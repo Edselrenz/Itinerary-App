@@ -54,15 +54,42 @@ export class ConnectivityService {
   }
 
   /**
-   * Sets or clears a custom API base URL (e.g. Cloudflare tunnel or ngrok).
+   * Validates whether a provided URL conforms to secure protocols (https or localhost http).
    */
-  public setCustomApiUrl(url: string | null): void {
+  public isValidApiUrl(url: string): boolean {
+    try {
+      const parsed = new URL(url.trim());
+      if (parsed.protocol === 'https:') {
+        return true;
+      }
+      if (
+        parsed.protocol === 'http:' &&
+        (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1')
+      ) {
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Sets or clears a custom API base URL (e.g. Cloudflare tunnel or ngrok).
+   * Validates protocol (https:// or localhost http://) to prevent exfiltration (CR-012).
+   */
+  public setCustomApiUrl(url: string | null): boolean {
     if (url && url.trim()) {
-      localStorage.setItem('ne_custom_api_url', url.trim());
+      const trimmed = url.trim();
+      if (!this.isValidApiUrl(trimmed)) {
+        throw new Error('Invalid API URL: Must use https:// or http://localhost.');
+      }
+      localStorage.setItem('ne_custom_api_url', trimmed);
     } else {
       localStorage.removeItem('ne_custom_api_url');
     }
     this.isDismissedManually = false;
+    return true;
   }
 
   /**

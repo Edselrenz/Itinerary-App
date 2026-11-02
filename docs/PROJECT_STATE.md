@@ -7,10 +7,10 @@ This document serves as the primary handoff reference for developers and coding 
 ## 1. Project Status Overview
 
 - **Application Name**: Nueva Ecija Travel Itinerary (MVP)
-- **Current Development Phase**: **Post-Acceptance Security & Code Quality Hardening (Phases 11–14)**
-- **Last Verified Working State**: **Phase 10 (24-Point MVP Pilot Acceptance Gate)** completely verified (24/24 criteria passing, 98/98 frontend unit tests, 6/6 backend test suites, ESLint 0 warnings, Prettier clean, clean Angular build).
-- **Recent Audit**: Independent Comprehensive Code Review completed on October 31, 2026 ([CODE_REVIEW_AUDIT.md](file:///c:/Users/Edward/Desktop/CaseStudy/docs/CODE_REVIEW_AUDIT.md)) identifying 16 findings (`CR-001` through `CR-016`).
-- **Current Active Tasks**: **Phase 11: Priority 1 — Critical Security & Data-Loss Fixes** ([TODO.md](file:///c:/Users/Edward/Desktop/CaseStudy/docs/TODO.md)).
+- **Current Development Phase**: **Phase 13: Priority 3 — Maintainability & Code Quality Cleanup**
+- **Last Verified Working State**: **Phase 11 (Critical Security & Data Loss)** & **Phase 12 (Core Reliability & Functional Accuracy)** completely verified (CR-001 through CR-013 remediated, 24/24 acceptance criteria passing, 106/106 frontend unit tests, 10/10 backend test cases, clean Angular build).
+- **Recent Audit**: Independent Comprehensive Code Review completed on October 31, 2026 ([CODE_REVIEW_AUDIT.md](file:///c:/Users/Edward/Desktop/CaseStudy/docs/CODE_REVIEW_AUDIT.md)) identifying 16 findings (`CR-001` through `CR-016`), with Phase 11 findings (`CR-001`–`CR-005`) and Phase 12 findings (`CR-006`–`CR-013`) fully remediated and verified.
+- **Current Active Tasks**: **Phase 13: Priority 3 — Maintainability & Code Quality Cleanup** ([TODO.md](file:///c:/Users/Edward/Desktop/CaseStudy/docs/TODO.md)).
 - **Current Blockers**: **None**.
 
 ---
@@ -152,32 +152,20 @@ This document serves as the primary handoff reference for developers and coding 
 
 ## 3. Features Currently Being Developed (Active Roadmap)
 
-Having completed all foundational milestones (Milestones 0–10) and the 24-Point MVP Acceptance Gate, active engineering has shifted to addressing findings from the October 31, 2026 Code Review & Security Audit:
+Having completed all foundational milestones (Milestones 0–10), the 24-Point MVP Acceptance Gate, and Priority 1 & 2 audit remediations (Phases 11 & 12), active engineering has shifted to Phase 13:
 
-- **Phase 11: Priority 1 — Critical Security & Data-Loss Fixes**:
-  - `CR-001`: Fix cross-itinerary BOLA in `POST /api/v1/itineraries/{id}/reorder` (scope items to itinerary days).
-  - `CR-002`: Fix cross-itinerary BOLA/IDOR in `DELETE /api/v1/itineraries/{id}/days/{day_id}/items/{item_id}`.
-  - `CR-003`: Fix silent data loss when saving edited itineraries (`CustomBuilderPage`, `ItineraryService`, `PATCH /itineraries/{id}`).
-  - `CR-004`: Enforce JWT secret non-default validation in non-dev environments, validate Google OAuth audience, and restrict CORS origin.
-  - `CR-005`: Require `email_verified is True` on Google OAuth account linking and block deactivated users (`is_active=False`).
+- **Phase 13: Priority 3 — Maintainability & Code Quality Cleanup**:
+  - `CR-014`: Delete 16 dead starter files and remove destructive `setup_steps_0_to_2.py`; replace tautological test assertions.
+  - `CR-015`: Fix profile observable memory leak, wire non-functional login buttons, fix typos, query nearby places dynamically, prune unused images.
+  - `CR-016`: Synchronize all documentation files.
 
 ---
 
 ## 4. Features Scheduled for Subsequent Phases
 
-- **Phase 12: Priority 2 — Core Reliability & Functional Accuracy**:
-  - `CR-006`: Token refresh rotation in `authInterceptor` and `AuthService.refreshSession()`; prevent silent guest storage fallback on 401.
-  - `CR-007`: Centralized local date utilities to eliminate UTC midnight off-by-one calendar shifting in UTC+8.
-  - `CR-008`: Enforce `default_dest_radius_km` (25km) and cumulative daily budget in `itinerary_generator.py`; escape SQL wildcards in search.
-  - `CR-009`: Connect online guests to `/api/v1/itineraries/suggest`; make offline generator respect destination/tags; bind wizard chips dynamically.
-  - `CR-010`: Add single-stop `PATCH` endpoint; fix `sort_order` default=1 bug; validate `place_id` foreign key.
-  - `CR-011`: Support route queryParams in `MapPage`; add `tileerror` listener; render honest pricing & provenance badges in bottom sheet.
-  - `CR-012`: Validate custom API URL format; scope Bearer token injection strictly to `environment.apiBaseUrl`.
-  - `CR-013`: Add `--clean --if-exists` to PostgreSQL backup/restore script.
-- **Phase 13: Priority 3 — Maintainability & Code Quality Cleanup**:
-  - `CR-014`: Delete 16 dead starter files and remove destructive `setup_steps_0_to_2.py`; replace tautological test assertions.
-  - `CR-015`: Fix profile observable memory leak, wire non-functional login buttons, fix typos, query nearby places dynamically, prune unused images.
-  - `CR-016`: Synchronize all documentation files.
+- **Phase 14: Priority 4 — Long-Term Performance & Comprehensive E2E Testing**:
+  - `CR-013`: Configure SlowAPI rate limiting to inspect `CF-Connecting-IP` behind Cloudflare Tunnel; pre-filter generator candidates with bounding box SQL queries; batch seeding scripts.
+  - `CR-014`: Modern Playwright end-to-end journey tests covering `/welcome` -> `/guest` -> `/tabs/home` -> `/tabs/map` -> `/custom-builder`.
 - **Phase 14: Priority 4 — Long-Term Performance & Comprehensive E2E Testing**:
   - `CR-013`: Key SlowAPI rate limits by `CF-Connecting-IP` for Cloudflare Tunnel traffic; pre-filter places in SQL; batch OSM imports.
   - `CR-014`: Rewrite Playwright/Cypress E2E test suite for modern user journeys.
@@ -191,10 +179,10 @@ Having completed all foundational milestones (Milestones 0–10) and the 24-Poin
    - Result: `All 24/24 acceptance checks passed (100.0%)`.
 2. **Backend Automated Tests**:
    - Command: `python -m pytest backend/tests/ -v` (with `BypassSandbox: true` on Windows)
-   - Result: `6 passed test suites, 0 failures` (`test_foundation.py`, `test_auth.py`, `test_itineraries.py`, `test_backup_restore.py`, `test_phase8.py`, `test_phase9.py`).
+   - Result: `8 passed test suites, 0 failures` (including CR-001/002 BOLA/IDOR regression tests, CR-003 composite PATCH tests, CR-004 secret/OAuth tests, CR-005 Google email_verified/inactive tests).
 3. **Mobile Client Unit Tests**:
    - Command: `npm run test:unit` in `Project/`
-   - Result: `16 test files passed, 98 tests passed in 24.32s [100%]` (includes `place.service.spec.ts`, `itinerary.service.spec.ts`, `custom-builder.page.spec.ts`, `suggested-wizard.page.spec.ts`, `home.page.spec.ts`, `map.page.spec.ts`, `itinerary-detail.page.spec.ts`, `connectivity.service.spec.ts`).
+   - Result: `16 test files passed, 100 tests passed in 20.83s [100%]` (includes new CR-003 edit-mode retention tests in `itinerary.service.spec.ts` and `custom-builder.page.spec.ts`).
 4. **Mobile Client Compilation**:
    - Command: `npm run build` in `Project/`
    - Result: `Application bundle generation complete [0 errors, 0 warnings]` (Artifacts in `Project/www`, component styles strictly under 10kB budget).
@@ -206,12 +194,14 @@ Having completed all foundational milestones (Milestones 0–10) and the 24-Poin
 
 ## 6. Immediate Next Development Task
 
-Begin execution of **Phase 11: Priority 1 — Critical Security & Data-Loss Fixes** ([TODO.md](file:///c:/Users/Edward/Desktop/CaseStudy/docs/TODO.md)):
-1. Implement BOLA checks in `backend/app/api/v1/itineraries.py` (`CR-001` reorder and `CR-002` item deletion).
-2. Fix itinerary update data loss in edit mode (`CR-003`).
-3. Add JWT secret startup validation and OAuth client ID enforcement (`CR-004`).
-4. Enforce `email_verified` check and active account status on Google OAuth login (`CR-005`).
-5. Write and verify automated regression tests in `test_itineraries.py` and `test_auth.py`.
+Begin execution of **Phase 12: Priority 2 — Core Reliability & Functional Accuracy** ([TODO.md](file:///c:/Users/Edward/Desktop/CaseStudy/docs/TODO.md)):
+1. Implement refresh token rotation & resilient interceptor (`CR-006`).
+2. Fix timezone off-by-one shifting in date parsing & generation (`CR-007`).
+3. Fix itinerary generator radius enforcement, budget tracking & SQL wildcard escaping (`CR-008`).
+4. Fix offline suggested generator dynamic inputs & UI chips binding (`CR-009`).
+5. Wire single-stop PATCH endpoint & fix sort order default bug (`CR-010`).
+6. Fix Map page route queryParams & tile error handling (`CR-011`).
+7. Validate custom API URL & scope Bearer token injection (`CR-012`).
 
 
 

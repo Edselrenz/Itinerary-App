@@ -335,3 +335,4 @@ An exhaustive, line-by-line architectural, security, data integrity, and code qu
 | **Phase 12** | **Priority 2 (High)** | `CR-006`, `CR-007`, `CR-008`, `CR-009`, `CR-010`, `CR-011`, `CR-012` | Token refresh, timezone accuracy, generator radius/budget, API completeness |
 | **Phase 13** | **Priority 3 (Medium)** | `CR-014` (part), `CR-015`, `CR-016` | Starter file pruning, UI typos, memory leaks, doc synchronization |
 | **Phase 14** | **Priority 4 (Low/Long-term)** | `CR-013`, `CR-014` (E2E) | Cloudflare Tunnel rate limiting, generator SQL pre-filtering, modern E2E spec |
+

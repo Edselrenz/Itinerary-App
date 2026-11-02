@@ -157,15 +157,22 @@ def authenticate_user(db: Session, identifier: str, password: str) -> User:
 
 def verify_google_id_token(raw_id_token: str) -> dict:
     """Server-side verification of Google OAuth ID token."""
+    if not settings.google_oauth_client_id:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Google OAuth client ID is not configured on this server.",
+        )
     try:
         idinfo = id_token.verify_oauth2_token(
             raw_id_token,
             google_requests.Request(),
-            settings.google_oauth_client_id or None,
+            settings.google_oauth_client_id,
         )
         if idinfo.get("iss") not in ("accounts.google.com", "https://accounts.google.com"):
             raise ValueError("Invalid Google token issuer")
         return idinfo
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -176,6 +183,12 @@ def verify_google_id_token(raw_id_token: str) -> dict:
 def authenticate_google_user(db: Session, raw_id_token: str) -> User:
     """Links or provisions an account via Google OAuth ID token sub identifier."""
     info = verify_google_id_token(raw_id_token)
+    if info.get("email_verified") is not True:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Google account email is not verified.",
+        )
+
     provider_sub = str(info["sub"])
     provider_email = info.get("email")
 
@@ -187,6 +200,11 @@ def authenticate_google_user(db: Session, raw_id_token: str) -> User:
     )
 
     if identity:
+        if not identity.user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Account is deactivated",
+            )
         return identity.user
 
     # If identity not found, check if a user with same email exists
@@ -195,7 +213,13 @@ def authenticate_google_user(db: Session, raw_id_token: str) -> User:
     if norm_email:
         user = db.scalar(select(User).where(User.email_normalized == norm_email))
 
-    if not user:
+    if user:
+        if not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Account is deactivated",
+            )
+    else:
         # Create new user for this Google account
         given_name = info.get("given_name") or "Traveler"
         family_name = info.get("family_name") or "User"

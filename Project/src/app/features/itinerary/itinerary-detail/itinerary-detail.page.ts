@@ -38,6 +38,7 @@ import {
   ItineraryDay,
   ItineraryItem,
 } from '../../../core/models/itinerary.models';
+import { formatDateRange } from '../../../core/utils/date.utils';
 import { ItineraryService } from '../../../core/services/itinerary.service';
 import { NearbyPlaceItem, PlaceService } from '../../../core/services/place.service';
 
@@ -187,17 +188,9 @@ export class ItineraryDetailPage implements OnInit, OnDestroy {
     if (!this.itinerary?.start_date || !this.itinerary?.end_date) {
       return '';
     }
-    const start = new Date(this.itinerary.start_date);
-    const end = new Date(this.itinerary.end_date);
-    const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
-    const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
     const days = this.computedTripDays;
     const nights = Math.max(0, days - 1);
-
-    let rangeStr = `${startMonth} ${start.getDate()} – ${endMonth} ${end.getDate()}`;
-    if (startMonth === endMonth) {
-      rangeStr = `${startMonth} ${start.getDate()} – ${end.getDate()}`;
-    }
+    const rangeStr = formatDateRange(this.itinerary.start_date, this.itinerary.end_date);
     return `${rangeStr} (${days} ${days === 1 ? 'day' : 'days'}, ${nights} ${nights === 1 ? 'night' : 'nights'})`;
   }
 

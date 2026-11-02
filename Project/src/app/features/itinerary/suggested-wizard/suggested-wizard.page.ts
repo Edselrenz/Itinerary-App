@@ -32,6 +32,7 @@ import {
   timeOutline,
 } from 'ionicons/icons';
 import { Itinerary, ItineraryBudgetSummary, ItineraryDay } from '../../../core/models/itinerary.models';
+import { addDaysLocal, diffDaysLocal, formatDateRange, parseLocalIsoDate, toLocalIsoDate } from '../../../core/utils/date.utils';
 import { ItineraryService } from '../../../core/services/itinerary.service';
 import { NearbyPlaceItem, PlaceService } from '../../../core/services/place.service';
 
@@ -95,7 +96,7 @@ export class SuggestedWizardPage implements OnInit {
   public isDatePickerOpen = false;
   public popupStartDate = '';
   public popupEndDate = '';
-  public minDate = new Date().toISOString().split('T')[0];
+  public minDate = toLocalIsoDate();
 
   constructor(
     private fb: FormBuilder,
@@ -126,13 +127,12 @@ export class SuggestedWizardPage implements OnInit {
     });
 
     const today = new Date();
-    const endDay = new Date();
-    endDay.setDate(today.getDate() + 2); // 3 days, 2 nights default
+    const endDay = addDaysLocal(today, 2); // 3 days, 2 nights default
 
     this.form = this.fb.group({
       destination: ['Nueva Ecija', [Validators.required]],
-      start_date: [today.toISOString().split('T')[0], [Validators.required]],
-      end_date: [endDay.toISOString().split('T')[0], [Validators.required]],
+      start_date: [toLocalIsoDate(today), [Validators.required]],
+      end_date: [toLocalIsoDate(endDay), [Validators.required]],
       daily_budget: [3000, [Validators.required, Validators.min(0)]],
     });
   }
@@ -214,20 +214,7 @@ export class SuggestedWizardPage implements OnInit {
     if (!startStr || !endStr) {
       return 'Select start and end dates';
     }
-    const start = new Date(startStr);
-    const end = new Date(endStr);
-    const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
-    const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
-    const startYear = start.getFullYear();
-    const endYear = end.getFullYear();
-
-    if (startYear !== endYear) {
-      return `${startMonth} ${start.getDate()}, ${startYear} – ${endMonth} ${end.getDate()}, ${endYear}`;
-    }
-    if (startMonth === endMonth) {
-      return `${startMonth} ${start.getDate()} – ${end.getDate()}, ${startYear}`;
-    }
-    return `${startMonth} ${start.getDate()} – ${endMonth} ${end.getDate()}, ${startYear}`;
+    return formatDateRange(startStr, endStr);
   }
 
   public get hasSelectedDates(): boolean {
@@ -238,13 +225,12 @@ export class SuggestedWizardPage implements OnInit {
     if (!this.popupStartDate || !this.popupEndDate) {
       return { days: 0, nights: 0, isValid: false, label: 'Select both departure (From) and return (To) dates' };
     }
-    const start = new Date(this.popupStartDate);
-    const end = new Date(this.popupEndDate);
+    const start = parseLocalIsoDate(this.popupStartDate);
+    const end = parseLocalIsoDate(this.popupEndDate);
     if (end < start) {
       return { days: 0, nights: 0, isValid: false, label: 'Return date must be on or after departure date' };
     }
-    const diff = Math.max(0, end.getTime() - start.getTime());
-    const days = Math.max(1, Math.ceil(diff / (1000 * 60 * 60 * 24)) + 1);
+    const days = diffDaysLocal(this.popupStartDate, this.popupEndDate);
     const nights = Math.max(0, days - 1);
     const label = `${days} ${days === 1 ? 'Day' : 'Days'}, ${nights} ${nights === 1 ? 'Night' : 'Nights'} in Nueva Ecija`;
     return { days, nights, isValid: true, label };
@@ -252,19 +238,24 @@ export class SuggestedWizardPage implements OnInit {
 
   public formatFriendlyDate(dateStr: string): string {
     if (!dateStr) return '';
-    const d = new Date(dateStr);
+    const d = parseLocalIsoDate(dateStr);
     return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
   }
 
   public get computedTripDays(): number {
     const startStr = this.form.get('start_date')?.value;
     const endStr = this.form.get('end_date')?.value;
-    if (!startStr || !endStr) return 1;
+    return diffDaysLocal(startStr, endStr);
+  }
 
-    const start = new Date(startStr);
-    const end = new Date(endStr);
-    const diff = Math.max(0, end.getTime() - start.getTime());
-    return Math.max(1, Math.ceil(diff / (1000 * 60 * 60 * 24)) + 1);
+  public get displayPreferences(): string[] {
+    if (this.generatedPlan?.preferences && this.generatedPlan.preferences.length > 0) {
+      return this.generatedPlan.preferences.map((k) => {
+        const found = this.preferenceOptions.find((p) => p.key === k);
+        return found ? found.label : k;
+      });
+    }
+    return ['Food Trip', 'Culture & History', 'Resort'];
   }
 
   public get formattedTripDateSubtitle(): string {

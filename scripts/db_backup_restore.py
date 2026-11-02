@@ -98,6 +98,8 @@ def create_backup(target_path: Path | None = None, db_url: str | None = None) ->
             str(info["port"]),
             "-U",
             str(info["user"]),
+            "--clean",
+            "--if-exists",
             "-F",
             "p",  # plain SQL format
             "-b",

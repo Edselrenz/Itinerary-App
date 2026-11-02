@@ -8,6 +8,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.config import settings
 from app.models.entities import Municipality, Place, Itinerary, ItineraryDay, ItineraryItem
 from app.schemas.itinerary import SuggestedItineraryRequest
 
@@ -64,19 +65,20 @@ def resolve_preference_categories(preferences: list[str]) -> set[str]:
 def resolve_geographic_anchor(db: Session, destination: str) -> tuple[float, float, str]:
     """Resolves target destination coordinates to serve as the initial geographic anchor."""
     clean_dest = destination.strip()
+    safe_dest = clean_dest.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
     
     # 1. Match Municipality by name or slug
     muni = db.scalar(
         select(Municipality).where(
-            (Municipality.name.ilike(f"%{clean_dest}%"))
-            | (Municipality.slug.ilike(f"%{clean_dest.replace(' ', '-')}%"))
+            (Municipality.name.ilike(f"%{safe_dest}%"))
+            | (Municipality.slug.ilike(f"%{safe_dest.replace(' ', '-')}%"))
         )
     )
     if muni and muni.center_lat is not None and muni.center_lng is not None:
         return muni.center_lat, muni.center_lng, muni.name
 
     # 2. Match Place by name
-    place = db.scalar(select(Place).where(Place.name.ilike(f"%{clean_dest}%")))
+    place = db.scalar(select(Place).where(Place.name.ilike(f"%{safe_dest}%")))
     if place:
         muni_name = place.municipality.name if place.municipality else clean_dest
         return place.latitude, place.longitude, muni_name
@@ -91,8 +93,9 @@ def score_place(
     anchor_lng: float,
     preferred_categories: set[str],
     current_day_categories: list[str],
-    daily_budget: float,
+    remaining_daily_budget: float,
     require_dining: bool = False,
+    max_radius_km: float = 25.0,
 ) -> float:
     """Scores a candidate place based on preferences, proximity, quality, and diversity."""
     # Hard boost or filter for dining slots
@@ -118,16 +121,29 @@ def score_place(
 
     # 3. Proximity to current anchor (+30 max, decaying by distance)
     dist = haversine_distance_km(anchor_lat, anchor_lng, place.latitude, place.longitude)
-    score += max(0.0, 30.0 - (dist * 1.2))
+    if dist <= max_radius_km:
+        score += max(0.0, 30.0 - (dist * 1.2))
+    else:
+        # Distance penalty for places exceeding default cluster radius
+        score -= (dist - max_radius_km) * 2.0
 
     # 4. Same-day Category Diversity penalty (-25)
     if place.category in current_day_categories:
         score -= 25.0
 
-    # 5. Cost fit (+10)
-    if daily_budget > 0 and place.estimated_cost_max is not None:
-        if place.estimated_cost_max <= daily_budget:
-            score += 10.0
+    # 5. Cumulative Daily Budget fit
+    if remaining_daily_budget > 0:
+        raw_cost = (
+            place.estimated_cost_min
+            if place.estimated_cost_min is not None
+            else place.estimated_cost_max
+        )
+        if raw_cost is not None:
+            place_cost = float(raw_cost)
+            if place_cost <= remaining_daily_budget:
+                score += 10.0
+            else:
+                score -= 30.0
 
     return score
 
@@ -165,6 +181,18 @@ def generate_suggested_itinerary_data(
     if not candidate_places:
         raise ValueError("No active destinations found in Nueva Ecija database.")
 
+    # Enforce default destination radius when a specific destination is resolved
+    cluster_radius_km = settings.default_dest_radius_km
+    if resolved_area != "Nueva Ecija":
+        within_radius = [
+            p
+            for p in candidate_places
+            if haversine_distance_km(anchor_lat, anchor_lng, p.latitude, p.longitude)
+            <= cluster_radius_km
+        ]
+        if len(within_radius) >= min(total_days * 2, 3):
+            candidate_places = within_radius
+
     # Track already scheduled places across the entire trip
     scheduled_place_ids: set[uuid.UUID] = set()
 
@@ -180,6 +208,7 @@ def generate_suggested_itinerary_data(
         day_number = day_idx + 1
         day_categories: list[str] = []
         day_items: list[dict[str, Any]] = []
+        current_day_cost = 0.0
 
         # Target 3 stops per day: Morning, Lunch, Afternoon
         available_slots = DAILY_TIME_SLOTS[:3]
@@ -199,6 +228,12 @@ def generate_suggested_itinerary_data(
             if not eligible:
                 break
 
+            remaining_daily_budget = (
+                max(0.0, request.daily_budget - current_day_cost)
+                if request.daily_budget > 0
+                else 0.0
+            )
+
             # Score each candidate relative to current day anchor
             scored_candidates = []
             for p in eligible:
@@ -208,8 +243,9 @@ def generate_suggested_itinerary_data(
                     anchor_lng=current_anchor_lng,
                     preferred_categories=preferred_categories,
                     current_day_categories=day_categories,
-                    daily_budget=request.daily_budget,
+                    remaining_daily_budget=remaining_daily_budget,
                     require_dining=is_dining_slot,
+                    max_radius_km=cluster_radius_km,
                 )
                 scored_candidates.append((s, p))
 
@@ -218,6 +254,15 @@ def generate_suggested_itinerary_data(
 
             scheduled_place_ids.add(chosen_place.id)
             day_categories.append(chosen_place.category)
+
+            # Track cumulative daily expenditure
+            raw_item_cost = (
+                chosen_place.estimated_cost_min
+                if chosen_place.estimated_cost_min is not None
+                else (chosen_place.estimated_cost_max or 0.0)
+            )
+            item_cost = float(raw_item_cost) if raw_item_cost is not None else 0.0
+            current_day_cost += item_cost
 
             # Move day anchor toward chosen place for localized proximity chaining
             current_anchor_lat = chosen_place.latitude

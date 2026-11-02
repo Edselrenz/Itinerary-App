@@ -428,9 +428,18 @@ export class HomePage implements OnInit, OnDestroy {
 
   public startPlanningWithDestination(destination: DestinationItem): void {
     this.closeDestinationDetail();
-    this.router.navigate(['/tabs/map'], {
-      queryParams: { destination: destination.name, municipality: destination.municipality },
-    });
+    const queryParams: Record<string, string> = {
+      destination: destination.name,
+      municipality: destination.municipality,
+    };
+    if (destination.directionsUrl) {
+      const match = destination.directionsUrl.match(/destination=(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+      if (match) {
+        queryParams['lat'] = match[1];
+        queryParams['lng'] = match[2];
+      }
+    }
+    this.router.navigate(['/tabs/map'], { queryParams });
   }
 
   public onSuggestedClick(): void {

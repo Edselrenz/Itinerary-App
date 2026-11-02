@@ -112,6 +112,7 @@ class ItineraryUpdate(BaseModel):
     daily_budget: float | None = Field(None, ge=0.0)
     preferences: list[str] | None = None
     assumptions: list[str] | None = None
+    days: list[ItineraryDayCreate] | None = None
 
 
 class ItineraryOut(BaseModel):

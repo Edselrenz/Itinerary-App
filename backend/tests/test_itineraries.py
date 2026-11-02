@@ -243,6 +243,101 @@ def test_itinerary_lifecycle_and_bola_protection():
     assert len(remaining_stops) == 1
     assert remaining_stops[0]["sort_order"] == 1
 
+    # 8b. CR-001 & CR-002: BOLA / IDOR Protection for Reorder and Delete
+    # User B creates an itinerary
+    res_b_itin = client.post(
+        "/api/v1/itineraries",
+        json={
+            "title": "User B Trip",
+            "destination": "Nueva Ecija",
+            "start_date": start_d.isoformat(),
+            "end_date": end_d.isoformat(),
+            "daily_budget": 1000.0,
+            "days": [
+                {
+                    "day_number": 1,
+                    "travel_date": start_d.isoformat(),
+                    "title": "User B Day 1",
+                    "items": [],
+                }
+            ],
+        },
+        headers=headers_b,
+    )
+    assert res_b_itin.status_code == 201
+    itin_b_id = res_b_itin.json()["id"]
+    day_b_id = res_b_itin.json()["days"][0]["id"]
+
+    # CR-001: User B tries to reorder stop item_1_id (belonging to User A) into User B's itinerary -> 400 Bad Request
+    res_reorder_bola = client.post(
+        f"/api/v1/itineraries/{itin_b_id}/reorder",
+        json={
+            "items": [
+                {"id": item_1_id, "day_id": day_b_id, "sort_order": 1}
+            ]
+        },
+        headers=headers_b,
+    )
+    assert res_reorder_bola.status_code == 400
+    assert "does not belong to this itinerary" in res_reorder_bola.json()["detail"]
+
+    # CR-002: User B tries to delete User A's stop using User B's itinerary -> 404 Not Found
+    res_del_idor = client.delete(
+        f"/api/v1/itineraries/{itin_b_id}/days/{day_1_id}/items/{item_1_id}",
+        headers=headers_b,
+    )
+    assert res_del_idor.status_code == 404
+    assert "Day not found in this itinerary" in res_del_idor.json()["detail"]
+
+    # 8c. CR-003: User A composite PATCH itinerary including days and stops
+    patch_payload = {
+        "title": "Updated Weekend Adventure",
+        "daily_budget": 4000.0,
+        "days": [
+            {
+                "day_number": 1,
+                "travel_date": start_d.isoformat(),
+                "title": "Day 1 Updated",
+                "items": [
+                    {
+                        "place_id": place_id,
+                        "sort_order": 1,
+                        "duration_minutes": 240,
+                        "notes": "Updated note",
+                    }
+                ],
+            },
+            {
+                "day_number": 2,
+                "travel_date": end_d.isoformat(),
+                "title": "Day 2 With New Stop",
+                "items": [
+                    {
+                        "custom_title": "Day 2 Custom Stop",
+                        "sort_order": 1,
+                        "duration_minutes": 60,
+                    }
+                ],
+            },
+        ],
+    }
+    patch_res = client.patch(
+        f"/api/v1/itineraries/{itinerary_id}",
+        json=patch_payload,
+        headers=headers_a,
+    )
+    assert patch_res.status_code == 200
+    patched_data = patch_res.json()
+    assert patched_data["title"] == "Updated Weekend Adventure"
+    assert patched_data["daily_budget"] == 4000.0
+    assert len(patched_data["days"]) == 2
+    assert patched_data["days"][0]["title"] == "Day 1 Updated"
+    assert len(patched_data["days"][0]["items"]) == 1
+    assert patched_data["days"][0]["items"][0]["notes"] == "Updated note"
+    assert patched_data["days"][1]["title"] == "Day 2 With New Stop"
+    assert len(patched_data["days"][1]["items"]) == 1
+    assert patched_data["days"][1]["items"][0]["custom_title"] == "Day 2 Custom Stop"
+
     # 9. Delete itinerary and verify cascade
     del_itin_res = client.delete(
         f"/api/v1/itineraries/{itinerary_id}", headers=headers_a
@@ -440,3 +535,291 @@ def test_suggested_itinerary_engine():
     assert any(i["id"] == saved_id for i in user_itins)
 
 
+
+
+def test_single_stop_patch_and_place_validation():
+    TestingSessionLocal = make_test_session()
+
+    def override_get_db():
+        db = TestingSessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app.dependency_overrides[get_db] = override_get_db
+    client = TestClient(app)
+
+    # Seed place
+    db = TestingSessionLocal()
+    muni = Municipality(
+        name="Cabanatuan City",
+        slug="cabanatuan-city",
+        is_city=True,
+        center_lat=15.4858,
+        center_lng=120.9667,
+    )
+    db.add(muni)
+    db.flush()
+
+    p = Place(
+        name="Plaza Lucero",
+        category="tourist_attraction",
+        latitude=15.4860,
+        longitude=120.9670,
+        municipality_id=muni.id,
+        source_name="TestSeeder",
+        source_record_id="test/plaza-lucero",
+    )
+    db.add(p)
+    db.commit()
+    place_id = str(p.id)
+    db.close()
+
+    # Register user
+    reg = client.post(
+        "/api/v1/auth/register",
+        json={
+            "first_name": "Juan",
+            "last_name": "Dela Cruz",
+            "username": "juandelacruz",
+            "email": "juan@example.ph",
+            "password": "Password123!",
+        },
+    )
+    assert reg.status_code == 201
+    auth_headers = {"Authorization": f"Bearer {reg.json()['access_token']}"}
+
+    # 1. Test create_itinerary with nonexistent place_id -> 404
+    fake_place_id = str(uuid.uuid4())
+    bad_itin_res = client.post(
+        "/api/v1/itineraries",
+        headers=auth_headers,
+        json={
+            "title": "Bad Itinerary",
+            "destination": "Cabanatuan City",
+            "start_date": "2026-11-10",
+            "end_date": "2026-11-10",
+            "days": [
+                {
+                    "day_number": 1,
+                    "travel_date": "2026-11-10",
+                    "title": "Day 1",
+                    "items": [
+                        {
+                            "place_id": fake_place_id,
+                            "sort_order": 1,
+                        }
+                    ],
+                }
+            ],
+        },
+    )
+    assert bad_itin_res.status_code == 404
+    assert "do not exist" in bad_itin_res.json()["detail"]
+
+    # 2. Test create valid itinerary
+    good_itin_res = client.post(
+        "/api/v1/itineraries",
+        headers=auth_headers,
+        json={
+            "title": "Good Itinerary",
+            "destination": "Cabanatuan City",
+            "start_date": "2026-11-10",
+            "end_date": "2026-11-10",
+            "days": [
+                {
+                    "day_number": 1,
+                    "travel_date": "2026-11-10",
+                    "title": "Day 1",
+                    "items": [
+                        {
+                            "place_id": place_id,
+                            "sort_order": 1,
+                            "duration_minutes": 60,
+                            "notes": "Initial note",
+                        }
+                    ],
+                }
+            ],
+        },
+    )
+    assert good_itin_res.status_code == 201
+    itin = good_itin_res.json()
+    itin_id = itin["id"]
+    day_id = itin["days"][0]["id"]
+    item_id = itin["days"][0]["items"][0]["id"]
+
+    # 3. Test add_itinerary_item with nonexistent place_id -> 404
+    bad_add_res = client.post(
+        f"/api/v1/itineraries/{itin_id}/days/{day_id}/items",
+        headers=auth_headers,
+        json={"place_id": fake_place_id, "sort_order": 2},
+    )
+    assert bad_add_res.status_code == 404
+
+    # 4. Test single-stop PATCH /api/v1/itineraries/{id}/days/{day_id}/items/{item_id}
+    patch_res = client.patch(
+        f"/api/v1/itineraries/{itin_id}/days/{day_id}/items/{item_id}",
+        headers=auth_headers,
+        json={
+            "notes": "Updated historical notes",
+            "duration_minutes": 120,
+            "estimated_cost_min": 150.0,
+            "estimated_cost_max": 300.0,
+        },
+    )
+    assert patch_res.status_code == 200
+    updated_itin = patch_res.json()
+    updated_item = updated_itin["days"][0]["items"][0]
+    assert updated_item["notes"] == "Updated historical notes"
+    assert updated_item["duration_minutes"] == 120
+    assert updated_item["estimated_cost_min"] == 150.0
+    assert updated_item["estimated_cost_max"] == 300.0
+
+    # 5. Test single-stop PATCH BOLA protection (foreign user)
+    reg2 = client.post(
+        "/api/v1/auth/register",
+        json={
+            "first_name": "Attacker",
+            "last_name": "Bob",
+            "username": "attackerbob",
+            "email": "attacker@example.ph",
+            "password": "Password123!",
+        },
+    )
+    assert reg2.status_code == 201
+    attacker_headers = {"Authorization": f"Bearer {reg2.json()['access_token']}"}
+
+    attacker_patch = client.patch(
+        f"/api/v1/itineraries/{itin_id}/days/{day_id}/items/{item_id}",
+        headers=attacker_headers,
+        json={"notes": "Hacked note"},
+    )
+    assert attacker_patch.status_code == 404
+
+
+def test_suggested_generator_radius_and_budget_clustering():
+    TestingSessionLocal = make_test_session()
+
+    def override_get_db():
+        db = TestingSessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app.dependency_overrides[get_db] = override_get_db
+    client = TestClient(app)
+
+    db = TestingSessionLocal()
+    # Municipality in Bongabon (Eastern Nueva Ecija)
+    muni_bongabon = Municipality(
+        name="Bongabon",
+        slug="bongabon",
+        is_city=False,
+        center_lat=15.6319,
+        center_lng=121.1444,
+    )
+    # Distant Municipality in Cuyapo (Northwestern Nueva Ecija ~60km away)
+    muni_cuyapo = Municipality(
+        name="Cuyapo",
+        slug="cuyapo",
+        is_city=False,
+        center_lat=15.7761,
+        center_lng=120.6669,
+    )
+    db.add_all([muni_bongabon, muni_cuyapo])
+    db.flush()
+
+    # Seed 3 places in Bongabon within 5km radius
+    p_b1 = Place(
+        name="Mount Labi Viewpoint",
+        category="nature_park",
+        latitude=15.6350,
+        longitude=121.1460,
+        municipality_id=muni_bongabon.id,
+        source_name="Seed",
+        source_record_id="b1",
+        is_featured=True,
+        estimated_cost_min=50.0,
+        estimated_cost_max=100.0,
+    )
+    p_b2 = Place(
+        name="Bongabon Onion Cafe",
+        category="restaurant",
+        latitude=15.6300,
+        longitude=121.1420,
+        municipality_id=muni_bongabon.id,
+        source_name="Seed",
+        source_record_id="b2",
+        is_featured=False,
+        estimated_cost_min=150.0,
+        estimated_cost_max=250.0,
+    )
+    p_b3 = Place(
+        name="Sierra Madre Nature Trail",
+        category="tourist_attraction",
+        latitude=15.6400,
+        longitude=121.1500,
+        municipality_id=muni_bongabon.id,
+        source_name="Seed",
+        source_record_id="b3",
+        is_featured=True,
+        estimated_cost_min=80.0,
+        estimated_cost_max=120.0,
+    )
+
+    # Seed distant places in Cuyapo (60+ km away)
+    p_c1 = Place(
+        name="Cuyapo Far Heritage House",
+        category="museum_cultural",
+        latitude=15.7770,
+        longitude=120.6680,
+        municipality_id=muni_cuyapo.id,
+        source_name="Seed",
+        source_record_id="c1",
+        is_featured=True,
+        estimated_cost_min=2000.0,
+        estimated_cost_max=3000.0,
+    )
+    p_c2 = Place(
+        name="Cuyapo Distant Restaurant",
+        category="restaurant",
+        latitude=15.7780,
+        longitude=120.6690,
+        municipality_id=muni_cuyapo.id,
+        source_name="Seed",
+        source_record_id="c2",
+        is_featured=True,
+        estimated_cost_min=1500.0,
+        estimated_cost_max=2000.0,
+    )
+    db.add_all([p_b1, p_b2, p_b3, p_c1, p_c2])
+    db.commit()
+    db.close()
+
+    # Request suggested itinerary for Bongabon
+    res = client.post(
+        "/api/v1/itineraries/suggest",
+        json={
+            "title": "Bongabon Radius Test",
+            "destination": "Bongabon",
+            "start_date": "2026-11-20",
+            "end_date": "2026-11-20",
+            "daily_budget": 500.0,
+            "preferences": ["nature", "food"],
+            "save_immediately": False,
+        },
+    )
+    assert res.status_code == 200
+    plan = res.json()
+    day_items = plan["days"][0]["items"]
+    assert len(day_items) >= 2
+
+    # Verify all scheduled stops belong to Bongabon and NOT distant Cuyapo
+    scheduled_names = [it["place"]["name"] for it in day_items]
+    assert "Mount Labi Viewpoint" in scheduled_names
+    assert "Bongabon Onion Cafe" in scheduled_names
+    assert "Cuyapo Far Heritage House" not in scheduled_names
+    assert "Cuyapo Distant Restaurant" not in scheduled_names

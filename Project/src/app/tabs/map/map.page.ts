@@ -10,6 +10,8 @@ import {
   ViewChild,
 } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { ActivatedRoute } from '@angular/router';
+import { Subscription } from 'rxjs';
 import {
   IonContent,
   IonIcon,
@@ -27,6 +29,8 @@ import {
   carOutline,
   cashOutline,
   closeOutline,
+  cloudOfflineOutline,
+  shieldCheckmarkOutline,
   flagOutline,
   layersOutline,
   leafOutline,
@@ -101,7 +105,11 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
   public selectedPlace: Place | null = null;
   public selectedCategory: string | null = null;
   public isLoading = false;
+  public hasTileError = false;
   public categoryFilters: CategoryFilterItem[] = CATEGORY_FILTERS;
+
+  private subscriptions = new Subscription();
+  private pendingTarget: { lat?: number; lng?: number; destination?: string; municipality?: string } | null = null;
 
   @ViewChild('mapElement', { static: false }) private mapElementRef?: ElementRef<HTMLDivElement>;
 
@@ -109,6 +117,7 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
 
   constructor(
     private placeService: PlaceService,
+    private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
     @Inject(PLATFORM_ID) private platformId: object
   ) {
@@ -127,6 +136,8 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
       carOutline,
       cashOutline,
       closeOutline,
+  cloudOfflineOutline,
+  shieldCheckmarkOutline,
       flagOutline,
       layersOutline,
       leafOutline,
@@ -146,6 +157,22 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
 
   public ngOnInit(): void {
     this.loadPlaces();
+    this.subscriptions.add(
+      this.route.queryParams.subscribe((params) => {
+        const lat = params['lat'] ? parseFloat(params['lat']) : undefined;
+        const lng = params['lng'] ? parseFloat(params['lng']) : undefined;
+        const destination = params['destination'] || undefined;
+        const municipality = params['municipality'] || undefined;
+
+        if (lat !== undefined && lng !== undefined) {
+          this.pendingTarget = { lat, lng, destination, municipality };
+          this.flyToTarget(lat, lng);
+        } else if (destination || municipality) {
+          this.pendingTarget = { destination, municipality };
+          this.flyToDestinationOrMunicipality(destination, municipality);
+        }
+      })
+    );
   }
 
   public ngAfterViewInit(): void {
@@ -166,12 +193,18 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
       } else {
         setTimeout(() => {
           this.map?.invalidateSize();
+          if (this.pendingTarget?.lat !== undefined && this.pendingTarget?.lng !== undefined) {
+            this.flyToTarget(this.pendingTarget.lat, this.pendingTarget.lng);
+          } else if (this.pendingTarget?.destination || this.pendingTarget?.municipality) {
+            this.flyToDestinationOrMunicipality(this.pendingTarget.destination, this.pendingTarget.municipality);
+          }
         }, 150);
       }
     }
   }
 
   public ngOnDestroy(): void {
+    this.subscriptions.unsubscribe();
     if (this.markerCluster) {
       this.markerCluster.clearLayers();
       this.markerCluster = null;
@@ -224,10 +257,17 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
       environment.tileAttribution ||
       '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors';
 
-    L.tileLayer(tileUrl, {
+    const tileLayer = L.tileLayer(tileUrl, {
       attribution: attribution,
       maxZoom: 19,
-    }).addTo(this.map);
+    });
+    tileLayer.on('tileerror', () => {
+      if (!this.hasTileError) {
+        this.hasTileError = true;
+        this.cdr.detectChanges();
+      }
+    });
+    tileLayer.addTo(this.map);
 
     // MarkerClusterGroup
     this.markerCluster = (L as unknown as { markerClusterGroup: (opts?: unknown) => L.MarkerClusterGroup }).markerClusterGroup({
@@ -267,6 +307,11 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
         this.places = result.items || [];
         this.isLoading = false;
         this.updateMarkers();
+        if (this.pendingTarget?.lat !== undefined && this.pendingTarget?.lng !== undefined) {
+          this.flyToTarget(this.pendingTarget.lat, this.pendingTarget.lng);
+        } else if (this.pendingTarget?.destination || this.pendingTarget?.municipality) {
+          this.flyToDestinationOrMunicipality(this.pendingTarget.destination, this.pendingTarget.municipality);
+        }
         this.cdr.detectChanges();
       },
       error: () => {
@@ -389,15 +434,46 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
     const min = place.estimated_cost_min;
     const max = place.estimated_cost_max;
     if (min != null && max != null) {
+      if (min === 0 && max === 0) {
+        return 'Free Admission (₱0)';
+      }
       return `₱${min} - ₱${max}`;
     }
     if (min != null) {
-      return `From ₱${min}`;
+      return min === 0 ? 'Free Admission (₱0)' : `From ₱${min}`;
     }
     if (max != null) {
       return `Up to ₱${max}`;
     }
-    return 'Cost not provided';
+    return 'Fee: Not verified / Not provided';
+  }
+
+  private flyToTarget(lat: number, lng: number): void {
+    if (this.map && !isNaN(lat) && !isNaN(lng)) {
+      this.map.flyTo([lat, lng], 14, { duration: 1.0 });
+    }
+  }
+
+  private flyToDestinationOrMunicipality(destination?: string, municipality?: string): void {
+    if (!this.places || this.places.length === 0) {
+      return;
+    }
+    let matchedPlace: Place | undefined;
+    if (destination) {
+      const lower = destination.toLowerCase();
+      matchedPlace = this.places.find((p) => p.name.toLowerCase().includes(lower));
+    }
+    if (!matchedPlace && municipality) {
+      const lowerMuni = municipality.toLowerCase();
+      matchedPlace = this.places.find((p) =>
+        p.municipality_name?.toLowerCase().includes(lowerMuni)
+      );
+    }
+    if (matchedPlace && typeof matchedPlace.latitude === 'number' && typeof matchedPlace.longitude === 'number') {
+      this.selectedPlace = matchedPlace;
+      this.flyToTarget(matchedPlace.latitude, matchedPlace.longitude);
+      this.cdr.detectChanges();
+    }
   }
 
   public formatCategory(categoryKey: string): string {

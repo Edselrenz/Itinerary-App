@@ -151,3 +151,78 @@ def test_auth_rate_limiting():
     assert "Rate limit exceeded" in responses[5].text
 
 
+def test_settings_secret_validation_in_production():
+    """CR-004: Verifies Settings rejects default JWT secret key outside development."""
+    import pytest
+    from app.core.config import Settings
+
+    with pytest.raises(ValueError, match="jwt_secret_key must be explicitly configured"):
+        Settings(
+            app_env="production",
+            jwt_secret_key="dev_only_replace_before_pilot_with_openssl_rand_hex_32",
+        )
+
+
+def test_google_oauth_security_hardening():
+    """CR-004 & CR-005: Verifies unconfigured client ID, unverified emails, and deactivated accounts."""
+    from unittest.mock import patch
+    from fastapi import HTTPException
+    from app.models.entities import User
+    from app.services.auth_service import authenticate_google_user, verify_google_id_token
+    from app.core.config import settings
+
+    TestingSessionLocal = make_test_session()
+    db = TestingSessionLocal()
+
+    # 1. CR-004: Unconfigured google_oauth_client_id raises 503
+    with patch.object(settings, "google_oauth_client_id", ""):
+        try:
+            verify_google_id_token("dummy-token")
+            assert False, "Should have raised HTTPException"
+        except HTTPException as exc:
+            assert exc.status_code == 503
+            assert "client ID is not configured" in exc.detail
+
+    # 2. CR-005: Unverified Google email rejected with 400 Bad Request
+    with patch("app.services.auth_service.verify_google_id_token") as mock_verify:
+        mock_verify.return_value = {
+            "sub": "google-123",
+            "email": "unverified@example.ph",
+            "email_verified": False,
+        }
+        try:
+            authenticate_google_user(db, "unverified-token")
+            assert False, "Should have raised HTTPException"
+        except HTTPException as exc:
+            assert exc.status_code == 400
+            assert "not verified" in exc.detail
+
+    # 3. CR-005: Deactivated existing user rejected with 403 Forbidden
+    inactive_user = User(
+        first_name="Banned",
+        last_name="User",
+        username_normalized="banneduser",
+        email_normalized="banned@example.ph",
+        password_hash=None,
+        is_active=False,
+    )
+    db.add(inactive_user)
+    db.commit()
+
+    with patch("app.services.auth_service.verify_google_id_token") as mock_verify:
+        mock_verify.return_value = {
+            "sub": "google-456",
+            "email": "banned@example.ph",
+            "email_verified": True,
+        }
+        try:
+            authenticate_google_user(db, "banned-token")
+            assert False, "Should have raised HTTPException"
+        except HTTPException as exc:
+            assert exc.status_code == 403
+            assert "deactivated" in exc.detail
+
+    db.close()
+
+
+

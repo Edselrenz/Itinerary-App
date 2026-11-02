@@ -80,6 +80,20 @@
               aria-label="Daily Budget"
             />
           </div>
+          <!-- Budget Preset Chips (CR-009) -->
+          <div class="budget-presets-row" style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;">
+            @for (preset of budgetPresets; track preset) {
+              <button
+                type="button"
+                class="figma-pref-pill"
+                style="padding: 4px 10px; font-size: 0.85rem;"
+                [class.active]="form.get('daily_budget')?.value === preset"
+                (click)="setBudgetPreset(preset)"
+              >
+                ₱{{ preset.toLocaleString() }}
+              </button>
+            }
+          </div>
         </div>
 
         <!-- Preferences (optional) -->
@@ -133,12 +147,12 @@
           <h2 class="trip-destination-title">{{ generatedPlan.destination }}</h2>
           <div class="trip-meta-subrow">
             <span class="trip-days-count">{{ computedTripDays }} days</span>
-            <span class="trip-budget-range">₱ 3,000 - ₱ 5,000/day</span>
+            <span class="trip-budget-range">₱ {{ generatedPlan.daily_budget ? generatedPlan.daily_budget.toLocaleString() : '3,000' }}/day</span>
           </div>
           <div class="trip-tags-row">
-            <span class="trip-tag-pill">Food Trip</span>
-            <span class="trip-tag-pill">Cultural & History</span>
-            <span class="trip-tag-pill">Resort</span>
+            @for (pref of displayPreferences; track pref) {
+              <span class="trip-tag-pill">{{ pref }}</span>
+            }
           </div>
         </div>
       </div>

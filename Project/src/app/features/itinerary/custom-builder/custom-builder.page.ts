@@ -39,6 +39,7 @@ import {
 } from 'ionicons/icons';
 import { Subscription, debounceTime, distinctUntilChanged } from 'rxjs';
 import { Itinerary } from '../../../core/models/itinerary.models';
+import { addDaysLocal, diffDaysLocal, formatDateRange, parseLocalIsoDate, toLocalIsoDate } from '../../../core/utils/date.utils';
 import { Place } from '../../../core/models/place.models';
 import { ItineraryBudgetSummary, ItineraryService } from '../../../core/services/itinerary.service';
 import { PlaceService } from '../../../core/services/place.service';
@@ -115,7 +116,7 @@ export class CustomBuilderPage implements OnInit, OnDestroy {
   public isDatePickerOpen = false;
   public popupStartDate = '';
   public popupEndDate = '';
-  public minDate = new Date().toISOString().split('T')[0];
+  public minDate = toLocalIsoDate();
 
   // Category Filter Pills (Figma: All, Tourist Spots, Food, Shopping, Other)
   public browseCategories = ['All', 'Tourist Spots', 'Food', 'Shopping', 'Other'];
@@ -312,20 +313,7 @@ export class CustomBuilderPage implements OnInit, OnDestroy {
     if (!startStr || !endStr) {
       return 'Select start and end dates';
     }
-    const start = new Date(startStr);
-    const end = new Date(endStr);
-    const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
-    const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
-    const startYear = start.getFullYear();
-    const endYear = end.getFullYear();
-
-    if (startYear !== endYear) {
-      return `${startMonth} ${start.getDate()}, ${startYear} – ${endMonth} ${end.getDate()}, ${endYear}`;
-    }
-    if (startMonth === endMonth) {
-      return `${startMonth} ${start.getDate()} – ${end.getDate()}, ${startYear}`;
-    }
-    return `${startMonth} ${start.getDate()} – ${endMonth} ${end.getDate()}, ${startYear}`;
+    return formatDateRange(startStr, endStr);
   }
 
   public get hasSelectedDates(): boolean {
@@ -336,13 +324,12 @@ export class CustomBuilderPage implements OnInit, OnDestroy {
     if (!this.popupStartDate || !this.popupEndDate) {
       return { days: 0, nights: 0, isValid: false, label: 'Select both departure (From) and return (To) dates' };
     }
-    const start = new Date(this.popupStartDate);
-    const end = new Date(this.popupEndDate);
+    const start = parseLocalIsoDate(this.popupStartDate);
+    const end = parseLocalIsoDate(this.popupEndDate);
     if (end < start) {
       return { days: 0, nights: 0, isValid: false, label: 'Return date must be on or after departure date' };
     }
-    const diff = Math.max(0, end.getTime() - start.getTime());
-    const days = Math.max(1, Math.ceil(diff / (1000 * 60 * 60 * 24)) + 1);
+    const days = diffDaysLocal(this.popupStartDate, this.popupEndDate);
     const nights = Math.max(0, days - 1);
     const label = `${days} ${days === 1 ? 'Day' : 'Days'}, ${nights} ${nights === 1 ? 'Night' : 'Nights'} in Nueva Ecija`;
     return { days, nights, isValid: true, label };
@@ -350,19 +337,14 @@ export class CustomBuilderPage implements OnInit, OnDestroy {
 
   public formatFriendlyDate(dateStr: string): string {
     if (!dateStr) return '';
-    const d = new Date(dateStr);
+    const d = parseLocalIsoDate(dateStr);
     return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
   }
 
   public get computedTripDays(): number {
     const startStr = this.form.get('start_date')?.value;
     const endStr = this.form.get('end_date')?.value;
-    if (!startStr || !endStr) return 1;
-
-    const start = new Date(startStr);
-    const end = new Date(endStr);
-    const diff = Math.max(0, end.getTime() - start.getTime());
-    return Math.max(1, Math.ceil(diff / (1000 * 60 * 60 * 24)) + 1);
+    return diffDaysLocal(startStr, endStr);
   }
 
   public get formattedTripDateSubtitle(): string {
@@ -372,19 +354,9 @@ export class CustomBuilderPage implements OnInit, OnDestroy {
       return 'e.g., Oct 30 – Nov 2 (4 days, 3 nights)';
     }
 
-    const start = new Date(startStr);
-    const end = new Date(endStr);
     const days = this.computedTripDays;
     const nights = Math.max(0, days - 1);
-
-    const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
-    const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
-
-    let rangeStr = `${startMonth} ${start.getDate()} – ${endMonth} ${end.getDate()}`;
-    if (startMonth === endMonth) {
-      rangeStr = `${startMonth} ${start.getDate()} – ${end.getDate()}`;
-    }
-
+    const rangeStr = formatDateRange(startStr, endStr);
     return `${rangeStr} (${days} ${days === 1 ? 'day' : 'days'}, ${nights} ${nights === 1 ? 'night' : 'nights'})`;
   }
 
@@ -401,14 +373,14 @@ export class CustomBuilderPage implements OnInit, OnDestroy {
 
     if (this.days.length !== targetDays) {
       const newDays: BuilderDay[] = [];
+      const baseDate = startDateStr ? parseLocalIsoDate(startDateStr) : new Date();
       for (let i = 0; i < targetDays; i++) {
-        const d = new Date(startDate);
-        d.setDate(d.getDate() + i);
+        const d = addDaysLocal(baseDate, i);
         const existing = this.days[i];
         newDays.push({
           id: existing?.id || this.generateTempId(),
           day_number: i + 1,
-          travel_date: d.toISOString().split('T')[0],
+          travel_date: toLocalIsoDate(d),
           title: existing?.title || `Day ${i + 1}`,
           items: existing?.items || [],
         });
@@ -520,12 +492,11 @@ export class CustomBuilderPage implements OnInit, OnDestroy {
 
   public addDay(): void {
     const lastDay = this.days[this.days.length - 1];
-    let nextDateStr = new Date().toISOString().split('T')[0];
+    let nextDateStr = toLocalIsoDate();
 
     if (lastDay && lastDay.travel_date) {
-      const nextDate = new Date(lastDay.travel_date);
-      nextDate.setDate(nextDate.getDate() + 1);
-      nextDateStr = nextDate.toISOString().split('T')[0];
+      const nextDate = addDaysLocal(parseLocalIsoDate(lastDay.travel_date), 1);
+      nextDateStr = toLocalIsoDate(nextDate);
     }
 
     const newDayNum = this.days.length + 1;
@@ -958,6 +929,9 @@ export class CustomBuilderPage implements OnInit, OnDestroy {
           start_date: payload.start_date,
           end_date: payload.end_date,
           daily_budget: payload.daily_budget,
+          preferences: payload.preferences,
+          assumptions: payload.assumptions,
+          days: payload.days,
         })
       : this.itineraryService.createItinerary(payload);
 

@@ -1,4 +1,4 @@
-import { Place } from './place.models';
+import type { Place } from './place.models';
 
 export interface ItineraryItem {
   id: string;
@@ -84,6 +84,7 @@ export interface ItineraryUpdatePayload {
   daily_budget?: number;
   preferences?: string[];
   assumptions?: string[];
+  days?: ItineraryDayCreatePayload[];
 }
 
 export interface ItineraryReorderEntry {
@@ -108,5 +109,3 @@ export interface ItineraryBudgetSummary {
   unverifiedCount: number;
   displayText: string;
 }
-
-

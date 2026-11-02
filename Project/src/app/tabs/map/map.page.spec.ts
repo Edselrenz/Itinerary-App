@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { ActivatedRoute } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
@@ -55,6 +56,12 @@ describe('MapPage', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: PlaceService, useValue: mockPlaceService },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            queryParams: of({}),
+          },
+        },
       ],
     }).compileComponents();
 
@@ -112,7 +119,10 @@ describe('MapPage', () => {
     expect(component.formatCost(placeMaxOnly)).toBe('Up to ₱1000');
 
     const placeNoCost: Place = { ...mockPlace, estimated_cost_min: null, estimated_cost_max: null };
-    expect(component.formatCost(placeNoCost)).toBe('Cost not provided');
+    expect(component.formatCost(placeNoCost)).toBe('Fee: Not verified / Not provided');
+
+    const placeFree: Place = { ...mockPlace, estimated_cost_min: 0, estimated_cost_max: 0 };
+    expect(component.formatCost(placeFree)).toBe('Free Admission (₱0)');
   });
 
   it('should return directions URL or fallback to coordinate link', () => {
@@ -142,6 +152,9 @@ describe('MapPage', () => {
     component.recenterMap();
 
     expect(flyToSpy).toHaveBeenCalledWith([15.58, 121.0], 10, { duration: 0.8 });
+  });
+  it('should initialize hasTileError as false', () => {
+    expect(component.hasTileError).toBe(false);
   });
 });
 

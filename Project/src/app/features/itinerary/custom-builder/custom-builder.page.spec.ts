@@ -210,6 +210,53 @@ describe('CustomBuilderPage', () => {
     expect(component.hasUnsavedChanges).toBe(false);
   });
 
+  it('saves edited itinerary with days and stops intact (CR-003)', async () => {
+    component.isEditMode = true;
+    component.itineraryId = 'itin-1';
+    component.days = [
+      {
+        id: 'day-1',
+        day_number: 1,
+        travel_date: '2026-11-01',
+        title: 'Day 1',
+        items: [
+          {
+            id: 'stop-1',
+            place_id: mockPlace.id,
+            name: mockPlace.name,
+            category: 'nature',
+            municipality: 'General Tinio',
+            image: '',
+            sort_order: 1,
+            duration_minutes: 90,
+            estimated_cost_min: 150,
+            estimated_cost_max: 450,
+            isCustomVenue: false,
+          },
+        ],
+      },
+    ];
+
+    await component.saveItinerary();
+
+    expect(mockItineraryService.updateItinerary).toHaveBeenCalledWith(
+      'itin-1',
+      expect.objectContaining({
+        title: expect.any(String),
+        days: expect.arrayContaining([
+          expect.objectContaining({
+            day_number: 1,
+            items: expect.arrayContaining([
+              expect.objectContaining({ place_id: mockPlace.id }),
+            ]),
+          }),
+        ]),
+      })
+    );
+    expect(router.navigate).toHaveBeenCalledWith(['/tabs/home']);
+    expect(component.hasUnsavedChanges).toBe(false);
+  });
+
   it('handles cancel with no unsaved changes cleanly', async () => {
     component.hasUnsavedChanges = false;
     await component.onCancel();

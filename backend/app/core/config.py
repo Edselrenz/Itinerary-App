@@ -1,6 +1,7 @@
 """Application configuration loaded from environment variables."""
 
 from pathlib import Path
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ROOT_ENV = Path(__file__).resolve().parents[3] / ".env"
@@ -23,10 +24,23 @@ class Settings(BaseSettings):
         "http://localhost:4200",
         "capacitor://localhost",
         "http://localhost",
+        "https://edselrenz.github.io",
     ]
+    cors_origin_regex: str | None = r"^https://edselrenz\.github\.io$"
     google_oauth_client_id: str = ""
     enable_apple_auth: bool = False
     default_dest_radius_km: float = 25.0
+
+    @model_validator(mode="after")
+    def validate_secrets(self) -> "Settings":
+        if (
+            self.app_env != "development"
+            and self.jwt_secret_key == "dev_only_replace_before_pilot_with_openssl_rand_hex_32"
+        ):
+            raise ValueError(
+                "jwt_secret_key must be explicitly configured outside development environment."
+            )
+        return self
 
     model_config = SettingsConfigDict(
         env_file=(str(ROOT_ENV), ".env"),

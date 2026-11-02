@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, tap } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, tap, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { AuthResponse, LoginRequest, RegisterRequest, User } from '../models/auth.models';
+import type { AuthResponse, LoginRequest, RegisterRequest, User } from '../models/auth.models';
 import { GuestStorageService } from './guest-storage.service';
 
 @Injectable({
@@ -43,8 +43,60 @@ export class AuthService {
     return localStorage.getItem(AuthService.REFRESH_TOKEN_KEY);
   }
 
+  private isTokenExpired(token: string): boolean {
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) return true;
+      const base64Url = parts[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split('')
+          .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+          .join('')
+      );
+      const payload = JSON.parse(jsonPayload);
+      if (typeof payload.exp !== 'number') return false;
+      return Date.now() >= payload.exp * 1000 - 5000;
+    } catch {
+      return true;
+    }
+  }
+
   public isAuthenticated(): boolean {
-    return !!this.getAccessToken() && !!this.currentUserSubject.value;
+    const token = this.getAccessToken();
+    const hasUser = !!this.currentUserSubject.value;
+    if (!token || !hasUser) return false;
+    if (!this.isTokenExpired(token)) return true;
+    const refreshToken = this.getRefreshToken();
+    return !!refreshToken && !this.isTokenExpired(refreshToken);
+  }
+
+  public isAccessTokenExpired(): boolean {
+    const token = this.getAccessToken();
+    if (!token) return true;
+    return this.isTokenExpired(token);
+  }
+
+  public refreshSession(): Observable<AuthResponse> {
+    const refreshToken = this.getRefreshToken();
+    if (!refreshToken) {
+      this.logout();
+      return throwError(() => new Error('No refresh token available'));
+    }
+    return this.http
+      .post<AuthResponse>(`${environment.apiBaseUrl}/auth/refresh`, {
+        refresh_token: refreshToken,
+      })
+      .pipe(
+        tap((res) => {
+          this.handleAuthSuccess(res);
+        }),
+        catchError((err) => {
+          this.logout();
+          return throwError(() => err);
+        })
+      );
   }
 
   public register(payload: RegisterRequest): Observable<AuthResponse> {
@@ -94,4 +146,3 @@ export class AuthService {
     localStorage.removeItem(AuthService.USER_KEY);
   }
 }
-

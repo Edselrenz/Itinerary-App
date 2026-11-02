@@ -40,6 +40,11 @@
         <ion-spinner name="crescent"></ion-spinner>
         <span>Loading places...</span>
       </div>
+
+      <div class="tile-error-pill" *ngIf="hasTileError">
+        <ion-icon name="cloud-offline-outline"></ion-icon>
+        <span>Map tiles unavailable offline. Cached locations remain accessible.</span>
+      </div>
     </div>
 
     <!-- Interactive POI Bottom Sheet -->
@@ -84,10 +89,21 @@
             </div>
           </div>
 
-          <!-- Opening Hours (if listed) -->
-          <div class="sheet-info-pill" *ngIf="selectedPlace.opening_hours">
+          <!-- Provenance / Verification Badge -->
+          <div class="sheet-provenance-row" *ngIf="selectedPlace.source_name">
+            <span class="sheet-provenance-badge">
+              <ion-icon name="shield-checkmark-outline"></ion-icon>
+              Source: {{ selectedPlace.source_name }}
+            </span>
+            <span class="sheet-verified-badge" *ngIf="selectedPlace.verified_at">
+              Verified
+            </span>
+          </div>
+
+          <!-- Opening Hours (Explicit fallback when unverified) -->
+          <div class="sheet-info-pill">
             <ion-icon name="time-outline"></ion-icon>
-            <span>{{ selectedPlace.opening_hours }}</span>
+            <span>{{ selectedPlace.opening_hours || 'Hours: Not verified / Not provided' }}</span>
           </div>
 
           <!-- Description -->

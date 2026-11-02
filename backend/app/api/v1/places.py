@@ -30,6 +30,11 @@ CANONICAL_CATEGORIES: set[str] = {
 }
 
 
+def escape_like(query: str) -> str:
+    """Escapes SQL LIKE / ILIKE wildcard characters (% and _) as well as backslashes."""
+    return query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
 def serialize_place(place: Place) -> PlaceOut:
     """Converts a Place ORM instance into a PlaceOut response with external Google Maps URL."""
     return PlaceOut(
@@ -75,7 +80,8 @@ def list_municipalities(
     """Returns searchable Nueva Ecija cities and municipalities."""
     stmt = select(Municipality)
     if q and q.strip():
-        stmt = stmt.where(Municipality.name.ilike(f"%{q.strip()}%"))
+        safe_q = escape_like(q.strip())
+        stmt = stmt.where(Municipality.name.ilike(f"%{safe_q}%"))
     stmt = stmt.order_by(Municipality.is_city.desc(), Municipality.name.asc())
     return list(db.scalars(stmt).all())
 
@@ -103,7 +109,8 @@ def list_places(
     )
 
     if q and q.strip():
-        pattern = f"%{q.strip()}%"
+        safe_q = escape_like(q.strip())
+        pattern = f"%{safe_q}%"
         stmt = stmt.where(
             or_(
                 Place.name.ilike(pattern),

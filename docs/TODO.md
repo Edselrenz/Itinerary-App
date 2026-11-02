@@ -166,69 +166,69 @@ This checklist tracks completed, active, and pending tasks across all developmen
 
 ---
 
-## Phase 11: Priority 1 — Critical Security & Data-Loss Fixes (PENDING)
+## Phase 11: Priority 1 — Critical Security & Data-Loss Fixes (COMPLETED)
 > Ref: [CODE_REVIEW_AUDIT.md](file:///c:/Users/Edward/Desktop/CaseStudy/docs/CODE_REVIEW_AUDIT.md) — Critical & High Severity Findings
 
-- [ ] **CR-001**: Fix cross-itinerary BOLA in `POST /api/v1/itineraries/{id}/reorder` (`backend/app/api/v1/itineraries.py`):
-  - [ ] Enforce `item.day_id in {d.id for d in itinerary.days}` before updating `sort_order`.
-  - [ ] Reject foreign items with HTTP 400 Bad Request.
-  - [ ] Add negative test in `backend/tests/test_itineraries.py` asserting cross-user reorder attempt fails.
-- [ ] **CR-002**: Fix cross-itinerary BOLA / IDOR in `DELETE /api/v1/itineraries/{id}/days/{day_id}/items/{item_id}` (`backend/app/api/v1/itineraries.py`):
-  - [ ] Verify `day.itinerary_id == itinerary.id` and `item.day_id == day.id` before executing delete.
-  - [ ] Reject mismatched day/item with HTTP 404 Not Found.
-  - [ ] Add negative test in `backend/tests/test_itineraries.py` asserting cross-user item deletion attempt fails.
-- [ ] **CR-003**: Fix edit-mode itinerary saving dropping all days and stops (Silent Data Loss):
-  - [ ] Extend `ItineraryUpdate` schema (`backend/app/schemas/itinerary.py`) to accept optional `days: Optional[List[ItineraryDayCreate]]`, `preferences`, and `assumptions`.
-  - [ ] Update `PATCH /api/v1/itineraries/{id}` in `backend/app/api/v1/itineraries.py` to synchronize days and items transactionally when provided.
-  - [ ] Update `ItineraryService.updateItinerary()` and `updateGuestItinerary()` in `Project/src/app/core/services/itinerary.service.ts` to pass full itinerary payload including `days`.
-  - [ ] Update `CustomBuilderPage.saveItinerary()` in `Project/src/app/features/itinerary/custom-builder/custom-builder.page.ts` to include `days` in edit mode.
-  - [ ] Add automated tests in `test_itineraries.py` and `itinerary.service.spec.ts` verifying edit mode preserves all days and stops.
-- [ ] **CR-004**: Harden JWT secrets, OAuth audience validation, and CORS scope:
-  - [ ] Add startup validation in `backend/app/core/config.py` rejecting the default JWT secret key if `environment != "development"`.
-  - [ ] Enforce non-empty `google_oauth_client_id` in `backend/app/services/auth_service.py` (`verify_google_id_token`); reject verification if audience is unconfigured instead of passing `audience=None`.
-  - [ ] Tighten CORS origin regex in `backend/app/core/config.py` from `r"^https://.*\.github\.io$"` to explicit `https://edselrenz.github.io`.
-- [ ] **CR-005**: Fix Google OAuth account takeover & deactivated user bypass:
-  - [ ] Assert `payload.get("email_verified") is True` in `backend/app/services/auth_service.py` before linking existing accounts by email.
-  - [ ] Enforce `user.is_active` check in `authenticate_google_user()`; return HTTP 403 Forbidden if user is inactive/banned.
-  - [ ] Add unit tests in `backend/tests/test_auth.py` verifying unverified emails and deactivated accounts are rejected.
+- [x] **CR-001**: Fix cross-itinerary BOLA in `POST /api/v1/itineraries/{id}/reorder` (`backend/app/api/v1/itineraries.py`):
+  - [x] Enforce `item.day_id in {d.id for d in itinerary.days}` before updating `sort_order`.
+  - [x] Reject foreign items with HTTP 400 Bad Request.
+  - [x] Add negative test in `backend/tests/test_itineraries.py` asserting cross-user reorder attempt fails.
+- [x] **CR-002**: Fix cross-itinerary BOLA / IDOR in `DELETE /api/v1/itineraries/{id}/days/{day_id}/items/{item_id}` (`backend/app/api/v1/itineraries.py`):
+  - [x] Verify `day.itinerary_id == itinerary.id` and `item.day_id == day.id` before executing delete.
+  - [x] Reject mismatched day/item with HTTP 404 Not Found.
+  - [x] Add negative test in `backend/tests/test_itineraries.py` asserting cross-user item deletion attempt fails.
+- [x] **CR-003**: Fix edit-mode itinerary saving dropping all days and stops (Silent Data Loss):
+  - [x] Extend `ItineraryUpdate` schema (`backend/app/schemas/itinerary.py`) to accept optional `days: Optional[List[ItineraryDayCreate]]`, `preferences`, and `assumptions`.
+  - [x] Update `PATCH /api/v1/itineraries/{id}` in `backend/app/api/v1/itineraries.py` to synchronize days and items transactionally when provided.
+  - [x] Update `ItineraryService.updateItinerary()` and `updateGuestItinerary()` in `Project/src/app/core/services/itinerary.service.ts` to pass full itinerary payload including `days`.
+  - [x] Update `CustomBuilderPage.saveItinerary()` in `Project/src/app/features/itinerary/custom-builder/custom-builder.page.ts` to include `days` in edit mode.
+  - [x] Add automated tests in `test_itineraries.py` and `itinerary.service.spec.ts` verifying edit mode preserves all days and stops.
+- [x] **CR-004**: Harden JWT secrets, OAuth audience validation, and CORS scope:
+  - [x] Add startup validation in `backend/app/core/config.py` rejecting the default JWT secret key if `environment != "development"`.
+  - [x] Enforce non-empty `google_oauth_client_id` in `backend/app/services/auth_service.py` (`verify_google_id_token`); reject verification if audience is unconfigured instead of passing `audience=None`.
+  - [x] Tighten CORS origin regex in `backend/app/core/config.py` from `r"^https://.*\.github\.io$"` to explicit `https://edselrenz.github.io`.
+- [x] **CR-005**: Fix Google OAuth account takeover & deactivated user bypass:
+  - [x] Assert `payload.get("email_verified") is True` in `backend/app/services/auth_service.py` before linking existing accounts by email.
+  - [x] Enforce `user.is_active` check in `authenticate_google_user()`; return HTTP 403 Forbidden if user is inactive/banned.
+  - [x] Add unit tests in `backend/tests/test_auth.py` verifying unverified emails and deactivated accounts are rejected.
 
 ---
 
-## Phase 12: Priority 2 — Core Reliability & Functional Accuracy (PENDING)
+## Phase 12: Priority 2 — Core Reliability & Functional Accuracy (COMPLETED)
 > Ref: [CODE_REVIEW_AUDIT.md](file:///c:/Users/Edward/Desktop/CaseStudy/docs/CODE_REVIEW_AUDIT.md) — High & Medium Severity Functional Deficiencies
 
-- [ ] **CR-006**: Implement refresh token rotation & resilient interceptor:
-  - [ ] Implement `refreshSession()` in `Project/src/app/core/services/auth.service.ts` calling `POST /api/v1/auth/refresh`.
-  - [ ] Update `Project/src/app/core/interceptors/auth.interceptor.ts` to trap 401 Unauthorized, queue pending requests, and invoke token refresh.
-  - [ ] Check JWT expiration (`exp` claim) in `AuthService.isAuthenticated()`.
-  - [ ] Restrict `ItineraryService` guest storage fallback strictly to network outages (`status === 0 || status === 502 || status === 504`), not 401 authentication errors.
-- [ ] **CR-007**: Fix timezone off-by-one shifting in date parsing & generation:
-  - [ ] Create centralized date utility (`Project/src/app/core/utils/date.utils.ts`) with `toLocalIsoDate()`, `parseLocalIsoDate()`, and `addDaysLocal()`.
-  - [ ] Replace `new Date().toISOString().split('T')[0]` with local calendar date helper in `suggested-wizard.page.ts`.
-  - [ ] Replace `new Date("YYYY-MM-DD")` parsing and UTC arithmetic in `custom-builder.page.ts`, `itinerary-detail.page.ts`, and `itinerary.service.ts`.
-  - [ ] Add unit test suite in `Project/src/app/core/utils/date.utils.spec.ts` testing across timezones (UTC+8, UTC, UTC-8).
-- [ ] **CR-008**: Fix itinerary generator algorithm & SQL wildcard injection:
-  - [ ] Enforce `settings.default_dest_radius_km` (25.0 km) in `backend/app/algorithms/itinerary_generator.py` to prevent cross-province backtracking.
-  - [ ] Maintain cumulative daily budget tracking instead of independent per-stop budget check.
-  - [ ] Escape `%` and `_` SQL wildcards in `backend/app/api/v1/places.py` query parameters.
-  - [ ] Add test cases in `backend/tests/test_itineraries.py` verifying clustering radius enforcement.
-- [ ] **CR-009**: Fix offline suggested itinerary generator & dynamic form bindings:
-  - [ ] Call `POST /api/v1/itineraries/suggest` for guests when online; fall back to offline generator only on network failure.
-  - [ ] Filter POI pool in `generateOfflineSuggestedItinerary()` (`itinerary.service.ts`) by destination municipality and category preferences.
-  - [ ] Dynamically bind budget and preference chips in `suggested-wizard.page.html` to configured options.
-- [ ] **CR-010**: Implement single-stop PATCH endpoint & fix edge cases:
-  - [ ] Implement `PATCH /api/v1/itineraries/{id}/days/{day_id}/items/{item_id}` endpoint in `backend/app/api/v1/itineraries.py` using `ItineraryItemUpdate`.
-  - [ ] Fix `sort_order` default=1 bug in `add_itinerary_item()` (`default=0 + 1`).
-  - [ ] Validate `place_id` foreign key existence in `create_itinerary()` to prevent unhandled 500 `IntegrityError`.
-- [ ] **CR-011**: Fix Map page route parameters, tile error handling & honest pricing:
-  - [ ] Inject `ActivatedRoute` in `MapPage` (`Project/src/app/features/map/map.page.ts`) to read `queryParams` from Home page "Plan Route Here" and center/fly to coordinates.
-  - [ ] Add `tileerror` listener on Leaflet tile layer with user feedback indicator.
-  - [ ] Render explicit "Not verified / Not provided" labels and provenance badges in POI bottom sheet.
-- [ ] **CR-012**: Validate custom API URL & scope Bearer token injection:
-  - [ ] Validate URL protocol (`https://` or `http://localhost`) in `ConnectivityService.setCustomApiUrl()`.
-  - [ ] Scope `authInterceptor` Bearer token attachment strictly to `req.url.startsWith(environment.apiBaseUrl)`.
-- [ ] **CR-013 (F.4)**: Fix PostgreSQL restore script in `scripts/db_backup_restore.py`:
-  - [ ] Add `--clean --if-exists` flags to `pg_dump` invocation to ensure clean restore over existing tables.
+- [x] **CR-006**: Implement refresh token rotation & resilient interceptor:
+  - [x] Implement `refreshSession()` in `Project/src/app/core/services/auth.service.ts` calling `POST /api/v1/auth/refresh`.
+  - [x] Update `Project/src/app/core/interceptors/auth.interceptor.ts` to trap 401 Unauthorized, queue pending requests, and invoke token refresh.
+  - [x] Check JWT expiration (`exp` claim) in `AuthService.isAuthenticated()`.
+  - [x] Restrict `ItineraryService` guest storage fallback strictly to network outages (`status === 0 || status === 502 || status === 504`), not 401 authentication errors.
+- [x] **CR-007**: Fix timezone off-by-one shifting in date parsing & generation:
+  - [x] Create centralized date utility (`Project/src/app/core/utils/date.utils.ts`) with `toLocalIsoDate()`, `parseLocalIsoDate()`, and `addDaysLocal()`.
+  - [x] Replace `new Date().toISOString().split('T')[0]` with local calendar date helper in `suggested-wizard.page.ts`.
+  - [x] Replace `new Date("YYYY-MM-DD")` parsing and UTC arithmetic in `custom-builder.page.ts`, `itinerary-detail.page.ts`, and `itinerary.service.ts`.
+  - [x] Add unit test suite in `Project/src/app/core/utils/date.utils.spec.ts` testing across timezones (UTC+8, UTC, UTC-8).
+- [x] **CR-008**: Fix itinerary generator algorithm & SQL wildcard injection:
+  - [x] Enforce `settings.default_dest_radius_km` (25.0 km) in `backend/app/algorithms/itinerary_generator.py` to prevent cross-province backtracking.
+  - [x] Maintain cumulative daily budget tracking instead of independent per-stop budget check.
+  - [x] Escape `%` and `_` SQL wildcards in `backend/app/api/v1/places.py` query parameters.
+  - [x] Add test cases in `backend/tests/test_itineraries.py` verifying clustering radius enforcement.
+- [x] **CR-009**: Fix offline suggested itinerary generator & dynamic form bindings:
+  - [x] Call `POST /api/v1/itineraries/suggest` for guests when online; fall back to offline generator only on network failure.
+  - [x] Filter POI pool in `generateOfflineSuggestedItinerary()` (`itinerary.service.ts`) by destination municipality and category preferences.
+  - [x] Dynamically bind budget and preference chips in `suggested-wizard.page.html` to configured options.
+- [x] **CR-010**: Implement single-stop PATCH endpoint & fix edge cases:
+  - [x] Implement `PATCH /api/v1/itineraries/{id}/days/{day_id}/items/{item_id}` endpoint in `backend/app/api/v1/itineraries.py` using `ItineraryItemUpdate`.
+  - [x] Fix `sort_order` default=1 bug in `add_itinerary_item()` (`default=0 + 1`).
+  - [x] Validate `place_id` foreign key existence in `create_itinerary()` to prevent unhandled 500 `IntegrityError`.
+- [x] **CR-011**: Fix Map page route parameters, tile error handling & honest pricing:
+  - [x] Inject `ActivatedRoute` in `MapPage` (`Project/src/app/tabs/map/map.page.ts`) to read `queryParams` from Home page "Plan Route Here" and center/fly to coordinates.
+  - [x] Add `tileerror` listener on Leaflet tile layer with user feedback indicator.
+  - [x] Render explicit "Not verified / Not provided" labels and provenance badges in POI bottom sheet.
+- [x] **CR-012**: Validate custom API URL & scope Bearer token injection:
+  - [x] Validate URL protocol (`https://` or `http://localhost`) in `ConnectivityService.setCustomApiUrl()`.
+  - [x] Scope `authInterceptor` Bearer token attachment strictly to `req.url.startsWith(environment.apiBaseUrl)`.
+- [x] **CR-013 (F.4)**: Fix PostgreSQL restore script in `scripts/db_backup_restore.py`:
+  - [x] Add `--clean --if-exists` flags to `pg_dump` invocation to ensure clean restore over existing tables.
 
 ---
 

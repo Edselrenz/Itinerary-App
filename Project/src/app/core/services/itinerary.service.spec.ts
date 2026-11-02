@@ -222,6 +222,35 @@ describe('ItineraryService', () => {
       req.flush({ ...mockItinerary, title: 'Updated Trip Title' });
     });
 
+    it('should update itinerary with days composite payload via HTTP (CR-003)', () => {
+      const updatePayload: ItineraryUpdatePayload = {
+        title: 'Updated Trip With Days',
+        days: [
+          {
+            day_number: 1,
+            travel_date: '2026-11-01',
+            title: 'Updated Day 1',
+            items: [
+              {
+                place_id: 'place-uuid-1',
+                sort_order: 1,
+                duration_minutes: 120,
+              },
+            ],
+          },
+        ],
+      };
+
+      service.updateItinerary('itin-uuid-1', updatePayload).subscribe((res) => {
+        expect(res.title).toBe('Updated Trip With Days');
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}/itineraries/itin-uuid-1`);
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toEqual(updatePayload);
+      req.flush({ ...mockItinerary, title: 'Updated Trip With Days' });
+    });
+
     it('should delete itinerary via HTTP and remove from subject', () => {
       service.deleteItinerary('itin-uuid-1').subscribe();
 
