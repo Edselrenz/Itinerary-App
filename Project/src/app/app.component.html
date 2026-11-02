@@ -1,36 +1,30 @@
 <ion-app>
-  <!-- Pilot Offline Host Laptop Warning Banner -->
+  <!-- Offline Mode Travel Banner (Anti-Generic Brand-Aligned) -->
   @if (connectivityService.isHostOffline$ | async) {
-    <div class="offline-host-banner" role="status" aria-live="polite">
+    <aside class="offline-host-banner" role="status" aria-live="polite" aria-label="Offline Mode Status">
       <div class="banner-inner">
         <div class="banner-lead">
-          <ion-icon name="cloud-offline-outline" class="offline-lead-icon"></ion-icon>
+          <div class="offline-icon-wrap" aria-hidden="true">
+            <ion-icon name="cloud-offline-outline" class="offline-lead-icon"></ion-icon>
+          </div>
           <div class="offline-copy">
-            <span class="offline-title">Pilot Backend Offline</span>
-            <span class="offline-desc">Host laptop (127.0.0.1:8000) unreachable. Local saved trips & offline features remain active.</span>
+            <span class="offline-title">Offline Mode</span>
+            <span class="offline-desc">Cloud sync paused. Your saved trips and curated destinations remain accessible.</span>
           </div>
         </div>
 
         <div class="banner-actions">
           <button
             type="button"
-            class="banner-config-btn"
-            (click)="configureApiUrl()"
-            title="Set backend API address / tunnel"
-          >
-            <ion-icon name="settings-outline"></ion-icon>
-            <span>Set Server</span>
-          </button>
-          <button
-            type="button"
             class="banner-retry-btn"
             [disabled]="connectivityService.isCheckingHealth$ | async"
             (click)="retryConnection()"
+            aria-label="Retry connection to server"
           >
             @if (connectivityService.isCheckingHealth$ | async) {
-              <ion-spinner name="crescent"></ion-spinner>
+              <ion-spinner name="crescent" aria-hidden="true"></ion-spinner>
             } @else {
-              <ion-icon name="refresh-outline"></ion-icon>
+              <ion-icon name="refresh-outline" aria-hidden="true"></ion-icon>
             }
             <span>Retry</span>
           </button>
@@ -40,11 +34,11 @@
             (click)="dismissOfflineBanner()"
             aria-label="Dismiss offline banner"
           >
-            <ion-icon name="close-outline"></ion-icon>
+            <ion-icon name="close-outline" aria-hidden="true"></ion-icon>
           </button>
         </div>
       </div>
-    </div>
+    </aside>
   }
 
   <ion-router-outlet></ion-router-outlet>

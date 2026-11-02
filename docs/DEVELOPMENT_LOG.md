@@ -1163,3 +1163,28 @@ This log records chronological development sessions, detailing objectives, execu
   - `npm --prefix Project run test:unit`: **14/14 test suites, 107/107 unit tests passed [100%]**.
   - `npm --prefix Project run build`: **0 compilation errors, production build successful [100%]** (`styles` transfer size 9.69 kB).
 
+---
+
+## Session 41: Anti-Generic Offline Mode Refactoring & Persistent ngrok Tunnel
+- **Date & Time**: 2026-11-02 13:40:00 (Local)
+- **Objective**: Implement Approach 1 replacing developer-oriented prompt banner (`[Set Server]` / `window.prompt`) with an anti-generic, brand-aligned "Offline Mode" status indicator (`anti-generic-frontend-design` & `coding-and-system-development`).
+- **Key Enhancements**:
+  - **Persistent ngrok Integration**:
+    - Pre-baked permanent endpoint `https://anybody-cube-surprise.ngrok-free.dev/api/v1` into `Project/src/environments/environment.prod.ts` and `Project/src/environments/environment.example.ts`.
+    - Added automated cleanup for stale temporary `*.trycloudflare.com` addresses stored in `localStorage`.
+    - Configured `ngrok-skip-browser-warning: true` in `auth.interceptor.ts`.
+    - Updated `scripts/start_server.ps1` to automatically launch `tools/ngrok.exe http --domain=anybody-cube-surprise.ngrok-free.dev 8000`.
+  - **Anti-Generic Frontend Design Refactoring (`Project/src/app/app.component.html`, `.ts`, `.scss`)**:
+    - Removed `[Set Server]` button and `configureApiUrl()` prompt to prevent user confusion and eliminate the arbitrary backend URL injection / token exfiltration vector.
+    - Updated title from "Pilot Backend Offline" to **"Offline Mode"** and description from "Host laptop (127.0.0.1:8000) unreachable..." to **"Cloud sync paused. Your saved trips and curated destinations remain accessible."**
+    - Designed sleek, brand-aligned status banner: slate-900 glassmorphic surface (`rgba(15, 23, 42, 0.94)`, `backdrop-filter: blur(14px)`), warm amber status icon wrapper (`#f59e0b`), tactile `[Retry]` action button with `ion-spinner` state, accessible `[✕ Dismiss]` button, and full safe-area padding.
+    - Component stylesheet size strictly maintained at 6.58 kB (well under the 10 kB limit).
+  - **Unit Testing**:
+    - Updated `Project/src/app/app.component.spec.ts` to assert that the offline mode status and description render without developer prompt controls, and verified retry and dismiss click handlers.
+- **Verification & Test Results**:
+  - `npm --prefix Project run test:unit`: **14/14 test suites, 107/107 unit tests passed [100%]**.
+  - `npm --prefix Project run build`: **0 compilation errors, production build successful [100%]** (`styles` transfer size 9.69 kB).
+  - `python -m pytest backend/tests/ -v`: **13/13 backend tests passed [100%]**.
+  - `python scripts/verify_acceptance_gate.py`: **24/24 checks passed [100.0%]**.
+
+

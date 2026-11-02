@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [0.15.0-rc.6] - 2026-11-02
+### Changed
+- **Anti-Generic UI Refactoring (Approach 1)**: Replaced the developer-oriented "Pilot Backend Offline" prompt banner with a brand-aligned "Offline Mode" status banner in `Project/src/app/app.component.html` and `Project/src/app/app.component.scss`.
+  - Removed `[Set Server]` button and `AppComponent.configureApiUrl()` prompt to prevent user confusion and eliminate the arbitrary backend URL injection / token exfiltration vector.
+  - Updated title to **"Offline Mode"** and description to **"Cloud sync paused. Your saved trips and curated destinations remain accessible."**
+  - Enhanced visual presentation per `anti-generic-frontend-design` guidelines: translucent slate-900 surface with subtle warm amber indicator icon wrapper, tactile `[Retry]` button with `ion-spinner`, accessible `[✕ Dismiss]` button, and full safe-area padding.
+- **Persistent ngrok Integration**: Baked permanent ngrok endpoint `https://anybody-cube-surprise.ngrok-free.dev/api/v1` into `Project/src/environments/environment.prod.ts` and `Project/src/environments/environment.example.ts`, eliminating the need to copy ad-hoc Cloudflare URLs upon startup. Configured `scripts/start_server.ps1` to automatically tunnel port 8000 to the domain.
+- **Unit Testing**: Updated `Project/src/app/app.component.spec.ts` to assert that the offline mode status and description render without developer inputs, and verified all 107/107 Vitest tests and the 24/24 acceptance gate pass.
+
+---
+
 ## [0.14.0-rc.5] - 2026-11-02
 ### Added
 - **CR-013**: Configured SlowAPI rate-limiting key function `get_client_ip` in `backend/app/core/limiter.py` to inspect `CF-Connecting-IP` and `X-Forwarded-For` when requests arrive from local proxies or Cloudflare Tunnel (`127.0.0.1`, `localhost`, `::1`, `testclient`). Added test coverage in `test_auth.py`.

@@ -57,12 +57,27 @@ describe('AppComponent', () => {
     expect(mockConnectivityService.dismissBanner).toHaveBeenCalled();
   });
 
-  it('renders offline banner when isHostOffline$ emits true', () => {
+  it('renders offline banner when isHostOffline$ emits true without developer prompt', () => {
     isHostOfflineSub.next(true);
     fixture.detectChanges();
 
     const banner = fixture.nativeElement.querySelector('.offline-host-banner');
     expect(banner).toBeTruthy();
-    expect(banner.textContent).toContain('Pilot Backend Offline');
+    expect(banner.textContent).toContain('Offline Mode');
+    expect(banner.textContent).toContain('Cloud sync paused');
+    expect(banner.textContent).not.toContain('Pilot Backend Offline');
+    expect(banner.textContent).not.toContain('Set Server');
+
+    // Verify retry button is wired
+    const retryBtn = banner.querySelector('.banner-retry-btn');
+    expect(retryBtn).toBeTruthy();
+    retryBtn.click();
+    expect(mockConnectivityService.checkHostHealth).toHaveBeenCalled();
+
+    // Verify dismiss button is wired
+    const dismissBtn = banner.querySelector('.banner-dismiss-btn');
+    expect(dismissBtn).toBeTruthy();
+    dismissBtn.click();
+    expect(mockConnectivityService.dismissBanner).toHaveBeenCalled();
   });
 });
