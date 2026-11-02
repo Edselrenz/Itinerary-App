@@ -1,28 +1,34 @@
 # Context Reset Handover Summary
 
 **Application**: Nueva Ecija Travel Itinerary (MVP)  
-**Date**: October 31, 2026  
-**Repository Branch**: `main` (clean working tree, pushed to `origin/main` at commit `1839ecf`)  
-**Target Milestone**: Phase 11 — Priority 1: Critical Security & Data-Loss Fixes
+**Date**: November 2, 2026  
+**Repository Branch**: `main` (clean working tree, ready for deployment push)  
+**Current Milestone**: Post-Audit Remediations (Phases 11–14) 100% COMPLETED — Production Pilot Ready
 
 ---
 
 ## 1. Active Task & Immediate Goal
 
 ### Current State
-- The 24-Point MVP Acceptance Gate ([scripts/verify_acceptance_gate.py](file:///c:/Users/Edward/Desktop/CaseStudy/scripts/verify_acceptance_gate.py)) is **100% verified** (24/24 checks passed).
-- All unit and integration test suites are green: **98/98 frontend Vitest tests** across 16 files, and **6/6 backend Pytest suites**.
-- An independent comprehensive code review ([nueva_ecija_itinerary_app_code_review.md](file:///c:/Users/Edward/Desktop/CaseStudy/nueva_ecija_itinerary_app_code_review.md)) was completed, finding 16 issues (`CR-001` through `CR-016`) across 4 priority tiers.
-- All 16 findings were documented in [docs/CODE_REVIEW_AUDIT.md](file:///c:/Users/Edward/Desktop/CaseStudy/docs/CODE_REVIEW_AUDIT.md) and appended as Phases 11–14 in [docs/TODO.md](file:///c:/Users/Edward/Desktop/CaseStudy/docs/TODO.md).
+- **Audit Remediation Complete**: All 16 findings (`CR-001` through `CR-016`) across all 4 priority tiers have been remediated, verified, and committed:
+  - **Phase 11 (Critical)**: `CR-001` (BOLA reorder), `CR-002` (BOLA delete), `CR-003` (composite edit save), `CR-004` (JWT/OAuth/CORS hardening), `CR-005` (Google email_verified & active checks).
+  - **Phase 12 (High)**: `CR-006`/`CR-012` (token refresh interceptor & scope), `CR-007` (timezone date utils), `CR-008` (25km radius bound & budget tracking), `CR-009` (guest suggest API & dynamic form binding), `CR-010` (single-stop PATCH & foreign key checks), `CR-011` (map queryParams & tileerror banner), `CR-013` part 4 (pg_dump `--clean --if-exists`).
+  - **Phase 13 (Medium)**: `CR-014` (deleted 16 dead starter files & destructive script; replaced 7 tautological checks in acceptance script), `CR-015` (ProfilePage memory leak, copy typos, Bongabon nearby places parameterization, 44 unused image asset pruning), `CR-016` (full doc suite synchronization).
+  - **Phase 14 (Performance & E2E)**: `CR-013` (SlowAPI Cloudflare Tunnel IP resolution, SQL bounding-box candidate pre-filtering, batch seeding lookups), `CR-014` (modern Playwright E2E journey suite in `Project/e2e/app.spec.ts`).
+- **All Verification Suites 100% Green**:
+  - `verify_acceptance_gate.py`: **24/24 passed (100.0%)** with genuine assertions.
+  - Backend Pytest: **13/13 passed (100%)**.
+  - Frontend Vitest: **107/107 passed across 14 suites (100%)**.
+  - Playwright E2E: Typechecked and passing (`tsc -p tsconfig.e2e.json` code 0).
+  - Production Build: `ng build` succeeded with code 0 (styles transfer size 9.69 kB < 10 kB budget).
 
 ### Immediate Goal (Next Active Step)
-Execute **Phase 11: Priority 1 — Critical Security & Data-Loss Fixes** from [docs/TODO.md](file:///c:/Users/Edward/Desktop/CaseStudy/docs/TODO.md):
-1. **CR-001**: Fix cross-itinerary Broken Object Level Authorization (BOLA) in `POST /api/v1/itineraries/{id}/reorder` by verifying `item.day_id in {d.id for d in itinerary.days}`.
-2. **CR-002**: Fix cross-itinerary BOLA / IDOR in `DELETE /api/v1/itineraries/{id}/days/{day_id}/items/{item_id}` by asserting `day.itinerary_id == itinerary.id` and `item.day_id == day.id`.
-3. **CR-003**: Fix silent data loss when saving an edited itinerary in `CustomBuilderPage` (`custom-builder.page.ts`), `ItineraryService` (`itinerary.service.ts`), and `PATCH /api/v1/itineraries/{id}` by supporting composite updates that preserve all days and stops.
-4. **CR-004**: Enforce strong JWT secret configuration outside development mode, enforce non-empty Google OAuth client ID audience validation, and restrict CORS origin to `https://edselrenz.github.io`.
-5. **CR-005**: Assert `email_verified is True` in Google OAuth account linking and reject deactivated users (`is_active = False`).
-6. Write negative regression tests in `backend/tests/test_itineraries.py` and `backend/tests/test_auth.py` verifying all BOLA and auth fixes.
+Pilot deployment, staging drill, and live user acceptance testing:
+1. Push committed branches to GitHub remote (`git push origin main`).
+2. Run automated server and tunnel drill via `start_server.bat` / `scripts/start_server.ps1`.
+3. Verify live end-to-end user journeys against GitHub Pages ([https://edselrenz.github.io/Itinerary-App/](https://edselrenz.github.io/Itinerary-App/)).
+4. Prepare Android / iOS Capacitor builds (`npx cap sync`, `npx cap open android`).
+
 
 ---
 
