@@ -1,3 +1,9 @@
+const TRUSTED_API_HOSTNAMES = new Set([
+  'localhost',
+  '127.0.0.1',
+  'anybody-cube-surprise.ngrok-free.dev',
+]);
+
 const resolveApiBaseUrl = (fallback: string): string => {
   if (typeof window !== 'undefined' && window.localStorage) {
     const custom = window.localStorage.getItem('ne_custom_api_url');
@@ -9,7 +15,17 @@ const resolveApiBaseUrl = (fallback: string): string => {
       if (!trimmed.endsWith('/api/v1')) {
         trimmed = `${trimmed}/api/v1`;
       }
-      return trimmed;
+      try {
+        const parsed = new URL(trimmed);
+        if (TRUSTED_API_HOSTNAMES.has(parsed.hostname.toLowerCase())) {
+          return trimmed;
+        } else {
+          console.warn(`[Security] Untrusted custom API hostname rejected: ${parsed.hostname}`);
+          window.localStorage.removeItem('ne_custom_api_url');
+        }
+      } catch {
+        window.localStorage.removeItem('ne_custom_api_url');
+      }
     }
   }
   return fallback;

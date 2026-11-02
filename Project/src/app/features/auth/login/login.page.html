@@ -99,9 +99,15 @@
 
       <!-- Outlined Pill Social Login Buttons -->
       <div class="social-login-group">
-        <!-- Google -->
-        <button type="button" class="social-pill-btn" (click)="onGoogleLogin()">
-          <img src="assets/images/google_logo.png" alt="Google logo" class="social-logo-img" />
+        <!-- Google (Disabled in pilot) -->
+        <button
+          type="button"
+          class="social-pill-btn unavailable-btn"
+          (click)="onGoogleLogin()"
+          aria-disabled="true"
+          title="Google Sign-In is disabled in this pilot build"
+        >
+          <img src="assets/images/google_logo.png" alt="Google logo" class="social-logo-img disabled-logo" />
           <span class="social-btn-text">Continue with Google</span>
         </button>
 
@@ -111,7 +117,7 @@
           class="social-pill-btn unavailable-btn"
           (click)="onAppleLogin()"
           aria-disabled="true"
-          title="Apple Log In is unavailable in this version"
+          title="Apple Sign-In is disabled in this pilot build"
         >
           <ion-icon name="logo-apple" class="apple-logo-icon"></ion-icon>
           <span class="social-btn-text">Continue with Apple</span>

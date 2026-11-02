@@ -45,7 +45,7 @@ export class LoginPage {
   public errorMessage: string | null = null;
 
   public loginForm = new FormGroup({
-    email: new FormControl('', [Validators.required]),
+    email: new FormControl('', [Validators.required, Validators.email]),
     password: new FormControl('', [Validators.required]),
     rememberMe: new FormControl(false),
   });
@@ -112,7 +112,7 @@ export class LoginPage {
 
   public async onGoogleLogin(): Promise<void> {
     const toast = await this.toastController.create({
-      message: 'Google Sign-In is configured for production credentials.',
+      message: 'Google Sign-In is disabled in this pilot build.',
       duration: 2500,
       position: 'top',
     });
@@ -129,9 +129,22 @@ export class LoginPage {
   }
 
   public async onForgotPassword(): Promise<void> {
+    const emailControl = this.loginForm.get('email');
+    if (!emailControl || emailControl.invalid || !emailControl.value) {
+      const toast = await this.toastController.create({
+        message: 'Please enter a valid email address first.',
+        duration: 3000,
+        position: 'top',
+        color: 'warning',
+      });
+      await toast.present();
+      return;
+    }
+
+    const email = String(emailControl.value).trim();
     const toast = await this.toastController.create({
-      message: 'Password reset link will be sent to your registered email address.',
-      duration: 3000,
+      message: `Self-service password reset is disabled in this pilot build. Please contact your administrator to reset credentials for ${email}.`,
+      duration: 4000,
       position: 'top',
     });
     await toast.present();

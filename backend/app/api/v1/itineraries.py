@@ -362,56 +362,6 @@ def update_itinerary(
     return serialize_itinerary(loaded)
 
 
-@router.patch(
-    "/{itinerary_id}/days/{day_id}/items/{item_id}", response_model=ItineraryOut
-)
-def update_itinerary_item(
-    itinerary_id: uuid.UUID,
-    day_id: uuid.UUID,
-    item_id: uuid.UUID,
-    payload: ItineraryItemUpdate,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-) -> ItineraryOut:
-    """Partially updates a specific itinerary stop (notes, planned time, duration, cost, etc.)."""
-    itinerary = db.scalar(get_eager_itinerary_stmt(itinerary_id, current_user.id))
-    if not itinerary:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Itinerary not found",
-        )
-
-    valid_day_ids = {day.id for day in itinerary.days}
-    if day_id not in valid_day_ids:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Day not found in this itinerary",
-        )
-
-    item = db.scalar(
-        select(ItineraryItem).where(
-            ItineraryItem.id == item_id,
-            ItineraryItem.day_id == day_id,
-        )
-    )
-    if not item:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Itinerary stop not found",
-        )
-
-    update_data = payload.model_dump(exclude_unset=True)
-    for field, val in update_data.items():
-        setattr(item, field, val)
-
-    from datetime import datetime, timezone
-    item.updated_at = datetime.now(timezone.utc)
-    itinerary.updated_at = datetime.now(timezone.utc)
-    db.commit()
-
-    loaded = db.scalar(get_eager_itinerary_stmt(itinerary_id, current_user.id))
-    return serialize_itinerary(loaded)
-
 
 @router.delete("/{itinerary_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_itinerary(

@@ -6,6 +6,81 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [0.15.4-rc.10] - 2026-11-02
+### Added
+- **DEF-09 (Accessibility Enhancements & WCAG Compliance)**:
+  - In `Project/src/app/app.component.html` and `app.component.ts`: added `tabindex="0"`, `(keydown.escape)="dismissSplash()"`, `(keydown.enter)="dismissSplash()"`, `(keydown.space)="dismissSplash()"`, `@HostListener('window:keydown.escape')`, and descriptive `aria-label` to the interactive splash screen overlay.
+  - In `Project/src/app/tabs/map/map.page.ts`: decorated custom Leaflet divIcon pins with `tabindex="0"`, `role="button"`, `aria-label="${safeName}, ${safeMuni}"`, and `title="${safeName}"`, plus keyboard listeners for Enter and Space key activation.
+  - Added unit test in `Project/src/app/app.component.spec.ts` asserting that `onEscapeKey()` triggers `dismissSplash()` and sets `isFadingOut = true`.
+  - Added unit test in `Project/src/app/tabs/map/map.page.spec.ts` verifying that custom Leaflet pins contain `role="button"`, `tabindex="0"`, and `aria-label`.
+- **CI Test Automation Gates**:
+  - In `.github/workflows/deploy.yml`: Added automated test gates before build and deployment:
+    - Python 3.12 setup (`actions/setup-python@v5`) with pip dependency caching.
+    - Automated execution of backend Pytest suite (`python -m pytest backend/tests/ -v`).
+    - Automated execution of frontend Vitest unit tests (`npm run test:unit`).
+- **SEC-02 (Secure Token Storage Architectural Roadmap & ADR-010)**:
+  - In `docs/SYSTEM_ARCHITECTURE.md`, `docs/TECHNICAL_DECISIONS.md` (ADR-010), and `docs/KNOWN_ISSUES.md`: Formulated comprehensive architectural migration roadmap from `window.localStorage` to `HttpOnly; Secure; SameSite=Strict` cookies for web production and native Biometric Keychain / Android Keystore enclave storage via `@capacitor-community/secure-storage-plugin` for Capacitor mobile binaries.
+
+### Documentation
+- Updated `docs/TODO.md`, `docs/DEVELOPMENT_PLAN.md`, `docs/KNOWN_ISSUES.md`, and `docs/PROJECT_STATE.md` marking Phase 15 and Milestone 15 as 100% completed.
+- Verified test suite expanded to 16/16 test files and 120/120 unit tests (100% passing in Vitest), 14/14 Pytest backend tests (100% passing), and 24/24 acceptance checks (100%).
+
+---
+
+## [0.15.3-rc.9] - 2026-11-02
+### Refactored
+- **DEF-05 (Consolidated Offline POI Datasets)**:
+  - Created canonical typed data module `Project/src/app/core/data/offline-places.data.ts` containing `CANONICAL_OFFLINE_PLACES` (13 curated destinations with complete metadata, verified pricing, opening hours, imagery, and coordinates).
+  - Eliminated over 750 lines of duplicate hardcoded data across `home.page.ts`, `place.service.ts`, and `itinerary.service.ts` by using canonical converter functions (`getOfflineDestinationsForHome()`, `getOfflinePlacesAsPlaceEntities()`, `getOfflineCuratedPoolForItinerary()`, and `getOfflineDayClusterPresets()`).
+  - Reduced `home-page` chunk transfer size from 34.95 kB to 29.44 kB.
+
+### Fixed
+- **DEF-06 (Nearby Places Category Misclassification)**:
+  - Updated `getOfflineNearbyPlaces()` in `Project/src/app/core/data/offline-places.data.ts` and `place.service.ts` to strictly filter by genuine shopping/retail categories (`shopping_market`, `convenience_store`, `supermarket`, or tags containing store/market/retail).
+  - Prevented cultural museum attractions (such as *Casa Batik*) and nature attractions from being erroneously categorized under "Stores" in the Suggested Itinerary Wizard's Nearby Places tab.
+
+### Removed
+- **DEF-10 (Git Hygiene & Counter Artifacts)**:
+  - Added `.VSCodeCounter/` to root `.gitignore`.
+  - Untracked 9 cached counter report files from Git version control via `git rm -r --cached .VSCodeCounter`.
+
+---
+
+## [0.15.2-rc.8] - 2026-11-02
+### Fixed
+- **DEF-03 (Chronological Stop Ordering & Overnight Placement)**:
+  - In `backend/app/algorithms/itinerary_generator.py`: added `is_accommodation_place()` classifier, applied morning slot penalties for lodging, assigned overnight stays to the evening arrival slot (`17:30`), and enforced strict post-clustering chronological sorting by `planned_time` with sequential `sort_order` re-indexing (1, 2, 3...).
+  - In `Project/src/app/core/services/itinerary.service.ts`: sorted day preset venues chronologically, added `parseTimeToMinutes()` and `isOvernightItem()` helpers, adjusted `dest-pantabangan-lake` time to `13:00`, and sorted all daily items chronologically ensuring overnight cabins (e.g. *La Casa Prime Cabins*, 22 hrs) are positioned strictly at the end of each day's schedule.
+
+### Security
+- **SEC-01 (API Hostname Allowlist)**: Restricted `resolveApiBaseUrl()` in `Project/src/environments/environment.prod.ts` and `Project/src/environments/environment.ts` to trusted hostnames (`localhost`, `127.0.0.1`, `anybody-cube-surprise.ngrok-free.dev`). Untrusted custom API hostnames stored in `localStorage` are automatically purged to prevent token exfiltration via malicious redirect URLs. Updated `ConnectivityService.isValidApiUrl()` and `setCustomApiUrl()` with domain validation.
+- **SEC-03 (Production JWT Secret Enforcement)**: Strengthened Pydantic `@model_validator(mode="after")` in `backend/app/core/config.py` to reject blank, placeholder, or weak keys (<32 characters, `dev_only_replace_before_pilot_with_openssl_rand_hex_32`, `change-this-in-production-use-openssl-rand-hex-32`, etc.) when starting in non-development environments.
+
+### Added
+- **Unit Test Coverage**:
+  - `backend/tests/test_itineraries.py`: Added `test_suggested_generator_chronological_ordering_and_overnight` verifying chronological sorting, sequential `sort_order`, and overnight accommodation placement.
+  - `backend/tests/test_auth.py`: Extended `test_settings_secret_validation_in_production` testing insecure default placeholders and short secrets.
+  - `Project/src/app/core/services/connectivity.service.spec.ts`: Added test case for `SEC-01` hostname allowlist validation and localStorage protection.
+  - `Project/src/app/core/services/itinerary.service.spec.ts`: Added test case for `DEF-03` verifying chronological stop ordering and end-of-day overnight stay placement.
+  - Test suites green: 14/14 Pytest backend tests (100%), 16/16 Vitest frontend suites with 117/117 unit tests (100%), and 24/24 acceptance checks (100%).
+
+---
+
+## [0.15.1-rc.7] - 2026-11-02
+### Fixed
+- **DEF-04 (Duplicate Route Handler)**: Deleted the first shadowed duplicate `@router.patch("/{itinerary_id}/days/{day_id}/items/{item_id}")` handler in `backend/app/api/v1/itineraries.py`. Ensured all single-stop update requests execute the complete handler supporting `day_id` consistency validation and automatic `itinerary.updated_at` timestamp refresh.
+- **DEF-01 (Deceptive Forgot Password Toast)**: Remediated `onForgotPassword()` in `Project/src/app/features/auth/login/login.page.ts`: added `Validators.email` validation to the email form control and replaced misleading success toast with an honest pilot notice informing the user that self-service password reset is disabled in the pilot build and directing them to contact an administrator.
+- **DEF-02 (Stubbed Google Auth Buttons)**: Gated non-functional Google Sign-In and Sign-Up buttons on `login.page` and `signup.page` with visual disabled cues (`unavailable-btn`, `disabled-logo`, grayscale styling, `aria-disabled="true"`), and truthfully notified users via toast that Google OAuth is disabled in the pilot build.
+- **DEF-08 (Apple Sign-In Copy Typo)**: Corrected copy-paste typo in `login.page.ts` where clicking Apple Sign-In toasted *"Apple Sign-Up is disabled..."*, standardizing it to *"Apple Sign-In is disabled in this pilot build."*.
+
+### Added
+- **Unit Test Coverage**: Added dedicated Vitest spec suites for auth pages:
+  - `Project/src/app/features/auth/login/login.page.spec.ts` (5 tests covering form initialization, validation, password toggle, disabled Google/Apple toasts, and forgot password handling).
+  - `Project/src/app/features/auth/signup/signup.page.spec.ts` (3 tests covering form initialization, matching password validation, and disabled OAuth handlers).
+  - Total frontend test suite expanded to 16 test files and 115 passing tests (100% green).
+
+---
+
 ## [0.15.0-rc.6] - 2026-11-02
 ### Changed
 - **Anti-Generic UI Refactoring (Approach 1)**: Replaced the developer-oriented "Pilot Backend Offline" prompt banner with a brand-aligned "Offline Mode" status banner in `Project/src/app/app.component.html` and `Project/src/app/app.component.scss`.

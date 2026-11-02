@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonApp, IonIcon, IonRouterOutlet, IonSpinner } from '@ionic/angular';
 import { addIcons } from 'ionicons';
@@ -38,6 +38,13 @@ export class AppComponent implements OnInit, OnDestroy {
   public ngOnDestroy(): void {
     if (this.autoDismissTimer) {
       clearTimeout(this.autoDismissTimer);
+    }
+  }
+
+  @HostListener('window:keydown.escape')
+  public onEscapeKey(): void {
+    if (this.showSplashScreen) {
+      this.dismissSplash();
     }
   }
 

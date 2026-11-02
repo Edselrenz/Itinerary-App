@@ -47,6 +47,12 @@ describe('AppComponent', () => {
     expect(component.isFadingOut).toBe(true);
   });
 
+  it('dismisses splash screen when Escape key is pressed (DEF-09)', () => {
+    expect(component.showSplashScreen).toBe(true);
+    component.onEscapeKey();
+    expect(component.isFadingOut).toBe(true);
+  });
+
   it('calls checkHostHealth when retryConnection is triggered', () => {
     component.retryConnection();
     expect(mockConnectivityService.checkHostHealth).toHaveBeenCalled();

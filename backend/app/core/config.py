@@ -33,13 +33,21 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_secrets(self) -> "Settings":
-        if (
-            self.app_env != "development"
-            and self.jwt_secret_key == "dev_only_replace_before_pilot_with_openssl_rand_hex_32"
-        ):
-            raise ValueError(
-                "jwt_secret_key must be explicitly configured outside development environment."
-            )
+        if self.app_env != "development":
+            insecure_defaults = {
+                "dev_only_replace_before_pilot_with_openssl_rand_hex_32",
+                "change-this-in-production-use-openssl-rand-hex-32",
+                "secret",
+                "changeme",
+            }
+            if (
+                not self.jwt_secret_key
+                or self.jwt_secret_key.strip() in insecure_defaults
+                or len(self.jwt_secret_key.strip()) < 32
+            ):
+                raise ValueError(
+                    "jwt_secret_key must be explicitly configured outside development environment."
+                )
         return self
 
     model_config = SettingsConfigDict(

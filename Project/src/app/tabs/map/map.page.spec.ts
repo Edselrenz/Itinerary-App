@@ -156,5 +156,21 @@ describe('MapPage', () => {
   it('should initialize hasTileError as false', () => {
     expect(component.hasTileError).toBe(false);
   });
-});
+it('creates accessible map pins with role="button" and tabindex="0" (DEF-09)', () => {
+    const addedMarkers: any[] = [];
+    component.markerCluster = {
+      clearLayers: vi.fn(),
+      addLayer: vi.fn((marker: any) => addedMarkers.push(marker)),
+    } as any;
 
+    component.places = [mockPlace];
+    component.updateMarkers();
+
+    expect(addedMarkers.length).toBe(1);
+    const iconHtml = addedMarkers[0].options.icon.options.html as string;
+    expect(iconHtml).toContain('tabindex="0"');
+    expect(iconHtml).toContain('role="button"');
+    expect(iconHtml).toContain('aria-label="Minalungao National Park, General Tinio"');
+    expect(iconHtml).toContain('title="Minalungao National Park"');
+  });
+});

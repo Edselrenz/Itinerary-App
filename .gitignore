@@ -123,6 +123,7 @@ figma_strings.txt
 !.vscode/launch.json
 !.vscode/extensions.json
 .history/
+.VSCodeCounter/
 
 # --- Operating System Artifacts ---
 .DS_Store

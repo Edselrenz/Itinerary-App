@@ -356,4 +356,122 @@ All 16 code review findings (`CR-001` through `CR-016`) have been remediated in 
 ### Final Review Verdict: APPROVED FOR PILOT DEPLOYMENT
 All blocking vulnerabilities and functional defects identified in the October 31, 2026 audit have been satisfactorily remediated. The codebase is confirmed ready for pilot user testing.
 
+---
+
+## 6. Comprehensive Technical Evaluation, QA & QC Audit (November 2, 2026 — Commit `06cefc5`)
+
+An independent Senior Software Engineering, QA & QC audit was conducted on November 2, 2026 evaluating repository commit `06cefc5` (v0.15.0-rc.6) and its live GitHub Pages deployment at `https://edselrenz.github.io/Itinerary-App/` connected to the live backend ngrok tunnel (`https://anybody-cube-surprise.ngrok-free.dev/api/v1`).
+
+- **Full Evaluation Artifact**: [itinerary_app_technical_evaluation_report.pdf](file:///c:/Users/Edward/Desktop/CaseStudy/itinerary_app_technical_evaluation_report.pdf) (17 pages)
+- **Final Verdict**: **NEEDS MINOR IMPROVEMENTS** (Core travel planning, Leaflet mapping, and offline fallback are solid; secondary auth stubs, duplicate route handler, and offline data duplication require remediation).
+- **QA Test Suite Result**: 21 Passed, 4 Failed, 3 Partial, 2 Untested (30 total structured cases, 70.0% pass rate).
+
+### 6.1 Audit Defect Registry (DEF-01 through DEF-10)
+
+#### DEF-01: Deceptive "Forgot Password?" Toast Without Validation or Backend Execution
+- **Severity**: High
+- **Category**: Functional Integrity / Auth
+- **Affected Module**: `Project/src/app/features/auth/login/login.page.ts` (lines 131–138) & `backend/app/api/v1/auth.py`
+- **Description**: Clicking "Forgot password?" immediately displays an Ionic Toast stating *"Password reset link will be sent to your registered email address."* with zero email validation and zero backend network calls. No password reset endpoint exists in `auth.py`.
+- **Root Cause**: `onForgotPassword()` was implemented as an unvalidated static UI toast stub.
+- **Remediation**: Add email input validation and connect to a backend password reset flow, or replace the misleading toast with an honest pilot alert stating that self-service password reset is disabled in this pilot build and requires administrator assistance.
+
+#### DEF-02: Google Sign-In & Sign-Up Buttons Are Non-Functional Frontend Stubs
+- **Severity**: Medium
+- **Category**: Functional Integrity / Auth
+- **Affected Module**: `Project/src/app/features/auth/login/login.page.ts` (lines 113–120), `Project/src/app/features/auth/signup/signup.page.ts` (lines 158–165), `Project/src/environments/environment.prod.ts` (line 23)
+- **Description**: Clicking the Google Sign-In or Sign-Up button does not launch the Google OAuth flow or call `POST /api/v1/auth/oauth/google`. Instead, it displays a static toast: *"Google Sign-In is configured for production credentials."*.
+- **Root Cause**: `onGoogleLogin()` and `onGoogleSignup()` only invoke `toastController.create()`, and `environment.prod.ts` configures a placeholder client ID (`prod-google-client-id...`).
+- **Remediation**: Integrate Google Identity Services SDK to trigger OAuth and pass the ID token to `POST /api/v1/auth/oauth/google`, or cleanly disable the buttons with an honest pilot caption similar to Apple Sign-In.
+
+#### DEF-03: Non-Chronological Stop Ordering in Suggested Itinerary Output
+- **Severity**: Medium
+- **Category**: Algorithmic Correctness / Travel UX
+- **Affected Module**: `backend/app/algorithms/itinerary_generator.py` & `Project/src/app/core/services/itinerary.service.ts` (lines 586–999)
+- **Description**: In generated suggested itineraries, stops within a day are not sorted chronologically. In live testing of a 2-day trip, Day 1 placed an "Overnight Stay" (*La Casa Prime Cabins*, 22 hrs) as Stop #2 between a noon cafe stop and a 2:00 PM museum stop, and Day 2 placed a 10:30 AM stop before a 09:00 AM stop.
+- **Root Cause**: The generator selects candidate stops based on category/distance score without performing a post-selection chronological sort by `planned_time` or ensuring accommodations are positioned last.
+- **Remediation**: Add a post-clustering sort step in both backend and frontend generators ordering stops from earliest morning arrival to evening, explicitly placing overnight hotel/cabin stays at the end of each day.
+
+#### DEF-04: Duplicate Route Handler `update_itinerary_item` Shadows Updated Implementation
+- **Severity**: Medium
+- **Category**: Backend API Correctness
+- **Affected Module**: `backend/app/api/v1/itineraries.py` (lines 365–413 vs lines 559–607)
+- **Description**: The endpoint `@router.patch("/{itinerary_id}/days/{day_id}/items/{item_id}", response_model=ItineraryOut)` is defined twice in `itineraries.py`. FastAPI routes requests to the first matching route (lines 365–413), which skips explicit `day_id not in valid_day_ids` validation and fails to update `item.updated_at` and `itinerary.updated_at`. The second complete implementation (lines 559–607) is shadowed as unreachable dead code.
+- **Root Cause**: An earlier partial implementation was left in place when the complete handler was appended during Phase 12 (`CR-010`).
+- **Remediation**: Delete lines 365–413 in `itineraries.py` and retain only the complete implementation at lines 559–607.
+
+#### DEF-05: Triple Duplication of Offline POI Datasets Across Frontend Modules
+- **Severity**: Medium
+- **Category**: Architecture & Maintainability
+- **Affected Module**: `Project/src/app/tabs/home/home.page.ts` (lines 10–227), `Project/src/app/core/services/place.service.ts` (lines 41–403), `Project/src/app/core/services/itinerary.service.ts` (lines 592–910)
+- **Description**: Three independent static arrays of curated fallback places are hardcoded across three different files, containing differing schemas, item counts, and price strings.
+- **Root Cause**: Incremental offline additions across separate development milestones created redundant inline arrays.
+- **Remediation**: Extract and consolidate all curated offline POI records, category clusters, and presets into a single canonical typed module: `Project/src/app/core/data/offline-places.data.ts`.
+
+#### DEF-06: Nearby Places Helper Misclassifies Museum Attraction Under "Stores"
+- **Severity**: Low
+- **Category**: Data Classification
+- **Affected Module**: `Project/src/app/core/services/place.service.ts` (lines 557–607)
+- **Description**: In the Suggested Wizard's "Nearby" view, clicking the Stores tab lists *Casa Batik* (a Culture & Museum attraction) under stores.
+- **Root Cause**: `getNearbyPlaces()` in `place.service.ts` catches non-restaurant, non-hospital fallback items into the store category bucket.
+- **Remediation**: Filter strictly by retail/shopping category tags when populating the Stores bucket.
+
+#### DEF-07: Outdated Documentation in `docs/KNOWN_ISSUES.md` Regarding History & Profile Tabs
+- **Severity**: Low
+- **Category**: Documentation Parity
+- **Affected Module**: `docs/KNOWN_ISSUES.md` (Section 1.2)
+- **Description**: `KNOWN_ISSUES.md` claimed History was a deferred placeholder, whereas `history.page.html` is a fully implemented Saved Itineraries view and `profile.page.html` is an account sync screen.
+- **Root Cause**: Documentation was not updated when views were completed.
+- **Remediation**: Synchronized `KNOWN_ISSUES.md` Section 1.2 to reflect implemented state. *(Resolved)*
+
+#### DEF-08: Copy-Paste Toast Typo in `onAppleLogin()` on Login Screen
+- **Severity**: Low
+- **Category**: UI / Copy Integrity
+- **Affected Module**: `Project/src/app/features/auth/login/login.page.ts` (line 125)
+- **Description**: Toast message on the Login screen says *"Apple Sign-Up is disabled in this pilot build."* instead of Sign-In.
+- **Root Cause**: Handler code was copied from `signup.page.ts` into `login.page.ts`.
+- **Remediation**: Update string to *"Apple Sign-In is disabled in this pilot build."*.
+
+#### DEF-09: Accessibility Gaps on Splash Overlay and Custom Leaflet Map Pins
+- **Severity**: Low
+- **Category**: Accessibility (WCAG 2.2)
+- **Affected Module**: `Project/src/app/app.component.html` (lines 49–83) & `Project/src/app/tabs/map/map.page.ts` (lines 324–388)
+- **Description**: Splash overlay `<div>` lacks `tabindex` and keyboard dismissal via `Escape`; Leaflet `L.divIcon` marker pins use generic `<div>` markup without `role="button"` or `aria-label`.
+- **Root Cause**: Custom UI elements omitted semantic keyboard/ARIA attributes.
+- **Remediation**: Add `tabindex="0"`, `role="button"`, and `aria-label` to custom pins, and bind a `@HostListener('window:keydown.escape')` listener on the splash screen.
+
+#### DEF-10: Tracked IDE Counter Directory & Git History Hygiene
+- **Severity**: Low
+- **Category**: Git Hygiene
+- **Affected Module**: `.VSCodeCounter/2026-10-31_21-29-44/`
+- **Description**: The `.VSCodeCounter/` directory is committed to Git version control instead of being ignored via `.gitignore`.
+- **Root Cause**: Missing `.VSCodeCounter/` entry in root `.gitignore`.
+- **Remediation**: Add `.VSCodeCounter/` to `.gitignore` and untrack cached files via `git rm -r --cached .VSCodeCounter`.
+
+---
+
+### 6.2 Security Hardening Recommendations (SEC-01 through SEC-03)
+
+1. **SEC-01 (Medium Severity) — Residual Unallowlisted `ne_custom_api_url` in `environment.prod.ts`**:
+   - *Impact*: Even though the UI prompt button was removed in commit `06cefc5`, `environment.prod.ts` still reads `localStorage.getItem('ne_custom_api_url')` and `authInterceptor` attaches Bearer tokens. Any XSS could manipulate this key to exfiltrate JWTs.
+   - *Remediation*: Restrict `resolveApiBaseUrl()` in `environment.prod.ts` to an explicit hostname allowlist (`localhost`, `127.0.0.1`, `anybody-cube-surprise.ngrok-free.dev`).
+2. **SEC-02 (Low Severity) — Long-Lived Refresh Tokens in `localStorage`**:
+   - *Impact*: `ne_refresh_token` stored in `localStorage` is accessible to JavaScript.
+   - *Remediation*: Migrate web deployments to `HttpOnly; Secure; SameSite=Strict` cookies and Capacitor mobile builds to native encrypted keychains.
+3. **SEC-03 (Low Severity) — Default Development JWT Secret Fallback**:
+   - *Impact*: If the backend starts in production mode without `.env`, it defaults to a known secret.
+   - *Remediation*: Add a Pydantic `@model_validator` in `backend/app/core/config.py` rejecting default JWT secret keys outside `app_env == "development"`.
+
+---
+
+### 6.3 Phase 15 Remediation Roadmap
+
+| Phase | Focus Area | Items Addressed | Verification Target | Status |
+| :---: | :--- | :--- | :--- | :---: |
+| **15.1** | **Immediate Critical Fixes** | `DEF-04`, `DEF-01`, `DEF-02`, `DEF-08` | Duplicate route removed; auth buttons validated/disabled; copy typo fixed. | **COMPLETED & VERIFIED** |
+| **15.2** | **Logic & Security Hardening** | `DEF-03`, `SEC-01`, `SEC-03` | Chronological stop ordering verified; domain allowlist active; JWT secret check enforced. | **COMPLETED & VERIFIED** |
+| **15.3** | **Maintainability & Data Cleanliness** | `DEF-05`, `DEF-06`, `DEF-07`, `DEF-10` | Consolidated offline POI module; accurate nearby store filtering; .gitignore cleaned. | **COMPLETED & VERIFIED** |
+| **15.4** | **Long-Term Accessibility & CI** | `DEF-09`, `SEC-02` | WCAG 2.2 accessibility attributes added; CI automated gates configured; ADR-010 adopted. | **COMPLETED & VERIFIED** |
+
+
 

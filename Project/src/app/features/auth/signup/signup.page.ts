@@ -157,7 +157,7 @@ export class SignupPage {
 
   public async onGoogleSignup(): Promise<void> {
     const toast = await this.toastController.create({
-      message: 'Google Sign-Up is configured for production credentials.',
+      message: 'Google Sign-Up is disabled in this pilot build.',
       duration: 2500,
       position: 'top',
     });

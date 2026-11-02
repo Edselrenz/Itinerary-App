@@ -264,5 +264,33 @@ This checklist tracks completed, active, and pending tasks across all developmen
   - [x] Replace outdated `Project/e2e/app.spec.ts` with end-to-end journey tests covering `/welcome` -> `/guest` -> `/tabs/home` -> `/tabs/map` -> `/custom-builder`.
   - [x] Verify Playwright TypeScript compilation with `npm run typecheck:e2e`.
 
+---
+
+## Phase 15: Technical Evaluation & QA/QC Audit Remediation (COMPLETED)
+> Ref: [itinerary_app_technical_evaluation_report.pdf](file:///c:/Users/Edward/Desktop/CaseStudy/itinerary_app_technical_evaluation_report.pdf) (Audit of Commit `06cefc5`, November 2, 2026)
+
+### Phase 15.1: Immediate Critical Fixes (Priority 1) (COMPLETED)
+- [x] **DEF-04 (Duplicate Route Handler)**: Delete first shadowed `@router.patch("/{itinerary_id}/days/{day_id}/items/{item_id}")` handler (Lines 365–413) in `backend/app/api/v1/itineraries.py`, ensuring requests hit the full implementation (Lines 559–607) with `day_id` validation and `updated_at` updates.
+- [x] **DEF-01 (Deceptive Forgot Password Toast)**: Remediate `onForgotPassword()` in `login.page.ts`: add email validation and connect to a backend recovery flow or display an honest pilot notice stating password recovery requires administrator assistance.
+- [x] **DEF-02 (Stubbed Google Auth Buttons)**: Remediate `onGoogleLogin()` and `onGoogleSignup()`: connect Google Identity Services SDK to `POST /api/v1/auth/oauth/google`, or cleanly disable/gate the buttons with a truthful pilot caption.
+- [x] **DEF-08 (Apple Sign-In Copy Typo)**: Fix copy-paste typo in `onAppleLogin()` in `Project/src/app/features/auth/login/login.page.ts:125` (*"Apple Sign-Up is disabled..."* -> *"Apple Sign-In is disabled in this pilot build."*).
+
+### Phase 15.2: High-Priority Logic & Security Hardening (Priority 2) (COMPLETED)
+- [x] **DEF-03 (Chronological Stop Ordering)**: Implement post-selection chronological sort by `planned_time` in `backend/app/algorithms/itinerary_generator.py` and `Project/src/app/core/services/itinerary.service.ts`, ensuring overnight stays are sorted to the end of each day.
+- [x] **SEC-01 (API Hostname Allowlist)**: Restrict `resolveApiBaseUrl()` in `Project/src/environments/environment.prod.ts` to trusted hostnames (`localhost`, `127.0.0.1`, `anybody-cube-surprise.ngrok-free.dev`) to prevent unallowlisted `ne_custom_api_url` localStorage tampering.
+- [x] **SEC-03 (Production JWT Secret Enforcement)**: Add a Pydantic `@model_validator` in `backend/app/core/config.py` raising a startup `ValueError` if `app_env != "development"` and `jwt_secret_key` is set to the default placeholder.
+
+### Phase 15.3: Maintainability & Data Cleanliness (Priority 3) (COMPLETED)
+- [x] **DEF-05 (Consolidate Offline POI Datasets)**: Consolidate triple-duplicated place arrays across `home.page.ts`, `place.service.ts`, and `itinerary.service.ts` into a single typed source: `Project/src/app/core/data/offline-places.data.ts`.
+- [x] **DEF-06 (Nearby Places Category Misclassification)**: Fix `getNearbyPlaces()` in `place.service.ts` to strictly filter by retail/shopping tags when populating the Stores bucket so cultural attractions like Casa Batik are not classified as Stores.
+- [x] **DEF-07 (Documentation Parity)**: Update `docs/KNOWN_ISSUES.md` Section 1.2 to reflect that History and Profile tabs are fully implemented.
+- [x] **DEF-10 (Git Hygiene & Counter Artifacts)**: Add `.VSCodeCounter/` to `.gitignore` and untrack from Git index via `git rm -r --cached`.
+
+### Phase 15.4: Long-Term Accessibility & CI (Priority 4) (COMPLETED)
+- [x] **DEF-09 (Accessibility Attributes)**: Add `tabindex="0"`, `role="button"`, and `aria-label` to custom Leaflet pins in `map.page.ts`, and enable Escape key dismissal on the splash screen overlay.
+- [x] **SEC-02 (Secure Token Storage)**: Formulate Architectural Decision Record (ADR-010) and migration roadmap for refresh tokens from `localStorage` to `HttpOnly; Secure; SameSite=Strict` cookies for web and native keychain for Capacitor mobile.
+- [x] **CI Automation**: Add Pytest (`pytest backend/tests/`) and Vitest (`npm run test:unit`) test runs to `.github/workflows/deploy.yml` before building GitHub Pages assets.
+
+
 
 

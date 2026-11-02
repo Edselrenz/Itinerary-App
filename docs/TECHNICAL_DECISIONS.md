@@ -130,4 +130,23 @@ This document records key technical decisions, their context, alternatives evalu
 - **Consequences**:
   - *Advantages*: Zero build warnings, faster stylesheet parsing, and consistent component aesthetics.
 
+---
+
+## ADR-010: Secure Token Storage & Refresh Migration Roadmap (SEC-02)
+
+- **Date**: 2026-11-02
+- **Context**: The Technical Evaluation Audit (SEC-02) flagged that storing refresh tokens in `window.localStorage` exposes them to JavaScript in the event of an XSS vulnerability.
+- **Problem**: Modern web applications must balance decoupled hosting architectures (e.g., GitHub Pages static SPA frontend communicating with a tunneled FastAPI backend on `ngrok-free.dev`) against cross-site cookie restrictions (Safari Intelligent Tracking Prevention, Chrome Privacy Sandbox, third-party cookie blocking) while providing ironclad token security.
+- **Options Considered**:
+  1. *Immediate enforcement of HttpOnly cookies in pilot cross-origin setup*: Browser third-party cookie blocking on cross-site domains (`github.io` vs `ngrok-free.dev`) breaks cookie transmission in Safari, iOS WebViews, and strict Chrome configurations, rendering the live web demo unauthenticated.
+  2. *Status quo localStorage indefinitely*: Leaves refresh tokens accessible to potential XSS vectors in the long term.
+  3. *Phased Security Migration Architecture*:
+     - **Phase A (Current Pilot / Cross-Origin)**: Keep short-lived JWT access tokens (30 minutes) and single-use rotating refresh tokens (7 days) with strict origin/hostname allowlisting (`SEC-01`), Argon2id password hashing, and strict input validation.
+     - **Phase B (Production Web / Unified Domain)**: When deploying to a custom domain (e.g., `app.tripmo.ph` with API on `api.tripmo.ph`), issue refresh tokens via `Set-Cookie: ne_refresh=...; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth/refresh`. Access tokens are maintained strictly in Angular service memory (`AuthService.currentUser$`) and refreshed automatically via silent HTTP interceptor calls.
+     - **Phase C (Mobile Binaries / Capacitor)**: On iOS and Android builds, employ `@capacitor-community/secure-storage-plugin` or native Biometric Keychain / Android Keystore encrypted storage, ensuring tokens are protected by hardware security enclaves at rest.
+- **Selected Approach**: Option 3 (Phased Security Migration Roadmap).
+- **Consequences**:
+  - *Advantages*: Preserves 100% functionality and cross-device testing capability for the current GitHub Pages live pilot demo while formally specifying and enforcing the migration path for enterprise web production and native app store distributions.
+  - *Disadvantages*: Requires backend cookie-handling support flags and domain-level DNS configuration upon production deployment.
+
 

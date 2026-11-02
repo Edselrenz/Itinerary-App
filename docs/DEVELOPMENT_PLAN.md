@@ -22,7 +22,8 @@ This plan tracks the 11 sequential milestones defined in the **End-to-End Engine
 | **11** | **Priority 1: Security & Data-Loss** | Fix BOLA/IDOR (CR-001, CR-002), edit-mode data loss (CR-003), JWT/OAuth hardening (CR-004, CR-005). | Negative BOLA tests pass; edit preserves days; strong secrets enforced. | **COMPLETED** |
 | **12** | **Priority 2: Core Reliability** | Token refresh (CR-006), timezone calendar fixes (CR-007), generator radius/budget (CR-008, CR-009), PATCH stop (CR-010), map routing (CR-011), URL safety (CR-012). | Zero timezone shift; 25km radius bound; auth refresh works seamlessly. | **COMPLETED** |
 | **13** | **Priority 3: Maintainability** | Clean dead starter files, remove destructive scripts, fix acceptance tautologies (CR-014), memory leaks & typos (CR-015), doc sync (CR-016). | Clean codebase; 0 memory leaks; exact test assertions. | **COMPLETED** |
-| **14** | **Priority 4: Performance & E2E** | Cloudflare Tunnel IP rate limiting, SQL generator pre-filtering, OSM batching (CR-013), rewrite modern E2E test suite (CR-014). | Independent remote rate limiting; sub-100ms generation; passing E2E spec. | **PENDING** |
+| **14** | **Priority 4: Performance & E2E** | Cloudflare Tunnel IP rate limiting, SQL generator pre-filtering, OSM batching (CR-013), rewrite modern E2E test suite (CR-014). | Independent remote rate limiting; sub-100ms generation; passing E2E spec. | **COMPLETED** |
+| **15** | **Audit Remediation & Hardening** | Remediate 10 defects (DEF-01 to DEF-10) and 3 security items (SEC-01 to SEC-03) from Nov 2 2026 Audit Report. | 30/30 QA cases passing, 0 shadowed routes, consolidated offline POI data module. | **ACTIVE** |
 
 ---
 
@@ -152,6 +153,28 @@ This plan tracks the 11 sequential milestones defined in the **End-to-End Engine
 ### Milestone 14: Priority 4 — Long-Term Performance & Comprehensive E2E Testing (Completed)
 - [x] **CR-013**: Key SlowAPI rate limits by `CF-Connecting-IP` / `X-Forwarded-For` for Cloudflare Tunnel traffic; pre-filter places in SQL bounding box; batch OSM & curated place imports.
 - [x] **CR-014**: Rewrite `Project/e2e/app.spec.ts` with comprehensive user journeys (`/welcome` -> `/guest` -> `/tabs/home` -> `/tabs/map` -> `/custom-builder`).
+
+### Milestone 15: Technical Evaluation & QA/QC Audit Remediation (Completed)
+> Ref: [itinerary_app_technical_evaluation_report.pdf](file:///c:/Users/Edward/Desktop/CaseStudy/itinerary_app_technical_evaluation_report.pdf) (Audit Date: November 2, 2026, Commit `06cefc5`)
+- **Phase 15.1: Immediate Critical Fixes (Priority 1) (Completed)**:
+  - [x] **DEF-04**: Remove duplicate `@router.patch("/{itinerary_id}/days/{day_id}/items/{item_id}")` handler (Lines 365–413) in `backend/app/api/v1/itineraries.py`.
+  - [x] **DEF-01**: Add email validation and honest pilot recovery handling to `onForgotPassword()` in `login.page.ts`.
+  - [x] **DEF-02**: Wire or cleanly disable non-functional Google Sign-In/Sign-Up buttons with honest pilot notice.
+  - [x] **DEF-08**: Correct copy-paste typo in `onAppleLogin()` in `login.page.ts:125`.
+- **Phase 15.2: High-Priority Logic & Security Hardening (Priority 2) (Completed)**:
+  - [x] **DEF-03**: Enforce chronological ordering of suggested stops by `planned_time` with overnight stays placed at day end.
+  - [x] **SEC-01**: Restrict `resolveApiBaseUrl()` in `environment.prod.ts` to explicit trusted hostnames allowlist.
+  - [x] **SEC-03**: Add startup check in `backend/app/core/config.py` rejecting default JWT secret keys outside development.
+- **Phase 15.3: Maintainability & Data Cleanliness (Priority 3) (Completed)**:
+  - [x] **DEF-05**: Consolidate triple-duplicated offline POI arrays into `Project/src/app/core/data/offline-places.data.ts`.
+  - [x] **DEF-06**: Fix category mapping in `place.service.ts:getNearbyPlaces()` to prevent cultural attractions being labeled as Stores.
+  - [x] **DEF-07**: Update `docs/KNOWN_ISSUES.md` Section 1.2 to reflect full implementation of History and Profile tabs.
+  - [x] **DEF-10**: Untrack `.VSCodeCounter/` from Git repository and add to root `.gitignore`.
+- **Phase 15.4: Long-Term Accessibility & CI (Priority 4) (Completed)**:
+  - [x] **DEF-09**: Add keyboard focus/dismissal to splash overlay and `role="button"` / `aria-label` to custom Leaflet pins.
+  - [x] **SEC-02**: Document Architectural Decision Record (ADR-010) and migration roadmap for refresh tokens to HttpOnly cookies / native keychain.
+  - [x] Automate Pytest and Vitest gates in GitHub Actions deploy workflow (`.github/workflows/deploy.yml`).
+
 
 
 

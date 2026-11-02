@@ -1,87 +1,91 @@
-<ion-app>
-  <!-- Offline Mode Travel Banner (Anti-Generic Brand-Aligned) -->
-  @if (connectivityService.isHostOffline$ | async) {
-    <aside class="offline-host-banner" role="status" aria-live="polite" aria-label="Offline Mode Status">
-      <div class="banner-inner">
-        <div class="banner-lead">
-          <div class="offline-icon-wrap" aria-hidden="true">
-            <ion-icon name="cloud-offline-outline" class="offline-lead-icon"></ion-icon>
-          </div>
-          <div class="offline-copy">
-            <span class="offline-title">Offline Mode</span>
-            <span class="offline-desc">Cloud sync paused. Your saved trips and curated destinations remain accessible.</span>
-          </div>
-        </div>
-
-        <div class="banner-actions">
-          <button
-            type="button"
-            class="banner-retry-btn"
-            [disabled]="connectivityService.isCheckingHealth$ | async"
-            (click)="retryConnection()"
-            aria-label="Retry connection to server"
-          >
-            @if (connectivityService.isCheckingHealth$ | async) {
-              <ion-spinner name="crescent" aria-hidden="true"></ion-spinner>
-            } @else {
-              <ion-icon name="refresh-outline" aria-hidden="true"></ion-icon>
-            }
-            <span>Retry</span>
-          </button>
-          <button
-            type="button"
-            class="banner-dismiss-btn"
-            (click)="dismissOfflineBanner()"
-            aria-label="Dismiss offline banner"
-          >
-            <ion-icon name="close-outline" aria-hidden="true"></ion-icon>
-          </button>
-        </div>
-      </div>
-    </aside>
-  }
-
-  <ion-router-outlet></ion-router-outlet>
-
-  @if (showSplashScreen) {
-    <div
-      class="app-splash-screen"
-      [class.fade-out]="isFadingOut"
-      (click)="dismissSplash()"
-      (touchstart)="onTouchStart($event)"
-      (touchend)="onTouchEnd($event)"
-      role="banner"
-      aria-label="Loading screen"
-    >
-      <div class="splash-background">
-        <img src="assets/images/loading_screen.jpg" alt="Nueva Ecija city skyline" class="splash-bg-image" />
-        <div class="splash-scrim"></div>
-      </div>
-
-      <div class="splash-content-container">
-        <!-- Airplane & Brand Title -->
-        <div class="splash-brand-header">
-          <svg class="splash-airplane-icon" viewBox="0 0 24 24" fill="currentColor">
-            <path
-              d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"
-            />
-          </svg>
-          <span class="splash-brand-title">Trip mo, trip ko</span>
-        </div>
-
-        <!-- Tagline / Slogan matching Figma -->
-        <p class="splash-tagline">
-          Plan your trip, explore new places,<br />
-          make better memories.
-        </p>
-      </div>
-
-      <!-- Subtle bottom tap / swipe indicator -->
-      <div class="splash-footer-hint">
-        <div class="hint-pill">
-          <span class="hint-text">Tap or swipe to enter</span>
-        </div>
-      </div>
-    </div>
-  }
-</ion-app>
+<ion-app>
+  <!-- Offline Mode Travel Banner (Anti-Generic Brand-Aligned) -->
+  @if (connectivityService.isHostOffline$ | async) {
+    <aside class="offline-host-banner" role="status" aria-live="polite" aria-label="Offline Mode Status">
+      <div class="banner-inner">
+        <div class="banner-lead">
+          <div class="offline-icon-wrap" aria-hidden="true">
+            <ion-icon name="cloud-offline-outline" class="offline-lead-icon"></ion-icon>
+          </div>
+          <div class="offline-copy">
+            <span class="offline-title">Offline Mode</span>
+            <span class="offline-desc">Cloud sync paused. Your saved trips and curated destinations remain accessible.</span>
+          </div>
+        </div>
+
+        <div class="banner-actions">
+          <button
+            type="button"
+            class="banner-retry-btn"
+            [disabled]="connectivityService.isCheckingHealth$ | async"
+            (click)="retryConnection()"
+            aria-label="Retry connection to server"
+          >
+            @if (connectivityService.isCheckingHealth$ | async) {
+              <ion-spinner name="crescent" aria-hidden="true"></ion-spinner>
+            } @else {
+              <ion-icon name="refresh-outline" aria-hidden="true"></ion-icon>
+            }
+            <span>Retry</span>
+          </button>
+          <button
+            type="button"
+            class="banner-dismiss-btn"
+            (click)="dismissOfflineBanner()"
+            aria-label="Dismiss offline banner"
+          >
+            <ion-icon name="close-outline" aria-hidden="true"></ion-icon>
+          </button>
+        </div>
+      </div>
+    </aside>
+  }
+
+  <ion-router-outlet></ion-router-outlet>
+
+  @if (showSplashScreen) {
+    <div
+      class="app-splash-screen"
+      [class.fade-out]="isFadingOut"
+      tabindex="0"
+      (click)="dismissSplash()"
+      (keydown.escape)="dismissSplash()"
+      (keydown.enter)="dismissSplash()"
+      (keydown.space)="dismissSplash()"
+      (touchstart)="onTouchStart($event)"
+      (touchend)="onTouchEnd($event)"
+      role="banner"
+      aria-label="Loading screen: Trip mo, trip ko. Tap, swipe, or press Escape to enter"
+    >
+      <div class="splash-background">
+        <img src="assets/images/loading_screen.jpg" alt="Nueva Ecija city skyline" class="splash-bg-image" />
+        <div class="splash-scrim"></div>
+      </div>
+
+      <div class="splash-content-container">
+        <!-- Airplane & Brand Title -->
+        <div class="splash-brand-header">
+          <svg class="splash-airplane-icon" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"
+            />
+          </svg>
+          <span class="splash-brand-title">Trip mo, trip ko</span>
+        </div>
+
+        <!-- Tagline / Slogan matching Figma -->
+        <p class="splash-tagline">
+          Plan your trip, explore new places,<br />
+          make better memories.
+        </p>
+      </div>
+
+      <!-- Subtle bottom tap / swipe indicator -->
+      <div class="splash-footer-hint">
+        <div class="hint-pill">
+          <span class="hint-text">Tap or swipe to enter</span>
+        </div>
+      </div>
+    </div>
+  }
+</ion-app>
