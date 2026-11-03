@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [0.16.5] - 2026-11-03
+### Changed
+- **Proactive Offline State Detection & Interceptor Hardening**:
+  - In `Project/src/app/app.component.ts`:
+    - Added proactive `this.connectivityService.checkHostHealth().subscribe()` on launch in `ngOnInit()`.
+    - Guarantees that if the user visits the app while the backend server is offline, the Offline Mode status banner appears promptly.
+  - In `Project/src/app/core/interceptors/auth.interceptor.ts`:
+    - Expanded offline detection criteria: added 503 and health endpoint 404s so that stopped or unreachable backends reliably trigger `setHostOffline(true)`.
+  - In `cloudflare-worker/worker.js`:
+    - Detected ngrok offline errors (`ngrok-error-code: ERR_NGROK_3200` and HTML 404s), converting them to standard 502 Bad Gateway responses so upstream proxy failures are correctly identified by clients.
+
+---
+
 ## [0.16.4] - 2026-11-03
 ### Removed
 - **Server Connection Settings Dialog & Gear Button**:

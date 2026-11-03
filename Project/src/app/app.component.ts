@@ -32,6 +32,9 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   public ngOnInit(): void {
+    // Proactively verify server connectivity on application launch
+    this.connectivityService.checkHostHealth().subscribe();
+
     // Auto-dismiss after 2.8 seconds once the underlying frontend has initialized
     this.autoDismissTimer = setTimeout(() => {
       this.dismissSplash();

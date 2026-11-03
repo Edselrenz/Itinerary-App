@@ -1643,4 +1643,35 @@ This log records chronological development sessions, detailing objectives, execu
 - **Verification & Test Results**:
   - `npm --prefix Project run test:unit`: **16/16 test files passed, 121/121 tests passed [100%]** in 24.37s.
 - **Next Recommended Step**:
-  - Commit changes as `release: v0.16.4` and push to `origin/main` to update GitHub Pages.
+  - Implement proactive launch health probing and edge error status mapping.
+
+---
+
+## Session 53: Proactive Offline Detection on App Launch
+- **Date & Time**: 2026-11-03 13:35:00 (Local)
+- **Objective**: Resolve issue where turning off the local server did not cause the "Offline Mode" banner to appear on page refresh.
+- **Root Cause Analysis**:
+  1. `checkHostHealth()` was previously only wired to user-initiated clicks on the `[↻ Retry]` button; on initial application boot in `AppComponent.ngOnInit()`, no health probe was dispatched.
+  2. When the backend or ngrok tunnel was stopped, ngrok returned an HTML 404 page (`ERR_NGROK_3200`). The Cloudflare Worker passed this through as a 404 client error rather than a 502 gateway error.
+  3. `authInterceptor` only checked for `status === 0 || 502 || 504`, so the 404 response from the offline upstream was not identified as an offline event.
+- **Tasks Performed & Implementation Details**:
+  - **1. Proactive Startup Health Check (`app.component.ts`)**:
+    - Added `this.connectivityService.checkHostHealth().subscribe()` to `AppComponent.ngOnInit()`.
+    - Proactively validates backend connectivity upon launch, rendering the offline banner immediately when the server is down.
+  - **2. Interceptor Offline Classification (`auth.interceptor.ts`)**:
+    - Expanded gateway/offline check to include HTTP 503 and health endpoint 404s (`req.url.endsWith('/health') || req.url.includes('/api/v1/health')`).
+  - **3. Worker Upstream Error Handling (`cloudflare-worker/worker.js`)**:
+    - Added inspection of `ngrok-error-code` and HTML 404s from upstream tunnels, mapping them directly to HTTP 502 Bad Gateway responses.
+  - **4. Unit Test Verification (`app.component.spec.ts`)**:
+    - Verified all 121 unit tests passing across 16 test files.
+- **Files Modified**:
+  - `Project/src/app/app.component.ts`
+  - `Project/src/app/core/interceptors/auth.interceptor.ts`
+  - `cloudflare-worker/worker.js`
+  - `docs/TODO.md`
+  - `docs/CHANGELOG.md`
+  - `docs/DEVELOPMENT_LOG.md`
+- **Verification & Test Results**:
+  - `npm --prefix Project run test:unit`: **16/16 test files passed, 121/121 tests passed [100%]** in 21.80s.
+- **Next Recommended Step**:
+  - Commit changes as `release: v0.16.5` and push to `origin/main` to trigger the GitHub Pages deployment.

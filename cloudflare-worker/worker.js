@@ -118,8 +118,13 @@ export default {
         });
 
         // If upstream returns a valid response (including 4xx client errors like 404 or 401),
-        // pass it through. Only retry on 502/503/504 gateway failures.
-        if (upstreamRes.status < 502) {
+        // pass it through. Only retry/failover if it's 502/503/504 or ngrok is offline (ERR_NGROK_3200).
+        const isNgrokOffline =
+          upstreamRes.headers.get('ngrok-error-code') ||
+          upstreamRes.headers.get('x-ngrok-error-code') ||
+          (upstreamRes.status === 404 && (upstreamRes.headers.get('content-type') || '').includes('text/html'));
+
+        if (upstreamRes.status < 500 && !isNgrokOffline) {
           const resHeaders = new Headers(upstreamRes.headers);
           Object.entries(corsHeaders).forEach(([k, v]) => resHeaders.set(k, v));
           return new Response(upstreamRes.body, {

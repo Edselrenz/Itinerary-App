@@ -38,7 +38,14 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     }),
     catchError((error: HttpErrorResponse) => {
       // Step 9 / Build Guide: Graceful Laptop-Offline State
-      if (error.status === 0 || error.status === 502 || error.status === 504) {
+      const isGatewayOrOffline =
+        error.status === 0 ||
+        error.status === 502 ||
+        error.status === 503 ||
+        error.status === 504 ||
+        (error.status === 404 && (req.url.endsWith('/health') || req.url.includes('/api/v1/health')));
+
+      if (isGatewayOrOffline) {
         console.warn(
           'Pilot backend is currently unreachable (host laptop or tunnel may be offline). Local guest data remains accessible.'
         );
