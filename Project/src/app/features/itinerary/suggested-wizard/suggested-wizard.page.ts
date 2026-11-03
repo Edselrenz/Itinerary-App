@@ -1,40 +1,47 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import {
   IonContent,
   IonHeader,
   IonIcon,
+  IonModal,
   IonSpinner,
   IonToolbar,
   ToastController,
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import {
+  addCircleOutline,
+  alertCircleOutline,
   arrowBack,
   arrowForwardOutline,
+  busOutline,
   calendarOutline,
   cartOutline,
   cashOutline,
-  alertCircleOutline,
-      checkmarkCircle,
+  checkmarkCircle,
   closeOutline,
   createOutline,
+  informationCircle,
   informationCircleOutline,
   locationOutline,
   locationSharp,
   medkitOutline,
+  openOutline,
   restaurantOutline,
   searchOutline,
   sparkles,
   storefrontOutline,
   timeOutline,
 } from 'ionicons/icons';
-import { Itinerary, ItineraryBudgetSummary, ItineraryDay } from '../../../core/models/itinerary.models';
+import { Itinerary, ItineraryBudgetSummary, ItineraryDay, ItineraryItem } from '../../../core/models/itinerary.models';
+import { Place } from '../../../core/models/place.models';
 import { addDaysLocal, diffDaysLocal, formatDateRange, parseLocalIsoDate, toLocalIsoDate } from '../../../core/utils/date.utils';
 import { ItineraryService } from '../../../core/services/itinerary.service';
 import { NearbyPlaceItem, PlaceService } from '../../../core/services/place.service';
+import { CommuteInfo, getCommuteInfoForMunicipality } from '../../../core/data/commute-guide.data';
 
 export interface PreferenceOption {
   key: string;
@@ -55,6 +62,7 @@ export interface PreferenceOption {
     IonToolbar,
     IonIcon,
     IonSpinner,
+    IonModal,
   ],
 })
 export class SuggestedWizardPage implements OnInit {
@@ -98,16 +106,22 @@ export class SuggestedWizardPage implements OnInit {
   public popupEndDate = '';
   public minDate = toLocalIsoDate();
 
+  public isStopModalOpen = false;
+  public selectedStop: ItineraryItem | null = null;
+
   constructor(
     private fb: FormBuilder,
     private router: Router,
+    private route: ActivatedRoute,
     private itineraryService: ItineraryService,
     public placeService: PlaceService,
     private toastController: ToastController
   ) {
     addIcons({
+      addCircleOutline,
       arrowBack,
       arrowForwardOutline,
+      busOutline,
       sparkles,
       searchOutline,
       locationOutline,
@@ -118,8 +132,10 @@ export class SuggestedWizardPage implements OnInit {
       alertCircleOutline,
       checkmarkCircle,
       createOutline,
+      informationCircle,
       informationCircleOutline,
       closeOutline,
+      openOutline,
       restaurantOutline,
       medkitOutline,
       cartOutline,
@@ -139,6 +155,11 @@ export class SuggestedWizardPage implements OnInit {
 
   public ngOnInit(): void {
     this.nearbyPlacesList = this.placeService.getNearbyPlaces('Bongabon');
+    this.route.queryParams.subscribe((params) => {
+      if (params['destination']) {
+        this.setDestination(params['destination']);
+      }
+    });
   }
 
   public setDestination(dest: string): void {
@@ -322,6 +343,111 @@ export class SuggestedWizardPage implements OnInit {
     const curDay = this.generatedPlan?.days[this.activeDayIndex];
     const muni = this.getDayLocationName(curDay);
     this.nearbyPlacesList = this.placeService.getNearbyPlaces(muni);
+  }
+
+  public openStopDetail(stop: ItineraryItem): void {
+    this.selectedStop = stop;
+    this.isStopModalOpen = true;
+  }
+
+  public closeStopDetail(): void {
+    this.isStopModalOpen = false;
+    this.selectedStop = null;
+  }
+
+  public getStopImage(stop: ItineraryItem): string {
+    return this.placeService.getPlaceImage(
+      stop.place?.name || stop.custom_title || '',
+      stop.place?.image_url
+    );
+  }
+
+  public getStopCategory(stop: ItineraryItem): string {
+    if (stop.place?.category) {
+      return this.placeService.formatCategoryName(stop.place.category);
+    }
+    return 'Attraction';
+  }
+
+  public getStopCost(stop: ItineraryItem): string {
+    if (stop.place?.estimated_cost_min !== null && stop.place?.estimated_cost_min !== undefined) {
+      if (
+        stop.place.estimated_cost_max !== null &&
+        stop.place.estimated_cost_max !== undefined &&
+        stop.place.estimated_cost_max > stop.place.estimated_cost_min
+      ) {
+        return `₱${Math.round(stop.place.estimated_cost_min)} - ₱${Math.round(stop.place.estimated_cost_max)}`;
+      }
+      return `₱${Math.round(stop.place.estimated_cost_min)}`;
+    }
+    return 'Cost not provided';
+  }
+
+  public getCommuteInfo(stop: ItineraryItem): CommuteInfo {
+    return getCommuteInfoForMunicipality(
+      stop.place?.municipality_name || this.generatedPlan?.destination || 'Nueva Ecija',
+      stop.place?.name || stop.custom_title
+    );
+  }
+
+  public openInGoogleMaps(stop: ItineraryItem): void {
+    const url =
+      stop.place?.directions_url ||
+      `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+        (stop.place?.name || stop.custom_title || '') + ' Nueva Ecija'
+      )}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
+
+  public openNearbyInMaps(place: NearbyPlaceItem): void {
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+      place.name + ' ' + place.municipality + ' Nueva Ecija'
+    )}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
+
+  public async addNearbyPlaceToActiveDay(place: NearbyPlaceItem): Promise<void> {
+    if (!this.generatedPlan || !this.generatedPlan.days || !this.generatedPlan.days[this.activeDayIndex]) {
+      return;
+    }
+    const currentDay = this.generatedPlan.days[this.activeDayIndex];
+    if (!currentDay.items) {
+      currentDay.items = [];
+    }
+
+    const newStop: ItineraryItem = {
+      id: `nearby-added-${Date.now()}`,
+      day_id: currentDay.id || `day-${currentDay.day_number}`,
+      sort_order: currentDay.items.length + 1,
+      duration_minutes: 60,
+      planned_time: '12:00 PM',
+      custom_title: place.name,
+      place: {
+        id: place.id,
+        name: place.name,
+        category: place.category === 'restaurant' ? 'restaurant' : place.category === 'hospital' ? 'pharmacy' : 'convenience_store',
+        latitude: 15.63,
+        longitude: 121.14,
+        municipality_name: place.municipality,
+        opening_hours: place.openingHours,
+        cost_currency: 'PHP',
+        is_featured: false,
+        source_name: 'NearbyEssential',
+        source_record_id: place.id,
+        imported_at: new Date().toISOString(),
+      } as Place,
+    };
+
+    currentDay.items.push(newStop);
+    this.budgetSummary = this.itineraryService.calculateBudgetSummary(this.generatedPlan);
+
+    const toast = await this.toastController.create({
+      message: `Added ${place.name} to Day ${currentDay.day_number}!`,
+      duration: 2000,
+      color: 'dark',
+      position: 'bottom',
+    });
+    await toast.present();
   }
 
   public openNearbyPlaces(stop?: any): void {

@@ -13,14 +13,17 @@ import {
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import {
+  addCircleOutline,
   alertCircleOutline,
   arrowBack,
   arrowForwardOutline,
+  busOutline,
   calendarOutline,
   cashOutline,
   checkmarkCircle,
   closeOutline,
   createOutline,
+  informationCircle,
   informationCircleOutline,
   locationOutline,
   locationSharp,
@@ -41,6 +44,7 @@ import {
 import { formatDateRange } from '../../../core/utils/date.utils';
 import { ItineraryService } from '../../../core/services/itinerary.service';
 import { NearbyPlaceItem, PlaceService } from '../../../core/services/place.service';
+import { CommuteInfo, getCommuteInfoForMunicipality } from '../../../core/data/commute-guide.data';
 
 @Component({
   selector: 'app-itinerary-detail',
@@ -84,7 +88,9 @@ export class ItineraryDetailPage implements OnInit, OnDestroy {
     private toastController: ToastController
   ) {
     addIcons({
+      addCircleOutline,
       arrowBack,
+      busOutline,
       createOutline,
       trashOutline,
       locationOutline,
@@ -94,6 +100,7 @@ export class ItineraryDetailPage implements OnInit, OnDestroy {
       timeOutline,
       checkmarkCircle,
       closeOutline,
+      informationCircle,
       informationCircleOutline,
       openOutline,
       navigateOutline,
@@ -320,6 +327,64 @@ export class ItineraryDetailPage implements OnInit, OnDestroy {
       )}`;
     }
     window.open(url, '_blank', 'noopener,noreferrer');
+  }
+
+  public getCommuteInfo(stop: ItineraryItem): CommuteInfo {
+    return getCommuteInfoForMunicipality(
+      stop.place?.municipality_name || this.itinerary?.destination || 'Nueva Ecija',
+      this.getStopTitle(stop)
+    );
+  }
+
+  public openNearbyInMaps(place: NearbyPlaceItem): void {
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+      place.name + ' ' + place.municipality + ' Nueva Ecija'
+    )}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
+
+  public async addNearbyPlaceToActiveDay(place: NearbyPlaceItem): Promise<void> {
+    const currentDay = this.currentDay;
+    if (!currentDay) return;
+    if (!currentDay.items) {
+      currentDay.items = [];
+    }
+
+    const newStop: ItineraryItem = {
+      id: `nearby-added-${Date.now()}`,
+      day_id: currentDay.id || `day-${currentDay.day_number}`,
+      sort_order: currentDay.items.length + 1,
+      duration_minutes: 60,
+      planned_time: '12:00 PM',
+      custom_title: place.name,
+      place: {
+        id: place.id,
+        name: place.name,
+        category: place.category === 'restaurant' ? 'restaurant' : place.category === 'hospital' ? 'pharmacy' : 'convenience_store',
+        latitude: 15.63,
+        longitude: 121.14,
+        municipality_name: place.municipality,
+        opening_hours: place.openingHours,
+        cost_currency: 'PHP',
+        is_featured: false,
+        source_name: 'NearbyEssential',
+        source_record_id: place.id,
+        imported_at: new Date().toISOString(),
+      } as any,
+    };
+
+    currentDay.items.push(newStop);
+    if (this.itinerary) {
+      this.budgetSummary = this.itineraryService.calculateBudgetSummary(this.itinerary);
+    }
+
+    const toast = await this.toastController.create({
+      message: `Added ${place.name} to Day ${currentDay.day_number}!`,
+      duration: 2000,
+      color: 'dark',
+      position: 'bottom',
+    });
+    await toast.present();
   }
 
   public onEdit(): void {

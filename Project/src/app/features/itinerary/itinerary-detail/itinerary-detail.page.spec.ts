@@ -243,4 +243,49 @@ describe('ItineraryDetailPage', () => {
     const subtitle = component.getDaySubtitle(component.itinerary?.days[0]);
     expect(subtitle).toContain('Bongabon');
   });
+
+  it('resolves commute guide and travel reminder for stop (UI-13)', () => {
+    const stop = component.itinerary!.days[0].items[0];
+    const commute = component.getCommuteInfo(stop);
+
+    expect(commute.transitMode).toContain('UV Express');
+    expect(commute.departureHub).toBe('Cabanatuan City Central Terminal');
+    expect(commute.dropOffPoint).toContain('Ricky Food House');
+    expect(commute.estimatedTravelTime).toBe('1 hr – 1 hr 30 mins');
+    expect(commute.travelReminder).toBeTruthy();
+  });
+
+  it('adds nearby place to active day and updates budget in detail view (UI-14)', async () => {
+    const initialItemCount = component.currentDay!.items.length;
+    const nearbyPlace = {
+      id: 'nb-test-1',
+      name: 'Test Dining Spot',
+      category: 'restaurant' as const,
+      openingHours: '10 AM - 10 PM',
+      municipality: 'Bongabon',
+    };
+
+    await component.addNearbyPlaceToActiveDay(nearbyPlace);
+    expect(component.currentDay!.items.length).toBe(initialItemCount + 1);
+    const added = component.currentDay!.items[initialItemCount];
+    expect(added.custom_title).toBe('Test Dining Spot');
+  });
+
+  it('opens nearby directions in Google Maps (UI-14)', () => {
+    const windowSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+    const nearbyPlace = {
+      id: 'nb-test-1',
+      name: 'Test Dining Spot',
+      category: 'restaurant' as const,
+      openingHours: '10 AM - 10 PM',
+      municipality: 'Bongabon',
+    };
+
+    component.openNearbyInMaps(nearbyPlace);
+    expect(windowSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Test%20Dining%20Spot'),
+      '_blank',
+      'noopener,noreferrer'
+    );
+  });
 });

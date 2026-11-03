@@ -231,7 +231,7 @@
           <!-- Stop Cards List -->
           <div class="stop-cards-vertical-list">
             @for (stop of curDay.items; track stop.id; let sIdx = $index) {
-              <div class="figma-stop-card" (click)="openNearbyPlaces(stop)">
+              <div class="figma-stop-card" (click)="openStopDetail(stop)">
                 <div class="stop-thumb-container">
                   <img
                     [src]="placeService.getPlaceImage(stop.place?.name || stop.custom_title || '', stop.place?.image_url)"
@@ -337,8 +337,29 @@
         <div class="nearby-cards-stack">
           @for (place of filteredNearbyPlaces; track place.id; let pIdx = $index) {
             <div class="figma-nearby-card">
-              <h4 class="nearby-card-title">{{ pIdx + 1 }}. {{ place.name }}</h4>
-              <p class="nearby-card-hours">Opening Hours: {{ place.openingHours }}</p>
+              <div class="nearby-card-main">
+                <div class="nearby-top-row">
+                  <span class="nearby-category-tag" [attr.data-cat]="place.category">
+                    {{ place.category === 'restaurant' ? 'Restaurant' : place.category === 'hospital' ? 'Health & Pharmacy' : 'Retail & Store' }}
+                  </span>
+                  <span class="nearby-hours-pill">{{ place.openingHours }}</span>
+                </div>
+                <h4 class="nearby-card-title">{{ pIdx + 1 }}. {{ place.name }}</h4>
+                <p class="nearby-card-muni">
+                  <ion-icon name="location-outline"></ion-icon>
+                  <span>{{ place.municipality }}</span>
+                </p>
+              </div>
+              <div class="nearby-actions-row">
+                <button type="button" class="nearby-map-link" (click)="openNearbyInMaps(place)" aria-label="Open in Maps">
+                  <ion-icon name="open-outline"></ion-icon>
+                  <span>Maps</span>
+                </button>
+                <button type="button" class="nearby-add-btn" (click)="addNearbyPlaceToActiveDay(place)">
+                  <ion-icon name="add-circle-outline"></ion-icon>
+                  <span>Add to Day {{ activeDayIndex + 1 }}</span>
+                </button>
+              </div>
             </div>
           }
         </div>
@@ -463,4 +484,121 @@
       </div>
     }
   </div>
+
+  <!-- ========================================================
+       STOP DETAILS MODAL SHEET (UI-12, UI-13)
+       ======================================================== -->
+  <ion-modal
+    [isOpen]="isStopModalOpen"
+    (didDismiss)="closeStopDetail()"
+    class="destination-modal"
+    [initialBreakpoint]="0.85"
+    [breakpoints]="[0, 0.85, 1.0]"
+  >
+    <ng-template>
+      @if (selectedStop) {
+        <div class="modal-detail-content">
+          <div class="modal-handle-bar"></div>
+
+          <div class="modal-image-wrap">
+            <img
+              [src]="getStopImage(selectedStop)"
+              [alt]="selectedStop.place?.name || selectedStop.custom_title || 'Stop'"
+              class="modal-hero-img"
+            />
+            <button
+              type="button"
+              class="modal-close-btn"
+              (click)="closeStopDetail()"
+              aria-label="Close modal"
+            >
+              <ion-icon name="close-outline"></ion-icon>
+            </button>
+            <span class="modal-category-badge">{{ getStopCategory(selectedStop) }}</span>
+          </div>
+
+          <div class="modal-body-content">
+            <div class="modal-muni-tag">
+              <ion-icon name="location-outline"></ion-icon>
+              <span>{{ selectedStop.place?.municipality_name || generatedPlan?.destination || 'Nueva Ecija' }}, Nueva Ecija</span>
+            </div>
+
+            <h2 class="modal-title">{{ selectedStop.place?.name || selectedStop.custom_title }}</h2>
+
+            <div class="modal-meta-grid">
+              @if (selectedStop.place?.opening_hours) {
+                <div class="modal-meta-item">
+                  <ion-icon name="time-outline"></ion-icon>
+                  <span>{{ selectedStop.place.opening_hours }}</span>
+                </div>
+              }
+              <div class="modal-meta-item">
+                <ion-icon name="cash-outline"></ion-icon>
+                <span>{{ getStopCost(selectedStop) }}</span>
+              </div>
+            </div>
+
+            @if (selectedStop.place?.description) {
+              <p class="modal-full-desc">{{ selectedStop.place.description }}</p>
+            }
+
+            @if (selectedStop.notes) {
+              <div class="stop-notes-box">
+                <span class="notes-label">Traveler Note:</span>
+                <p>{{ selectedStop.notes }}</p>
+              </div>
+            }
+
+            <!-- How to Get There? Commute Guide (UI-13) -->
+            @if (getCommuteInfo(selectedStop); as commute) {
+              <div class="commute-guide-box">
+                <div class="commute-header-row">
+                  <ion-icon name="bus-outline" class="commute-title-icon"></ion-icon>
+                  <h4 class="commute-title">How to get there?</h4>
+                </div>
+
+                <div class="commute-detail-list">
+                  <div class="commute-detail-item">
+                    <span class="commute-label">Transit & Hub</span>
+                    <span class="commute-value">{{ commute.transitMode }} &bull; {{ commute.departureHub }}</span>
+                  </div>
+                  <div class="commute-detail-item">
+                    <span class="commute-label">Drop-off Point</span>
+                    <span class="commute-value">{{ commute.dropOffPoint }}</span>
+                  </div>
+                  <div class="commute-detail-item">
+                    <span class="commute-label">Estimated Travel Time</span>
+                    <span class="commute-value">{{ commute.estimatedTravelTime }}</span>
+                  </div>
+                  <div class="commute-detail-item">
+                    <span class="commute-label">Estimated Fare</span>
+                    <span class="commute-value">{{ commute.estimatedFare }}</span>
+                  </div>
+                </div>
+
+                <div class="travel-reminder-card">
+                  <ion-icon name="information-circle" class="reminder-icon"></ion-icon>
+                  <div class="reminder-text">
+                    <span class="reminder-heading">Travel Reminder</span>
+                    <p class="reminder-body">{{ commute.travelReminder }}</p>
+                  </div>
+                </div>
+              </div>
+            }
+
+            <div class="modal-actions-grid" style="margin-top: 14px;">
+              <button
+                type="button"
+                class="external-map-btn"
+                (click)="openInGoogleMaps(selectedStop)"
+              >
+                <ion-icon name="open-outline"></ion-icon>
+                <span>Open in Google Maps</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+    </ng-template>
+  </ion-modal>
 </ion-content>

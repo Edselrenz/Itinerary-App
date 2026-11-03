@@ -273,4 +273,52 @@ describe('SuggestedWizardPage', () => {
     expect(assumptionsBox.textContent).toContain('Trip Assumptions & Travel Notes');
     expect(assumptionsBox.textContent).toContain('3 stops scheduled per day');
   });
+
+  it('opens and closes stop detail modal on stop card click (UI-12)', () => {
+    const stop = mockGeneratedPlan.days[0].items[0];
+    expect(component.isStopModalOpen).toBe(false);
+
+    component.openStopDetail(stop);
+    expect(component.isStopModalOpen).toBe(true);
+    expect(component.selectedStop).toEqual(stop);
+
+    component.closeStopDetail();
+    expect(component.isStopModalOpen).toBe(false);
+    expect(component.selectedStop).toBeNull();
+  });
+
+  it('resolves commute guide and travel reminder for stop (UI-13)', () => {
+    const stop = mockGeneratedPlan.days[0].items[0];
+    const commute = component.getCommuteInfo(stop);
+
+    expect(commute.transitMode).toContain('UV Express');
+    expect(commute.departureHub).toBe('Cabanatuan City Central Terminal');
+    expect(commute.dropOffPoint).toContain('Ricky Food House');
+    expect(commute.estimatedTravelTime).toBe('1 hr – 1 hr 30 mins');
+    expect(commute.travelReminder).toBeTruthy();
+  });
+
+  it('adds nearby place to active day and updates budget (UI-14)', async () => {
+    component.generatedPlan = JSON.parse(JSON.stringify(mockGeneratedPlan));
+    component.activeDayIndex = 0;
+    const initialItemCount = component.generatedPlan!.days[0].items.length;
+
+    const nearbyItem = mockNearbyPlaces[0];
+    await component.addNearbyPlaceToActiveDay(nearbyItem);
+
+    expect(component.generatedPlan!.days[0].items.length).toBe(initialItemCount + 1);
+    const addedItem = component.generatedPlan!.days[0].items[initialItemCount];
+    expect(addedItem.custom_title).toBe('Boss Samgyupsal');
+    expect(addedItem.place?.municipality_name).toBe('Bongabon');
+  });
+
+  it('opens nearby directions in Google Maps (UI-14)', () => {
+    const windowSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+    component.openNearbyInMaps(mockNearbyPlaces[0]);
+    expect(windowSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Boss%20Samgyupsal'),
+      '_blank',
+      'noopener,noreferrer'
+    );
+  });
 });

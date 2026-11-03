@@ -12,6 +12,7 @@ import {
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import {
+  arrowBackOutline,
   arrowForward,
   calendarOutline,
   cashOutline,
@@ -75,6 +76,19 @@ export class HomePage implements OnInit, OnDestroy {
   public selectedDestination: DestinationItem | null = null;
   public isDetailModalOpen = false;
 
+  public isPopularCatalogOpen = false;
+  public selectedCatalogMunicipality = 'All';
+  public catalogMunicipalities: string[] = [
+    'All',
+    'Bongabon',
+    'Pantabangan',
+    'Gapan City',
+    'General Tinio',
+    'Cabanatuan City',
+    'Science City of Muñoz',
+    'Gabaldon',
+  ];
+
   public searchResults: DestinationItem[] = [];
   public isSearching = false;
   public searchLoading = false;
@@ -94,6 +108,7 @@ export class HomePage implements OnInit, OnDestroy {
     private toastController: ToastController
   ) {
     addIcons({
+      arrowBackOutline,
       notifications,
       personCircleOutline,
       informationCircle,
@@ -264,8 +279,28 @@ export class HomePage implements OnInit, OnDestroy {
     await toast.present();
   }
 
+  public get filteredCatalogDestinations(): DestinationItem[] {
+    if (this.selectedCatalogMunicipality === 'All') {
+      return this.destinations;
+    }
+    const filter = this.selectedCatalogMunicipality.toLowerCase();
+    return this.destinations.filter(
+      (d) =>
+        d.municipality.toLowerCase().includes(filter) ||
+        filter.includes(d.municipality.toLowerCase())
+    );
+  }
+
+  public filterCatalogByMunicipality(muni: string): void {
+    this.selectedCatalogMunicipality = muni;
+  }
+
   public onSeeAll(): void {
-    this.router.navigate(['/tabs/map']);
+    this.isPopularCatalogOpen = true;
+  }
+
+  public closePopularCatalog(): void {
+    this.isPopularCatalogOpen = false;
   }
 
   public clearSearch(): void {
@@ -288,6 +323,18 @@ export class HomePage implements OnInit, OnDestroy {
 
   public startPlanningWithDestination(destination: DestinationItem): void {
     this.closeDestinationDetail();
+    this.closePopularCatalog();
+    this.router.navigate(['/suggested-wizard'], {
+      queryParams: {
+        destination: destination.municipality,
+        placeId: destination.id,
+      },
+    });
+  }
+
+  public viewDestinationOnMap(destination: DestinationItem): void {
+    this.closeDestinationDetail();
+    this.closePopularCatalog();
     const queryParams: Record<string, string> = {
       destination: destination.name,
       municipality: destination.municipality,

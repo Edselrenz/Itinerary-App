@@ -393,25 +393,25 @@ This checklist tracks completed, active, and pending tasks across all developmen
 ---
 
 ## Phase 18: Missing Figma Windows — Popular Destinations Catalog, Stop Details & Commute Guide (`Priority 1 — Figma Design Parity`)
-- [ ] **18.1: Build Popular Destinations ("See All") Window / Modal (`UI-11`)**:
-  - [ ] Target: `home.page.ts`, `home.page.html`, `home.page.scss`.
-  - [ ] Match Figma `Popular Destinations` frame: header with back button, municipality filter pills, and responsive destination catalog.
-  - [ ] Wire `onSeeAll()` to open this full-screen catalog view (`isPopularCatalogOpen = true`).
-- [ ] **18.2: Add Stop Detail Modal to `SuggestedWizardPage` & Fix Stop Card Click Binding (`UI-12`)**:
-  - [ ] Target: `suggested-wizard.page.html` (Line 189), `suggested-wizard.page.ts` (Line 319).
-  - [ ] Change `(click)="openNearbyPlaces(stop)"` to `(click)="openStopDetail(stop)"`.
-  - [ ] Add Stop Detail bottom-sheet modal to inspect photos, hours, cost breakdown, and transit links.
-- [ ] **18.3: Add Figma "How to Get There?" Commute Guide & `Travel Reminder` Section (`UI-13`)**:
-  - [ ] Target: `commute-guide.data.ts` (new), `itinerary-detail.page.html`, `suggested-wizard.page.html`, `global.scss`.
-  - [ ] Map Nueva Ecija municipalities to transit hubs (Cabanatuan Central Terminal, UV Express routes, drop-off points, travel time).
-  - [ ] Render advisory box with transit tips and Google Maps transit handoff.
-- [ ] **18.4: Make "Nearby Places" Cards Interactive with "Add to Day" & "Directions" Actions (`UI-14`)**:
-  - [ ] Target: `suggested-wizard.page.html`, `itinerary-detail.page.html`, `suggested-wizard.page.ts`, `itinerary-detail.page.ts`.
-  - [ ] Enrich `.figma-nearby-card` with category pills, cost badges, stop details click, and `"+ Add to Day"` action.
-- [ ] **18.5: Fix Home Destination Modal Primary CTA & Widen Popular Carousel Cards (`UI-15`)**:
-  - [ ] Target: `home.page.html`, `home.page.ts`, `home.page.scss`.
-  - [ ] Change primary CTA in Destination Detail modal to **"Build Itinerary Here"** navigating to `/suggested-wizard?destination=<muni>&placeId=<id>`.
-  - [ ] Widen `.dest-card` to `160px` with category and honest price badge overlays.
+- [x] **18.1: Build Popular Destinations ("See All") Window / Modal (`UI-11`)**:
+  - [x] Target: `home.page.ts`, `home.page.html`, `home.page.scss`, `global.scss`.
+  - [x] Match Figma `Popular Destinations` frame: header with back button, municipality filter pills, and responsive destination catalog.
+  - [x] Wire `onSeeAll()` to open this full-screen catalog view (`isPopularCatalogOpen = true`).
+- [x] **18.2: Add Stop Detail Modal to `SuggestedWizardPage` & Fix Stop Card Click Binding (`UI-12`)**:
+  - [x] Target: `suggested-wizard.page.html` (Line 189), `suggested-wizard.page.ts` (Line 319).
+  - [x] Change `(click)="openNearbyPlaces(stop)"` to `(click)="openStopDetail(stop)"`.
+  - [x] Add Stop Detail bottom-sheet modal to inspect photos, hours, cost breakdown, and transit links.
+- [x] **18.3: Add Figma "How to Get There?" Commute Guide & `Travel Reminder` Section (`UI-13`)**:
+  - [x] Target: `commute-guide.data.ts` (new), `itinerary-detail.page.html`, `suggested-wizard.page.html`, `global.scss`.
+  - [x] Map Nueva Ecija municipalities to transit hubs (Cabanatuan Central Terminal, UV Express routes, drop-off points, travel time).
+  - [x] Render advisory box with transit tips and Google Maps transit handoff.
+- [x] **18.4: Make "Nearby Places" Cards Interactive with "Add to Day" & "Directions" Actions (`UI-14`)**:
+  - [x] Target: `suggested-wizard.page.html`, `itinerary-detail.page.html`, `suggested-wizard.page.ts`, `itinerary-detail.page.ts`.
+  - [x] Enrich `.figma-nearby-card` with category pills, cost badges, stop details click, and `"+ Add to Day"` action.
+- [x] **18.5: Fix Home Destination Modal Primary CTA & Widen Popular Carousel Cards (`UI-15`)**:
+  - [x] Target: `home.page.html`, `home.page.ts`, `home.page.scss`.
+  - [x] Change primary CTA in Destination Detail modal to **"Build Itinerary Here"** navigating to `/suggested-wizard?destination=<muni>&placeId=<id>`.
+  - [x] Widen `.dest-card` to `160px` with category and honest price badge overlays.
 
 ---
 

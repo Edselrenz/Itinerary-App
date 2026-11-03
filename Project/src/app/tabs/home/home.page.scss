@@ -239,8 +239,8 @@
 }
 
 .dest-card {
-  flex: 0 0 120px;
-  width: 120px;
+  flex: 0 0 160px;
+  width: 160px;
   scroll-snap-align: start;
   cursor: pointer;
   transition: transform 0.15s ease;
@@ -251,13 +251,34 @@
 }
 
 .dest-image-wrapper {
-  width: 120px;
+  position: relative;
+  width: 160px;
   height: 120px;
-  border-radius: 16px;
+  border-radius: 14px;
   overflow: hidden;
   background: #e2e8f0;
-  margin-bottom: 0.55rem;
+  margin-bottom: 0.45rem;
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.06);
+}
+
+.dest-badge-category {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  background: rgba(15, 23, 42, 0.85);
+  color: #ffffff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.02em;
+}
+
+.dest-cost-chip {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #047857;
+  margin: 2px 0 0;
 }
 
 .dest-title,
@@ -573,173 +594,4 @@
   color: #94a3b8;
   font-size: 1.1rem;
   flex-shrink: 0;
-}
-
-/* Destination Detail Modal */
-.destination-modal {
-  --border-radius: 24px 24px 0 0;
-
-  .modal-detail-content {
-    background: #ffffff;
-    padding-bottom: 2rem;
-    max-height: 85vh;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .modal-handle-bar {
-    width: 36px;
-    height: 4px;
-    background: #cbd5e1;
-    border-radius: 9999px;
-    margin: 12px auto 8px;
-  }
-
-  .modal-image-wrap {
-    position: relative;
-    width: 100%;
-    height: 240px;
-    background: #0f172a;
-    overflow: hidden;
-  }
-
-  .modal-close-btn {
-    position: absolute;
-    top: 14px;
-    right: 14px;
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    background: rgba(15, 23, 42, 0.6);
-    color: #ffffff;
-    border: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-size: 1.25rem;
-    z-index: 10;
-  }
-
-  .modal-category-badge {
-    position: absolute;
-    bottom: 14px;
-    left: 14px;
-    background: rgba(15, 23, 42, 0.8);
-    backdrop-filter: blur(4px);
-    color: #ffffff;
-    font-size: 0.75rem;
-    font-weight: 700;
-    padding: 0.3rem 0.75rem;
-    border-radius: 8px;
-  }
-
-  .modal-body-content {
-    padding: 1.25rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  .modal-muni-tag {
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
-    color: #0084ff;
-    font-size: 0.82rem;
-    font-weight: 700;
-
-    ion-icon {
-      font-size: 1rem;
-    }
-  }
-
-  .modal-title {
-    font-size: 1.45rem;
-    font-weight: 800;
-    color: #0f172a;
-    margin: 0;
-    line-height: 1.2;
-  }
-
-  .modal-meta-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.6rem;
-    margin-top: -0.25rem;
-  }
-
-  .modal-meta-item {
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-    font-size: 0.78rem;
-    font-weight: 600;
-    color: #334155;
-    background: #f1f5f9;
-    padding: 0.35rem 0.65rem;
-    border-radius: 8px;
-
-    ion-icon {
-      font-size: 0.95rem;
-      color: #0084ff;
-    }
-  }
-
-  .modal-full-desc {
-    font-size: 0.92rem;
-    color: #475569;
-    line-height: 1.5;
-    margin: 0;
-  }
-
-  .modal-tags-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.4rem;
-    margin-top: 0.25rem;
-  }
-
-  .tag-chip {
-    background: #f1f5f9;
-    color: #334155;
-    font-size: 0.72rem;
-    font-weight: 600;
-    padding: 0.25rem 0.6rem;
-    border-radius: 6px;
-  }
-
-  .modal-actions-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 0.65rem;
-    margin-top: 1rem;
-  }
-
-  .external-map-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    background: #ffffff;
-    border: 1.5px solid #0084ff;
-    color: #0084ff;
-    border-radius: 12px;
-    padding: 0.85rem;
-    font-size: 0.92rem;
-    font-weight: 700;
-    cursor: pointer;
-
-    ion-icon {
-      font-size: 1.15rem;
-    }
-  }
-
-  .plan-with-dest-btn {
-    --background: #0084ff;
-    --border-radius: 12px;
-    font-weight: 700;
-    margin: 0;
-    height: 48px;
-  }
 }

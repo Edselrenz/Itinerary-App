@@ -166,4 +166,48 @@ describe('HomePage', () => {
     component.openItinerary(dummyItin);
     expect(router.navigate).toHaveBeenCalledWith(['/itinerary', 'itin-detail-test']);
   });
+
+  it('opens and closes popular destinations catalog modal on onSeeAll (UI-11)', () => {
+    expect(component.isPopularCatalogOpen).toBe(false);
+    component.onSeeAll();
+    expect(component.isPopularCatalogOpen).toBe(true);
+
+    component.closePopularCatalog();
+    expect(component.isPopularCatalogOpen).toBe(false);
+  });
+
+  it('filters catalog destinations by municipality pill selection (UI-11)', () => {
+    component.filterCatalogByMunicipality('General Tinio');
+    expect(component.selectedCatalogMunicipality).toBe('General Tinio');
+    expect(component.filteredCatalogDestinations.every((d) => d.municipality.includes('General Tinio'))).toBe(true);
+
+    component.filterCatalogByMunicipality('All');
+    expect(component.filteredCatalogDestinations.length).toBe(component.destinations.length);
+  });
+
+  it('navigates to suggested wizard on startPlanningWithDestination (UI-15)', () => {
+    const dest = component.destinations[0];
+    component.startPlanningWithDestination(dest);
+    expect(router.navigate).toHaveBeenCalledWith(['/suggested-wizard'], {
+      queryParams: {
+        destination: dest.municipality,
+        placeId: dest.id,
+      },
+    });
+  });
+
+  it('navigates to map with lat/lng coordinates on viewDestinationOnMap (UI-15)', () => {
+    const dest = component.destinations[0];
+    component.viewDestinationOnMap(dest);
+    expect(router.navigate).toHaveBeenCalledWith(
+      ['/tabs/map'],
+      expect.objectContaining({
+        queryParams: expect.objectContaining({
+          destination: dest.name,
+          lat: '15.2981',
+          lng: '121.1223',
+        }),
+      })
+    );
+  });
 });

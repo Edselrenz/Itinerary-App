@@ -237,8 +237,31 @@
           <div class="nearby-cards-stack">
             @for (place of filteredNearbyPlaces; track place.id; let pIdx = $index) {
               <div class="figma-nearby-card">
-                <h4 class="nearby-card-title">{{ pIdx + 1 }}. {{ place.name }}</h4>
-                <p class="nearby-card-hours">Opening Hours: {{ place.openingHours }}</p>
+                <div class="nearby-card-main">
+                  <div class="nearby-top-row">
+                    <span class="nearby-category-tag" [attr.data-cat]="place.category">
+                      {{ place.category === 'restaurant' ? 'Restaurant' : place.category === 'hospital' ? 'Health & Pharmacy' : 'Retail & Store' }}
+                    </span>
+                    <span class="nearby-hours-pill">{{ place.openingHours }}</span>
+                  </div>
+                  <h4 class="nearby-card-title">{{ pIdx + 1 }}. {{ place.name }}</h4>
+                  <p class="nearby-card-muni">
+                    <ion-icon name="location-outline"></ion-icon>
+                    <span>{{ place.municipality }}</span>
+                  </p>
+                </div>
+                <div class="nearby-actions-row">
+                  <button type="button" class="nearby-map-link" (click)="openNearbyInMaps(place)" aria-label="Open in Maps">
+                    <ion-icon name="open-outline"></ion-icon>
+                    <span>Maps</span>
+                  </button>
+                  @if (currentDay) {
+                    <button type="button" class="nearby-add-btn" (click)="addNearbyPlaceToActiveDay(place)">
+                      <ion-icon name="add-circle-outline"></ion-icon>
+                      <span>Add to Day {{ currentDay.day_number }}</span>
+                    </button>
+                  }
+                </div>
               </div>
             }
           </div>
@@ -311,7 +334,44 @@
               </div>
             }
 
-            <div class="modal-actions-grid">
+            <!-- How to Get There? Commute Guide (UI-13) -->
+            @if (getCommuteInfo(selectedStop); as commute) {
+              <div class="commute-guide-box">
+                <div class="commute-header-row">
+                  <ion-icon name="bus-outline" class="commute-title-icon"></ion-icon>
+                  <h4 class="commute-title">How to get there?</h4>
+                </div>
+
+                <div class="commute-detail-list">
+                  <div class="commute-detail-item">
+                    <span class="commute-label">Transit & Hub</span>
+                    <span class="commute-value">{{ commute.transitMode }} &bull; {{ commute.departureHub }}</span>
+                  </div>
+                  <div class="commute-detail-item">
+                    <span class="commute-label">Drop-off Point</span>
+                    <span class="commute-value">{{ commute.dropOffPoint }}</span>
+                  </div>
+                  <div class="commute-detail-item">
+                    <span class="commute-label">Estimated Travel Time</span>
+                    <span class="commute-value">{{ commute.estimatedTravelTime }}</span>
+                  </div>
+                  <div class="commute-detail-item">
+                    <span class="commute-label">Estimated Fare</span>
+                    <span class="commute-value">{{ commute.estimatedFare }}</span>
+                  </div>
+                </div>
+
+                <div class="travel-reminder-card">
+                  <ion-icon name="information-circle" class="reminder-icon"></ion-icon>
+                  <div class="reminder-text">
+                    <span class="reminder-heading">Travel Reminder</span>
+                    <p class="reminder-body">{{ commute.travelReminder }}</p>
+                  </div>
+                </div>
+              </div>
+            }
+
+            <div class="modal-actions-grid" style="margin-top: 14px;">
               <button
                 type="button"
                 class="external-map-btn"

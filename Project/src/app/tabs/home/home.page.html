@@ -144,9 +144,11 @@
             <div class="dest-card" (click)="openDestinationDetail(item)" role="button" tabindex="0">
               <div class="dest-image-wrapper">
                 <img [src]="item.image" [alt]="item.name" class="dest-img" loading="lazy" />
+                <span class="dest-badge-category">{{ item.category }}</span>
               </div>
               <h4 class="dest-title">{{ item.name }}</h4>
               <p class="dest-municipality">{{ item.municipality }}</p>
+              <p class="dest-cost-chip">{{ item.costDisplay }}</p>
             </div>
           }
         </div>
@@ -258,27 +260,105 @@
             </div>
 
             <div class="modal-actions-grid">
-              <button
-                type="button"
-                class="external-map-btn"
-                (click)="openInGoogleMaps(selectedDestination)"
-              >
-                <ion-icon name="open-outline"></ion-icon>
-                <span>Open in Google Maps</span>
-              </button>
-
               <ion-button
                 expand="block"
                 class="plan-with-dest-btn"
                 (click)="startPlanningWithDestination(selectedDestination)"
               >
-                <ion-icon name="navigate-outline" slot="start"></ion-icon>
-                <span>Plan Route Here</span>
+                <ion-icon name="sparkles" slot="start"></ion-icon>
+                <span>Build Itinerary Here</span>
               </ion-button>
+
+              <div class="secondary-actions-row">
+                <button
+                  type="button"
+                  class="secondary-action-btn"
+                  (click)="viewDestinationOnMap(selectedDestination)"
+                >
+                  <ion-icon name="map-outline"></ion-icon>
+                  <span>View Pin on Map</span>
+                </button>
+
+                <button
+                  type="button"
+                  class="secondary-action-btn"
+                  (click)="openInGoogleMaps(selectedDestination)"
+                >
+                  <ion-icon name="open-outline"></ion-icon>
+                  <span>Google Maps</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
       }
+    </ng-template>
+  </ion-modal>
+
+  <!-- Popular Destinations Catalog Modal (UI-11) -->
+  <ion-modal
+    [isOpen]="isPopularCatalogOpen"
+    (didDismiss)="closePopularCatalog()"
+    class="popular-catalog-modal"
+  >
+    <ng-template>
+      <div class="catalog-modal-container">
+        <!-- Header -->
+        <div class="catalog-modal-header">
+          <button type="button" class="catalog-back-btn" (click)="closePopularCatalog()" aria-label="Back">
+            <ion-icon name="arrow-back-outline"></ion-icon>
+          </button>
+          <div class="catalog-header-text">
+            <h2 class="catalog-header-title">Popular Destinations</h2>
+            <span class="catalog-header-count">{{ filteredCatalogDestinations.length }} places in Nueva Ecija</span>
+          </div>
+        </div>
+
+        <!-- Horizontal Municipality Filter Bar -->
+        <div class="catalog-filter-bar">
+          @for (muni of catalogMunicipalities; track muni) {
+            <button
+              type="button"
+              class="catalog-muni-pill"
+              [class.active]="selectedCatalogMunicipality === muni"
+              (click)="filterCatalogByMunicipality(muni)"
+            >
+              {{ muni }}
+            </button>
+          }
+        </div>
+
+        <!-- Catalog Grid -->
+        <div class="catalog-scroll-body">
+          <div class="catalog-cards-grid">
+            @for (item of filteredCatalogDestinations; track item.id) {
+              <div class="catalog-card" (click)="openDestinationDetail(item)" role="button" tabindex="0">
+                <div class="catalog-card-media">
+                  <img [src]="item.image" [alt]="item.name" class="catalog-card-img" loading="lazy" />
+                  <span class="catalog-card-category">{{ item.category }}</span>
+                </div>
+                <div class="catalog-card-info">
+                  <h4 class="catalog-card-title">{{ item.name }}</h4>
+                  <div class="catalog-card-meta">
+                    <ion-icon name="location-outline"></ion-icon>
+                    <span>{{ item.municipality }}</span>
+                  </div>
+                  @if (item.openingHours) {
+                    <div class="catalog-card-meta">
+                      <ion-icon name="time-outline"></ion-icon>
+                      <span>{{ item.openingHours }}</span>
+                    </div>
+                  }
+                  <div class="catalog-card-cost">
+                    <ion-icon name="cash-outline"></ion-icon>
+                    <span>{{ item.costDisplay }}</span>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
     </ng-template>
   </ion-modal>
 </ion-content>

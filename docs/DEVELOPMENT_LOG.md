@@ -1794,3 +1794,48 @@ This log records chronological development sessions, detailing objectives, execu
   - `docs/PROJECT_STATE.md`
 - **Next Recommended Step**:
   - Proceed to **Phase 18**: Missing Figma Windows — Popular Destinations Catalog, Stop Details & Commute Guide (`UI-11` to `UI-15`).
+
+---
+
+## Session 57: Implementation & Verification of Phase 18 (UI-11 to UI-15)
+- **Date & Time**: 2026-11-03 15:45:00 (Local)
+- **Objective**: Execute Phase 18: Missing Figma Windows — Popular Destinations Catalog, Stop Details & Commute Guide (`Priority 1 — Figma Design Parity`) across the Angular/Ionic frontend application and verify 100% test passing rate and clean production build.
+- **Tasks Performed & Implementation Details**:
+  - **1. Popular Destinations ("See All") Full-Screen Catalog Modal (`UI-11`, `UI-15`)**:
+    - In `home.page.ts`, added `isPopularCatalogOpen`, `selectedCatalogMunicipality`, `catalogMunicipalities`, and `filteredCatalogDestinations`.
+    - Bound `onSeeAll()` to open `<ion-modal [isOpen]="isPopularCatalogOpen">` featuring a back navigation header, municipality filter chips (`All`, `Bongabon`, `Pantabangan`, `Gapan City`, `General Tinio`, `Cabanatuan City`, `Science City of Muñoz`, etc.), and a 2-column responsive destination catalog grid.
+    - Widened `.dest-card` to `160px` in `home.page.scss` and `Project/src/global.scss`, rendering category tags and honest cost badges (`₱min - ₱max` or "Cost not provided") directly over photo tiles.
+    - Updated Destination Detail primary CTA to **"Build Itinerary Here"** (`startPlanningWithDestination()`) navigating to `/suggested-wizard?destination=<muni>&placeId=<id>` and secondary CTA to **"View Pin on Map"** (`viewDestinationOnMap()`).
+  - **2. Suggested Wizard Stop Details Modal & Click Binding (`UI-12`)**:
+    - In `suggested-wizard.page.html`, changed `.figma-stop-card` click from `openNearbyPlaces(stop)` to `openStopDetail(stop)`.
+    - Added `<ion-modal [isOpen]="isStopModalOpen">` bottom sheet displaying venue photo, verified opening hours, honest cost breakdown, venue description, notes, and the Commute Guide.
+    - Updated `suggested-wizard.page.ts` to read query parameters (`destination`, `placeId`) via `ActivatedRoute.queryParams` to auto-fill wizard destination.
+  - **3. Figma "How to Get There?" Commute Guide & Travel Reminder (`UI-13`)**:
+    - Created `Project/src/app/core/data/commute-guide.data.ts` and `Project/src/app/core/data/commute-guide.data.spec.ts`.
+    - Curated transit hubs across Nueva Ecija (Cabanatuan Central Terminal, UV Express routes, drop-off points, travel time, fares, and reminders) for Bongabon, Pantabangan, General Tinio, Gapan City, Science City of Muñoz, Cabanatuan City, Gabaldon, and San Jose City.
+    - Embedded `.commute-guide-box` and `.travel-reminder-card` into Stop Detail modals across both `SuggestedWizardPage` and `ItineraryDetailPage`.
+  - **4. Interactive Nearby Places Cards with "Add to Day" Action (`UI-14`)**:
+    - Enriched `.figma-nearby-card` in both `suggested-wizard.page.html` and `itinerary-detail.page.html` with category pills (`restaurant`, `hospital`, `store`), verified hours, external Google Maps link, and `"+ Add to Day {{ day_number }}"` action button.
+    - Implemented `addNearbyPlaceToActiveDay()` in both controllers to dynamically append stops and recalculate the trip budget summary in real time.
+- **Verification & Test Results**:
+  - `npm --prefix Project run test:unit`: **18/18 test files passed, 149/149 unit tests passed [100%]** in 20.09s.
+  - `npm --prefix Project run build`: **Clean production build** generated in `Project/www/` with 0 errors, 0 warnings, and 0 budget violations in 8.20s.
+- **Files Modified / Created**:
+  - `Project/src/app/core/data/commute-guide.data.ts` (new)
+  - `Project/src/app/core/data/commute-guide.data.spec.ts` (new)
+  - `Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.html`
+  - `Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.spec.ts`
+  - `Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.ts`
+  - `Project/src/app/features/itinerary/suggested-wizard/suggested-wizard.page.html`
+  - `Project/src/app/features/itinerary/suggested-wizard/suggested-wizard.page.spec.ts`
+  - `Project/src/app/features/itinerary/suggested-wizard/suggested-wizard.page.ts`
+  - `Project/src/app/tabs/home/home.page.html`
+  - `Project/src/app/tabs/home/home.page.scss`
+  - `Project/src/app/tabs/home/home.page.spec.ts`
+  - `Project/src/app/tabs/home/home.page.ts`
+  - `Project/src/global.scss`
+  - `docs/TODO.md`
+  - `docs/DEVELOPMENT_LOG.md`
+  - `docs/PROJECT_STATE.md`
+- **Next Recommended Step**:
+  - Proceed to **Phase 19**: Map Discovery, Multi-Select Filter Sheet & Accessible POI List Drawer (`UI-16` & `UI-17`).
