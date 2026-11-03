@@ -88,13 +88,16 @@ describe('AppComponent', () => {
     );
   });
 
-  it('opens server config alert when retryConnection fails', async () => {
+  it('shows warning toast when retryConnection fails while server is offline', async () => {
     mockConnectivityService.checkHostHealth.mockReturnValue(of(false));
-    const openAlertSpy = vi.spyOn(component, 'openServerConfigAlert');
     component.retryConnection();
     expect(mockConnectivityService.checkHostHealth).toHaveBeenCalled();
     await new Promise((resolve) => setTimeout(resolve, 10));
-    expect(openAlertSpy).toHaveBeenCalledWith(true);
+    expect(mockToastController.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        color: 'warning',
+      })
+    );
   });
 
   it('calls dismissBanner when dismissOfflineBanner is triggered', () => {
@@ -102,7 +105,7 @@ describe('AppComponent', () => {
     expect(mockConnectivityService.dismissBanner).toHaveBeenCalled();
   });
 
-  it('renders offline banner and wires Retry, Configure, and Dismiss actions', () => {
+  it('renders offline banner and wires Retry and Dismiss actions', () => {
     isHostOfflineSub.next(true);
     fixture.detectChanges();
 
@@ -116,13 +119,6 @@ describe('AppComponent', () => {
     expect(retryBtn).toBeTruthy();
     retryBtn.click();
     expect(mockConnectivityService.checkHostHealth).toHaveBeenCalled();
-
-    // Verify config button is wired
-    const configBtn = banner.querySelector('.banner-config-btn');
-    expect(configBtn).toBeTruthy();
-    const openAlertSpy = vi.spyOn(component, 'openServerConfigAlert');
-    configBtn.click();
-    expect(openAlertSpy).toHaveBeenCalledWith(false);
 
     // Verify dismiss button is wired
     const dismissBtn = banner.querySelector('.banner-dismiss-btn');

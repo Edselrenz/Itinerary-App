@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [0.16.4] - 2026-11-03
+### Removed
+- **Server Connection Settings Dialog & Gear Button**:
+  - In `Project/src/app/app.component.html`, `app.component.ts`, and `app.component.scss`:
+    - Removed the Settings gear button (`banner-config-btn`) from the Offline Mode status banner.
+    - Removed `openServerConfigAlert()` dialog and `showInvalidUrlToast()` from `AppComponent`.
+    - Hardened the client interface so end users are never exposed to internal backend URLs or manual tunnel inputs.
+    - Simplified `retryConnection()` to present a clean, user-friendly status toast when the backend is offline.
+  - In `Project/src/app/app.component.spec.ts`:
+    - Updated unit tests to verify clean Retry and Dismiss banner actions and offline status toast (121/121 passing).
+
+---
+
 ## [0.16.3] - 2026-11-03
 ### Changed
 - **Permanent Cloudflare Worker Production Activation**:

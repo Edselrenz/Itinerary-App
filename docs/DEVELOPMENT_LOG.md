@@ -1613,4 +1613,34 @@ This log records chronological development sessions, detailing objectives, execu
   - `docs/CHANGELOG.md`
   - `docs/DEVELOPMENT_LOG.md`
 - **Next Recommended Step**:
-  - Commit changes as `release: v0.16.3` and push to `origin/main` to trigger the final GitHub Pages deployment.
+  - Remove manual tunnel configuration UI and harden offline banner controls.
+
+---
+
+## Session 52: Hardening Offline Banner & Removing Manual Tunnel UI
+- **Date & Time**: 2026-11-03 13:20:00 (Local)
+- **Objective**: Remove the Settings gear button and editable tunnel URL dialog from the Offline Mode banner now that the permanent Cloudflare Worker is active, preventing end users from viewing or modifying internal backend endpoints.
+- **Tasks Performed & Implementation Details**:
+  - **1. Component Template & Styling Cleanup (`app.component.html`, `app.component.scss`)**:
+    - Removed `banner-config-btn` settings button from `app.component.html`.
+    - Removed `.banner-config-btn` styles from `app.component.scss`.
+    - Banner now cleanly displays only the `[↻ Retry]` and `[✕ Dismiss]` actions.
+  - **2. Component Logic Hardening (`app.component.ts`)**:
+    - Removed `openServerConfigAlert()` dialog and `showInvalidUrlToast()`.
+    - Removed `AlertController` and `settingsOutline` imports.
+    - Updated `retryConnection()` to show a clean warning toast (`"Server is currently offline. Your saved trips and places remain available."`) without exposing any technical configuration dialogs.
+  - **3. Unit Test Verification (`app.component.spec.ts`)**:
+    - Updated unit tests to assert warning toast display on retry failure and clean Retry + Dismiss controls.
+    - Verified all 121 unit tests passing across 16 test files.
+- **Files Modified**:
+  - `Project/src/app/app.component.html`
+  - `Project/src/app/app.component.scss`
+  - `Project/src/app/app.component.ts`
+  - `Project/src/app/app.component.spec.ts`
+  - `docs/TODO.md`
+  - `docs/CHANGELOG.md`
+  - `docs/DEVELOPMENT_LOG.md`
+- **Verification & Test Results**:
+  - `npm --prefix Project run test:unit`: **16/16 test files passed, 121/121 tests passed [100%]** in 24.37s.
+- **Next Recommended Step**:
+  - Commit changes as `release: v0.16.4` and push to `origin/main` to update GitHub Pages.

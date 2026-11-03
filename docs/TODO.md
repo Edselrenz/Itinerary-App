@@ -339,7 +339,8 @@ This checklist tracks completed, active, and pending tasks across all developmen
 - [x] Add RxJS `timeout(5000)` operator to `ConnectivityService.checkHostHealth()` to eliminate browser hanging on stalled DNS lookups.
 - [x] Implement automatic data rehydration via smooth reload (`window.location.reload()`) upon successful reconnection in `retryConnection()` and `Save & Connect`.
 - [x] Verify end-to-end edge connectivity: `GET /api/v1/health` (200 OK) and `GET /api/v1/places` returning live database records.
-- [x] Commit all Phase 16 changes to Git with message `release: v0.16.3 permanent cloudflare worker api proxy activation`.
+- [x] Remove obsolete Settings gear button and manual tunnel configuration alert (`v0.16.4` UI hardening).
+- [x] Commit all Phase 16 changes to Git with message `release: v0.16.4 remove manual tunnel configuration and harden offline banner`.
 - [x] Push to `origin/main` to trigger automated GitHub Actions CI pipeline (`deploy.yml`).
 - [ ] Smoke-test live production URL (`https://edselrenz.github.io/Itinerary-App/`).
 
