@@ -416,16 +416,16 @@ This checklist tracks completed, active, and pending tasks across all developmen
 ---
 
 ## Phase 19: Map Discovery, Multi-Select Filter Sheet & Accessible POI List Drawer (`Priority 2 — MVP Map Spec`)
-- [ ] **19.1: Add Floating Map Search Bar & Multi-Select Filter Bottom Sheet (`UI-16`)**:
-  - [ ] Target: `map.page.html`, `map.page.ts`, `map.page.scss`.
-  - [ ] Floating search bar with filter badge count; multi-select category checkboxes, municipality chips, price tier toggles, and Reset/Apply.
-- [ ] **19.2: Build Accessible Collapsible POI List Drawer on `/tabs/map` (`UI-16`)**:
-  - [ ] Target: `map.page.html`, `map.page.ts`, `map.page.scss`.
-  - [ ] Floating `"List View ({{ places.length }})"` toggle pill opening scrollable POI drawer with keyboard navigation.
-- [ ] **19.3: Add "Add to Itinerary" CTA in Map Bottom Sheet & Dynamic Viewport Bounds Querying (`UI-17`)**:
-  - [ ] Target: `map.page.html`, `map.page.ts`.
-  - [ ] Add `"Start Trip Here"` and `"Add to Custom Itinerary"` buttons inside Map POI Bottom Sheet.
-  - [ ] Listen to Leaflet `moveend` (debounced 350ms) querying `min_lat, max_lat, min_lng, max_lng` via `placeService.getPlaces()`.
+- [x] **19.1: Add Floating Map Search Bar & Multi-Select Filter Bottom Sheet (`UI-16`)**:
+  - [x] Target: `map.page.html`, `map.page.ts`, `map.page.scss`, `global.scss`.
+  - [x] Floating search bar with clear button and active filter badge count; multi-select category checkboxes, municipality chips, price tier toggles, and Reset/Apply.
+- [x] **19.2: Build Accessible Collapsible POI List Drawer on `/tabs/map` (`UI-16`)**:
+  - [x] Target: `map.page.html`, `map.page.ts`, `global.scss`.
+  - [x] Floating `"List View ({{ places.length }})"` toggle pill opening scrollable POI drawer with keyboard navigation, category tags, municipality, and price badges.
+- [x] **19.3: Add "Add to Itinerary" CTA in Map Bottom Sheet & Dynamic Viewport Bounds Querying (`UI-17`)**:
+  - [x] Target: `map.page.html`, `map.page.ts`, `custom-builder.page.ts`, `global.scss`.
+  - [x] Add `"Start Trip Here"` and `"Add to Custom Trip"` buttons inside Map POI Bottom Sheet.
+  - [x] Listen to Leaflet `moveend` (debounced 350ms) querying `min_lat, max_lat, min_lng, max_lng` via `placeService.searchPlaces()`.
 
 ---
 

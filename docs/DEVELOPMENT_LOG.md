@@ -1839,3 +1839,44 @@ This log records chronological development sessions, detailing objectives, execu
   - `docs/PROJECT_STATE.md`
 - **Next Recommended Step**:
   - Proceed to **Phase 19**: Map Discovery, Multi-Select Filter Sheet & Accessible POI List Drawer (`UI-16` & `UI-17`).
+
+---
+
+## Session 58: Implementation & Verification of Phase 19 (UI-16 & UI-17)
+- **Date & Time**: 2026-11-03 16:15:00 (Local)
+- **Objective**: Implement Phase 19: Map Discovery, Multi-Select Filter Sheet & Accessible POI List Drawer (`Priority 2 — MVP Map Spec`) across `/tabs/map`, connect Itinerary CTAs, and verify 100% test pass rate and clean production build.
+- **Tasks Performed & Implementation Details**:
+  - **1. Floating Search Bar & Multi-Select Filter Sheet (`UI-16`)**:
+    - Built `.map-top-bar` in [map.page.html](file:///c:/Users/Edward/Desktop/CaseStudy/Project/src/app/tabs/map/map.page.html) featuring a floating pill search box with search icon, clear button (`close-circle-outline`), and a dedicated `"Filters"` toggle button with active badge count (`activeFilterCount > 0`).
+    - Added `<ion-modal [isOpen]="isFilterSheetOpen">` bottom sheet (`.map-filter-modal` styled in [Project/src/global.scss](file:///c:/Users/Edward/Desktop/CaseStudy/Project/src/global.scss)):
+      - Multi-select category grid (`selectedCategories: Set<string>`) with icons and checkmark indicators.
+      - Municipality chip selector (`selectedMunicipality`) populated from `placeService.getMunicipalities()` with fallback to 32 Nueva Ecija municipalities.
+      - 4-way price tier segmented buttons: `All Prices`, `Free (₱0)`, `Budget (≤ ₱500)`, `Mid-Range (> ₱500)`.
+      - Reset and Apply action buttons.
+  - **2. Accessible Collapsible POI List Drawer (`UI-16`)**:
+    - Added floating `.poi-list-toggle-pill` anchored at the bottom center: `"List View ({{ places.length }})"`.
+    - Implemented `.poi-list-drawer` with backdrop, header showing destination count and close button, and a scrollable list of venue cards.
+    - Each card displays thumbnail image, category badge, municipality, honest price tag, and directional chevron.
+    - Full keyboard navigation (`tabindex="0"`, `role="button"`, `Enter` key support); selecting a place pans the map, closes the drawer, and opens the POI bottom sheet.
+  - **3. Map Bottom Sheet Itinerary Integration CTAs & Viewport Bounds Querying (`UI-17`)**:
+    - Replaced the single directions link in `.poi-bottom-sheet` with `.sheet-actions-stack`:
+      - Primary CTA 1: **"Start Trip Here"** navigating to `/suggested-wizard?destination=<muni>&placeId=<id>` (with pre-filled wizard state).
+      - Primary CTA 2: **"Add to Custom Trip"** navigating to `/custom-builder?destination=<muni>&addPlaceId=<id>`.
+      - Secondary CTA: **"Get Directions (Google Maps)"** keyless external redirect.
+    - Supported `addPlaceId` query parameter in [custom-builder.page.ts](file:///c:/Users/Edward/Desktop/CaseStudy/Project/src/app/features/itinerary/custom-builder/custom-builder.page.ts) to automatically append the selected map place to Day 1.
+    - Connected Leaflet `moveend` event on `this.map` (debounced 350ms) to query viewport bounds via `placeService.searchPlaces()` when zoom &ge; 10.
+- **Verification & Test Results**:
+  - `npm --prefix Project run test:unit`: **18/18 test files passed, 158/158 unit tests passed [100%]** in 18.32s (including 9 new unit tests covering search, multi-select filtering, drawer toggles, itinerary CTAs, and viewport bounds).
+  - `npm --prefix Project run build`: **Clean production build** generated in `Project/www/` with 0 errors, 0 warnings, and 0 budget violations in 8.33s.
+- **Files Modified**:
+  - `Project/src/app/features/itinerary/custom-builder/custom-builder.page.ts`
+  - `Project/src/app/tabs/map/map.page.html`
+  - `Project/src/app/tabs/map/map.page.scss`
+  - `Project/src/app/tabs/map/map.page.spec.ts`
+  - `Project/src/app/tabs/map/map.page.ts`
+  - `Project/src/global.scss`
+  - `docs/TODO.md`
+  - `docs/DEVELOPMENT_LOG.md`
+  - `docs/PROJECT_STATE.md`
+- **Next Recommended Step**:
+  - Proceed to **Phase 20**: Profile Sub-Windows, Notifications & Saved Trips Filtering (`UI-18` to `UI-20`).

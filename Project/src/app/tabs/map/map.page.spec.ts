@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
@@ -41,6 +41,13 @@ describe('MapPage', () => {
     getFeaturedPlaces: vi.fn().mockReturnValue(of([mockPlace])),
     getPlaceImage: vi.fn().mockReturnValue('assets/images/minalungao.png'),
     formatCategoryName: vi.fn().mockReturnValue('Nature & Parks'),
+    getMunicipalities: vi.fn().mockReturnValue(
+      of([{ id: 'm-1', name: 'General Tinio' }, { id: 'm-2', name: 'Bongabon' }])
+    ),
+  };
+
+  const mockRouter = {
+    navigate: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -49,6 +56,9 @@ describe('MapPage', () => {
       of({ total: 1, limit: 100, offset: 0, items: [mockPlace] })
     );
     mockPlaceService.getFeaturedPlaces.mockReturnValue(of([mockPlace]));
+    mockPlaceService.getMunicipalities.mockReturnValue(
+      of([{ id: 'm-1', name: 'General Tinio' }, { id: 'm-2', name: 'Bongabon' }])
+    );
 
     await TestBed.configureTestingModule({
       imports: [MapPage],
@@ -56,6 +66,7 @@ describe('MapPage', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: PlaceService, useValue: mockPlaceService },
+        { provide: Router, useValue: mockRouter },
         {
           provide: ActivatedRoute,
           useValue: {
@@ -87,7 +98,7 @@ describe('MapPage', () => {
     expect(component.places[0].name).toBe('Minalungao National Park');
   });
 
-  it('should filter places when a category is selected', () => {
+  it('should filter places when a category is selected via quick pill', () => {
     component.selectCategory('nature_park');
 
     expect(component.selectedCategory).toBe('nature_park');
@@ -105,7 +116,7 @@ describe('MapPage', () => {
 
     component.loadPlaces();
 
-    expect(mockPlaceService.getFeaturedPlaces).toHaveBeenCalledWith(25);
+    expect(mockPlaceService.getFeaturedPlaces).toHaveBeenCalledWith(50);
     expect(component.places.length).toBe(1);
   });
 
@@ -153,10 +164,12 @@ describe('MapPage', () => {
 
     expect(flyToSpy).toHaveBeenCalledWith([15.58, 121.0], 10, { duration: 0.8 });
   });
+
   it('should initialize hasTileError as false', () => {
     expect(component.hasTileError).toBe(false);
   });
-it('creates accessible map pins with role="button" and tabindex="0" (DEF-09)', () => {
+
+  it('creates accessible map pins with role="button" and tabindex="0" (DEF-09)', () => {
     const addedMarkers: any[] = [];
     component.markerCluster = {
       clearLayers: vi.fn(),
@@ -172,5 +185,133 @@ it('creates accessible map pins with role="button" and tabindex="0" (DEF-09)', (
     expect(iconHtml).toContain('role="button"');
     expect(iconHtml).toContain('aria-label="Minalungao National Park, General Tinio"');
     expect(iconHtml).toContain('title="Minalungao National Park"');
+  });
+
+  // --- Phase 19: UI-16 Floating Search Bar & Multi-Select Filter Sheet ---
+
+  it('should handle search input and clear search (UI-16)', () => {
+    component.onSearchInput({ target: { value: 'Minalungao' } } as unknown as Event);
+    expect(component.searchQuery).toBe('Minalungao');
+
+    component.clearSearch();
+    expect(component.searchQuery).toBe('');
+  });
+
+  it('should toggle multi-select categories and calculate active filter count (UI-16)', () => {
+    expect(component.activeFilterCount).toBe(0);
+
+    component.toggleCategoryFilter('nature_park');
+    expect(component.isCategorySelected('nature_park')).toBe(true);
+    expect(component.activeFilterCount).toBe(1);
+
+    component.toggleCategoryFilter('restaurant');
+    expect(component.isCategorySelected('restaurant')).toBe(true);
+    expect(component.activeFilterCount).toBe(2);
+
+    component.toggleCategoryFilter('nature_park');
+    expect(component.isCategorySelected('nature_park')).toBe(false);
+    expect(component.activeFilterCount).toBe(1);
+  });
+
+  it('should select municipality and price tier filters (UI-16)', () => {
+    component.selectMunicipality('General Tinio');
+    expect(component.selectedMunicipality).toBe('General Tinio');
+    expect(component.activeFilterCount).toBe(1);
+
+    component.selectPriceTier('budget');
+    expect(component.selectedPriceTier).toBe('budget');
+    expect(component.activeFilterCount).toBe(2);
+
+    // Toggle off municipality
+    component.selectMunicipality('General Tinio');
+    expect(component.selectedMunicipality).toBeNull();
+    expect(component.activeFilterCount).toBe(1);
+  });
+
+  it('should reset all filters (UI-16)', () => {
+    component.toggleCategoryFilter('nature_park');
+    component.selectMunicipality('General Tinio');
+    component.selectPriceTier('free');
+    expect(component.activeFilterCount).toBe(3);
+
+    component.resetFilters();
+    expect(component.selectedCategories.size).toBe(0);
+    expect(component.selectedCategory).toBeNull();
+    expect(component.selectedMunicipality).toBeNull();
+    expect(component.selectedPriceTier).toBe('all');
+    expect(component.activeFilterCount).toBe(0);
+  });
+
+  it('should open and close the filter bottom sheet (UI-16)', () => {
+    expect(component.isFilterSheetOpen).toBe(false);
+
+    component.openFilterSheet();
+    expect(component.isFilterSheetOpen).toBe(true);
+
+    component.closeFilterSheet();
+    expect(component.isFilterSheetOpen).toBe(false);
+  });
+
+  // --- Phase 19: UI-16 Accessible Collapsible POI List Drawer ---
+
+  it('should toggle and select place from POI list drawer (UI-16)', () => {
+    expect(component.isPoiDrawerOpen).toBe(false);
+
+    component.openPoiDrawer();
+    expect(component.isPoiDrawerOpen).toBe(true);
+
+    component.togglePoiDrawer();
+    expect(component.isPoiDrawerOpen).toBe(false);
+
+    component.openPoiDrawer();
+    component.selectPlaceFromDrawer(mockPlace);
+
+    expect(component.selectedPlace).toEqual(mockPlace);
+    expect(component.isPoiDrawerOpen).toBe(false);
+  });
+
+  // --- Phase 19: UI-17 Bottom Sheet Itinerary Integration Actions ---
+
+  it('should navigate to suggested wizard with "Start Trip Here" CTA (UI-17)', () => {
+    component.startTripHere(mockPlace);
+
+    expect(mockRouter.navigate).toHaveBeenCalledWith(['/suggested-wizard'], {
+      queryParams: {
+        destination: 'General Tinio',
+        placeId: 'test-place-1',
+      },
+    });
+  });
+
+  it('should navigate to custom builder with "Add to Custom Trip" CTA (UI-17)', () => {
+    component.addToCustomTrip(mockPlace);
+
+    expect(mockRouter.navigate).toHaveBeenCalledWith(['/custom-builder'], {
+      queryParams: {
+        destination: 'General Tinio',
+        addPlaceId: 'test-place-1',
+      },
+    });
+  });
+
+  // --- Phase 19: UI-17 Viewport Bounds Querying ---
+
+  it('should pass viewport bounds to PlaceService when bounds are provided (UI-17)', () => {
+    const mockBounds = {
+      getSouth: () => 15.2,
+      getNorth: () => 15.6,
+      getWest: () => 120.8,
+      getEast: () => 121.2,
+    } as unknown as L.LatLngBounds;
+
+    component.loadPlaces(mockBounds);
+
+    expect(mockPlaceService.searchPlaces).toHaveBeenCalledWith({
+      min_lat: 15.2,
+      max_lat: 15.6,
+      min_lng: 120.8,
+      max_lng: 121.2,
+      limit: 150,
+    });
   });
 });

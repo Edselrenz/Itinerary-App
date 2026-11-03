@@ -10,15 +10,18 @@ import {
   ViewChild,
 } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { ActivatedRoute } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
+import { Subject, Subscription, debounceTime, distinctUntilChanged } from 'rxjs';
 import {
   IonContent,
   IonIcon,
+  IonModal,
   IonSpinner,
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import {
+  addOutline,
   bandageOutline,
   basketOutline,
   bedOutline,
@@ -28,19 +31,27 @@ import {
   cardOutline,
   carOutline,
   cashOutline,
+  checkmarkOutline,
+  closeCircleOutline,
   closeOutline,
   cloudOfflineOutline,
-  shieldCheckmarkOutline,
+  filterOutline,
   flagOutline,
+  funnelOutline,
   layersOutline,
   leafOutline,
   libraryOutline,
+  listOutline,
   locateOutline,
   locationOutline,
   mapOutline,
   medkitOutline,
   navigateOutline,
+  optionsOutline,
+  reloadOutline,
   restaurantOutline,
+  searchOutline,
+  shieldCheckmarkOutline,
   sparklesOutline,
   timeOutline,
   waterOutline,
@@ -49,7 +60,7 @@ import {
 import * as L from 'leaflet';
 import 'leaflet.markercluster';
 
-import { Place } from '../../core/models/place.models';
+import { Municipality, Place } from '../../core/models/place.models';
 import { PlaceService } from '../../core/services/place.service';
 import { environment } from '../../../environments/environment';
 
@@ -79,6 +90,15 @@ export const CATEGORY_FILTERS: CategoryFilterItem[] = [
   { key: 'public_facility', label: 'Public Facilities', icon: 'flag-outline' },
 ];
 
+export const NUEVA_ECIJA_MUNICIPALITIES: string[] = [
+  'Aliaga', 'Bongabon', 'Cabanatuan City', 'Cabiao', 'Carranglan', 'Cuyapo',
+  'Gabaldon', 'Gapan City', 'General Mamerto Natividad', 'General Tinio', 'Guimba',
+  'Jaen', 'Laur', 'Licab', 'Llanera', 'Lupao', 'Nampicuan', 'Palayan City',
+  'Pantabangan', 'Peñaranda', 'Quezon', 'Rizal', 'San Antonio', 'San Isidro',
+  'San Jose City', 'San Leonardo', 'Santa Rosa', 'Santo Domingo', 'Science City of Muñoz',
+  'Talavera', 'Talugtug', 'Zaragoza'
+];
+
 export const NUEVA_ECIJA_CENTER: [number, number] = [15.58, 121.0];
 export const NUEVA_ECIJA_DEFAULT_ZOOM = 10;
 export const NUEVA_ECIJA_BOUNDS: [[number, number], [number, number]] = [
@@ -93,8 +113,10 @@ export const NUEVA_ECIJA_BOUNDS: [[number, number], [number, number]] = [
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     IonContent,
     IonIcon,
+    IonModal,
     IonSpinner,
   ],
 })
@@ -108,6 +130,20 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
   public hasTileError = false;
   public categoryFilters: CategoryFilterItem[] = CATEGORY_FILTERS;
 
+  // Search & Deep Multi-Select Filter Sheet State (UI-16)
+  public searchQuery = '';
+  public selectedCategories: Set<string> = new Set<string>();
+  public selectedMunicipality: string | null = null;
+  public selectedPriceTier: 'all' | 'free' | 'budget' | 'mid' = 'all';
+  public isFilterSheetOpen = false;
+  public activeFilterCount = 0;
+  public municipalities: string[] = NUEVA_ECIJA_MUNICIPALITIES;
+
+  // Accessible Collapsible POI List Drawer (UI-16)
+  public isPoiDrawerOpen = false;
+
+  private searchSubject = new Subject<string>();
+  private viewportDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   private subscriptions = new Subscription();
   private pendingTarget: { lat?: number; lng?: number; destination?: string; municipality?: string } | null = null;
 
@@ -118,6 +154,7 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
   constructor(
     private placeService: PlaceService,
     private route: ActivatedRoute,
+    private router: Router,
     private cdr: ChangeDetectorRef,
     @Inject(PLATFORM_ID) private platformId: object
   ) {
@@ -126,6 +163,7 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
       (window as unknown as { L: unknown }).L = L;
     }
     addIcons({
+      addOutline,
       bandageOutline,
       basketOutline,
       bedOutline,
@@ -135,19 +173,27 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
       cardOutline,
       carOutline,
       cashOutline,
+      checkmarkOutline,
+      closeCircleOutline,
       closeOutline,
-  cloudOfflineOutline,
-  shieldCheckmarkOutline,
+      cloudOfflineOutline,
+      filterOutline,
       flagOutline,
+      funnelOutline,
       layersOutline,
       leafOutline,
       libraryOutline,
+      listOutline,
       locateOutline,
       locationOutline,
       mapOutline,
       medkitOutline,
       navigateOutline,
+      optionsOutline,
+      reloadOutline,
       restaurantOutline,
+      searchOutline,
+      shieldCheckmarkOutline,
       sparklesOutline,
       timeOutline,
       waterOutline,
@@ -157,6 +203,17 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
 
   public ngOnInit(): void {
     this.loadPlaces();
+    this.loadMunicipalities();
+
+    this.subscriptions.add(
+      this.searchSubject
+        .pipe(debounceTime(300), distinctUntilChanged())
+        .subscribe((q) => {
+          this.searchQuery = q;
+          this.loadPlaces();
+        })
+    );
+
     this.subscriptions.add(
       this.route.queryParams.subscribe((params) => {
         const lat = params['lat'] ? parseFloat(params['lat']) : undefined;
@@ -183,9 +240,6 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  /**
-   * Ionic page lifecycle hook: recalculates dimensions when navigating back to tab.
-   */
   public ionViewDidEnter(): void {
     if (this.isBrowser) {
       if (!this.map) {
@@ -205,6 +259,10 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
 
   public ngOnDestroy(): void {
     this.subscriptions.unsubscribe();
+    if (this.viewportDebounceTimer) {
+      clearTimeout(this.viewportDebounceTimer);
+      this.viewportDebounceTimer = null;
+    }
     if (this.markerCluster) {
       this.markerCluster.clearLayers();
       this.markerCluster = null;
@@ -287,6 +345,11 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
       }
     });
 
+    // Viewport-bounded POI querying on map pan/zoom (UI-17)
+    this.map.on('moveend', () => {
+      this.onMapMoveEnd();
+    });
+
     // Render any places already loaded
     if (this.places.length > 0) {
       this.updateMarkers();
@@ -294,17 +357,76 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   /**
-   * Fetches places matching the active category filter with graceful offline fallback.
+   * Listen to Leaflet moveend (debounced 350ms) to dynamically query viewport bounds (UI-17).
    */
-  public loadPlaces(): void {
+  public onMapMoveEnd(): void {
+    if (this.viewportDebounceTimer) {
+      clearTimeout(this.viewportDebounceTimer);
+    }
+    this.viewportDebounceTimer = setTimeout(() => {
+      if (this.map && this.map.getZoom() >= 10) {
+        const bounds = this.map.getBounds();
+        this.loadPlaces(bounds);
+      }
+    }, 350);
+  }
+
+  private loadMunicipalities(): void {
+    this.placeService.getMunicipalities().subscribe({
+      next: (munis: Municipality[]) => {
+        if (munis && munis.length > 0) {
+          const names = munis.map((m) => m.name).sort();
+          this.municipalities = Array.from(new Set(names));
+          this.cdr.detectChanges();
+        }
+      },
+      error: () => {
+        // Fall back to statically curated NUEVA_ECIJA_MUNICIPALITIES
+        this.municipalities = NUEVA_ECIJA_MUNICIPALITIES;
+      },
+    });
+  }
+
+  /**
+   * Fetches places matching the active filters & optional viewport bounds with graceful offline fallback.
+   */
+  public loadPlaces(bounds?: L.LatLngBounds): void {
     this.isLoading = true;
-    const searchParams = this.selectedCategory
-      ? { categories: [this.selectedCategory], limit: 100 }
-      : { limit: 100 };
+
+    const searchParams: {
+      q?: string;
+      categories?: string[];
+      min_lat?: number;
+      max_lat?: number;
+      min_lng?: number;
+      max_lng?: number;
+      limit?: number;
+    } = {};
+
+    if (this.searchQuery && this.searchQuery.trim().length > 0) {
+      searchParams.q = this.searchQuery.trim();
+    }
+
+    if (this.selectedCategories.size > 0) {
+      searchParams.categories = Array.from(this.selectedCategories);
+    } else if (this.selectedCategory) {
+      searchParams.categories = [this.selectedCategory];
+    }
+
+    if (bounds) {
+      searchParams.min_lat = bounds.getSouth();
+      searchParams.max_lat = bounds.getNorth();
+      searchParams.min_lng = bounds.getWest();
+      searchParams.max_lng = bounds.getEast();
+      searchParams.limit = 150;
+    } else {
+      searchParams.limit = 100;
+    }
 
     this.placeService.searchPlaces(searchParams).subscribe({
       next: (result) => {
-        this.places = result.items || [];
+        const items = result.items || [];
+        this.places = this.applyLocalFilters(items);
         this.isLoading = false;
         this.updateMarkers();
         if (this.pendingTarget?.lat !== undefined && this.pendingTarget?.lng !== undefined) {
@@ -316,11 +438,23 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
       },
       error: () => {
         // Fallback to featured places if local server is unreachable
-        this.placeService.getFeaturedPlaces(25).subscribe({
+        this.placeService.getFeaturedPlaces(50).subscribe({
           next: (featured) => {
-            this.places = this.selectedCategory
-              ? featured.filter((p) => p.category === this.selectedCategory)
-              : featured;
+            let items = featured;
+            if (this.selectedCategories.size > 0) {
+              items = items.filter((p) => this.selectedCategories.has(p.category));
+            } else if (this.selectedCategory) {
+              items = items.filter((p) => p.category === this.selectedCategory);
+            }
+            if (this.searchQuery && this.searchQuery.trim()) {
+              const q = this.searchQuery.trim().toLowerCase();
+              items = items.filter(
+                (p) =>
+                  p.name.toLowerCase().includes(q) ||
+                  (p.municipality_name && p.municipality_name.toLowerCase().includes(q))
+              );
+            }
+            this.places = this.applyLocalFilters(items);
             this.isLoading = false;
             this.updateMarkers();
             this.cdr.detectChanges();
@@ -332,6 +466,39 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
         });
       },
     });
+  }
+
+  private applyLocalFilters(items: Place[]): Place[] {
+    let result = items;
+
+    if (this.selectedMunicipality) {
+      const muniLower = this.selectedMunicipality.toLowerCase();
+      result = result.filter(
+        (p) => p.municipality_name && p.municipality_name.toLowerCase().includes(muniLower)
+      );
+    }
+
+    if (this.selectedPriceTier !== 'all') {
+      if (this.selectedPriceTier === 'free') {
+        result = result.filter(
+          (p) => p.estimated_cost_min === 0 && p.estimated_cost_max === 0
+        );
+      } else if (this.selectedPriceTier === 'budget') {
+        result = result.filter(
+          (p) =>
+            (p.estimated_cost_max != null && p.estimated_cost_max <= 500) ||
+            (p.estimated_cost_min === 0 && p.estimated_cost_max == null)
+        );
+      } else if (this.selectedPriceTier === 'mid') {
+        result = result.filter(
+          (p) =>
+            (p.estimated_cost_max != null && p.estimated_cost_max > 500) ||
+            (p.estimated_cost_min != null && p.estimated_cost_min > 500)
+        );
+      }
+    }
+
+    return result;
   }
 
   /**
@@ -401,16 +568,149 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  /**
-   * Toggles category filter pill selection.
-   */
+  // --- Search Input Handlers (UI-16) ---
+
+  public onSearchInput(event: Event): void {
+    const val = (event.target as HTMLInputElement).value || '';
+    this.searchQuery = val;
+    this.searchSubject.next(val);
+  }
+
+  public clearSearch(): void {
+    this.searchQuery = '';
+    this.searchSubject.next('');
+  }
+
+  // --- Quick Pill Filter Selection ---
+
   public selectCategory(categoryKey: string | null): void {
-    if (this.selectedCategory === categoryKey) {
-      return;
+    if (categoryKey === null) {
+      this.selectedCategory = null;
+      this.selectedCategories.clear();
+    } else {
+      if (this.selectedCategory === categoryKey) {
+        this.selectedCategory = null;
+        this.selectedCategories.delete(categoryKey);
+      } else {
+        this.selectedCategory = categoryKey;
+        this.selectedCategories = new Set([categoryKey]);
+      }
     }
-    this.selectedCategory = categoryKey;
+    this.updateActiveFilterCount();
     this.selectedPlace = null;
     this.loadPlaces();
+  }
+
+  // --- Multi-Select Filter Modal Actions (UI-16) ---
+
+  public openFilterSheet(): void {
+    this.isFilterSheetOpen = true;
+  }
+
+  public closeFilterSheet(): void {
+    this.isFilterSheetOpen = false;
+  }
+
+  public toggleCategoryFilter(categoryKey: string): void {
+    if (this.selectedCategories.has(categoryKey)) {
+      this.selectedCategories.delete(categoryKey);
+    } else {
+      this.selectedCategories.add(categoryKey);
+    }
+    this.selectedCategory =
+      this.selectedCategories.size === 1
+        ? Array.from(this.selectedCategories)[0]
+        : null;
+    this.updateActiveFilterCount();
+  }
+
+  public isCategorySelected(categoryKey: string): boolean {
+    return this.selectedCategories.has(categoryKey);
+  }
+
+  public selectMunicipality(name: string | null): void {
+    this.selectedMunicipality = this.selectedMunicipality === name ? null : name;
+    this.updateActiveFilterCount();
+  }
+
+  public selectPriceTier(tier: 'all' | 'free' | 'budget' | 'mid'): void {
+    this.selectedPriceTier = tier;
+    this.updateActiveFilterCount();
+  }
+
+  public applyFilters(): void {
+    this.updateActiveFilterCount();
+    this.closeFilterSheet();
+    this.loadPlaces();
+  }
+
+  public resetFilters(): void {
+    this.selectedCategories.clear();
+    this.selectedCategory = null;
+    this.selectedMunicipality = null;
+    this.selectedPriceTier = 'all';
+    this.updateActiveFilterCount();
+    this.loadPlaces();
+  }
+
+  public updateActiveFilterCount(): void {
+    let count = 0;
+    if (this.selectedCategories.size > 0) {
+      count += this.selectedCategories.size;
+    }
+    if (this.selectedMunicipality) {
+      count += 1;
+    }
+    if (this.selectedPriceTier !== 'all') {
+      count += 1;
+    }
+    this.activeFilterCount = count;
+  }
+
+  // --- Accessible Collapsible POI List Drawer (UI-16) ---
+
+  public togglePoiDrawer(): void {
+    this.isPoiDrawerOpen = !this.isPoiDrawerOpen;
+    this.cdr.detectChanges();
+  }
+
+  public openPoiDrawer(): void {
+    this.isPoiDrawerOpen = true;
+    this.cdr.detectChanges();
+  }
+
+  public closePoiDrawer(): void {
+    this.isPoiDrawerOpen = false;
+    this.cdr.detectChanges();
+  }
+
+  public selectPlaceFromDrawer(place: Place): void {
+    this.selectedPlace = place;
+    this.isPoiDrawerOpen = false;
+    if (typeof place.latitude === 'number' && typeof place.longitude === 'number') {
+      this.flyToTarget(place.latitude, place.longitude);
+    }
+    this.cdr.detectChanges();
+  }
+
+  // --- Bottom Sheet Itinerary Integration Actions (UI-17) ---
+
+  public startTripHere(place: Place): void {
+    this.router.navigate(['/suggested-wizard'], {
+      queryParams: {
+        destination: place.municipality_name || place.name,
+        placeId: place.id,
+      },
+    });
+  }
+
+  public addToCustomTrip(place: Place): void {
+    this.router.navigate(['/custom-builder'], {
+      queryParams: {
+        destination: place.municipality_name || place.name,
+        addPlaceId: place.id,
+      },
+    });
   }
 
   /**

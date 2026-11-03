@@ -240,6 +240,33 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
         this.updateBudgetSummary();
       })
     );
+
+    // Support destination & addPlaceId from Map and Home discovery (UI-17)
+    this.subscriptions.add(
+      this.route.queryParams.subscribe((params) => {
+        const dest = params['destination'];
+        const addPlaceId = params['addPlaceId'];
+        if (dest) {
+          this.form.patchValue({ destination: dest });
+        }
+        if (addPlaceId) {
+          this.placeService.getPlaceById(addPlaceId).subscribe({
+            next: (place) => {
+              if (place && this.days.length > 0) {
+                const targetDay = this.days[0];
+                const exists = targetDay.items.some((it) => it.place_id === place.id);
+                if (!exists) {
+                  this.addPlaceStop(place);
+                  this.activeView = 'timeline';
+                  this.hasUnsavedChanges = true;
+                  this.updateBudgetSummary();
+                }
+              }
+            },
+          });
+        }
+      })
+    );
   }
 
   public ngOnDestroy(): void {
