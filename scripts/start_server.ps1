@@ -17,27 +17,49 @@ Write-Host "============================================================" -Foreg
 
 # 1. Start PostgreSQL Database
 Write-Host "`n[1/4] Checking PostgreSQL Database..." -ForegroundColor Yellow
-$pgListening = Test-NetConnection -ComputerName 127.0.0.1 -Port 5432 -InformationLevel Quiet -WarningAction SilentlyContinue
+$pgListening = $false
+try {
+    $tcp = New-Object System.Net.Sockets.TcpClient
+    $iar = $tcp.BeginConnect("127.0.0.1", 5432, $null, $null)
+    $success = $iar.AsyncWaitHandle.WaitOne(1000)
+    if ($success -and $tcp.Connected) {
+        $tcp.EndConnect($iar)
+        $pgListening = $true
+    }
+    $tcp.Close()
+} catch {}
 
 if (-not $pgListening) {
     Write-Host "PostgreSQL is not listening on port 5432. Checking Docker..." -ForegroundColor Gray
     $dockerCmd = Get-Command docker -ErrorAction SilentlyContinue
     if ($dockerCmd) {
         Write-Host "Starting PostgreSQL container via Docker Compose..." -ForegroundColor Gray
-        docker compose up -d
+        docker compose up -d 2>$null
         Start-Sleep -Seconds 3
-    } else {
-        Write-Host "[!] Docker not detected in PATH. If using native PostgreSQL, ensure the service is running." -ForegroundColor Yellow
+        try {
+            $tcp = New-Object System.Net.Sockets.TcpClient
+            $iar = $tcp.BeginConnect("127.0.0.1", 5432, $null, $null)
+            $success = $iar.AsyncWaitHandle.WaitOne(1000)
+            if ($success -and $tcp.Connected) {
+                $tcp.EndConnect($iar)
+                $pgListening = $true
+            }
+            $tcp.Close()
+        } catch {}
     }
-} else {
-    Write-Host "[OK] PostgreSQL is active on port 5432." -ForegroundColor Green
 }
 
-# 2. Run Database Migrations & Seeding
-Write-Host "`n[2/4] Verifying database schema & seed data..." -ForegroundColor Yellow
-python scripts/setup_postgres.py
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "[WARNING] Database setup returned non-zero code. Proceeding with server start..." -ForegroundColor Yellow
+if ($pgListening) {
+    Write-Host "[OK] PostgreSQL is active on port 5432." -ForegroundColor Green
+    Write-Host "`n[2/4] Verifying database schema & seed data..." -ForegroundColor Yellow
+    python scripts/setup_postgres.py
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[WARNING] Database setup returned non-zero code. Proceeding with server start..." -ForegroundColor Yellow
+    }
+} else {
+    Write-Host "[INFO] PostgreSQL not available on port 5432. Falling back to local SQLite database (nueva_ecija_travel.db)..." -ForegroundColor Yellow
+    $env:DATABASE_URL = "sqlite:///./nueva_ecija_travel.db"
+    Write-Host "[OK] Using seeded SQLite database (nueva_ecija_travel.db)." -ForegroundColor Green
 }
 
 # 3. Locate and Launch Persistent Tunnel (ngrok permanent tunnel with Cloudflare fallback)
@@ -73,11 +95,28 @@ if (-not $NoTunnel) {
         }
 
         $tunnelProcess = Start-Process -FilePath $ngrokBin `
-            -ArgumentList "http --domain=$ngrokDomain 8000" `
-            -RedirectStandardError $tunnelLog `
+            -ArgumentList "http --url=https://$ngrokDomain 8000 --log=stdout" `
+            -RedirectStandardOutput $tunnelLog `
+            -RedirectStandardError (Join-Path $env:TEMP "ne_ngrok_err.log") `
             -PassThru -NoNewWindow
 
-        Start-Sleep -Seconds 2
+        Write-Host "Connecting to ngrok edge network ($ngrokDomain)..." -ForegroundColor Gray
+        for ($i = 0; $i -lt 15; $i++) {
+            Start-Sleep -Seconds 1
+            if (Test-Path $tunnelLog) {
+                $logContent = Get-Content $tunnelLog -Raw -ErrorAction SilentlyContinue
+                if ($logContent -match 'started tunnel.*url=') {
+                    break
+                }
+                if ($logContent -match 'ERR_NGROK_') {
+                    Write-Host "[WARNING] ngrok error: $logContent" -ForegroundColor Yellow
+                    break
+                }
+            }
+            if ($tunnelProcess.HasExited) {
+                break
+            }
+        }
         $tunnelUrl = "https://$ngrokDomain"
 
         Write-Host "`n+----------------------------------------------------------------------+" -ForegroundColor Green
