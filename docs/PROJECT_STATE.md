@@ -7,10 +7,10 @@ This document serves as the primary handoff reference for developers and coding 
 ## 1. Project Status Overview
 
 - **Application Name**: Nueva Ecija Travel Itinerary (MVP)
-- **Current Development Phase**: **Phase 16: Unwired State & Template Parity (Roadmap v2.0: Milestones 16–22)**
-- **Last Verified Working State**: **Phases 0–15 Completed & Verified; Release `v0.16.5` Deployed** (24/24 acceptance criteria passing, 16/16 test files and 121/121 frontend unit tests, 14/14 backend Pytest cases, clean Angular production build, permanent Cloudflare Worker reverse proxy edge deployment, live GitHub Pages deployment at `https://edselrenz.github.io/Itinerary-App/`).
+- **Current Development Phase**: **Phase 17: Custom Builder Stop Editing, Day-Move & Schedule Accuracy (Roadmap v2.0: Milestones 16–22)**
+- **Last Verified Working State**: **Phases 0–16 Completed & Verified; Release `v0.16.5` + Phase 16 Template Parity Deployed** (16/16 test files and 126/126 frontend unit tests passing, 14/14 backend Pytest cases, clean Angular production build, permanent Cloudflare Worker reverse proxy edge deployment, live GitHub Pages deployment at `https://edselrenz.github.io/Itinerary-App/`).
 - **Recent Audit & Roadmap Expansion**: Adoption of **Development Plan & UI/UX Audit (`v2.0`)** covering 9 missing Figma/MVP windows and modals, 24 audit gap registry items (`UI-01` to `UI-24`), and detailed implementation roadmaps for Milestones 16–22.
-- **Current Active Tasks**: Preparing Milestone 16 quick wins (Quick destination chips `UI-01`, budget summary & assumptions `UI-02`, browse modal tab `UI-03`, local date helpers `UI-04`, splash session persistence `UI-05`).
+- **Current Active Tasks**: Preparing Milestone 17 (Custom builder stop edit modal `UI-06`, move stop between days `UI-07`, off-grid coordinate & time inputs `UI-08`, and sequential time slot formatting `UI-09`).
 - **Current Blockers**: **None**.
 
 ---
@@ -206,20 +206,16 @@ All 16 audit findings from [CODE_REVIEW_AUDIT.md](file:///c:/Users/Edward/Deskto
 
 ---
 
-## 6. Next Immediate Tasks (Phase 16 Execution Roadmap)
+## 6. Next Immediate Tasks (Phase 17 Execution Roadmap)
 
-1. **Phase 16.1 (Release Deployment & Live CI Pipeline Verification)**:
-   - Commit all staged and modified Phase 15 remediation files to Git (`v0.15.4-rc.10`).
-   - Push to `origin/main` to trigger automated GitHub Actions CI pipeline executing Pytest backend (14 tests) and Vitest frontend (120 tests) before deploying to GitHub Pages.
-   - Live smoke verification on `https://edselrenz.github.io/Itinerary-App/` and ngrok backend.
-2. **Phase 16.2 (Native Mobile Binary Packaging — Capacitor)**:
-   - Scaffold Capacitor Android platform (`npx cap add android`).
-   - Integrate `@capacitor-community/secure-storage-plugin` for hardware enclave keystore token storage (`SEC-02`).
-   - Build and test unsigned debug Android APK.
-3. **Phase 16.3 (Offline Map Pre-Caching — PWA Service Worker)**:
-   - Configure Service Worker tile pre-caching for Nueva Ecija bounding box coordinates.
-4. **Phase 16.4 (Itinerary Export & Sharing)**:
-   - Implement client-side PDF export and downloadable `.ics` calendar schedules.
+1. **Phase 17.1 (Edit Scheduled Stop Modal & Move-to-Day Action — UI-06, UI-07)**:
+   - Build `<ion-modal>` in Custom Builder for editing scheduled stops (time range, duration, expense estimates, custom notes).
+   - Implement "Move to Day..." select dropdown moving stops across itinerary days with order re-indexing.
+2. **Phase 17.2 (Custom Off-Grid Venue Coordinates & Time Inputs — UI-08, UI-09)**:
+   - Wire latitude/longitude coordinate fields and time pickers in the custom venue form.
+   - Implement sequential schedule time auto-formatting based on stop duration and preceding stop end times.
+3. **Phase 17.3 (Single-Stop Deletion Confirmation Alert — UI-10)**:
+   - Add destructive confirmation prompt before removing a stop from the builder timeline.
 
 
 

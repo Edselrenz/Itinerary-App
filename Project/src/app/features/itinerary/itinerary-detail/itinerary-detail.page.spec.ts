@@ -214,4 +214,15 @@ describe('ItineraryDetailPage', () => {
     component.onBack();
     expect(router.navigate).toHaveBeenCalledWith(['/tabs/history']);
   });
+
+  it('renders budget summary and assumptions box when loaded (UI-02)', () => {
+    fixture.detectChanges();
+    const budgetCard = fixture.nativeElement.querySelector('.verified-budget-card');
+    expect(budgetCard).toBeTruthy();
+    expect(budgetCard.textContent).toContain('Verified Estimated Costs');
+
+    const assumptionsBox = fixture.nativeElement.querySelector('.assumptions-info-box');
+    expect(assumptionsBox).toBeTruthy();
+    expect(assumptionsBox.textContent).toContain('Lunch stop scheduled at 12:00 PM');
+  });
 });

@@ -184,14 +184,13 @@ export class CustomBuilderPage implements OnInit, OnDestroy {
     });
 
     const today = new Date();
-    const tomorrow = new Date();
-    tomorrow.setDate(today.getDate() + 1);
+    const tomorrow = addDaysLocal(today, 1);
 
     this.form = this.fb.group({
       title: ['Nueva Ecija Getaway', [Validators.required, Validators.minLength(3)]],
       destination: ['Nueva Ecija', [Validators.required]],
-      start_date: [today.toISOString().split('T')[0], [Validators.required]],
-      end_date: [tomorrow.toISOString().split('T')[0], [Validators.required]],
+      start_date: [toLocalIsoDate(today), [Validators.required]],
+      end_date: [toLocalIsoDate(tomorrow), [Validators.required]],
       daily_budget: [3000, [Validators.required, Validators.min(0)]],
     });
   }
@@ -223,22 +222,20 @@ export class CustomBuilderPage implements OnInit, OnDestroy {
   }
 
   private initDefaultDays(): void {
-    const startDate = this.form.get('start_date')?.value || new Date().toISOString().split('T')[0];
+    const startDate = this.form.get('start_date')?.value || toLocalIsoDate();
     const endDate = this.form.get('end_date')?.value || startDate;
 
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const diffTime = Math.max(0, end.getTime() - start.getTime());
-    const diffDays = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1);
+    const start = parseLocalIsoDate(startDate);
+    const end = parseLocalIsoDate(endDate);
+    const diffDays = Math.max(1, diffDaysLocal(startDate, endDate));
 
     this.days = [];
     for (let i = 0; i < diffDays; i++) {
-      const dayDate = new Date(start);
-      dayDate.setDate(start.getDate() + i);
+      const dayDate = addDaysLocal(start, i);
       this.days.push({
         id: this.generateTempId(),
         day_number: i + 1,
-        travel_date: dayDate.toISOString().split('T')[0],
+        travel_date: toLocalIsoDate(dayDate),
         title: `Day ${i + 1}`,
         items: [],
       });
@@ -269,9 +266,8 @@ export class CustomBuilderPage implements OnInit, OnDestroy {
     if (currentEnd) {
       this.popupEndDate = currentEnd;
     } else {
-      const end = new Date(this.popupStartDate);
-      end.setDate(end.getDate() + 1);
-      this.popupEndDate = end.toISOString().split('T')[0];
+      const end = addDaysLocal(parseLocalIsoDate(this.popupStartDate), 1);
+      this.popupEndDate = toLocalIsoDate(end);
     }
     this.isDatePickerOpen = true;
   }
@@ -286,16 +282,15 @@ export class CustomBuilderPage implements OnInit, OnDestroy {
     }
   }
 
-    public isPresetActive(days: number): boolean {
+  public isPresetActive(days: number): boolean {
     return this.tempTripSummary.isValid && this.tempTripSummary.days === days;
   }
 
   public setPresetDuration(days: number): void {
-    const start = this.popupStartDate ? new Date(this.popupStartDate) : new Date();
-    this.popupStartDate = start.toISOString().split('T')[0];
-    const end = new Date(start);
-    end.setDate(end.getDate() + Math.max(0, days - 1));
-    this.popupEndDate = end.toISOString().split('T')[0];
+    const start = this.popupStartDate ? parseLocalIsoDate(this.popupStartDate) : new Date();
+    this.popupStartDate = toLocalIsoDate(start);
+    const end = addDaysLocal(start, Math.max(0, days - 1));
+    this.popupEndDate = toLocalIsoDate(end);
   }
 
   public applyDatePicker(): void {

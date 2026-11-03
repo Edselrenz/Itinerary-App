@@ -54,6 +54,58 @@
   color: #000000;
 }
 
+/* Quick Destination Chips (UI-01) */
+.quick-dest-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 2px 6px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.quick-dest-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 9999px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #334155;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  .dest-chip-icon {
+    font-size: 13px;
+    color: #0084ff;
+  }
+
+  &:hover {
+    border-color: #0084ff;
+    color: #0084ff;
+    background: #f8fafc;
+  }
+
+  &.active {
+    background: #0084ff;
+    border-color: #0084ff;
+    color: #ffffff;
+    box-shadow: 0 2px 6px rgba(0, 132, 255, 0.25);
+
+    .dest-chip-icon {
+      color: #ffffff;
+    }
+  }
+}
+
 .btn-spinner {
   width: 20px;
   height: 20px;

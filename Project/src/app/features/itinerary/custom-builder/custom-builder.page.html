@@ -669,13 +669,125 @@
         <div class="modal-handle-bar"></div>
 
         <div class="picker-header">
-          <h3 class="picker-title">Add Off-Grid Custom Venue</h3>
+          <div class="picker-segmented-bar" role="tablist" aria-label="Place picker source">
+            <button
+              type="button"
+              role="tab"
+              class="picker-segment-tab"
+              [class.active]="pickerTab === 'browse'"
+              [attr.aria-selected]="pickerTab === 'browse'"
+              (click)="setPickerTab('browse')"
+            >
+              <ion-icon name="search-outline"></ion-icon>
+              <span>Browse Places</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              class="picker-segment-tab"
+              [class.active]="pickerTab === 'custom'"
+              [attr.aria-selected]="pickerTab === 'custom'"
+              (click)="setPickerTab('custom')"
+            >
+              <ion-icon name="create-outline"></ion-icon>
+              <span>Off-Grid Venue</span>
+            </button>
+          </div>
           <button type="button" class="picker-close-btn" (click)="closePlacePicker()" aria-label="Close modal">
             <ion-icon name="close-outline"></ion-icon>
           </button>
         </div>
 
-        <div class="custom-venue-form-box">
+        @if (pickerTab === 'browse') {
+          <!-- Tab 1: Database & OSM Place Search (UI-03) -->
+          <div class="picker-browse-container">
+            <div class="picker-search-bar">
+              <ion-icon name="search-outline" class="picker-search-icon"></ion-icon>
+              <input
+                type="text"
+                class="picker-search-input"
+                placeholder="Search curated spots, heritage, dining..."
+                [value]="pickerSearchTerm"
+                (input)="onPickerSearchChange($event)"
+                aria-label="Search places"
+              />
+              @if (pickerSearchTerm) {
+                <button
+                  type="button"
+                  class="picker-clear-btn"
+                  (click)="pickerSearchTerm = ''; onPickerSearchChange($event)"
+                  aria-label="Clear search"
+                >
+                  <ion-icon name="close-outline"></ion-icon>
+                </button>
+              }
+            </div>
+
+            @if (pickerSearching) {
+              <div class="picker-status-box">
+                <ion-spinner name="crescent" color="primary"></ion-spinner>
+                <p>Searching destinations...</p>
+              </div>
+            } @else if (pickerSearchResults && pickerSearchResults.length > 0) {
+              <div class="picker-results-scroll">
+                @for (place of pickerSearchResults; track place.id) {
+                  <div class="picker-place-card">
+                    <div class="place-thumb-wrap">
+                      <img
+                        [src]="placeService.getPlaceImage(place.name, place.image_url)"
+                        [alt]="place.name"
+                        class="place-thumb"
+                        loading="lazy"
+                      />
+                    </div>
+                    <div class="place-info-col">
+                      <h4 class="place-name">{{ place.name }}</h4>
+                      <p class="place-sub">
+                        <ion-icon name="location-outline"></ion-icon>
+                        <span>{{ place.municipality_name }}, Nueva Ecija</span>
+                      </p>
+                      <div class="place-tags">
+                        <span class="place-cat-badge">{{ placeService.formatCategoryName(place.category) }}</span>
+                        <span class="place-cost-badge">
+                          {{
+                            place.estimated_cost_min != null || place.estimated_cost_max != null
+                              ? (place.estimated_cost_min === place.estimated_cost_max
+                                  ? '₱' + place.estimated_cost_min
+                                  : '₱' + place.estimated_cost_min + ' - ₱' + place.estimated_cost_max)
+                              : 'Price unlisted'
+                          }}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      class="picker-add-action-btn"
+                      [class.added]="isPlaceInActiveDay(place.id)"
+                      (click)="selectPlaceFromPicker(place)"
+                      [disabled]="isPlaceInActiveDay(place.id)"
+                      [attr.aria-label]="isPlaceInActiveDay(place.id) ? 'Place already added' : 'Add ' + place.name + ' to Day ' + currentDay?.day_number"
+                    >
+                      @if (isPlaceInActiveDay(place.id)) {
+                        <ion-icon name="checkmark"></ion-icon>
+                        <span>Added</span>
+                      } @else {
+                        <ion-icon name="add-outline"></ion-icon>
+                        <span>Add</span>
+                      }
+                    </button>
+                  </div>
+                }
+              </div>
+            } @else {
+              <div class="picker-status-box">
+                <ion-icon name="search-outline"></ion-icon>
+                <p>No places found matching "{{ pickerSearchTerm }}"</p>
+              </div>
+            }
+          </div>
+        } @else {
+          <!-- Tab 2: Off-Grid Custom Venue Form -->
+          <div class="custom-venue-form-box">
           <p class="custom-intro">
             Have a personal favorite farm, campsite, or local food stop not in our catalog? Add it directly to Day {{ currentDay?.day_number }}.
           </p>
@@ -758,6 +870,7 @@
             <span>Add to Day {{ currentDay?.day_number }}</span>
           </button>
         </div>
+        }
       </div>
     </ng-template>
   </ion-modal>

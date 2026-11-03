@@ -347,27 +347,27 @@ This checklist tracks completed, active, and pending tasks across all developmen
 
 ---
 
-## Phase 16: Unwired State & Template Parity (`Priority 1 — Quick Wins`)
-- [ ] **16.1: Render Quick Destination Chips in Suggested Wizard (`UI-01`)**:
-  - [ ] Target: `suggested-wizard.page.html`, `suggested-wizard.page.scss`.
-  - [ ] Horizontal chip row iterating over `quickDestinations` (`['Bongabon', 'Pantabangan', 'Cabanatuan City', 'Gapan City', 'General Tinio', 'Nueva Ecija']`).
-  - [ ] Bind to `(click)="setDestination(dest)"` with `.active` styling when `wizardForm.get('destination')?.value === dest`.
-- [ ] **16.2: Render Budget Summary & Assumptions Box in Suggested Wizard and Itinerary Detail (`UI-02`)**:
-  - [ ] Target: `suggested-wizard.page.html`, `itinerary-detail.page.html`, `global.scss`.
-  - [ ] In `suggested-wizard.page.html` (`viewMode === 'itinerary'`), add `.verified-budget-card` banner bound to `budgetSummary` (`minTotal`, `maxTotal`, `budgetWarning`, `dailyBudgetTarget`).
-  - [ ] In `suggested-wizard.page.html` and `itinerary-detail.page.html`, add expandable/collapsible **Trip Assumptions & Cost Notes** card (`.assumptions-info-box`) rendering `assumptions` array.
-- [ ] **16.3: Wire `pickerTab === 'browse'` Inside Custom Builder's Timeline Modal (`UI-03`)**:
-  - [ ] Target: `custom-builder.page.html` (Lines 515–621), `global.scss`.
-  - [ ] Add 2-segment switcher (`Browse Curated & OSM Places` vs. `Add Off-Grid Custom Venue`) at top of `<ion-modal [isOpen]="isPickerModalOpen">`.
-  - [ ] Wire search input bound to `pickerSearchQuery` / `onPickerSearchChange($event)` and scrollable list of `pickerSearchResults` calling `selectDatabasePlace(place)`.
-- [ ] **16.4: Eliminate Remaining Raw UTC Date Conversions (`UI-04`)**:
-  - [ ] Target: `suggested-wizard.page.ts` (Lines 210–211), `custom-builder.page.ts` (Lines 154–155, 189–201, 224, 241–244).
-  - [ ] Replace `new Date(startStr)` / `new Date(endStr)` with `formatDateRange(startStr, endStr)` from `core/utils/date-input.util.ts`.
-  - [ ] Replace all `new Date().toISOString().split('T')[0]` calls with `toLocalIsoDate(new Date())` and `addDaysLocal()`.
-- [ ] **16.5: Persist Splash Dismissal in `sessionStorage` & Clean Up Unused CSS (`UI-05`)**:
-  - [ ] Target: `app.component.ts`, `app.component.scss`.
-  - [ ] Check `sessionStorage.getItem('ne_splash_seen_v1')` in `AppComponent.ngOnInit()`. Skip 2.8s timer if already seen in current session.
-  - [ ] Write `'true'` to `sessionStorage` in `dismissSplash()`. Remove or bind `.pulse-ring` in `app.component.scss`.
+## Phase 16: Unwired State & Template Parity (`Priority 1 — Quick Wins`) (COMPLETED)
+- [x] **16.1: Render Quick Destination Chips in Suggested Wizard (`UI-01`)**:
+  - [x] Target: `suggested-wizard.page.html`, `suggested-wizard.page.scss`.
+  - [x] Horizontal chip row iterating over `quickDestinations` (`['Bongabon', 'Pantabangan', 'Cabanatuan City', 'Gapan City', 'General Tinio', 'Nueva Ecija']`).
+  - [x] Bind to `(click)="setDestination(dest)"` with `.active` styling when `wizardForm.get('destination')?.value === dest`.
+- [x] **16.2: Render Budget Summary & Assumptions Box in Suggested Wizard and Itinerary Detail (`UI-02`)**:
+  - [x] Target: `suggested-wizard.page.html`, `itinerary-detail.page.html`, `global.scss`.
+  - [x] In `suggested-wizard.page.html` (`viewMode === 'itinerary'`), add `.verified-budget-card` banner bound to `budgetSummary` (`minTotal`, `maxTotal`, `budgetWarning`, `dailyBudgetTarget`).
+  - [x] In `suggested-wizard.page.html` and `itinerary-detail.page.html`, add expandable/collapsible **Trip Assumptions & Cost Notes** card (`.assumptions-info-box`) rendering `assumptions` array.
+- [x] **16.3: Wire `pickerTab === 'browse'` Inside Custom Builder's Timeline Modal (`UI-03`)**:
+  - [x] Target: `custom-builder.page.html` (Lines 515–621), `global.scss`.
+  - [x] Add 2-segment switcher (`Browse Curated & OSM Places` vs. `Add Off-Grid Custom Venue`) at top of `<ion-modal [isOpen]="isPickerModalOpen">`.
+  - [x] Wire search input bound to `pickerSearchQuery` / `onPickerSearchChange($event)` and scrollable list of `pickerSearchResults` calling `selectDatabasePlace(place)`.
+- [x] **16.4: Eliminate Remaining Raw UTC Date Conversions (`UI-04`)**:
+  - [x] Target: `suggested-wizard.page.ts` (Lines 210–211), `custom-builder.page.ts` (Lines 154–155, 189–201, 224, 241–244).
+  - [x] Replace `new Date(startStr)` / `new Date(endStr)` with `formatDateRange(startStr, endStr)` from `core/utils/date-input.util.ts`.
+  - [x] Replace all `new Date().toISOString().split('T')[0]` calls with `toLocalIsoDate(new Date())` and `addDaysLocal()`.
+- [x] **16.5: Persist Splash Dismissal in `sessionStorage` & Clean Up Unused CSS (`UI-05`)**:
+  - [x] Target: `app.component.ts`, `app.component.scss`.
+  - [x] Check `sessionStorage.getItem('ne_splash_seen_v1')` in `AppComponent.ngOnInit()`. Skip 2.8s timer if already seen in current session.
+  - [x] Write `'true'` to `sessionStorage` in `dismissSplash()`. Remove or bind `.pulse-ring` in `app.component.scss`.
 
 ---
 

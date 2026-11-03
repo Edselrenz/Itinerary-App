@@ -42,6 +42,20 @@
               aria-label="Destination"
             />
           </div>
+          <!-- Quick Destination Chips (UI-01) -->
+          <div class="quick-dest-row" role="group" aria-label="Quick destination suggestions">
+            @for (dest of quickDestinations; track dest) {
+              <button
+                type="button"
+                class="quick-dest-chip"
+                [class.active]="form.get('destination')?.value === dest"
+                (click)="setDestination(dest)"
+              >
+                <ion-icon name="location-outline" class="dest-chip-icon"></ion-icon>
+                <span>{{ dest }}</span>
+              </button>
+            }
+          </div>
         </div>
 
         <!-- Travel Dates Field -->
@@ -156,6 +170,40 @@
           </div>
         </div>
       </div>
+
+      <!-- Verified Estimated Costs Summary (UI-02) -->
+      @if (budgetSummary) {
+        <div class="verified-budget-card">
+          <ion-icon name="cash-outline" class="budget-card-icon"></ion-icon>
+          <div class="budget-card-text">
+            <div class="budget-card-header">
+              <span class="budget-card-label">Verified Estimated Costs</span>
+              <span class="budget-card-target">Budget: ₱{{ form.get('daily_budget')?.value || generatedPlan.daily_budget || 0 }}/day</span>
+            </div>
+            <div class="budget-card-amount">{{ budgetSummary.displayText }}</div>
+            @if (budgetSummary.unverifiedCount > 0) {
+              <p class="budget-card-note">
+                * {{ budgetSummary.unverifiedCount }} stop(s) do not list verified pricing in open public records.
+              </p>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Trip Assumptions & Cost Notes (UI-02) -->
+      @if (generatedPlan.assumptions && generatedPlan.assumptions.length > 0) {
+        <div class="assumptions-info-box">
+          <div class="assumptions-header">
+            <ion-icon name="information-circle-outline" class="assumptions-icon"></ion-icon>
+            <h4 class="assumptions-title">Trip Assumptions & Travel Notes</h4>
+          </div>
+          <ul class="assumptions-list">
+            @for (note of generatedPlan.assumptions; track note) {
+              <li class="assumption-item">{{ note }}</li>
+            }
+          </ul>
+        </div>
+      }
 
       <!-- Segmented Day Switcher Capsule Bar -->
       <div class="figma-day-capsule-bar">

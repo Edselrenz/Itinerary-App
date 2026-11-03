@@ -40,6 +40,9 @@ describe('AppComponent', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      sessionStorage.clear();
+    }
     isHostOfflineSub.next(false);
     isCheckingHealthSub.next(false);
     mockConnectivityService.checkHostHealth.mockReturnValue(of(true));
@@ -67,6 +70,14 @@ describe('AppComponent', () => {
   it('dismisses splash screen on demand', () => {
     component.dismissSplash();
     expect(component.isFadingOut).toBe(true);
+    expect(sessionStorage.getItem('ne_splash_seen_v1')).toBe('true');
+  });
+
+  it('skips splash screen if already seen in current session (UI-05)', () => {
+    sessionStorage.setItem('ne_splash_seen_v1', 'true');
+    const newComponent = new AppComponent(mockConnectivityService as any, mockToastController as any);
+    newComponent.ngOnInit();
+    expect(newComponent.showSplashScreen).toBe(false);
   });
 
   it('dismisses splash screen when Escape key is pressed (DEF-09)', () => {

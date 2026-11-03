@@ -291,4 +291,25 @@ describe('CustomBuilderPage', () => {
     component.closeDatePicker();
     expect(component.isDatePickerOpen).toBe(false);
   });
+
+  it('manages place picker modal tabs and selecting places (UI-03)', async () => {
+    expect(component.isPlacePickerOpen).toBe(false);
+    component.openPlacePicker();
+    expect(component.isPlacePickerOpen).toBe(true);
+    expect(component.pickerTab).toBe('browse');
+    expect(mockPlaceService.getFeaturedPlaces).toHaveBeenCalled();
+
+    component.setPickerTab('custom');
+    expect(component.pickerTab).toBe('custom');
+
+    component.setPickerTab('browse');
+    expect(component.pickerTab).toBe('browse');
+
+    // Select a place from picker into current day
+    const initialCount = component.currentDay?.items.length || 0;
+    await component.selectPlaceFromPicker(mockPlace);
+
+    expect(component.currentDay?.items.length).toBe(initialCount + 1);
+    expect(component.isPlacePickerOpen).toBe(false);
+  });
 });

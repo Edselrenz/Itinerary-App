@@ -94,6 +94,12 @@ describe('SuggestedWizardPage', () => {
     vi.clearAllMocks();
     mockItineraryService.suggestItinerary.mockReturnValue(of(mockGeneratedPlan));
     mockItineraryService.createItinerary.mockReturnValue(of(mockGeneratedPlan));
+    mockItineraryService.calculateBudgetSummary.mockReturnValue({
+      verifiedMin: 100,
+      verifiedMax: 200,
+      unverifiedCount: 0,
+      displayText: '₱100 - ₱200',
+    });
     mockPlaceService.getNearbyPlaces.mockReturnValue(mockNearbyPlaces);
 
     const mockToast = { present: vi.fn().mockResolvedValue(undefined) };
@@ -233,5 +239,38 @@ describe('SuggestedWizardPage', () => {
     expect(component.isDatePickerOpen).toBe(true);
     component.closeDatePicker();
     expect(component.isDatePickerOpen).toBe(false);
+  });
+
+  it('renders quick destination chips and updates destination on click (UI-01)', () => {
+    fixture.detectChanges();
+    const chips = fixture.nativeElement.querySelectorAll('.quick-dest-chip');
+    expect(chips.length).toBe(component.quickDestinations.length);
+
+    chips[1].click(); // 'Pantabangan'
+    expect(component.form.get('destination')?.value).toBe('Pantabangan');
+  });
+
+  it('renders budget summary and assumptions box when plan is generated (UI-02)', () => {
+    const testFixture = TestBed.createComponent(SuggestedWizardPage);
+    const testComp = testFixture.componentInstance;
+    testComp.generatedPlan = mockGeneratedPlan;
+    testComp.viewMode = 'itinerary';
+    testComp.budgetSummary = {
+      verifiedMin: 100,
+      verifiedMax: 200,
+      unverifiedCount: 0,
+      displayText: '₱100 - ₱200',
+    };
+    testFixture.detectChanges();
+
+    const budgetCard = testFixture.nativeElement.querySelector('.verified-budget-card');
+    expect(budgetCard).toBeTruthy();
+    expect(budgetCard.textContent).toContain('Verified Estimated Costs');
+    expect(budgetCard.textContent).toContain('₱100 - ₱200');
+
+    const assumptionsBox = testFixture.nativeElement.querySelector('.assumptions-info-box');
+    expect(assumptionsBox).toBeTruthy();
+    expect(assumptionsBox.textContent).toContain('Trip Assumptions & Travel Notes');
+    expect(assumptionsBox.textContent).toContain('3 stops scheduled per day');
   });
 });

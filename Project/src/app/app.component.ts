@@ -35,6 +35,14 @@ export class AppComponent implements OnInit, OnDestroy {
     // Proactively verify server connectivity on application launch
     this.connectivityService.checkHostHealth().subscribe();
 
+    // Check if splash screen was already dismissed in the current session (UI-05)
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      if (sessionStorage.getItem('ne_splash_seen_v1') === 'true') {
+        this.showSplashScreen = false;
+        return;
+      }
+    }
+
     // Auto-dismiss after 2.8 seconds once the underlying frontend has initialized
     this.autoDismissTimer = setTimeout(() => {
       this.dismissSplash();
@@ -93,6 +101,10 @@ export class AppComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      sessionStorage.setItem('ne_splash_seen_v1', 'true');
+    }
+
     if (this.autoDismissTimer) {
       clearTimeout(this.autoDismissTimer);
       this.autoDismissTimer = undefined;
@@ -103,6 +115,7 @@ export class AppComponent implements OnInit, OnDestroy {
     // Remove from DOM after smooth 500ms fade/scale animation completes
     setTimeout(() => {
       this.showSplashScreen = false;
+      this.isFadingOut = false;
     }, 500);
   }
 

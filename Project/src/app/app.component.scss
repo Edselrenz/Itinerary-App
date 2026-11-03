@@ -127,6 +127,8 @@
   border-radius: 50%;
   background-color: #38bdf8;
   box-shadow: 0 0 8px #38bdf8;
+  animation: splashPulse 2s ease-in-out infinite;
+  flex-shrink: 0;
 }
 
 .hint-text {

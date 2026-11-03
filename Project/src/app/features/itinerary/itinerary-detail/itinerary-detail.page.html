@@ -69,6 +69,40 @@
           </div>
         </div>
 
+        <!-- Verified Estimated Costs Summary (UI-02) -->
+        @if (budgetSummary) {
+          <div class="verified-budget-card">
+            <ion-icon name="cash-outline" class="budget-card-icon"></ion-icon>
+            <div class="budget-card-text">
+              <div class="budget-card-header">
+                <span class="budget-card-label">Verified Estimated Costs</span>
+                <span class="budget-card-target">Budget: ₱{{ itinerary.daily_budget ? itinerary.daily_budget.toLocaleString() : '0' }}/day</span>
+              </div>
+              <div class="budget-card-amount">{{ budgetSummary.displayText }}</div>
+              @if (budgetSummary.unverifiedCount > 0) {
+                <p class="budget-card-note">
+                  * {{ budgetSummary.unverifiedCount }} stop(s) do not list verified pricing in open public records.
+                </p>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- Trip Assumptions & Cost Notes (UI-02) -->
+        @if (itinerary.assumptions && itinerary.assumptions.length > 0) {
+          <div class="assumptions-info-box">
+            <div class="assumptions-header">
+              <ion-icon name="information-circle-outline" class="assumptions-icon"></ion-icon>
+              <h4 class="assumptions-title">Trip Assumptions & Travel Notes</h4>
+            </div>
+            <ul class="assumptions-list">
+              @for (note of itinerary.assumptions; track note) {
+                <li class="assumption-item">{{ note }}</li>
+              }
+            </ul>
+          </div>
+        }
+
         <!-- Segmented Day Switcher Capsule Bar -->
         <div class="figma-day-capsule-bar">
           @for (day of itinerary.days; track day.id; let idx = $index) {

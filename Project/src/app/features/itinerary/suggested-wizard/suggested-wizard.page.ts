@@ -265,18 +265,9 @@ export class SuggestedWizardPage implements OnInit {
       return 'e.g., Oct 30 – Nov 2 (4 days, 3 nights)';
     }
 
-    const start = new Date(startStr);
-    const end = new Date(endStr);
     const days = this.computedTripDays;
     const nights = Math.max(0, days - 1);
-
-    const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
-    const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
-
-    let rangeStr = `${startMonth} ${start.getDate()} – ${endMonth} ${end.getDate()}`;
-    if (startMonth === endMonth) {
-      rangeStr = `${startMonth} ${start.getDate()} – ${end.getDate()}`;
-    }
+    const rangeStr = formatDateRange(startStr, endStr);
 
     return `${rangeStr} (${days} ${days === 1 ? 'day' : 'days'}, ${nights} ${nights === 1 ? 'night' : 'nights'})`;
   }
