@@ -6,6 +6,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [0.16.1] - 2026-11-03
+### Added
+- **Option 2: Cloudflare Worker Reverse Proxy Architecture**:
+  - Created `cloudflare-worker/worker.js` with:
+    - Dynamic CORS support for `https://edselrenz.github.io`, `localhost`, and `capacitor://localhost`.
+    - Secure `POST /__sync_tunnel` admin endpoint authenticated via `X-Admin-Sync-Key` header.
+    - `GET /__status` diagnostic endpoint returning worker health and active tunnel metadata.
+    - Dual-tunnel failover proxy: routes incoming `/api/v1/*` requests to active Cloudflare Tunnel first, falling back to ngrok.
+  - Created `cloudflare-worker/wrangler.toml` for declarative Wrangler CLI deployment.
+  - Authored `cloudflare-worker/README.md` with a complete 2-minute web dashboard deployment walkthrough.
+- **Automated Tunnel Publishing in `scripts/start_server.ps1`**:
+  - Automatically loads `WORKER_SYNC_URL` and `WORKER_SYNC_KEY` from `.env`.
+  - Sends an automated `POST` request to `/__sync_tunnel` upon tunnel startup, publishing the latest `$cfUrl` and `$ngrokUrl` to Cloudflare KV in 2 seconds.
+  - Displays the permanent zero-touch Cloudflare Worker proxy URL in the console launch banner.
+- **Frontend Hostname Security Expansion (`SEC-01`)**:
+  - In `Project/src/environments/environment.prod.ts`, `environment.ts`, and `connectivity.service.ts`:
+    - Added `*.workers.dev`, `*.onrender.com`, and `*.koyeb.app` to `isTrustedApiHostname()` and `isValidApiUrl()`.
+  - In `Project/src/app/core/services/connectivity.service.spec.ts`:
+    - Added unit test asserting that `*.workers.dev` URLs are recognized, validated, and normalized with `/api/v1`.
+  - In `Project/src/app/app.component.ts`:
+    - Updated connection settings alert message and placeholder to highlight `https://*.workers.dev`.
+- **Environment & Architecture Documentation**:
+  - Updated `.env.example` with `WORKER_SYNC_URL` and `WORKER_SYNC_KEY`.
+  - Added Section 5 to `docs/SYSTEM_ARCHITECTURE.md` (Sequence diagram and edge routing data flow).
+  - Added Section 5 to `docs/CONFIGURATION_GUIDE.md` (Worker deployment steps).
+
+---
+
 ## [0.16.0] - 2026-11-03
 ### Added
 - **Interactive Server Connection Manager (Offline Banner & Retry Experience)**:

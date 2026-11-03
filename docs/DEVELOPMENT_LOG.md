@@ -1501,3 +1501,56 @@ This log records chronological development sessions, detailing objectives, execu
   - `npm --prefix Project run build`: **0 compilation errors, production build generated in 7.7s (`Project/www`)**.
 - **Next Recommended Step**:
   - Commit all changes and push to `origin/main` to trigger the GitHub Actions deployment pipeline, then smoke test the live GitHub Pages application with the enhanced connection manager.
+
+---
+
+## Session 49: Cloudflare Worker Reverse Proxy Implementation (Option 2)
+- **Date & Time**: 2026-11-03 11:08:00 (Local)
+- **Objective**: Implement Option 2 from `github_pages_backend_connectivity_plan.pdf` to eliminate client DNS changes and manual tunnel entry by providing a fixed, permanent Cloudflare Worker reverse proxy (`*.workers.dev`) backed by Cloudflare KV and automated tunnel publishing in `scripts/start_server.ps1`.
+- **Tasks Performed & Implementation Details**:
+  - **1. Cloudflare Worker Reverse Proxy (`cloudflare-worker/worker.js`)**:
+    - Created `cloudflare-worker/worker.js` with:
+      - Dynamic CORS support matching `https://edselrenz.github.io`, `localhost`, and `capacitor://localhost`.
+      - Admin endpoint `POST /__sync_tunnel` protected by `X-Admin-Sync-Key` header, persisting active endpoints into `env.TUNNEL_KV`.
+      - Diagnostic endpoint `GET /__status` reporting worker status and active tunnel metadata.
+      - Dynamic failover reverse proxying: routes requests to active Cloudflare Tunnel first; if unavailable, seamlessly falls back to the permanent ngrok tunnel.
+      - Automated injection of `'ngrok-skip-browser-warning': 'true'` and removal of upstream `Host` header.
+    - Created `cloudflare-worker/wrangler.toml` for standard Wrangler CLI deployment.
+    - Authored `cloudflare-worker/README.md` containing a comprehensive 2-minute web dashboard deployment walkthrough.
+  - **2. Automated Endpoint Publishing in `scripts/start_server.ps1`**:
+    - Added automatic reading of `WORKER_SYNC_URL` and `WORKER_SYNC_KEY` from `.env`.
+    - Integrated automated `Invoke-RestMethod` `POST` call to `$WORKER_SYNC_URL/__sync_tunnel` on server startup.
+    - Displays the permanent zero-touch Cloudflare Worker proxy URL in the console launch banner.
+  - **3. Frontend Hostname Security Expansion (`SEC-01`)**:
+    - In `Project/src/environments/environment.prod.ts`, `environment.ts`, and `connectivity.service.ts`:
+      - Added `*.workers.dev`, `*.onrender.com`, and `*.koyeb.app` to `isTrustedApiHostname()` and `isValidApiUrl()`.
+    - In `Project/src/app/core/services/connectivity.service.spec.ts`:
+      - Added unit test verifying that `*.workers.dev` URLs are validated and normalized with `/api/v1`.
+    - In `Project/src/app/app.component.ts`:
+      - Updated connection settings alert message and placeholder to highlight `https://*.workers.dev`.
+  - **4. Environment & Documentation Updates**:
+    - Updated `.env.example` with `WORKER_SYNC_URL` and `WORKER_SYNC_KEY`.
+    - Added Section 5 to `docs/SYSTEM_ARCHITECTURE.md` (Sequence diagram and edge routing data flow).
+    - Added Section 5 to `docs/CONFIGURATION_GUIDE.md` (Worker deployment steps).
+    - Updated `docs/TODO.md` and `docs/CHANGELOG.md` (`[0.16.1] - 2026-11-03`).
+- **Files Created / Modified**:
+  - `cloudflare-worker/worker.js`
+  - `cloudflare-worker/wrangler.toml`
+  - `cloudflare-worker/README.md`
+  - `scripts/start_server.ps1`
+  - `Project/src/environments/environment.prod.ts`
+  - `Project/src/environments/environment.ts`
+  - `Project/src/app/core/services/connectivity.service.ts`
+  - `Project/src/app/core/services/connectivity.service.spec.ts`
+  - `Project/src/app/app.component.ts`
+  - `.env.example`
+  - `docs/SYSTEM_ARCHITECTURE.md`
+  - `docs/CONFIGURATION_GUIDE.md`
+  - `docs/TODO.md`
+  - `docs/CHANGELOG.md`
+  - `docs/DEVELOPMENT_LOG.md`
+- **Verification & Test Results**:
+  - `npm --prefix Project run test:unit`: **16/16 test files passed, 121/121 tests passed [100%]** in 18.43s.
+  - `python -m pytest backend/tests/ -v`: **14/14 backend tests passed [100%]**.
+- **Next Recommended Step**:
+  - Commit changes and push to `origin/main` to trigger the automated CI/CD pipeline, and follow the 2-minute setup guide in `cloudflare-worker/README.md` to deploy the Worker on Cloudflare dashboard.

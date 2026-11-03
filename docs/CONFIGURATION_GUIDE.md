@@ -93,3 +93,28 @@ The application loads environment variables using Pydantic Settings from the rep
   cd Project && npm run typecheck:e2e
   ```
 
+---
+
+## 5. Cloudflare Worker Reverse Proxy Setup (Option 2)
+
+Option 2 enables zero-touch connectivity between the static GitHub Pages application and your laptop's backend, bypassing residential ISP DNS blocks (PLDT, Converge, Globe, Smart) and home router NXDOMAIN caching.
+
+### 5.1 Environment Variables (.env)
+Add the following optional variables to `.env` on your laptop:
+```env
+# Cloudflare Worker Reverse Proxy Endpoint
+WORKER_SYNC_URL=https://ne-itinerary-api.<your-subdomain>.workers.dev
+
+# Shared secret key between laptop start_server.ps1 and Cloudflare Worker
+WORKER_SYNC_KEY=your_chosen_admin_sync_secret_key
+```
+
+### 5.2 Deploying the Worker (2 Minutes)
+1. Go to [dash.cloudflare.com](https://dash.cloudflare.com/) &rarr; **Storage & Databases** &rarr; **KV** &rarr; Create namespace `TUNNEL_KV`.
+2. Go to **Compute (Workers)** &rarr; **Create Worker** (`ne-itinerary-api`).
+3. Paste code from [`cloudflare-worker/worker.js`](../cloudflare-worker/worker.js) and click **Deploy**.
+4. In Worker **Settings** &rarr; **Variables & Secrets**:
+   - Bind KV namespace `TUNNEL_KV` to variable `TUNNEL_KV`.
+   - Add environment variable `ADMIN_SYNC_KEY` with your secret key.
+5. In your laptop `.env`, set `WORKER_SYNC_URL` and `WORKER_SYNC_KEY`.
+6. Run `start_server.bat`. It will automatically sync active tunnels (`$cfUrl` and `$ngrokUrl`) to the worker on startup.

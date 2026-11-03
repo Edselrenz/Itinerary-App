@@ -121,6 +121,11 @@ describe('ConnectivityService', () => {
     service.setCustomApiUrl('https://dynamic-tunnel-demo.trycloudflare.com');
     expect(localStorage.getItem('ne_custom_api_url')).toBe('https://dynamic-tunnel-demo.trycloudflare.com/api/v1');
 
+    // Cloudflare Worker reverse proxies supported (Option 2)
+    expect(service.isValidApiUrl('https://ne-itinerary-api.demo-subdomain.workers.dev')).toBe(true);
+    service.setCustomApiUrl('https://ne-itinerary-api.demo-subdomain.workers.dev');
+    expect(localStorage.getItem('ne_custom_api_url')).toBe('https://ne-itinerary-api.demo-subdomain.workers.dev/api/v1');
+
     // clearCustomApiUrl clears storage
     service.clearCustomApiUrl();
     expect(localStorage.getItem('ne_custom_api_url')).toBeNull();

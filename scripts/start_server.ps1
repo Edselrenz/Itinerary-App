@@ -157,9 +157,44 @@ if (-not $NoTunnel) {
         }
     }
 
+    # 3c. Automatically sync active tunnel endpoints to Cloudflare Worker Proxy (Option 2)
+    $workerSyncUrl = $env:WORKER_SYNC_URL
+    $workerSyncKey = $env:WORKER_SYNC_KEY
+
+    if (Test-Path (Join-Path $ProjectRoot ".env")) {
+        $envLines = Get-Content (Join-Path $ProjectRoot ".env")
+        foreach ($line in $envLines) {
+            if ($line -match '^WORKER_SYNC_URL\s*=\s*(.+)$') {
+                $workerSyncUrl = $matches[1].Trim()
+            }
+            if ($line -match '^WORKER_SYNC_KEY\s*=\s*(.+)$') {
+                $workerSyncKey = $matches[1].Trim()
+            }
+        }
+    }
+
+    $workerSynced = $false
+    if (($cfUrl -or $ngrokUrl) -and $workerSyncUrl -and $workerSyncKey) {
+        Write-Host "`nSyncing active tunnels to Cloudflare Worker ($workerSyncUrl)..." -ForegroundColor Cyan
+        try {
+            $syncPayload = @{ cfUrl = $cfUrl; ngrokUrl = $ngrokUrl } | ConvertTo-Json
+            $res = Invoke-RestMethod -Uri "$($workerSyncUrl.TrimEnd('/'))/__sync_tunnel" `
+                -Method Post `
+                -Headers @{ "X-Admin-Sync-Key" = $workerSyncKey; "Content-Type" = "application/json" } `
+                -Body $syncPayload -TimeoutSec 6
+            $workerSynced = $true
+            Write-Host "  [OK] Successfully synced active tunnels to Cloudflare Worker Proxy!" -ForegroundColor Green
+        } catch {
+            Write-Host "  [WARNING] Could not auto-sync to Cloudflare Worker: $($_.Exception.Message)" -ForegroundColor Yellow
+        }
+    }
+
     Write-Host "`n+----------------------------------------------------------------------+" -ForegroundColor Green
     Write-Host "|  ONLINE CONNECTION OPTIONS FOR GITHUB PAGES & MOBILE                 |" -ForegroundColor Green
     Write-Host "+----------------------------------------------------------------------+" -ForegroundColor Green
+    if ($workerSyncUrl) {
+        Write-Host "  ★ Cloudflare Worker:     $workerSyncUrl/api/v1 (ZERO-TOUCH)" -ForegroundColor Green
+    }
     if ($ngrokUrl) {
         Write-Host "  1. Fixed ngrok URL:      $ngrokUrl/api/v1" -ForegroundColor Cyan
     }

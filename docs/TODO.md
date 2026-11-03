@@ -315,10 +315,28 @@ This checklist tracks completed, active, and pending tasks across all developmen
   - [x] Backend Pytest suite: 14/14 tests passing.
   - [x] Frontend production compilation: `npm run build` completed cleanly into `Project/www/`.
 
-### Phase 16.2: Release Candidate Deployment & Live Verification (Immediate)
-- [ ] Commit all Phase 15 and 16.1 remediation changes, tests, and documentation to Git with message `release: v0.16.0 Live connectivity, retry resilience, and QA report remediation`.
-- [ ] Push to `origin/main` to trigger automated GitHub Actions CI pipeline (`deploy.yml`) running backend Pytest and frontend Vitest suites before deploying to GitHub Pages.
-- [ ] Smoke-test live production URL (`https://edselrenz.github.io/Itinerary-App/`) connected to backend.
+### Phase 16.2: Cloudflare Worker Reverse Proxy (Option 2) (COMPLETED)
+- [x] **Cloudflare Worker Proxy Architecture (`cloudflare-worker/worker.js`)**:
+  - [x] Author `cloudflare-worker/worker.js` supporting dynamic CORS (`https://edselrenz.github.io`, localhost, Capacitor).
+  - [x] Implement secure `POST /__sync_tunnel` admin endpoint guarded by `X-Admin-Sync-Key`.
+  - [x] Implement `GET /__status` health check and tunnel diagnostic endpoint.
+  - [x] Implement auto-failover proxying (active Cloudflare Tunnel &rarr; ngrok fallback).
+  - [x] Create `cloudflare-worker/wrangler.toml` configuration and `cloudflare-worker/README.md` 2-minute dashboard deployment guide.
+- [x] **Auto-Publish Integration in `scripts/start_server.ps1`**:
+  - [x] Automatically read `WORKER_SYNC_URL` and `WORKER_SYNC_KEY` from `.env`.
+  - [x] Auto-push newly generated `$cfUrl` and `$ngrokUrl` to Worker KV on server startup.
+- [x] **Frontend Security Allowlist & Settings (`SEC-01`)**:
+  - [x] Allow `*.workers.dev` in `environment.prod.ts`, `environment.ts`, and `connectivity.service.ts`.
+  - [x] Add unit tests in `connectivity.service.spec.ts` asserting `*.workers.dev` validation and path normalization.
+  - [x] Update in-app connection settings alert and toast guidance in `app.component.ts`.
+- [x] **Environment & Architecture Documentation**:
+  - [x] Update `.env.example` with `WORKER_SYNC_URL` and `WORKER_SYNC_KEY`.
+  - [x] Update `docs/SYSTEM_ARCHITECTURE.md` (Section 5) and `docs/CONFIGURATION_GUIDE.md` (Section 5).
+
+### Phase 16.3: Release Candidate Deployment & Live Verification (Immediate)
+- [ ] Commit all Phase 16 changes to Git with message `release: v0.16.1 Option 2 Cloudflare Worker reverse proxy implementation`.
+- [ ] Push to `origin/main` to trigger automated GitHub Actions CI pipeline (`deploy.yml`).
+- [ ] Smoke-test live production URL (`https://edselrenz.github.io/Itinerary-App/`).
 
 ### Phase 16.2: Native Mobile Binary Packaging (Capacitor)
 - [ ] Initialize Capacitor Android platform (`npx cap add android`) in `Project/`.

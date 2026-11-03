@@ -85,12 +85,12 @@ export class AppComponent implements OnInit, OnDestroy {
         ? `Could not reach ${currentUrl}`
         : 'Configure Backend Tunnel or Server URL',
       message:
-        'The app is currently in offline mode. If you are running the backend on a laptop, enter your active Cloudflare Tunnel (https://*.trycloudflare.com), ngrok URL, or localhost address below.',
+        'The app is currently in offline mode. Enter your permanent Cloudflare Worker proxy (https://*.workers.dev), Cloudflare Tunnel (https://*.trycloudflare.com), ngrok URL, or localhost address below.',
       inputs: [
         {
           name: 'apiUrl',
           type: 'url',
-          placeholder: 'https://your-tunnel.trycloudflare.com',
+          placeholder: 'https://your-api.workers.dev',
           value: currentUrl,
         },
       ],
@@ -154,7 +154,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
   public async showInvalidUrlToast(): Promise<void> {
     const toast = await this.toastController.create({
-      message: 'Invalid URL. Host must be localhost or a trusted tunnel (*.trycloudflare.com, *.ngrok-free.dev).',
+      message: 'Invalid URL. Host must be localhost, Cloudflare Worker (*.workers.dev), or trusted tunnel (*.trycloudflare.com, *.ngrok-free.dev).',
       duration: 3500,
       color: 'danger',
       position: 'top',

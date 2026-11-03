@@ -8,7 +8,10 @@ const isTrustedApiHostname = (hostname: string): boolean => {
     lower.endsWith('.ngrok-free.dev') ||
     lower.endsWith('.ngrok.app') ||
     lower.endsWith('.ngrok.io') ||
-    lower.endsWith('.trycloudflare.com')
+    lower.endsWith('.trycloudflare.com') ||
+    lower.endsWith('.workers.dev') ||
+    lower.endsWith('.onrender.com') ||
+    lower.endsWith('.koyeb.app')
   ) {
     return true;
   }

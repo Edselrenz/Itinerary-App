@@ -123,3 +123,44 @@ sequenceDiagram
    - *Web Production Target (Custom Domain)*: Once frontend and backend are unified under a shared parent domain (e.g., `app.tripmo.ph` and `api.tripmo.ph`), refresh tokens will transition to `HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth/refresh` cookies, completely shielding refresh tokens from browser script execution and rendering XSS token exfiltration impossible. Access tokens will be retained purely in-memory within Angular reactive service state (`BehaviorSubject`).
    - *Mobile Native Target (Capacitor)*: In Android and iOS binary builds, tokens will be persisted into hardware-backed keystores via `@capacitor-community/secure-storage-plugin` (Android Keystore with AES-GCM and iOS Keychain with kSecAttrAccessibleAfterFirstUnlock), providing hardware enclave protection at rest.
 
+---
+
+## 5. Live Tunnel & Cloudflare Worker Reverse Proxy Architecture (Option 2)
+
+To bridge the static GitHub Pages application (`https://edselrenz.github.io/Itinerary-App/`) with the developer's laptop backend without being subject to residential ISP DNS blocks (PLDT, Converge, Globe, Smart) or home router NXDOMAIN caching, the system supports an automated Cloudflare Worker Reverse Proxy.
+
+### 5.1 Architecture Data Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Laptop as Host Laptop (start_server.ps1)
+    participant CF_Tunnel as Cloudflare Quick Tunnel (*.trycloudflare.com)
+    participant Worker as Cloudflare Worker Proxy (*.workers.dev)
+    participant KV as Cloudflare KV (TUNNEL_KV)
+    participant GH_Pages as GitHub Pages (User Browser)
+
+    Note over Laptop,CF_Tunnel: Server Startup
+    Laptop->>Laptop: Start FastAPI (port 8000) & ngrok
+    Laptop->>CF_Tunnel: Start cloudflared quick tunnel
+    CF_Tunnel-->>Laptop: Generated random tunnel URL ($cfUrl)
+    Laptop->>Worker: POST /__sync_tunnel (with X-Admin-Sync-Key, $cfUrl, $ngrokUrl)
+    Worker->>KV: Persist ACTIVE_TUNNELS JSON
+
+    Note over GH_Pages,Worker: User Accesses GitHub Pages
+    GH_Pages->>GH_Pages: Load app bundle from edselrenz.github.io
+    GH_Pages->>Worker: GET /api/v1/health (Fixed *.workers.dev domain)
+    Worker->>KV: Fetch ACTIVE_TUNNELS
+    Worker->>CF_Tunnel: Proxy request via Cloudflare Internal Edge
+    CF_Tunnel->>Laptop: Forward to http://127.0.0.1:8000
+    Laptop-->>CF_Tunnel: 200 OK (Province Scope: Nueva Ecija)
+    CF_Tunnel-->>Worker: 200 OK
+    Worker-->>GH_Pages: 200 OK with dynamic CORS headers
+    GH_Pages->>GH_Pages: Cloud sync active (Offline Mode disabled)
+```
+
+### 5.2 Key Architectural Benefits
+1. **Zero Client-Side DNS Configuration**: End users connect exclusively to standard `*.workers.dev` domains, which resolve reliably across all telecommunications providers.
+2. **Zero Manual Copy-Paste**: `scripts/start_server.ps1` publishes the newly generated ephemeral Cloudflare Tunnel URL automatically within 2 seconds of startup.
+3. **Multi-Tunnel Failover**: The Worker attempts the active Cloudflare Tunnel first; if the connection fails or returns >= 502, it instantly fails over to the permanent ngrok tunnel.
+4. **SEC-01 Compliance**: Frontend hostname allowlist explicitly validates `*.workers.dev` alongside `*.trycloudflare.com` and `*.ngrok-free.dev`.
