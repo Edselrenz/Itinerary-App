@@ -7,6 +7,7 @@ import {
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import {
+  bookmarkOutline,
   home,
   locationSharp,
   personCircleOutline,
@@ -27,6 +28,7 @@ export class TabsPage {
     addIcons({
       home,
       locationSharp,
+      bookmarkOutline,
       timeOutline,
       personCircleOutline,
     });

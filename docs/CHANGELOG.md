@@ -6,6 +6,48 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [0.16.0] - 2026-11-03
+### Added
+- **Interactive Server Connection Manager (Offline Banner & Retry Experience)**:
+  - In `Project/src/app/app.component.html`, `app.component.ts`, and `app.component.scss`:
+    - Added interactive `[Settings]` gear button (`settingsOutline`) to the brand-aligned Offline Mode banner.
+    - Enhanced `retryConnection()` with visual loading spinner and positive feedback toast (`Connected to backend server! Cloud sync active.`) upon successful health checks.
+    - If a retry attempt fails or cannot resolve the host, automatically launches `openServerConfigAlert(true)` displaying the unreachable host and providing an intuitive input dialog to paste or update an active Cloudflare Tunnel (`https://*.trycloudflare.com`), ngrok URL, or localhost address.
+    - Added "Reset to Default" action to restore the default permanent tunnel.
+    - Added `showInvalidUrlToast()` to reject untrusted hostnames with informative guidance.
+- **Dual-Tunnel Startup Architecture (`scripts/start_server.ps1` & `start_server.bat`)**:
+  - Enhanced startup script to launch both permanent ngrok (`anybody-cube-surprise.ngrok-free.dev`) and Cloudflare Quick Tunnel (`*.trycloudflare.com`) concurrently forwarding to local port `8000`.
+  - Added port collision detection: if port 8000 is already active, server startup avoids crashing uvicorn and maintains tunnel proxying without killing background processes.
+  - Displayed both public connection URLs and diagnostic tips for residential Wi-Fi routers (e.g. Tenda/PLDT) with DNS-over-HTTPS guidance.
+- **WQA-03 (Navigation Tab Parity)**:
+  - In `Project/src/app/tabs/tabs.page.html` and `tabs.page.ts`:
+    - Updated Tab 3 icon from `time-outline` to `bookmark-outline`.
+    - Updated aria-label to `"Saved Itineraries"` for better clarity and alignment with modern mobile design.
+
+### Fixed
+- **SEC-01 & Dual-Tunnel Hostname Security**:
+  - In `Project/src/environments/environment.prod.ts`, `environment.ts`, and `Project/src/app/core/services/connectivity.service.ts`:
+    - Broadened `isValidApiUrl()` and `isTrustedApiHostname()` to securely trust `*.trycloudflare.com`, `*.ngrok-free.dev`, `*.ngrok.app`, and `*.ngrok.io`, while strictly rejecting arbitrary untrusted hostnames.
+    - Added automatic `/api/v1` path normalization in `setCustomApiUrl()`.
+    - Added `clearCustomApiUrl()` helper to safely clear overrides from `localStorage`.
+- **WQA-01 (Guest Mode Body Copy Mismatch)**:
+  - In `Project/src/app/features/auth/guest/guest.page.html`:
+    - Replaced misleading copy (*"Your data won't be saved."*) with honest guest persistence notice: *"Your trips are saved locally on this device. Sign in anytime to back them up to the cloud."*.
+- **WQA-02 (Suggested Wizard Day 2 Time Overlaps)**:
+  - In `Project/src/app/core/data/offline-places.data.ts`:
+    - Rescheduled Day 2 stops to clean, non-overlapping windows:
+      - Stop 1 (Farm Villaronte): 09:00 AM – 10:30 AM (90 mins).
+      - Stop 2 (Casa Batik): 11:00 AM – 12:30 PM (90 mins).
+      - Stop 3 (D' Pavilion Farm and Resort): 01:00 PM – 03:00 PM (120 mins).
+  - Updated corresponding unit tests in `itinerary.service.spec.ts`.
+
+### Testing & Verification
+- Unit test suite expanded to 121/121 passing tests in Vitest across all 16 test suites.
+- Backend Pytest test suite (14/14 tests) passing with 100% green rate.
+- Verified frontend production build compiles cleanly into `Project/www/` (829 kB initial chunk).
+
+---
+
 ## [0.15.4-rc.10] - 2026-11-02
 ### Added
 - **DEF-09 (Accessibility Enhancements & WCAG Compliance)**:

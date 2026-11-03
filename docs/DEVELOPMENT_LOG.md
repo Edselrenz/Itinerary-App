@@ -1431,3 +1431,73 @@ This log records chronological development sessions, detailing objectives, execu
 - **Next Recommended Step**:
   - Proceed to Phase 16.1 (Commit all Phase 15 audit remediation changes for release candidate `v0.15.4-rc.10`, push to `origin/main` to trigger the automated CI testing pipeline, and smoke-test live GitHub Pages deployment).
 
+---
+
+## Session 48: Live Server Connectivity, Retry Resilience & QA Report Remediation
+- **Date & Time**: 2026-11-03 10:25:00 (Local)
+- **Objective**:
+  1. Investigate and resolve the root cause of GitHub Pages failure to connect to the backend server and why clicking `[Retry]` or refreshing the page failed to recover connectivity.
+  2. Implement an interactive in-app Server Connection Manager with diagnostic alerts and custom tunnel URL entry.
+  3. Expand the trusted API hostname allowlist (`SEC-01`) to support Cloudflare Tunnels (`*.trycloudflare.com`) and custom ngrok domains (`*.ngrok-free.dev`).
+  4. Build a resilient dual-tunnel launcher in `scripts/start_server.ps1` with port collision protection.
+  5. Remediate observations `WQA-01`, `WQA-02`, and `WQA-03` from `itinerary_app_website_qa_report.pdf`.
+  6. Verify the entire application with 100% test passing rates in Vitest, Pytest, and Angular production build.
+- **Root Cause Analysis (Live Connectivity & Retry Failure)**:
+  - **Issue 1 (ngrok agent version deprecation)**: ngrok 3.3.1 was rejected by ngrok cloud with `ERR_NGROK_121`. Upgraded to official ngrok Windows x64 v3.39.13 in `tools/ngrok.exe`.
+  - **Issue 2 (Residential Wi-Fi Router DNS Negative Caching / NXDOMAIN)**:
+    - Wi-Fi router (Tenda at `192.168.5.1`) was returning NXDOMAIN for `anybody-cube-surprise.ngrok-free.dev` because it dropped IPv4 A records or cached negative DNS responses from when the server was previously offline.
+    - Public DNS servers (Google `8.8.8.8` and Cloudflare `1.1.1.1`) resolved `anybody-cube-surprise.ngrok-free.dev` instantly (IPs `18.141.129.246`, `18.139.9.214`).
+    - Cloudflare Tunnel domains (`*.trycloudflare.com`) resolved cleanly on all residential DNS proxies.
+  - **Issue 3 (Silent Retry Loop in Frontend)**:
+    - In `app.component.ts`, `retryConnection()` invoked `checkHostHealth()` without displaying user feedback on failure.
+    - When the health check failed against the hardcoded ngrok domain, the UI simply remained in "Offline Mode" with no explanation, no URL display, and no way for the user to provide an alternate active tunnel.
+- **Tasks Performed & Implementation Details**:
+  - **1. Interactive Server Connection Manager & Offline Banner Settings**:
+    - In `Project/src/app/app.component.html`: Added a `.banner-config-btn` settings gear button (`settings-outline`) next to the Retry button in the offline banner.
+    - In `Project/src/app/app.component.ts`:
+      - Injected `AlertController` and `ToastController`.
+      - Enhanced `retryConnection()`: Upon success, presents a positive toast notification (*"Connected to backend server! Cloud sync active."*). Upon failure, automatically opens `openServerConfigAlert(true)`.
+      - Implemented `openServerConfigAlert(isRetryFailure)`: Prompts the user with an Ionic Alert displaying the current API URL, offline explanation, and an input to test and save an active Cloudflare Tunnel (`https://*.trycloudflare.com`), ngrok URL, or localhost address.
+      - Implemented "Reset to Default" action to restore the default environment configuration via `clearCustomApiUrl()`.
+      - Added `showInvalidUrlToast()` for instant user feedback on untrusted URLs.
+    - In `Project/src/app/app.component.scss`: Styled `.banner-config-btn` matching the existing dark/amber glass aesthetic.
+    - In `Project/src/app/app.component.spec.ts`: Updated unit tests with Alert and Toast mocks, verifying retry success toast, failure alert trigger, and settings button click.
+  - **2. Security & Trusted Hostname Allowlist Expansion (`SEC-01`)**:
+    - In `Project/src/environments/environment.prod.ts`, `environment.ts`, and `connectivity.service.ts`:
+      - Updated `isValidApiUrl()` and `isTrustedApiHostname()` to allow `localhost`, `127.0.0.1`, `anybody-cube-surprise.ngrok-free.dev`, `*.ngrok-free.dev`, `*.ngrok.app`, `*.ngrok.io`, and `*.trycloudflare.com`.
+      - Added auto-normalization in `setCustomApiUrl()` ensuring paths end with `/api/v1`.
+      - Added `clearCustomApiUrl()` helper to remove `ne_custom_api_url` from `localStorage`.
+    - In `Project/src/app/core/services/connectivity.service.spec.ts`: Added tests verifying Cloudflare tunnel URL validation, path normalization, untrusted URL rejection, and storage cleanup.
+  - **3. Dual-Tunnel Launcher (`scripts/start_server.ps1` & `start_server.bat`)**:
+    - Added TCP port check for port 8000: if FastAPI is already running (e.g. from background process), avoids crashing uvicorn with port collision and keeps tunnels alive.
+    - Starts both permanent ngrok (`anybody-cube-surprise.ngrok-free.dev`) and Cloudflare Quick Tunnel (`*.trycloudflare.com`) concurrently, printing both URLs to the console.
+    - Output clear troubleshooting instructions for residential Wi-Fi router DNS (using Chrome/Edge Secure DNS with Cloudflare 1.1.1.1 / Google 8.8.8.8, or pasting the Cloudflare tunnel into the app).
+  - **4. Website QA & QC Report Remediation (`itinerary_app_website_qa_report.pdf`)**:
+    - **WQA-01**: In `Project/src/app/features/auth/guest/guest.page.html`, updated subtitle copy from *"Your data won't be saved."* to *"Your trips are saved locally on this device. Sign in anytime to back them up to the cloud."*.
+    - **WQA-02**: In `Project/src/app/core/data/offline-places.data.ts`, rescheduled Day 2 suggested itinerary stops to eliminate overlapping time windows: Farm Villaronte (09:00–10:30 AM), Casa Batik (11:00 AM–12:30 PM), D' Pavilion Farm (01:00–03:00 PM). Updated unit test assertions in `itinerary.service.spec.ts`.
+    - **WQA-03**: In `Project/src/app/tabs/tabs.page.html` and `tabs.page.ts`, replaced Tab 3 icon `time-outline` with `bookmark-outline` and updated aria-label to `"Saved Itineraries"`.
+- **Files Created / Modified**:
+  - `Project/src/app/core/services/connectivity.service.ts`
+  - `Project/src/app/core/services/connectivity.service.spec.ts`
+  - `Project/src/app/app.component.html`
+  - `Project/src/app/app.component.ts`
+  - `Project/src/app/app.component.scss`
+  - `Project/src/app/app.component.spec.ts`
+  - `Project/src/environments/environment.prod.ts`
+  - `Project/src/environments/environment.ts`
+  - `Project/src/app/features/auth/guest/guest.page.html`
+  - `Project/src/app/core/data/offline-places.data.ts`
+  - `Project/src/app/core/services/itinerary.service.spec.ts`
+  - `Project/src/app/tabs/tabs.page.html`
+  - `Project/src/app/tabs/tabs.page.ts`
+  - `scripts/start_server.ps1`
+  - `docs/KNOWN_ISSUES.md`
+  - `docs/CHANGELOG.md`
+  - `docs/TODO.md`
+  - `docs/DEVELOPMENT_LOG.md`
+- **Verification & Test Results**:
+  - `npm --prefix Project run test:unit`: **16/16 test files passed, 121/121 tests passed [100%]** in 20.65s.
+  - `python -m pytest backend/tests/ -v`: **14/14 backend tests passed [100%]** in 5.29s.
+  - `npm --prefix Project run build`: **0 compilation errors, production build generated in 7.7s (`Project/www`)**.
+- **Next Recommended Step**:
+  - Commit all changes and push to `origin/main` to trigger the GitHub Actions deployment pipeline, then smoke test the live GitHub Pages application with the enhanced connection manager.

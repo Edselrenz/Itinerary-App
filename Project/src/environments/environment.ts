@@ -1,8 +1,19 @@
-const TRUSTED_API_HOSTNAMES = new Set([
-  'localhost',
-  '127.0.0.1',
-  'anybody-cube-surprise.ngrok-free.dev',
-]);
+const isTrustedApiHostname = (hostname: string): boolean => {
+  const lower = hostname.toLowerCase();
+  if (lower === 'localhost' || lower === '127.0.0.1') {
+    return true;
+  }
+  if (
+    lower === 'anybody-cube-surprise.ngrok-free.dev' ||
+    lower.endsWith('.ngrok-free.dev') ||
+    lower.endsWith('.ngrok.app') ||
+    lower.endsWith('.ngrok.io') ||
+    lower.endsWith('.trycloudflare.com')
+  ) {
+    return true;
+  }
+  return false;
+};
 
 const resolveApiBaseUrl = (fallback: string): string => {
   if (typeof window !== 'undefined' && window.localStorage) {
@@ -14,7 +25,7 @@ const resolveApiBaseUrl = (fallback: string): string => {
       }
       try {
         const parsed = new URL(trimmed);
-        if (TRUSTED_API_HOSTNAMES.has(parsed.hostname.toLowerCase())) {
+        if (isTrustedApiHostname(parsed.hostname)) {
           return trimmed;
         } else {
           console.warn(`[Security] Untrusted custom API hostname rejected: ${parsed.hostname}`);

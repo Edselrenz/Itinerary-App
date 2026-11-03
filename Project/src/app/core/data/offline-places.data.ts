@@ -257,7 +257,7 @@ export const CANONICAL_OFFLINE_PLACES: CanonicalOfflinePlace[] = [
     tags: ['Sunflower Fields', 'Organic Produce', 'Agri-Tour'],
     directionsUrl: 'https://www.google.com/maps/dir/?api=1&destination=15.7850,120.9980',
     defaultTime: '09:00',
-    defaultDurationMinutes: 120,
+    defaultDurationMinutes: 90,
     isFeatured: true,
   },
   {
@@ -279,7 +279,7 @@ export const CANONICAL_OFFLINE_PLACES: CanonicalOfflinePlace[] = [
     image: 'assets/images/casa_batik.png',
     tags: ['Handcrafted Goods', 'Art Cafe', 'Local Heritage'],
     directionsUrl: 'https://www.google.com/maps/dir/?api=1&destination=15.4850,120.9680',
-    defaultTime: '10:30',
+    defaultTime: '11:00',
     defaultDurationMinutes: 90,
     isFeatured: true,
   },
@@ -302,7 +302,7 @@ export const CANONICAL_OFFLINE_PLACES: CanonicalOfflinePlace[] = [
     image: 'assets/images/pavillion_farm.png',
     tags: ['Mountain View', 'Onion Capital', 'Eco Camp'],
     directionsUrl: 'https://www.google.com/maps/dir/?api=1&destination=15.6322,121.1447',
-    defaultTime: '11:30',
+    defaultTime: '13:00',
     defaultDurationMinutes: 120,
     isFeatured: true,
   },
@@ -464,8 +464,8 @@ export function getOfflineDayClusterPresets(curatedPool: OfflineCuratedPlace[]):
       municipality: 'Cabanatuan City',
       subtitle: 'Heritage art crafts, authentic dining, and countryside leisure!',
       places: [
-        curatedPool.find((p: OfflineCuratedPlace) => p.id === 'dest-farm-villaronte')!,    // 09:00
-        curatedPool.find((p: OfflineCuratedPlace) => p.id === 'dest-casa-batik')!,         // 10:30
+        curatedPool.find((p: OfflineCuratedPlace) => p.id === 'dest-farm-villaronte')!,    // 09:00 - 10:30 AM
+        curatedPool.find((p: OfflineCuratedPlace) => p.id === 'dest-casa-batik')!,         // 11:00 AM - 12:30 PM
         curatedPool.find((p: OfflineCuratedPlace) => p.id === 'dest-pavillion-farm')!,     // 11:30
       ],
     },

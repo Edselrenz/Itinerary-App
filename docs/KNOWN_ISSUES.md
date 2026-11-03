@@ -157,6 +157,36 @@ An independent Senior Software Engineering, QA & QC audit of the repository and 
 | **SEC-02** | **LOW** | `Project/src/app/core/services/auth.service.ts` (L135–147) | Long-lived refresh tokens stored in `window.localStorage` are accessible to JavaScript if an XSS flaw arises. | Plan migration to `HttpOnly; Secure; SameSite=Strict` cookies for web, or encrypted native keychain on Capacitor mobile (ADR-010). | **RESOLVED** |
 | **SEC-03** | **LOW** | `backend/app/core/config.py` (L11–16) | Default development JWT secret fallback allows forged tokens if backend runs in production mode without `.env`. | Add a Pydantic `@model_validator` in `Settings` raising startup error if `app_env != "development"` and `jwt_secret_key` is default. | **RESOLVED** |
 
+---
 
+## 6. Live QA & Connectivity Observations (November 3, 2026)
 
+### 6.1 Website QA & QC Findings (itinerary_app_website_qa_report.pdf)
 
+| ID | Severity | Module / Location | Observation Summary | Remediation Applied | Status |
+| :--- | :---: | :--- | :--- | :--- | :---: |
+| **WQA-01** | **LOW** | `Project/src/app/features/auth/guest/guest.page.html` | Subtitle stated *"Your data won't be saved"* even though guest trips are persisted locally via Dexie IndexedDB. | Updated text to: *"Your trips are saved locally on this device. Sign in anytime to back them up to the cloud."* | **RESOLVED** |
+| **WQA-02** | **LOW** | `Project/src/app/core/data/offline-places.data.ts` | Overlapping Day 2 time windows in suggested wizard (09:00–11:00 AM, 10:30 AM–12:00 PM, 11:30 AM–1:30 PM). | Rescheduled stops to clean non-overlapping slots: Stop 1: 09:00–10:30 AM; Stop 2: 11:00 AM–12:30 PM; Stop 3: 01:00–03:00 PM. | **RESOLVED** |
+| **WQA-03** | **LOW** | `Project/src/app/tabs/tabs.page.html` & `tabs.page.ts` | Tab 3 used `time-outline` icon with ambiguous history context. | Changed icon to `bookmark-outline` and aria-label to `"Saved Itineraries"` for clarity and alignment with modern mobile design. | **RESOLVED** |
+
+### 6.2 Pilot Backend Live Connectivity & Home Router DNS NXDOMAIN Caching
+
+- **Problem Analysis**:
+  - When the FastAPI backend runs on the developer laptop and exposes an ngrok tunnel (`anybody-cube-surprise.ngrok-free.dev`), certain residential Wi-Fi routers (e.g., Tenda, TP-Link, PLDT) drop IPv4 A queries or aggressively cache NXDOMAIN (Non-Existent Domain) responses from when the tunnel was inactive.
+  - When users open the deployed GitHub Pages application (`https://edselrenz.github.io/Itinerary-App/`), the browser triggers a network error (`ERR_NAME_NOT_RESOLVED`), rendering the Offline Mode banner.
+  - Clicking `[Retry]` or refreshing the page repeatedly pinged the same cached NXDOMAIN with no UI feedback and no fallback mechanism.
+- **Root Cause**:
+  1. Router DHCP DNS server (`192.168.5.1`) negative DNS caching for dynamic `.dev` TLDs.
+  2. Frontend `environment.prod.ts` and `ConnectivityService.isValidApiUrl()` lacked Cloudflare Tunnel support (`*.trycloudflare.com`) and did not offer an interactive URL configuration UI.
+  3. `scripts/start_server.ps1` previously exited with port conflict when port 8000 was already active.
+- **Architectural Solution**:
+  1. **Interactive In-App Server Connection Manager**:
+     - Added a `[Settings]` gear button to the Offline Mode banner.
+     - Enhanced `retryConnection()`: If reconnection succeeds, displays a green toast confirmation; if it fails, immediately opens an interactive Ionic Alert dialog displaying the unreachable host and an input field to enter or paste an active Cloudflare Tunnel (`https://*.trycloudflare.com`), ngrok URL, or localhost.
+     - Validates candidate URLs against strict trusted hostname allowlist (`SEC-01`) before persisting to `localStorage.ne_custom_api_url`.
+     - Provided a "Reset to Default" action to restore the default permanent tunnel.
+  2. **Dual-Tunnel Startup Script (`scripts/start_server.ps1`)**:
+     - Starts both ngrok (`anybody-cube-surprise.ngrok-free.dev`) and Cloudflare Quick Tunnel (`*.trycloudflare.com`) concurrently, outputting both URLs to the terminal.
+     - Detects when port 8000 is already active without crashing or killing active tunnels.
+  3. **Browser Secure DNS (DNS-over-HTTPS)**:
+     - Documented one-click Secure DNS configuration for Chrome/Edge (Settings > Privacy and security > Use secure DNS > Choose 'Cloudflare' / 'Google') to bypass residential router DNS filtering.

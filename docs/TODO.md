@@ -294,10 +294,31 @@ This checklist tracks completed, active, and pending tasks across all developmen
 
 ## Phase 16: Release Candidate Deployment & Post-MVP Evolution (ACTIVE / PLANNED)
 
-### Phase 16.1: Release Candidate Deployment & Live Verification (Immediate)
-- [ ] Commit all Phase 15 remediation changes, tests, and documentation to Git with message `release: v0.15.4-rc.10 QA/QC audit remediation complete`.
+### Phase 16.1: Live Server Connectivity, Retry Resilience & QA Fixes (COMPLETED)
+- [x] **Interactive Server Connection Manager (Offline Banner & Retry Experience)**:
+  - [x] Add interactive `[Settings]` gear button to offline banner for immediate configuration.
+  - [x] Enhance `retryConnection()` with visual loading spinner and positive feedback toast upon success.
+  - [x] Launch `openServerConfigAlert(true)` automatically when retry fails, allowing users to inspect the unreachable URL and input/paste an active Cloudflare Tunnel (`https://*.trycloudflare.com`), ngrok URL, or localhost address.
+  - [x] Implement "Reset to Default" action to restore default environment configuration.
+- [x] **Dual-Tunnel Startup Architecture (`scripts/start_server.ps1` & `start_server.bat`)**:
+  - [x] Launch both permanent ngrok (`anybody-cube-surprise.ngrok-free.dev`) and Cloudflare Quick Tunnel (`*.trycloudflare.com`) concurrently to port `8000`.
+  - [x] Detect when port 8000 is already active to prevent port collision crashes.
+  - [x] Output both connection URLs with residential Wi-Fi router Secure DNS (DoH) tips.
+- [x] **QA & QC Report Remediation (itinerary_app_website_qa_report.pdf)**:
+  - [x] **WQA-01**: In `guest.page.html`, replace *"Your data won't be saved."* with *"Your trips are saved locally on this device. Sign in anytime to back them up to the cloud."*.
+  - [x] **WQA-02**: In `offline-places.data.ts`, adjust Day 2 venue default times/durations to prevent overlaps (Farm Villaronte: 09:00–10:30, Casa Batik: 11:00–12:30, D' Pavilion: 13:00–15:00).
+  - [x] **WQA-03**: In `tabs.page.html` and `tabs.page.ts`, update Tab 3 icon to `bookmark-outline` and aria-label to `"Saved Itineraries"`.
+- [x] **SEC-01 & Hostname Allowlist Expansion**:
+  - [x] Update `isValidApiUrl()` and `isTrustedApiHostname()` in `environment.prod.ts`, `environment.ts`, and `connectivity.service.ts` to securely allow `*.trycloudflare.com` and `*.ngrok-free.dev`.
+- [x] **Full Test Verification & Production Build**:
+  - [x] Vitest unit test suite: 121/121 tests passing across 16 test files.
+  - [x] Backend Pytest suite: 14/14 tests passing.
+  - [x] Frontend production compilation: `npm run build` completed cleanly into `Project/www/`.
+
+### Phase 16.2: Release Candidate Deployment & Live Verification (Immediate)
+- [ ] Commit all Phase 15 and 16.1 remediation changes, tests, and documentation to Git with message `release: v0.16.0 Live connectivity, retry resilience, and QA report remediation`.
 - [ ] Push to `origin/main` to trigger automated GitHub Actions CI pipeline (`deploy.yml`) running backend Pytest and frontend Vitest suites before deploying to GitHub Pages.
-- [ ] Smoke-test live production URL (`https://edselrenz.github.io/Itinerary-App/`) connected to the persistent tunnel (`https://anybody-cube-surprise.ngrok-free.dev/api/v1`) across desktop and mobile screen viewports.
+- [ ] Smoke-test live production URL (`https://edselrenz.github.io/Itinerary-App/`) connected to backend.
 
 ### Phase 16.2: Native Mobile Binary Packaging (Capacitor)
 - [ ] Initialize Capacitor Android platform (`npx cap add android`) in `Project/`.

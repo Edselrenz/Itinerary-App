@@ -1,5 +1,5 @@
 # ==============================================================================
-# Nueva Ecija Travel App - Server Startup & Cloudflare Tunnel Script
+# Nueva Ecija Travel App - Server Startup & Dual Tunnel Script (ngrok + Cloudflare)
 # ==============================================================================
 param (
     [switch]$WithTunnel = $true,
@@ -12,10 +12,10 @@ $ProjectRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 Set-Location $ProjectRoot
 
 Write-Host "============================================================" -ForegroundColor Cyan
-Write-Host "  Nueva Ecija Travel App - Local Server & Database Launcher " -ForegroundColor Cyan
+Write-Host "  Nueva Ecija Travel App - Local Server & Dual Tunnel       " -ForegroundColor Cyan
 Write-Host "============================================================" -ForegroundColor Cyan
 
-# 1. Start PostgreSQL Database
+# 1. Start or Verify Database
 Write-Host "`n[1/4] Checking PostgreSQL Database..." -ForegroundColor Yellow
 $pgListening = $false
 try {
@@ -62,13 +62,31 @@ if ($pgListening) {
     Write-Host "[OK] Using seeded SQLite database (nueva_ecija_travel.db)." -ForegroundColor Green
 }
 
-# 3. Locate and Launch Persistent Tunnel (ngrok permanent tunnel with Cloudflare fallback)
-$tunnelProcess = $null
-$tunnelUrl = $null
+# 2. Check if FastAPI backend on port 8000 is already active
+$serverAlreadyRunning = $false
+try {
+    $tcp = New-Object System.Net.Sockets.TcpClient
+    $iar = $tcp.BeginConnect("127.0.0.1", 8000, $null, $null)
+    $success = $iar.AsyncWaitHandle.WaitOne(1000)
+    if ($success -and $tcp.Connected) {
+        $tcp.EndConnect($iar)
+        $serverAlreadyRunning = $true
+    }
+    $tcp.Close()
+} catch {}
+
+if ($serverAlreadyRunning) {
+    Write-Host "`n[+] FastAPI backend is already running on http://127.0.0.1:8000." -ForegroundColor Green
+}
+
+# 3. Locate and Launch Tunnels (ngrok and Cloudflare Tunnel)
+$tunnelProcesses = @()
+$ngrokUrl = $null
+$cfUrl = $null
 $toolsDir = Join-Path $ProjectRoot "tools"
 
 if (-not $NoTunnel) {
-    # Check for ngrok permanent domain
+    # 3a. Start ngrok tunnel
     $ngrokDomain = "anybody-cube-surprise.ngrok-free.dev"
     if (Test-Path (Join-Path $ProjectRoot ".env")) {
         $envLines = Get-Content (Join-Path $ProjectRoot ".env")
@@ -87,121 +105,76 @@ if (-not $NoTunnel) {
         }
     }
 
-    if ($ngrokBin -and (Test-Path $ngrokBin) -and $ngrokDomain) {
-        Write-Host "`n[3/4] Launching Permanent ngrok Tunnel ($ngrokDomain)..." -ForegroundColor Cyan
-        $tunnelLog = Join-Path $env:TEMP "ne_ngrok.log"
-        if (Test-Path $tunnelLog) {
-            Remove-Item $tunnelLog -Force -ErrorAction SilentlyContinue
-        }
+    if ($ngrokBin -and (Test-Path $ngrokBin)) {
+        Write-Host "`n[3/4] Launching ngrok Tunnel ($ngrokDomain)..." -ForegroundColor Cyan
+        $ngrokLog = Join-Path $env:TEMP "ne_ngrok.log"
+        if (Test-Path $ngrokLog) { Remove-Item $ngrokLog -Force -ErrorAction SilentlyContinue }
 
-        $tunnelProcess = Start-Process -FilePath $ngrokBin `
+        $ngrokProcess = Start-Process -FilePath $ngrokBin `
             -ArgumentList "http --url=https://$ngrokDomain 8000 --log=stdout" `
-            -RedirectStandardOutput $tunnelLog `
+            -RedirectStandardOutput $ngrokLog `
             -RedirectStandardError (Join-Path $env:TEMP "ne_ngrok_err.log") `
             -PassThru -NoNewWindow
+        
+        $tunnelProcesses += $ngrokProcess
+        $ngrokUrl = "https://$ngrokDomain"
+        Write-Host "  [OK] ngrok tunnel process launched." -ForegroundColor Green
+    }
 
-        Write-Host "Connecting to ngrok edge network ($ngrokDomain)..." -ForegroundColor Gray
-        for ($i = 0; $i -lt 15; $i++) {
-            Start-Sleep -Seconds 1
-            if (Test-Path $tunnelLog) {
-                $logContent = Get-Content $tunnelLog -Raw -ErrorAction SilentlyContinue
-                if ($logContent -match 'started tunnel.*url=') {
-                    break
-                }
-                if ($logContent -match 'ERR_NGROK_') {
-                    Write-Host "[WARNING] ngrok error: $logContent" -ForegroundColor Yellow
-                    break
-                }
-            }
-            if ($tunnelProcess.HasExited) {
-                break
-            }
-        }
-        $tunnelUrl = "https://$ngrokDomain"
-
-        Write-Host "`n+----------------------------------------------------------------------+" -ForegroundColor Green
-        Write-Host "|  PERMANENT NGROK HTTPS TUNNEL ACTIVE!                                |" -ForegroundColor Green
-        Write-Host "+----------------------------------------------------------------------+" -ForegroundColor Green
-        Write-Host "  Fixed Backend URL: $tunnelUrl/api/v1" -ForegroundColor Cyan
-        Write-Host "  Live GitHub Pages: https://edselrenz.github.io/Itinerary-App/" -ForegroundColor Cyan
-        Write-Host ""
-        Write-Host "  AUTOMATIC CONNECTION: ACTIVE" -ForegroundColor Green
-        Write-Host "  GitHub Pages and mobile devices connect automatically without" -ForegroundColor Green
-        Write-Host "  copying or pasting any URLs!" -ForegroundColor Green
-        Write-Host "+----------------------------------------------------------------------+`n" -ForegroundColor Green
-    } else {
-        Write-Host "`n[3/4] Preparing Cloudflare Tunnel fallback for GitHub Pages..." -ForegroundColor Cyan
-
-        $cloudflaredBin = $null
+    # 3b. Start Cloudflare Tunnel
+    $cloudflaredBin = Join-Path $toolsDir "cloudflared.exe"
+    if (-not (Test-Path $cloudflaredBin)) {
         $systemCloudflared = Get-Command cloudflared -ErrorAction SilentlyContinue
         if ($systemCloudflared) {
             $cloudflaredBin = $systemCloudflared.Source
         }
+    }
 
-        $localCloudflared = Join-Path $toolsDir "cloudflared.exe"
-        if (-not $cloudflaredBin -and (Test-Path $localCloudflared)) {
-            $cloudflaredBin = $localCloudflared
-        }
+    if ($cloudflaredBin -and (Test-Path $cloudflaredBin)) {
+        Write-Host "Launching Cloudflare Tunnel (High-resilience fallback)..." -ForegroundColor Cyan
+        $cfLog = Join-Path $env:TEMP "ne_cloudflared.log"
+        if (Test-Path $cfLog) { Remove-Item $cfLog -Force -ErrorAction SilentlyContinue }
 
-        if (-not $cloudflaredBin) {
-            Write-Host "Downloading portable cloudflared.exe to tools/..." -ForegroundColor Yellow
-            try {
-                if (-not (Test-Path $toolsDir)) {
-                    New-Item -ItemType Directory -Path $toolsDir -Force | Out-Null
-                }
-                $downloadUrl = "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe"
-                Invoke-WebRequest -Uri $downloadUrl -OutFile $localCloudflared -UseBasicParsing -TimeoutSec 30
-                if (Test-Path $localCloudflared) {
-                    $cloudflaredBin = $localCloudflared
-                }
-            } catch {
-                Write-Host "[!] Auto-download failed: $($_.Exception.Message)" -ForegroundColor Yellow
-            }
-        }
+        $cfProcess = Start-Process -FilePath $cloudflaredBin `
+            -ArgumentList "tunnel --url http://127.0.0.1:8000 --no-autoupdate" `
+            -RedirectStandardError $cfLog `
+            -PassThru -NoNewWindow
 
-        if ($cloudflaredBin) {
-            Write-Host "Launching Cloudflare Tunnel..." -ForegroundColor Gray
-            $tunnelLog = Join-Path $env:TEMP "ne_cloudflared.log"
-            if (Test-Path $tunnelLog) {
-                Remove-Item $tunnelLog -Force -ErrorAction SilentlyContinue
-            }
-
-            $tunnelProcess = Start-Process -FilePath $cloudflaredBin `
-                -ArgumentList "tunnel --url http://127.0.0.1:8000 --no-autoupdate" `
-                -RedirectStandardError $tunnelLog `
-                -PassThru -NoNewWindow
-
-            Write-Host "Connecting to Cloudflare edge network..." -ForegroundColor Gray
-            for ($i = 0; $i -lt 30; $i++) {
-                Start-Sleep -Milliseconds 500
-                if (Test-Path $tunnelLog) {
-                    $logContent = Get-Content $tunnelLog -Raw -ErrorAction SilentlyContinue
-                    if ($logContent -match '(https://[a-zA-Z0-9-]+\.trycloudflare\.com)') {
-                        $tunnelUrl = $matches[1]
-                        break
-                    }
-                }
-                if ($tunnelProcess.HasExited) {
+        $tunnelProcesses += $cfProcess
+        Write-Host "Connecting to Cloudflare edge network..." -ForegroundColor Gray
+        for ($i = 0; $i -lt 15; $i++) {
+            Start-Sleep -Milliseconds 600
+            if (Test-Path $cfLog) {
+                $logContent = Get-Content $cfLog -Raw -ErrorAction SilentlyContinue
+                if ($logContent -match '(https://[a-zA-Z0-9-]+\.trycloudflare\.com)') {
+                    $cfUrl = $matches[1]
                     break
                 }
             }
-
-            if ($tunnelUrl) {
-                try {
-                    Set-Clipboard -Value $tunnelUrl
-                    $copiedMsg = " [COPIED TO CLIPBOARD]"
-                } catch {
-                    $copiedMsg = ""
-                }
-
-                Write-Host "`n+----------------------------------------------------------------------+" -ForegroundColor Green
-                Write-Host "|  CLOUDFLARE PUBLIC HTTPS TUNNEL CREATED!                             |" -ForegroundColor Green
-                Write-Host "+----------------------------------------------------------------------+" -ForegroundColor Green
-                Write-Host "  Public URL: $tunnelUrl$copiedMsg" -ForegroundColor Cyan
-                Write-Host "+----------------------------------------------------------------------+`n" -ForegroundColor Green
-            }
+        }
+        if ($cfUrl) {
+            Write-Host "  [OK] Cloudflare Tunnel established: $cfUrl" -ForegroundColor Green
         }
     }
+
+    Write-Host "`n+----------------------------------------------------------------------+" -ForegroundColor Green
+    Write-Host "|  ONLINE CONNECTION OPTIONS FOR GITHUB PAGES & MOBILE                 |" -ForegroundColor Green
+    Write-Host "+----------------------------------------------------------------------+" -ForegroundColor Green
+    if ($ngrokUrl) {
+        Write-Host "  1. Fixed ngrok URL:      $ngrokUrl/api/v1" -ForegroundColor Cyan
+    }
+    if ($cfUrl) {
+        Write-Host "  2. Cloudflare Tunnel:    $cfUrl/api/v1" -ForegroundColor Cyan
+    }
+    Write-Host "  Live GitHub Pages:       https://edselrenz.github.io/Itinerary-App/" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "  HOW TO CONNECT:" -ForegroundColor Yellow
+    Write-Host "  - The GitHub Pages app defaults to ngrok automatically." -ForegroundColor Gray
+    Write-Host "  - If your Wi-Fi router (e.g. Tenda/PLDT) has DNS issues resolving ngrok:" -ForegroundColor Gray
+    Write-Host "    A) In Chrome/Edge: Settings > Privacy > Use secure DNS > Choose 'Cloudflare'" -ForegroundColor Gray
+    Write-Host "    B) Or in the App: Tap the [Settings] gear on the Offline banner and paste the" -ForegroundColor Gray
+    Write-Host "       Cloudflare Tunnel URL ($cfUrl) directly!" -ForegroundColor Gray
+    Write-Host "+----------------------------------------------------------------------+`n" -ForegroundColor Green
 } else {
     Write-Host "`n[3/4] Tunnel disabled (-NoTunnel passed)." -ForegroundColor Gray
 }
@@ -212,21 +185,37 @@ if ($WithFrontend) {
     Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$ProjectRoot/Project'; npm start"
 }
 
-# 5. Start FastAPI Backend (Foreground)
-Write-Host "[4/4] Starting FastAPI Server on http://127.0.0.1:8000 ..." -ForegroundColor Green
-Write-Host "  * Swagger UI:    http://127.0.0.1:8000/docs" -ForegroundColor Gray
-Write-Host "  * Health Check:  http://127.0.0.1:8000/api/v1/health" -ForegroundColor Gray
-Write-Host "  * GitHub Pages:  https://edselrenz.github.io/Itinerary-App/" -ForegroundColor Gray
-if ($tunnelUrl) {
-    Write-Host "  * Live Tunnel:   $tunnelUrl" -ForegroundColor Cyan
-}
-Write-Host "`nPress Ctrl+C in this window to stop both the Server and Tunnel.`n" -ForegroundColor Yellow
+# 5. Start or Monitor FastAPI Backend
+if (-not $serverAlreadyRunning) {
+    Write-Host "[4/4] Starting FastAPI Server on http://127.0.0.1:8000 ..." -ForegroundColor Green
+    Write-Host "  * Swagger UI:    http://127.0.0.1:8000/docs" -ForegroundColor Gray
+    Write-Host "  * Health Check:  http://127.0.0.1:8000/api/v1/health" -ForegroundColor Gray
+    Write-Host "`nPress Ctrl+C in this window to stop Server and Tunnels.`n" -ForegroundColor Yellow
 
-try {
-    python -m uvicorn app.main:app --app-dir backend --host 0.0.0.0 --port 8000 --reload
-} finally {
-    if ($tunnelProcess -and -not $tunnelProcess.HasExited) {
-        Write-Host "`nStopping Tunnel process..." -ForegroundColor Gray
-        Stop-Process -Id $tunnelProcess.Id -Force -ErrorAction SilentlyContinue
+    try {
+        python -m uvicorn app.main:app --app-dir backend --host 0.0.0.0 --port 8000 --reload
+    } finally {
+        Write-Host "`nStopping Tunnel processes..." -ForegroundColor Gray
+        foreach ($proc in $tunnelProcesses) {
+            if ($proc -and -not $proc.HasExited) {
+                Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+            }
+        }
+    }
+} else {
+    Write-Host "[4/4] FastAPI Server is already listening on http://127.0.0.1:8000." -ForegroundColor Green
+    Write-Host "Tunnels are running. Press Ctrl+C in this window to stop tunnels.`n" -ForegroundColor Yellow
+
+    try {
+        while ($true) {
+            Start-Sleep -Seconds 2
+        }
+    } finally {
+        Write-Host "`nStopping Tunnel processes..." -ForegroundColor Gray
+        foreach ($proc in $tunnelProcesses) {
+            if ($proc -and -not $proc.HasExited) {
+                Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+            }
+        }
     }
 }
