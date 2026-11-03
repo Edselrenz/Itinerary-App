@@ -66,3 +66,4 @@ npx wrangler secret put ADMIN_SYNC_KEY
 # 5. Deploy the worker
 npx wrangler deploy
 ```
+

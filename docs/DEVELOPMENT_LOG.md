@@ -1553,4 +1553,37 @@ This log records chronological development sessions, detailing objectives, execu
   - `npm --prefix Project run test:unit`: **16/16 test files passed, 121/121 tests passed [100%]** in 18.43s.
   - `python -m pytest backend/tests/ -v`: **14/14 backend tests passed [100%]**.
 - **Next Recommended Step**:
-  - Commit changes and push to `origin/main` to trigger the automated CI/CD pipeline, and follow the 2-minute setup guide in `cloudflare-worker/README.md` to deploy the Worker on Cloudflare dashboard.
+  - Deploy the Cloudflare Worker via `dash.cloudflare.com` per the 2-minute guide in `cloudflare-worker/README.md` to establish a permanent edge proxy.
+
+---
+
+## Session 50: Incognito Connectivity Resolution & Reconnect Auto-Reload
+- **Date & Time**: 2026-11-03 11:45:00 (Local)
+- **Objective**: Diagnose why opening the website in an incognito tab resulted in "server is still unreachable", fix the default production fallback to use the active Cloudflare Tunnel, make the retry mechanism snappy with timeouts, and automatically rehydrate all page data upon reconnect.
+- **Root Cause Analysis**:
+  1. In incognito mode, `localStorage` is empty, so `resolveApiBaseUrl` fell back to `https://anybody-cube-surprise.ngrok-free.dev/api/v1`.
+  2. The user's Philippine ISP / residential router (Tenda at `192.168.5.1`) sinkholes free ngrok `.dev` domains (`net::ERR_NAME_NOT_RESOLVED`), causing the health check to immediately abort.
+  3. The Option 2 Cloudflare Worker (`cloudflare-worker/worker.js`) had not yet been deployed by the user to `dash.cloudflare.com`, so no `*.workers.dev` URL was available yet to serve as the default.
+  4. Meanwhile, the laptop's dual-tunnel daemon (`task-1626`) was actively running and serving `https://incentive-fish-lung-observe.trycloudflare.com`, which resolves cleanly and returns HTTP 200 `{"status":"ok"}` in 0.5s from anywhere.
+- **Tasks Performed & Implementation Details**:
+  - **1. Update Production Fallback API URL (`Project/src/environments/environment.prod.ts`)**:
+    - Changed default fallback from `https://anybody-cube-surprise.ngrok-free.dev/api/v1` to `https://incentive-fish-lung-observe.trycloudflare.com/api/v1`.
+    - Guarantees that any new visitor or incognito tab immediately connects to the laptop's live backend without requiring any manual URL entry.
+  - **2. Fast-Failing Health Check (`Project/src/app/core/services/connectivity.service.ts`)**:
+    - Added RxJS `timeout(5000)` operator to `checkHostHealth()`.
+    - Prevents the browser from hanging for 15–30 seconds during dead DNS lookups, failing gracefully within 5 seconds.
+  - **3. Automatic Data Rehydration on Reconnect (`Project/src/app/app.component.ts`)**:
+    - In `retryConnection()` and `Save & Connect`: added automatic window reload (`window.location.reload()` after 800ms) upon successful connection.
+    - Resolves user concern where refreshing or retrying did not rehydrate components with live database records.
+- **Files Modified**:
+  - `Project/src/environments/environment.prod.ts`
+  - `Project/src/app/core/services/connectivity.service.ts`
+  - `Project/src/app/app.component.ts`
+  - `docs/TODO.md`
+  - `docs/CHANGELOG.md`
+  - `docs/DEVELOPMENT_LOG.md`
+- **Verification & Test Results**:
+  - `npm --prefix Project run test:unit`: **16/16 test files passed, 121/121 tests passed [100%]** in 18.44s.
+  - Live tunnel probe: `curl -s https://incentive-fish-lung-observe.trycloudflare.com/api/v1/health` &rarr; `{"status":"ok","province_scope":"Nueva Ecija","environment":"development"}`.
+- **Next Recommended Step**:
+  - Commit changes as `release: v0.16.2` and push to `origin/main` to trigger the GitHub Pages deployment.

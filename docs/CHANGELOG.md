@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [0.16.2] - 2026-11-03
+### Changed
+- **Default Production API Endpoint Update**:
+  - In `Project/src/environments/environment.prod.ts`:
+    - Updated default fallback API base URL from `https://anybody-cube-surprise.ngrok-free.dev/api/v1` to `https://incentive-fish-lung-observe.trycloudflare.com/api/v1`.
+    - Eliminates initial `ERR_NAME_NOT_RESOLVED` offline failures on residential Philippine ISPs / Wi-Fi routers (e.g. Tenda/PLDT) that sinkhole `.dev` domains.
+- **Snappy Health Check Timeout (`ConnectivityService`)**:
+  - Added RxJS `timeout(5000)` operator to `ConnectivityService.checkHostHealth()` so failed DNS lookups fail fast within 5s instead of leaving the UI spinning indefinitely.
+- **Automatic Reconnection Data Rehydration**:
+  - In `Project/src/app/app.component.ts`:
+    - Added automatic page rehydration (`window.location.reload()` after 800ms) upon successful server reconnection in `retryConnection()` and `openServerConfigAlert()` ("Save & Connect").
+    - Guarantees that when server connectivity is restored, all components and services immediately fetch live backend data rather than displaying stale offline caches.
+
+---
+
 ## [0.16.1] - 2026-11-03
 ### Added
 - **Option 2: Cloudflare Worker Reverse Proxy Architecture**:

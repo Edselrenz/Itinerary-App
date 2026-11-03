@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 
 import { HttpClient } from '@angular/common/http';
 
-import { BehaviorSubject, Observable, catchError, map, of, tap } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, map, of, tap, timeout } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 
@@ -171,7 +171,7 @@ export class ConnectivityService {
     const healthUrl = `${environment.apiBaseUrl}/health`;
 
     return this.http.get<HealthResponse>(healthUrl).pipe(
-
+      timeout(5000),
       tap(() => {
 
         this.isCheckingHealthSubject.next(false);

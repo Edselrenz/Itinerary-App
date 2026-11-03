@@ -62,12 +62,15 @@ export class AppComponent implements OnInit, OnDestroy {
     this.connectivityService.checkHostHealth().subscribe(async (online) => {
       if (online) {
         const toast = await this.toastController.create({
-          message: 'Connected to backend server! Cloud sync active.',
-          duration: 3000,
+          message: 'Connected to backend server! Reloading data...',
+          duration: 2500,
           color: 'success',
           position: 'top',
         });
         await toast.present();
+        setTimeout(() => {
+          window.location.reload();
+        }, 800);
       } else {
         await this.openServerConfigAlert(true);
       }
@@ -132,13 +135,18 @@ export class AppComponent implements OnInit, OnDestroy {
               this.connectivityService.checkHostHealth().subscribe(async (online) => {
                 const toast = await this.toastController.create({
                   message: online
-                    ? 'Connected to backend server! Cloud sync active.'
+                    ? 'Connected to backend server! Reloading data...'
                     : `Saved URL (${this.connectivityService.currentApiUrl}), but host check failed. Verify tunnel is running.`,
-                  duration: 4000,
+                  duration: 3500,
                   color: online ? 'success' : 'warning',
                   position: 'top',
                 });
                 await toast.present();
+                if (online) {
+                  setTimeout(() => {
+                    window.location.reload();
+                  }, 800);
+                }
               });
               return true;
             } catch {

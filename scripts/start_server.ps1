@@ -105,13 +105,17 @@ if (-not $NoTunnel) {
         }
     }
 
+    # Terminate any orphaned tunnel processes from previous runs
+    Stop-Process -Name ngrok, cloudflared -Force -ErrorAction SilentlyContinue
+
     if ($ngrokBin -and (Test-Path $ngrokBin)) {
         Write-Host "`n[3/4] Launching ngrok Tunnel ($ngrokDomain)..." -ForegroundColor Cyan
         $ngrokLog = Join-Path $env:TEMP "ne_ngrok.log"
         if (Test-Path $ngrokLog) { Remove-Item $ngrokLog -Force -ErrorAction SilentlyContinue }
 
+        # Added --pooling-enabled to prevent ERR_NGROK_334 if tunnel was recently active
         $ngrokProcess = Start-Process -FilePath $ngrokBin `
-            -ArgumentList "http --url=https://$ngrokDomain 8000 --log=stdout" `
+            -ArgumentList "http --url=https://$ngrokDomain --pooling-enabled 8000 --log=stdout" `
             -RedirectStandardOutput $ngrokLog `
             -RedirectStandardError (Join-Path $env:TEMP "ne_ngrok_err.log") `
             -PassThru -NoNewWindow

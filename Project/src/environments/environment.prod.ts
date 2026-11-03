@@ -45,7 +45,7 @@ const resolveApiBaseUrl = (fallback: string): string => {
 export const environment = {
   production: true,
   get apiBaseUrl(): string {
-    return resolveApiBaseUrl('https://anybody-cube-surprise.ngrok-free.dev/api/v1');
+    return resolveApiBaseUrl('https://incentive-fish-lung-observe.trycloudflare.com/api/v1');
   },
   tileUrlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
   tileAttribution:

@@ -334,8 +334,11 @@ This checklist tracks completed, active, and pending tasks across all developmen
   - [x] Update `docs/SYSTEM_ARCHITECTURE.md` (Section 5) and `docs/CONFIGURATION_GUIDE.md` (Section 5).
 
 ### Phase 16.3: Release Candidate Deployment & Live Verification (Immediate)
-- [ ] Commit all Phase 16 changes to Git with message `release: v0.16.1 Option 2 Cloudflare Worker reverse proxy implementation`.
-- [ ] Push to `origin/main` to trigger automated GitHub Actions CI pipeline (`deploy.yml`).
+- [x] Update `environment.prod.ts` fallback API base URL to live active Cloudflare Tunnel (`https://incentive-fish-lung-observe.trycloudflare.com/api/v1`) to resolve Philippine ISP/router ngrok DNS failure.
+- [x] Add RxJS `timeout(5000)` operator to `ConnectivityService.checkHostHealth()` to eliminate browser hanging on stalled DNS lookups.
+- [x] Implement automatic data rehydration via smooth reload (`window.location.reload()`) upon successful reconnection in `retryConnection()` and `Save & Connect`.
+- [x] Commit all Phase 16 changes to Git with message `release: v0.16.2 live cloudflare tunnel fallback and reconnect auto-reload`.
+- [x] Push to `origin/main` to trigger automated GitHub Actions CI pipeline (`deploy.yml`).
 - [ ] Smoke-test live production URL (`https://edselrenz.github.io/Itinerary-App/`).
 
 ### Phase 16.2: Native Mobile Binary Packaging (Capacitor)
