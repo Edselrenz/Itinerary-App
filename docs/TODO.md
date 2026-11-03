@@ -343,20 +343,132 @@ This checklist tracks completed, active, and pending tasks across all developmen
 - [x] Proactive launch health probing (`AppComponent.ngOnInit()`) and ngrok offline error conversion (`v0.16.5`).
 - [x] Commit all Phase 16 changes to Git with message `release: v0.16.5 proactive offline detection on app launch`.
 - [x] Push to `origin/main` to trigger automated GitHub Actions CI pipeline (`deploy.yml`).
-- [ ] Smoke-test live production URL (`https://edselrenz.github.io/Itinerary-App/`).
+- [x] Smoke-test live production URL (`https://edselrenz.github.io/Itinerary-App/`).
 
-### Phase 16.2: Native Mobile Binary Packaging (Capacitor)
-- [ ] Initialize Capacitor Android platform (`npx cap add android`) in `Project/`.
-- [ ] Synchronize web assets, plugins, and app icons (`npx cap sync android`).
-- [ ] Implement `SEC-02` Capacitor hardware enclave storage using `@capacitor-community/secure-storage-plugin` for biometrics and hardware Keystore.
-- [ ] Build and verify unsigned debug APK on Android emulator or physical test device.
+---
 
-### Phase 16.3: Offline Map Tile Pre-Caching (PWA Service Worker)
-- [ ] Implement Service Worker caching for OpenStreetMap raster tiles within Nueva Ecija bounds (`15.15 <= lat <= 16.15`, `120.70 <= lng <= 121.40`).
-- [ ] Support zero-signal offline map browsing when travelers visit remote locations (Minalungao National Park, Pantabangan trails).
+## Phase 16: Unwired State & Template Parity (`Priority 1 — Quick Wins`)
+- [ ] **16.1: Render Quick Destination Chips in Suggested Wizard (`UI-01`)**:
+  - [ ] Target: `suggested-wizard.page.html`, `suggested-wizard.page.scss`.
+  - [ ] Horizontal chip row iterating over `quickDestinations` (`['Bongabon', 'Pantabangan', 'Cabanatuan City', 'Gapan City', 'General Tinio', 'Nueva Ecija']`).
+  - [ ] Bind to `(click)="setDestination(dest)"` with `.active` styling when `wizardForm.get('destination')?.value === dest`.
+- [ ] **16.2: Render Budget Summary & Assumptions Box in Suggested Wizard and Itinerary Detail (`UI-02`)**:
+  - [ ] Target: `suggested-wizard.page.html`, `itinerary-detail.page.html`, `global.scss`.
+  - [ ] In `suggested-wizard.page.html` (`viewMode === 'itinerary'`), add `.verified-budget-card` banner bound to `budgetSummary` (`minTotal`, `maxTotal`, `budgetWarning`, `dailyBudgetTarget`).
+  - [ ] In `suggested-wizard.page.html` and `itinerary-detail.page.html`, add expandable/collapsible **Trip Assumptions & Cost Notes** card (`.assumptions-info-box`) rendering `assumptions` array.
+- [ ] **16.3: Wire `pickerTab === 'browse'` Inside Custom Builder's Timeline Modal (`UI-03`)**:
+  - [ ] Target: `custom-builder.page.html` (Lines 515–621), `global.scss`.
+  - [ ] Add 2-segment switcher (`Browse Curated & OSM Places` vs. `Add Off-Grid Custom Venue`) at top of `<ion-modal [isOpen]="isPickerModalOpen">`.
+  - [ ] Wire search input bound to `pickerSearchQuery` / `onPickerSearchChange($event)` and scrollable list of `pickerSearchResults` calling `selectDatabasePlace(place)`.
+- [ ] **16.4: Eliminate Remaining Raw UTC Date Conversions (`UI-04`)**:
+  - [ ] Target: `suggested-wizard.page.ts` (Lines 210–211), `custom-builder.page.ts` (Lines 154–155, 189–201, 224, 241–244).
+  - [ ] Replace `new Date(startStr)` / `new Date(endStr)` with `formatDateRange(startStr, endStr)` from `core/utils/date-input.util.ts`.
+  - [ ] Replace all `new Date().toISOString().split('T')[0]` calls with `toLocalIsoDate(new Date())` and `addDaysLocal()`.
+- [ ] **16.5: Persist Splash Dismissal in `sessionStorage` & Clean Up Unused CSS (`UI-05`)**:
+  - [ ] Target: `app.component.ts`, `app.component.scss`.
+  - [ ] Check `sessionStorage.getItem('ne_splash_seen_v1')` in `AppComponent.ngOnInit()`. Skip 2.8s timer if already seen in current session.
+  - [ ] Write `'true'` to `sessionStorage` in `dismissSplash()`. Remove or bind `.pulse-ring` in `app.component.scss`.
 
-### Phase 16.4: Itinerary Export & Sharing
-- [ ] Client-side PDF export for printing or offline travel documentation.
-- [ ] Downloadable `.ics` (iCalendar) schedule generator for Google Calendar, Apple Calendar, and Outlook.
-- [ ] Shareable read-only itinerary link with QR code generator.
+---
+
+## Phase 17: Custom Builder Stop Editing, Day-Move & Schedule Accuracy (`Priority 1 — Core Functional Parity`)
+- [ ] **17.1: Build Edit Scheduled Stop Modal & Move-to-Day Action (`UI-06`, `UI-07`)**:
+  - [ ] Target: `custom-builder.page.ts`, `custom-builder.page.html`, `custom-builder.page.scss`, `itinerary.service.ts`.
+  - [ ] Add `Edit` button (`create-outline`) on each `.timeline-stop-card`.
+  - [ ] Create `<ion-modal [isOpen]="isEditStopModalOpen">` to edit `planned_time`, `duration_minutes`, `estimated_cost_min`, `estimated_cost_max`, `notes`, and `targetDayNumber` (move stop across days).
+  - [ ] Add `updateItineraryItem()` to `ItineraryService` calling `PATCH /api/v1/itineraries/{id}/days/{day_id}/items/{item_id}`.
+- [ ] **17.2: Add Planned Time & Optional Coordinates to Off-Grid Custom Venue Modal (`UI-08`)**:
+  - [ ] Target: `custom-builder.page.ts`, `custom-builder.page.html` (Lines 529–617).
+  - [ ] Add `customPlannedTime` (`<input type="time">`) and collapsible `"Pin Coordinates (Lat / Lng)"` inputs bounded to Nueva Ecija (`15.15–16.15`, `120.70–121.40`).
+- [ ] **17.3: Fix Misleading Schedule, Budget, and Day Subtitle Fallbacks in `ItineraryDetailPage` (`UI-09`)**:
+  - [ ] Target: `itinerary-detail.page.ts` (Lines 169–215).
+  - [ ] Compute cumulative sequential windows starting from `08:30 AM` or return `'Flexible time'` (eliminate hardcoded `'12:00 PM - 2:00 PM'`).
+  - [ ] Update `formatDailyBudget()` to return `'Flexible Budget'` when `0` or null instead of `'₱ 3,000 - ₱ 5,000/day'`.
+  - [ ] Dynamically derive `getDaySubtitle(day)` from stop categories.
+- [ ] **17.4: Upgrade Custom Builder Browse Stage to Server-Backed Search & Add `CanDeactivate` Route Guard (`UI-10`)**:
+  - [ ] Target: `custom-builder.page.ts`, `app.routes.ts`, `unsaved-changes.guard.ts`.
+  - [ ] Pipe `browseSearchQuery` through debounced search querying all 4,400+ seeded OSM places via `placeService.searchPlaces()`.
+  - [ ] Add `unsavedChangesGuard` attached to `/custom-builder` and `/custom-builder/:id`.
+
+---
+
+## Phase 18: Missing Figma Windows — Popular Destinations Catalog, Stop Details & Commute Guide (`Priority 1 — Figma Design Parity`)
+- [ ] **18.1: Build Popular Destinations ("See All") Window / Modal (`UI-11`)**:
+  - [ ] Target: `home.page.ts`, `home.page.html`, `home.page.scss`.
+  - [ ] Match Figma `Popular Destinations` frame: header with back button, municipality filter pills, and responsive destination catalog.
+  - [ ] Wire `onSeeAll()` to open this full-screen catalog view (`isPopularCatalogOpen = true`).
+- [ ] **18.2: Add Stop Detail Modal to `SuggestedWizardPage` & Fix Stop Card Click Binding (`UI-12`)**:
+  - [ ] Target: `suggested-wizard.page.html` (Line 189), `suggested-wizard.page.ts` (Line 319).
+  - [ ] Change `(click)="openNearbyPlaces(stop)"` to `(click)="openStopDetail(stop)"`.
+  - [ ] Add Stop Detail bottom-sheet modal to inspect photos, hours, cost breakdown, and transit links.
+- [ ] **18.3: Add Figma "How to Get There?" Commute Guide & `Travel Reminder` Section (`UI-13`)**:
+  - [ ] Target: `commute-guide.data.ts` (new), `itinerary-detail.page.html`, `suggested-wizard.page.html`, `global.scss`.
+  - [ ] Map Nueva Ecija municipalities to transit hubs (Cabanatuan Central Terminal, UV Express routes, drop-off points, travel time).
+  - [ ] Render advisory box with transit tips and Google Maps transit handoff.
+- [ ] **18.4: Make "Nearby Places" Cards Interactive with "Add to Day" & "Directions" Actions (`UI-14`)**:
+  - [ ] Target: `suggested-wizard.page.html`, `itinerary-detail.page.html`, `suggested-wizard.page.ts`, `itinerary-detail.page.ts`.
+  - [ ] Enrich `.figma-nearby-card` with category pills, cost badges, stop details click, and `"+ Add to Day"` action.
+- [ ] **18.5: Fix Home Destination Modal Primary CTA & Widen Popular Carousel Cards (`UI-15`)**:
+  - [ ] Target: `home.page.html`, `home.page.ts`, `home.page.scss`.
+  - [ ] Change primary CTA in Destination Detail modal to **"Build Itinerary Here"** navigating to `/suggested-wizard?destination=<muni>&placeId=<id>`.
+  - [ ] Widen `.dest-card` to `160px` with category and honest price badge overlays.
+
+---
+
+## Phase 19: Map Discovery, Multi-Select Filter Sheet & Accessible POI List Drawer (`Priority 2 — MVP Map Spec`)
+- [ ] **19.1: Add Floating Map Search Bar & Multi-Select Filter Bottom Sheet (`UI-16`)**:
+  - [ ] Target: `map.page.html`, `map.page.ts`, `map.page.scss`.
+  - [ ] Floating search bar with filter badge count; multi-select category checkboxes, municipality chips, price tier toggles, and Reset/Apply.
+- [ ] **19.2: Build Accessible Collapsible POI List Drawer on `/tabs/map` (`UI-16`)**:
+  - [ ] Target: `map.page.html`, `map.page.ts`, `map.page.scss`.
+  - [ ] Floating `"List View ({{ places.length }})"` toggle pill opening scrollable POI drawer with keyboard navigation.
+- [ ] **19.3: Add "Add to Itinerary" CTA in Map Bottom Sheet & Dynamic Viewport Bounds Querying (`UI-17`)**:
+  - [ ] Target: `map.page.html`, `map.page.ts`.
+  - [ ] Add `"Start Trip Here"` and `"Add to Custom Itinerary"` buttons inside Map POI Bottom Sheet.
+  - [ ] Listen to Leaflet `moveend` (debounced 350ms) querying `min_lat, max_lat, min_lng, max_lng` via `placeService.getPlaces()`.
+
+---
+
+## Phase 20: Profile Sub-Windows, Notifications & Saved Trips Filtering (`Priority 2 — Account & Navigation UX`)
+- [ ] **20.1: Build `Edit Profile` Modal & Backend `PATCH /api/v1/auth/me` Endpoint (`UI-18`)**:
+  - [ ] Target: `backend/app/api/v1/auth.py`, `backend/app/schemas/auth.py`, `auth.service.ts`, `profile.page.html`, `profile.page.ts`.
+  - [ ] Support updating `full_name`, `username`, and password with Argon2id current password check.
+- [ ] **20.2: Build `App Settings` Modal & Restore Optional Custom API/Tunnel Override (`UI-18`)**:
+  - [ ] Target: `profile.page.html`, `profile.page.ts`, `variables.scss`, `global.scss`.
+  - [ ] Light/Dark high-contrast theme toggle, default trip budget preference, offline data reset, and Advanced Connection Settings override.
+- [ ] **20.3: Add Logout Confirmation Dialog (`UI-18`)**:
+  - [ ] Target: `profile.page.ts`.
+  - [ ] Ionic `AlertController` confirmation dialog with unsynced guest trips alert.
+- [ ] **20.4: Build Notifications & Travel Reminders Drawer on Home (`UI-19`)**:
+  - [ ] Target: `home.page.html`, `home.page.ts`, `home.page.scss`.
+  - [ ] Modal/popover displaying upcoming trip reminders, guest trip sync status, and provincial travel advisories.
+- [ ] **20.5: Add Visible Text Labels to Bottom Tab Bar & Filtering to Saved Itineraries (`UI-20`)**:
+  - [ ] Target: `tabs.page.html`, `tabs.page.scss`, `tabs.routes.ts`, `history.page.html`, `history.page.ts`.
+  - [ ] Add `<ion-label>` (`Home`, `Map`, `Saved`, `Profile`); add search, segment filters (`Upcoming`, `Past`, `Suggested`, `Custom`), and total cost ranges on Saved trips.
+
+---
+
+## Phase 21: Authentication Completeness & Form Integrity (`Priority 2 — Auth Polish`)
+- [ ] **21.1: Add Explicit `Username` Field & Preserve `middleInitial` in `SignupPage` (`UI-21`)**:
+  - [ ] Target: `signup.page.html`, `signup.page.ts`.
+  - [ ] Dedicated `username` input with validation to prevent domain prefix collisions; include `middleInitial` in `fullName`.
+- [ ] **21.2: Wire `rememberMe` Storage Scope, Standardize Eye Icons & Add Forgot Password Modal (`UI-22`)**:
+  - [ ] Target: `login.page.ts`, `login.page.html`, `signup.page.html`, `auth.service.ts`.
+  - [ ] Toggle `localStorage` (remember) vs. `sessionStorage` (session only); standardize password eye icons; structured recovery modal.
+
+---
+
+## Phase 22: Trip Export/Sharing, PWA Caching & Capacitor Packaging (`Priority 3 — Post-MVP & Release`)
+- [ ] **22.1: Build Itinerary Export & Share Modal on `ItineraryDetailPage` (`UI-23`)**:
+  - [ ] Target: `itinerary-detail.page.html`, `itinerary-detail.page.ts`, `itinerary-export.util.ts`.
+  - [ ] Printable PDF summary view (`@media print`), RFC 5545 `.ics` calendar file download, and clipboard summary copy.
+- [ ] **22.2: Configure PWA Service Worker & Offline Map Tile Pre-Caching (`UI-24`)**:
+  - [ ] Target: `ngsw-config.json`, `angular.json`.
+  - [ ] Caching for `/api/v1/municipalities`, `/api/v1/places`, and OSM raster tiles within Nueva Ecija bounds (`15.15–16.15`, `120.70–121.40`).
+- [ ] **22.3: Scaffold Capacitor Android Project & Secure Token Storage (`UI-24`, `SEC-02`)**:
+  - [ ] Target: `capacitor.config.ts`, `auth.service.ts`.
+  - [ ] `npx cap add android`, sync web assets, abstract hardware Keystore token storage with `@capacitor-community/secure-storage-plugin`.
+- [ ] **22.4: Full Regression & E2E Verification Suite**:
+  - [ ] Target: `Project/e2e/app.spec.ts`, `scripts/verify_acceptance_gate.py`.
+  - [ ] Comprehensive test coverage for new catalog, modals, filter sheet, profile sub-windows, and offline behaviors.
 

@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [Unreleased]
+### Documentation & Roadmap
+- **Adopted Development Plan & UI/UX Audit (`v2.0`)**:
+  - Integrated 9 missing Figma/MVP windows and modals into `docs/DEVELOPMENT_PLAN.md`.
+  - Added 24 audit defect registry items (`UI-01` to `UI-24`).
+  - Expanded engineering roadmap across `docs/DEVELOPMENT_PLAN.md`, `docs/TODO.md`, `docs/DEVELOPMENT_LOG.md`, and `docs/PROJECT_STATE.md` with Milestones 16–22.
+
+---
+
 ## [0.16.5] - 2026-11-03
 ### Changed
 - **Proactive Offline State Detection & Interceptor Hardening**:

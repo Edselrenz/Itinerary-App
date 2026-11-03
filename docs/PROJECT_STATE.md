@@ -7,10 +7,10 @@ This document serves as the primary handoff reference for developers and coding 
 ## 1. Project Status Overview
 
 - **Application Name**: Nueva Ecija Travel Itinerary (MVP)
-- **Current Development Phase**: **Phase 15: Technical Evaluation & QA/QC Audit Remediation (Completed & Fully Verified)**
-- **Last Verified Working State**: **Phases 1–15 Completed & Verified** (24/24 acceptance criteria passing, 16/16 test files and 120/120 frontend unit tests, 14/14 backend Pytest cases, clean Angular production build with <10kB styles, automated CI test gates in GitHub Actions, live GitHub Pages deployment at `https://edselrenz.github.io/Itinerary-App/` connected to persistent ngrok tunnel).
-- **Recent Audit Remediation**: Comprehensive remediation of the November 2, 2026 Senior QA/QC Technical Evaluation Audit ([itinerary_app_technical_evaluation_report.pdf](file:///c:/Users/Edward/Desktop/CaseStudy/itinerary_app_technical_evaluation_report.pdf), commit `06cefc5`, v0.15.0-rc.6). All 10 defects (`DEF-01` through `DEF-10`) and all 3 security recommendations (`SEC-01` through `SEC-03`) are resolved and verified.
-- **Current Active Tasks**: System in stable release candidate state (`v0.15.4-rc.10`). Final documentation synchronized and verified.
+- **Current Development Phase**: **Phase 16: Unwired State & Template Parity (Roadmap v2.0: Milestones 16–22)**
+- **Last Verified Working State**: **Phases 0–15 Completed & Verified; Release `v0.16.5` Deployed** (24/24 acceptance criteria passing, 16/16 test files and 121/121 frontend unit tests, 14/14 backend Pytest cases, clean Angular production build, permanent Cloudflare Worker reverse proxy edge deployment, live GitHub Pages deployment at `https://edselrenz.github.io/Itinerary-App/`).
+- **Recent Audit & Roadmap Expansion**: Adoption of **Development Plan & UI/UX Audit (`v2.0`)** covering 9 missing Figma/MVP windows and modals, 24 audit gap registry items (`UI-01` to `UI-24`), and detailed implementation roadmaps for Milestones 16–22.
+- **Current Active Tasks**: Preparing Milestone 16 quick wins (Quick destination chips `UI-01`, budget summary & assumptions `UI-02`, browse modal tab `UI-03`, local date helpers `UI-04`, splash session persistence `UI-05`).
 - **Current Blockers**: **None**.
 
 ---
