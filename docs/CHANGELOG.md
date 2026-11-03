@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [0.16.3] - 2026-11-03
+### Changed
+- **Permanent Cloudflare Worker Production Activation**:
+  - In `Project/src/environments/environment.prod.ts`:
+    - Updated default production API base URL to permanent Cloudflare Worker reverse proxy: `https://ne-itinerary-api.edselrenz0.workers.dev/api/v1`.
+    - Enables 100% zero-configuration permanent connectivity from GitHub Pages to developer laptop.
+  - In `.env`:
+    - Added user-configured `WORKER_SYNC_URL=https://ne-itinerary-api.edselrenz0.workers.dev` and `WORKER_SYNC_KEY`.
+- **End-to-End Edge Verification**:
+  - Verified edge health probe `https://ne-itinerary-api.edselrenz0.workers.dev/api/v1/health` returning `{"status":"ok"}`.
+  - Verified edge places probe `https://ne-itinerary-api.edselrenz0.workers.dev/api/v1/places` returning live database records directly from developer laptop.
+
+---
+
 ## [0.16.2] - 2026-11-03
 ### Changed
 - **Default Production API Endpoint Update**:

@@ -334,10 +334,12 @@ This checklist tracks completed, active, and pending tasks across all developmen
   - [x] Update `docs/SYSTEM_ARCHITECTURE.md` (Section 5) and `docs/CONFIGURATION_GUIDE.md` (Section 5).
 
 ### Phase 16.3: Release Candidate Deployment & Live Verification (Immediate)
-- [x] Update `environment.prod.ts` fallback API base URL to live active Cloudflare Tunnel (`https://incentive-fish-lung-observe.trycloudflare.com/api/v1`) to resolve Philippine ISP/router ngrok DNS failure.
+- [x] Update `environment.prod.ts` fallback API base URL to permanent Cloudflare Worker (`https://ne-itinerary-api.edselrenz0.workers.dev/api/v1`).
+- [x] Configure `.env` with user's permanent Worker URL and `ADMIN_SYNC_KEY`.
 - [x] Add RxJS `timeout(5000)` operator to `ConnectivityService.checkHostHealth()` to eliminate browser hanging on stalled DNS lookups.
 - [x] Implement automatic data rehydration via smooth reload (`window.location.reload()`) upon successful reconnection in `retryConnection()` and `Save & Connect`.
-- [x] Commit all Phase 16 changes to Git with message `release: v0.16.2 live cloudflare tunnel fallback and reconnect auto-reload`.
+- [x] Verify end-to-end edge connectivity: `GET /api/v1/health` (200 OK) and `GET /api/v1/places` returning live database records.
+- [x] Commit all Phase 16 changes to Git with message `release: v0.16.3 permanent cloudflare worker api proxy activation`.
 - [x] Push to `origin/main` to trigger automated GitHub Actions CI pipeline (`deploy.yml`).
 - [ ] Smoke-test live production URL (`https://edselrenz.github.io/Itinerary-App/`).
 
