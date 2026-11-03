@@ -36,93 +36,296 @@ body {
 /* Verified Budget Banner */
 .verified-budget-card {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  background: #ecfdf5;
-  border: 1px solid #a7f3d0;
-  border-radius: 12px;
-  padding: 10px 12px;
+  flex-direction: column;
+  background: linear-gradient(135deg, rgba(236, 253, 245, 0.95) 0%, rgba(240, 253, 244, 0.98) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  box-shadow: 0 2px 8px -2px rgba(16, 185, 129, 0.08);
 
-  .budget-card-icon {
-    font-size: 20px;
-    color: #059669;
-    flex-shrink: 0;
-  }
-  .budget-card-text {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    flex-grow: 1;
-  }
   .budget-card-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    margin-bottom: 6px;
   }
-  .budget-card-label {
-    font-size: 0.72rem;
-    font-weight: 700;
-    color: #065f46;
-    text-transform: uppercase;
+
+  .budget-label-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    .budget-card-icon {
+      font-size: 17px;
+      color: #059669;
+      flex-shrink: 0;
+    }
+
+    .budget-card-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      color: #047857;
+      text-transform: uppercase;
+    }
   }
+
   .budget-card-target {
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     font-weight: 600;
-    color: #047857;
-  }
-  .budget-card-amount {
-    font-size: 0.9rem;
-    font-weight: 800;
-    color: #047857;
-  }
-  .budget-card-note {
-    font-size: 0.7rem;
     color: #065f46;
-    margin: 1px 0 0;
+    background: rgba(5, 150, 105, 0.12);
+    padding: 2px 8px;
+    border-radius: 10px;
+  }
+
+  .budget-card-main-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .budget-amount-stack {
+    display: flex;
+    flex-direction: column;
+
+    .budget-card-amount {
+      font-size: 1.12rem;
+      font-weight: 800;
+      color: #065f46;
+      letter-spacing: -0.01em;
+      line-height: 1.2;
+    }
+
+    .budget-currency-label {
+      font-size: 0.68rem;
+      font-weight: 500;
+      color: #059669;
+      margin-top: 1px;
+    }
+  }
+
+  .unverified-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #b45309;
+    background: #fef3c7;
+    border: 1px solid #fde68a;
+    padding: 3px 8px;
+    border-radius: 8px;
+    flex-shrink: 0;
+
+    ion-icon {
+      font-size: 13px;
+    }
+  }
+
+  .budget-card-note {
+    font-size: 0.68rem;
+    color: #047857;
+    margin: 6px 0 0;
+    line-height: 1.35;
+    opacity: 0.9;
   }
 }
 
 /* Trip Assumptions & Notes Callout Box (Shared UI-02) */
 .assumptions-info-box {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-left: 3.5px solid #0084ff;
-  border-radius: 12px;
-  padding: 10px 14px;
-  margin-top: 10px;
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  border-radius: 14px;
+  margin-top: 6px;
   margin-bottom: 14px;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+  overflow: hidden;
+  transition: all 0.25s ease;
+
+  &.is-expanded {
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.07);
+    border-color: #cbd5e1;
+
+    .assumptions-header {
+      background: #ffffff;
+      border-bottom: 1px solid #f1f5f9;
+    }
+  }
 
   .assumptions-header {
     display: flex;
     align-items: center;
-    gap: 7px;
-    margin-bottom: 6px;
+    justify-content: space-between;
+    padding: 10px 12px;
+    cursor: pointer;
+    user-select: none;
+    background: #fafbfc;
+    border-bottom: 1px solid transparent;
+    transition: background 0.2s ease, border-color 0.2s ease;
 
-    .assumptions-icon {
-      font-size: 18px;
-      color: #0084ff;
-      flex-shrink: 0;
-    }
-
-    .assumptions-title {
-      font-size: 0.82rem;
-      font-weight: 700;
-      color: #0f172a;
-      margin: 0;
+    &:active {
+      background: #f1f5f9;
     }
   }
 
-  .assumptions-list {
-    margin: 0;
-    padding-left: 18px;
+  .assumptions-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    flex: 1;
+
+    .assumptions-icon-badge {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      background: rgba(0, 132, 255, 0.1);
+      color: #0084ff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+
+      ion-icon {
+        font-size: 18px;
+      }
+    }
+
+    .assumptions-title-text {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+
+      .assumptions-title {
+        font-size: 0.82rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin: 0;
+        line-height: 1.25;
+      }
+
+      .assumptions-subtitle {
+        display: block;
+        font-size: 0.7rem;
+        font-weight: 500;
+        color: #64748b;
+        margin-top: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    }
+  }
+
+  .assumptions-toggle-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #0084ff;
+    background: rgba(0, 132, 255, 0.08);
+    padding: 4px 9px;
+    border-radius: 12px;
+    flex-shrink: 0;
+    margin-left: 8px;
+    transition: background 0.2s ease;
+
+    ion-icon {
+      font-size: 13px;
+    }
+  }
+
+  .assumptions-content-collapse {
+    transition: max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease, padding 0.35s ease;
+    max-height: 900px;
+    opacity: 1;
+    overflow: hidden;
+    padding: 10px 12px;
+
+    &.collapsed {
+      max-height: 0;
+      opacity: 0;
+      padding-top: 0;
+      padding-bottom: 0;
+      pointer-events: none;
+    }
+  }
+
+  .assumptions-cards-grid {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 8px;
+  }
 
-    .assumption-item {
-      font-size: 0.76rem;
-      color: #475569;
-      line-height: 1.4;
+  .assumption-insight-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    background: #f8fafc;
+    border: 1px solid #f1f5f9;
+    border-radius: 10px;
+    padding: 9px 11px;
+
+    .insight-icon-wrap {
+      width: 26px;
+      height: 26px;
+      border-radius: 8px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: #0084ff;
+      margin-top: 1px;
+
+      ion-icon {
+        font-size: 14px;
+      }
+    }
+
+    .insight-content {
+      flex: 1;
+      min-width: 0;
+
+      .insight-header-line {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 3px;
+      }
+
+      .insight-tag {
+        font-size: 0.62rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #0284c7;
+        background: rgba(2, 132, 199, 0.1);
+        padding: 1px 6px;
+        border-radius: 5px;
+        flex-shrink: 0;
+      }
+
+      .insight-title {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin: 0;
+        line-height: 1.25;
+      }
+
+      .insight-desc {
+        font-size: 0.72rem;
+        color: #475569;
+        margin: 0;
+        line-height: 1.45;
+      }
     }
   }
 }

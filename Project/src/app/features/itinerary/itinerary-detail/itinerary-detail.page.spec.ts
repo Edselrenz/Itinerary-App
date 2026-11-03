@@ -288,4 +288,29 @@ describe('ItineraryDetailPage', () => {
       'noopener,noreferrer'
     );
   });
+
+  it('toggles assumptions expansion and parses category metadata', () => {
+    expect(component.isAssumptionsExpanded).toBe(false);
+    component.toggleAssumptions();
+    expect(component.isAssumptionsExpanded).toBe(true);
+    component.toggleAssumptions();
+    expect(component.isAssumptionsExpanded).toBe(false);
+
+    const parsed = component.parseAssumption('Operating Hours: Verified public records');
+    expect(parsed.tag).toBe('Schedule');
+    expect(parsed.title).toBe('Operating Hours');
+    expect(parsed.description).toBe('Verified public records');
+    expect(parsed.icon).toBe('time-outline');
+  });
+
+  it('formats SQL time strings into friendly timing windows', () => {
+    const formatted = component.getTimingTime({
+      id: 'item-time',
+      day_id: 'day-1',
+      sort_order: 1,
+      planned_time: '14:00:00',
+      duration_minutes: 60,
+    });
+    expect(formatted).toBe('2:00 PM - 3:00 PM');
+  });
 });

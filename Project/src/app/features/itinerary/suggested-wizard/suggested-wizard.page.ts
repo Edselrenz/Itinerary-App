@@ -22,19 +22,25 @@ import {
   cartOutline,
   cashOutline,
   checkmarkCircle,
+  chevronDownOutline,
+  chevronUpOutline,
   closeOutline,
+  compassOutline,
   createOutline,
   informationCircle,
   informationCircleOutline,
   locationOutline,
   locationSharp,
+  mapOutline,
   medkitOutline,
   openOutline,
   restaurantOutline,
   searchOutline,
+  shieldCheckmarkOutline,
   sparkles,
   storefrontOutline,
   timeOutline,
+  walkOutline,
 } from 'ionicons/icons';
 import { Itinerary, ItineraryBudgetSummary, ItineraryDay, ItineraryItem } from '../../../core/models/itinerary.models';
 import { Place } from '../../../core/models/place.models';
@@ -108,6 +114,7 @@ export class SuggestedWizardPage implements OnInit {
 
   public isStopModalOpen = false;
   public selectedStop: ItineraryItem | null = null;
+  public isAssumptionsExpanded = false;
 
   constructor(
     private fb: FormBuilder,
@@ -131,15 +138,21 @@ export class SuggestedWizardPage implements OnInit {
       timeOutline,
       alertCircleOutline,
       checkmarkCircle,
+      chevronDownOutline,
+      chevronUpOutline,
+      compassOutline,
       createOutline,
       informationCircle,
       informationCircleOutline,
       closeOutline,
+      mapOutline,
       openOutline,
       restaurantOutline,
       medkitOutline,
       cartOutline,
+      shieldCheckmarkOutline,
       storefrontOutline,
+      walkOutline,
     });
 
     const today = new Date();
@@ -583,9 +596,77 @@ export class SuggestedWizardPage implements OnInit {
     return `Food spots, local culture, and historic sites in ${muni}!`;
   }
 
+  public toggleAssumptions(): void {
+    this.isAssumptionsExpanded = !this.isAssumptionsExpanded;
+  }
+
+  public parseAssumption(note: string): { tag: string; title: string; description: string; icon: string } {
+    if (!note) {
+      return { tag: 'Tip', title: 'Travel Note', description: '', icon: 'compass-outline' };
+    }
+    const match = note.match(/^([A-Za-z\s&/]{2,30}):\s+(.+)$/);
+    let title = '';
+    let description = '';
+
+    if (match) {
+      title = match[1].trim();
+      description = match[2].trim();
+    } else {
+      title = '';
+      description = note.trim();
+    }
+
+    const lower = (title + ' ' + description).toLowerCase();
+    let icon = 'compass-outline';
+    let tag = 'Advice';
+
+    if (lower.includes('pacing') || lower.includes('speed')) {
+      icon = 'walk-outline';
+      tag = 'Pacing';
+    } else if (lower.includes('geographic') || lower.includes('cluster') || lower.includes('route') || lower.includes('backtrack')) {
+      icon = 'map-outline';
+      tag = 'Routing';
+    } else if (lower.includes('budget') || lower.includes('cost') || lower.includes('expense') || lower.includes('fare') || lower.includes('pricing') || lower.includes('unpriced')) {
+      icon = 'cash-outline';
+      tag = 'Budget';
+    } else if (lower.includes('hour') || lower.includes('schedule') || lower.includes('holiday') || lower.includes('time') || lower.includes('pm') || lower.includes('am')) {
+      icon = 'time-outline';
+      tag = 'Schedule';
+    } else if (lower.includes('stop')) {
+      icon = 'walk-outline';
+      tag = 'Pacing';
+    }
+
+    return { tag, title, description, icon };
+  }
+
   public getTimingTime(stop: any): string {
     if (stop.planned_time) {
-      return stop.planned_time;
+      const raw = String(stop.planned_time).trim();
+      if (raw.includes('AM') || raw.includes('PM') || raw.includes('Night')) {
+        return raw;
+      }
+      const match = raw.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+      if (match) {
+        const h = parseInt(match[1], 10);
+        const m = parseInt(match[2], 10);
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        const h12 = h % 12 || 12;
+        const mm = m < 10 ? `0${m}` : `${m}`;
+        const startTime = `${h12}:${mm} ${ampm}`;
+
+        const dur = stop.duration_minutes || 90;
+        const endTotal = h * 60 + m + dur;
+        const endH = Math.floor(endTotal / 60) % 24;
+        const endM = endTotal % 60;
+        const endAmpm = endH >= 12 ? 'PM' : 'AM';
+        const endH12 = endH % 12 || 12;
+        const endMm = endM < 10 ? `0${endM}` : `${endM}`;
+        const endTime = `${endH12}:${endMm} ${endAmpm}`;
+
+        return `${startTime} - ${endTime}`;
+      }
+      return raw;
     }
     return '12:00 PM - 2:00 PM';
   }

@@ -174,34 +174,77 @@
       <!-- Verified Estimated Costs Summary (UI-02) -->
       @if (budgetSummary) {
         <div class="verified-budget-card">
-          <ion-icon name="cash-outline" class="budget-card-icon"></ion-icon>
-          <div class="budget-card-text">
-            <div class="budget-card-header">
+          <div class="budget-card-header">
+            <div class="budget-label-wrap">
+              <ion-icon name="shield-checkmark-outline" class="budget-card-icon"></ion-icon>
               <span class="budget-card-label">Verified Estimated Costs</span>
-              <span class="budget-card-target">Budget: ₱{{ form.get('daily_budget')?.value || generatedPlan.daily_budget || 0 }}/day</span>
             </div>
-            <div class="budget-card-amount">{{ budgetSummary.displayText }}</div>
+            <span class="budget-card-target">
+              Target: ₱{{ (form.get('daily_budget')?.value || generatedPlan.daily_budget || 0).toLocaleString() }}/day
+            </span>
+          </div>
+          <div class="budget-card-main-row">
+            <div class="budget-amount-stack">
+              <span class="budget-card-amount">{{ budgetSummary.displayText }}</span>
+              <span class="budget-currency-label">estimated venue admission & activities</span>
+            </div>
             @if (budgetSummary.unverifiedCount > 0) {
-              <p class="budget-card-note">
-                * {{ budgetSummary.unverifiedCount }} stop(s) do not list verified pricing in open public records.
-              </p>
+              <span class="unverified-badge">
+                <ion-icon name="information-circle-outline"></ion-icon>
+                {{ budgetSummary.unverifiedCount }} unpriced
+              </span>
             }
           </div>
+          @if (budgetSummary.unverifiedCount > 0) {
+            <p class="budget-card-note">
+              * {{ budgetSummary.unverifiedCount }} stop(s) do not list verified pricing in open public records.
+            </p>
+          }
         </div>
       }
 
-      <!-- Trip Assumptions & Cost Notes (UI-02) -->
+      <!-- Trip Assumptions & Travel Notes (Collapsible Structured Insight Cards) -->
       @if (generatedPlan.assumptions && generatedPlan.assumptions.length > 0) {
-        <div class="assumptions-info-box">
-          <div class="assumptions-header">
-            <ion-icon name="information-circle-outline" class="assumptions-icon"></ion-icon>
-            <h4 class="assumptions-title">Trip Assumptions & Travel Notes</h4>
+        <div class="assumptions-info-box" [class.is-expanded]="isAssumptionsExpanded">
+          <div class="assumptions-header" (click)="toggleAssumptions()">
+            <div class="assumptions-title-wrap">
+              <div class="assumptions-icon-badge">
+                <ion-icon name="compass-outline"></ion-icon>
+              </div>
+              <div class="assumptions-title-text">
+                <h4 class="assumptions-title">Trip Assumptions & Travel Notes</h4>
+                <span class="assumptions-subtitle">
+                  {{ isAssumptionsExpanded ? 'Pacing, clustering, and local transit rules' : 'Pacing & routes clustered around ' + generatedPlan.destination }}
+                </span>
+              </div>
+            </div>
+            <div class="assumptions-toggle-btn">
+              <span class="toggle-text">{{ isAssumptionsExpanded ? 'Hide' : 'View ' + generatedPlan.assumptions.length }}</span>
+              <ion-icon [name]="isAssumptionsExpanded ? 'chevron-up-outline' : 'chevron-down-outline'"></ion-icon>
+            </div>
           </div>
-          <ul class="assumptions-list">
-            @for (note of generatedPlan.assumptions; track note) {
-              <li class="assumption-item">{{ note }}</li>
-            }
-          </ul>
+
+          <div class="assumptions-content-collapse" [class.collapsed]="!isAssumptionsExpanded">
+            <div class="assumptions-cards-grid">
+              @for (note of generatedPlan.assumptions; track note) {
+                @let parsed = parseAssumption(note);
+                <div class="assumption-insight-card">
+                  <div class="insight-icon-wrap">
+                    <ion-icon [name]="parsed.icon"></ion-icon>
+                  </div>
+                  <div class="insight-content">
+                    <div class="insight-header-line">
+                      <span class="insight-tag">{{ parsed.tag }}</span>
+                      @if (parsed.title) {
+                        <h5 class="insight-title">{{ parsed.title }}</h5>
+                      }
+                    </div>
+                    <p class="insight-desc">{{ parsed.description }}</p>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
         </div>
       }
 

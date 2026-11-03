@@ -321,4 +321,35 @@ describe('SuggestedWizardPage', () => {
       'noopener,noreferrer'
     );
   });
+
+  it('toggles assumptions expansion and parses category metadata', () => {
+    expect(component.isAssumptionsExpanded).toBe(false);
+    component.toggleAssumptions();
+    expect(component.isAssumptionsExpanded).toBe(true);
+    component.toggleAssumptions();
+    expect(component.isAssumptionsExpanded).toBe(false);
+
+    const parsedPacing = component.parseAssumption('Pacing: 2 to 3 stops scheduled per day');
+    expect(parsedPacing.tag).toBe('Pacing');
+    expect(parsedPacing.title).toBe('Pacing');
+    expect(parsedPacing.description).toBe('2 to 3 stops scheduled per day');
+    expect(parsedPacing.icon).toBe('walk-outline');
+
+    const parsedRouting = component.parseAssumption('Geographic clustering: Stops on each day are clustered');
+    expect(parsedRouting.tag).toBe('Routing');
+    expect(parsedRouting.icon).toBe('map-outline');
+
+    const parsedRaw = component.parseAssumption('Unstructured advice note');
+    expect(parsedRaw.tag).toBe('Advice');
+    expect(parsedRaw.title).toBe('');
+    expect(parsedRaw.description).toBe('Unstructured advice note');
+  });
+
+  it('formats SQL time strings and duration into friendly timing windows', () => {
+    const formatted = component.getTimingTime({ planned_time: '09:00:00', duration_minutes: 120 });
+    expect(formatted).toBe('9:00 AM - 11:00 AM');
+
+    const durationText = component.getTimingDuration({ duration_minutes: 120 });
+    expect(durationText).toBe('2 hrs');
+  });
 });
