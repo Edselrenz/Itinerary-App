@@ -510,6 +510,25 @@ describe('ItineraryService', () => {
 
     });
 
+    it('should partially update stop via HTTP (UI-06)', () => {
+      const patchData = {
+        notes: 'Updated personal note',
+        duration_minutes: 60,
+        estimated_cost_min: 250,
+      };
+
+      service.updateStop('itin-uuid-1', 'day-uuid-1', 'item-uuid-1', patchData).subscribe();
+
+      const req = httpMock.expectOne(
+        `${environment.apiBaseUrl}/itineraries/itin-uuid-1/days/day-uuid-1/items/item-uuid-1`
+      );
+
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toEqual(patchData);
+
+      req.flush(mockItinerary);
+    });
+
     it('should reorder stops via HTTP', () => {
 
       const entries: ItineraryReorderEntry[] = [

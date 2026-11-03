@@ -37,12 +37,13 @@ import {
   timeOutline,
   trashOutline,
 } from 'ionicons/icons';
-import { Subscription, debounceTime, distinctUntilChanged } from 'rxjs';
+import { Subject, Subscription, debounceTime, distinctUntilChanged } from 'rxjs';
 import { Itinerary } from '../../../core/models/itinerary.models';
 import { addDaysLocal, diffDaysLocal, formatDateRange, parseLocalIsoDate, toLocalIsoDate } from '../../../core/utils/date.utils';
 import { Place } from '../../../core/models/place.models';
 import { ItineraryBudgetSummary, ItineraryService } from '../../../core/services/itinerary.service';
 import { PlaceService } from '../../../core/services/place.service';
+import { ComponentCanDeactivate } from '../../../core/guards/pending-changes.guard';
 
 export interface BuilderStop {
   id: string;
@@ -90,7 +91,7 @@ export interface BuilderDay {
     IonSpinner,
   ],
 })
-export class CustomBuilderPage implements OnInit, OnDestroy {
+export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactivate {
   public form: FormGroup;
   public days: BuilderDay[] = [];
   public activeDayIndex = 0;
@@ -125,6 +126,7 @@ export class CustomBuilderPage implements OnInit, OnDestroy {
   public allCuratedPlaces: Place[] = [];
   public displayedPlaces: Place[] = [];
   public isBrowseLoading = false;
+  public browseSearchSubject = new Subject<string>();
 
   // Budget summary
   public budgetSummary: ItineraryBudgetSummary = {
@@ -141,13 +143,28 @@ export class CustomBuilderPage implements OnInit, OnDestroy {
   public pickerSearching = false;
   public pickerTab: 'browse' | 'custom' = 'browse';
 
-  // Custom venue form fields
+  // Custom venue form fields (UI-08)
   public customVenueTitle = '';
   public customVenueAddress = '';
   public customVenueCostMin: number | null = null;
   public customVenueCostMax: number | null = null;
   public customVenueDuration = 90;
   public customVenueNotes = '';
+  public customPlannedTime = '';
+  public customVenueLat: number | null = null;
+  public customVenueLng: number | null = null;
+  public isCustomCoordsExpanded = false;
+
+  // Edit Scheduled Stop Modal state (UI-06, UI-07)
+  public isEditStopModalOpen = false;
+  public editingStop: BuilderStop | null = null;
+  public editingStopIndex = -1;
+  public editStopTargetDayIndex = 0;
+  public editStopTime = '';
+  public editStopDuration = 90;
+  public editStopCostMin: number | null = null;
+  public editStopCostMax: number | null = null;
+  public editStopNotes = '';
 
   private subscriptions = new Subscription();
 
@@ -210,6 +227,14 @@ export class CustomBuilderPage implements OnInit, OnDestroy {
     this.loadBrowsePlaces();
 
     this.subscriptions.add(
+      this.browseSearchSubject
+        .pipe(debounceTime(300), distinctUntilChanged())
+        .subscribe((q) => {
+          this.executeBrowseServerSearch(q);
+        })
+    );
+
+    this.subscriptions.add(
       this.form.valueChanges.subscribe(() => {
         this.hasUnsavedChanges = true;
         this.updateBudgetSummary();
@@ -219,6 +244,35 @@ export class CustomBuilderPage implements OnInit, OnDestroy {
 
   public ngOnDestroy(): void {
     this.subscriptions.unsubscribe();
+  }
+
+  /**
+   * Prevents accidental navigation when travelers have unsaved itinerary edits (UI-10).
+   */
+  public canDeactivate(): boolean | Promise<boolean> {
+    if (!this.hasUnsavedChanges) {
+      return true;
+    }
+    return new Promise<boolean>((resolve) => {
+      this.alertController
+        .create({
+          header: 'Unsaved Itinerary Changes',
+          message: 'You have unsaved changes in your custom itinerary. Leaving now will discard your current edits.',
+          buttons: [
+            {
+              text: 'Stay & Edit',
+              role: 'cancel',
+              handler: () => resolve(false),
+            },
+            {
+              text: 'Discard & Leave',
+              role: 'destructive',
+              handler: () => resolve(true),
+            },
+          ],
+        })
+        .then((alert) => alert.present());
+    });
   }
 
   private initDefaultDays(): void {
@@ -571,14 +625,85 @@ export class CustomBuilderPage implements OnInit, OnDestroy {
     this.hasUnsavedChanges = true;
   }
 
-  public removeStop(itemIndex: number): void {
+  public async removeStop(itemIndex: number): Promise<void> {
     const cur = this.currentDay;
     if (!cur) return;
+    const stop = cur.items[itemIndex];
+    const stopName = stop?.name || 'this stop';
 
-    cur.items.splice(itemIndex, 1);
-    this.reindexSortOrder(cur);
+    const alert = await this.alertController.create({
+      header: 'Remove Stop?',
+      message: `Are you sure you want to remove "${stopName}" from Day ${cur.day_number}?`,
+      buttons: [
+        {
+          text: 'Cancel',
+          role: 'cancel',
+        },
+        {
+          text: 'Remove',
+          role: 'destructive',
+          handler: () => {
+            this.executeRemoveStop(cur, itemIndex);
+          },
+        },
+      ],
+    });
+    await alert.present();
+  }
+
+  public executeRemoveStop(day: BuilderDay, itemIndex: number): void {
+    day.items.splice(itemIndex, 1);
+    this.reindexSortOrder(day);
     this.hasUnsavedChanges = true;
     this.updateBudgetSummary();
+  }
+
+  // --- Edit Scheduled Stop Modal Workflow (UI-06, UI-07) ---
+
+  public openEditStopModal(stop: BuilderStop, index: number): void {
+    this.editingStop = stop;
+    this.editingStopIndex = index;
+    this.editStopTargetDayIndex = this.activeDayIndex;
+    this.editStopTime = stop.planned_time || '';
+    this.editStopDuration = stop.duration_minutes || 90;
+    this.editStopCostMin = stop.estimated_cost_min ?? null;
+    this.editStopCostMax = stop.estimated_cost_max ?? null;
+    this.editStopNotes = stop.notes || '';
+    this.isEditStopModalOpen = true;
+  }
+
+  public closeEditStopModal(): void {
+    this.isEditStopModalOpen = false;
+    this.editingStop = null;
+    this.editingStopIndex = -1;
+  }
+
+  public saveStopEdits(): void {
+    if (!this.editingStop || this.editingStopIndex < 0) return;
+
+    const sourceDay = this.days[this.activeDayIndex];
+    const targetIdx = Number(this.editStopTargetDayIndex);
+    const targetDay = this.days[targetIdx] || sourceDay;
+
+    this.editingStop.planned_time = this.editStopTime.trim() || null;
+    this.editingStop.duration_minutes = Number(this.editStopDuration) || 90;
+    this.editingStop.estimated_cost_min = this.editStopCostMin != null ? Number(this.editStopCostMin) : null;
+    this.editingStop.estimated_cost_max = this.editStopCostMax != null ? Number(this.editStopCostMax) : null;
+    this.editingStop.notes = this.editStopNotes.trim() || null;
+
+    // Check if moving to another day (UI-07)
+    if (targetIdx !== this.activeDayIndex && sourceDay && targetDay) {
+      sourceDay.items.splice(this.editingStopIndex, 1);
+      this.reindexSortOrder(sourceDay);
+
+      targetDay.items.push(this.editingStop);
+      this.reindexSortOrder(targetDay);
+      this.activeDayIndex = targetIdx;
+    }
+
+    this.hasUnsavedChanges = true;
+    this.updateBudgetSummary();
+    this.closeEditStopModal();
   }
 
   private reindexSortOrder(day: BuilderDay): void {
@@ -623,12 +748,31 @@ export class CustomBuilderPage implements OnInit, OnDestroy {
   }
 
   public onBrowseSearch(event: Event): void {
-    this.browseSearchTerm = (event.target as HTMLInputElement).value || '';
+    const val = (event.target as HTMLInputElement).value || '';
+    this.browseSearchTerm = val;
+    this.browseSearchSubject.next(val);
     this.applyBrowseFilter();
+  }
+
+  public executeBrowseServerSearch(query: string): void {
+    const q = query.trim();
+    if (q.length >= 2) {
+      this.placeService.searchPlaces({ q, limit: 50 }).subscribe({
+        next: (res) => {
+          if (res && res.items) {
+            const existingIds = new Set(this.allCuratedPlaces.map((p) => p.id));
+            const newPlaces = res.items.filter((p) => !existingIds.has(p.id));
+            this.allCuratedPlaces = [...this.allCuratedPlaces, ...newPlaces];
+            this.applyBrowseFilter();
+          }
+        },
+      });
+    }
   }
 
   public clearBrowseSearch(): void {
     this.browseSearchTerm = '';
+    this.browseSearchSubject.next('');
     this.applyBrowseFilter();
   }
 
@@ -799,12 +943,33 @@ export class CustomBuilderPage implements OnInit, OnDestroy {
     this.updateBudgetSummary();
   }
 
-  public addCustomVenueStop(): void {
+  public toggleCustomCoords(): void {
+    this.isCustomCoordsExpanded = !this.isCustomCoordsExpanded;
+  }
+
+  public async addCustomVenueStop(): Promise<void> {
     const cur = this.currentDay;
     if (!cur) return;
 
     const trimmedTitle = this.customVenueTitle.trim();
     if (!trimmedTitle) return;
+
+    // Validate coordinates if entered (UI-08)
+    if (this.customVenueLat != null && this.customVenueLng != null) {
+      const lat = Number(this.customVenueLat);
+      const lng = Number(this.customVenueLng);
+      const isWithinNuevaEcija = lat >= 15.15 && lat <= 16.15 && lng >= 120.70 && lng <= 121.40;
+      if (!isWithinNuevaEcija) {
+        const toast = await this.toastController.create({
+          message: 'Coordinates fall outside Nueva Ecija (Lat 15.15–16.15, Lng 120.70–121.40). Please check your coordinates.',
+          duration: 3500,
+          color: 'warning',
+          position: 'top',
+        });
+        await toast.present();
+        return;
+      }
+    }
 
     const stop: BuilderStop = {
       id: this.generateTempId(),
@@ -815,6 +980,9 @@ export class CustomBuilderPage implements OnInit, OnDestroy {
       municipality: this.customVenueAddress.trim() || 'Nueva Ecija',
       image: 'assets/images/casa_batik.png',
       sort_order: cur.items.length + 1,
+      planned_time: this.customPlannedTime.trim() || null,
+      custom_lat: this.customVenueLat != null ? Number(this.customVenueLat) : null,
+      custom_lng: this.customVenueLng != null ? Number(this.customVenueLng) : null,
       duration_minutes: Number(this.customVenueDuration) || 90,
       notes: this.customVenueNotes.trim() || null,
       estimated_cost_min: this.customVenueCostMin != null ? Number(this.customVenueCostMin) : null,
@@ -831,7 +999,12 @@ export class CustomBuilderPage implements OnInit, OnDestroy {
     this.customVenueAddress = '';
     this.customVenueCostMin = null;
     this.customVenueCostMax = null;
+    this.customVenueDuration = 90;
     this.customVenueNotes = '';
+    this.customPlannedTime = '';
+    this.customVenueLat = null;
+    this.customVenueLng = null;
+    this.isCustomCoordsExpanded = false;
     this.closePlacePicker();
   }
 

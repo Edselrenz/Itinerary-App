@@ -7,10 +7,10 @@ This document serves as the primary handoff reference for developers and coding 
 ## 1. Project Status Overview
 
 - **Application Name**: Nueva Ecija Travel Itinerary (MVP)
-- **Current Development Phase**: **Phase 17: Custom Builder Stop Editing, Day-Move & Schedule Accuracy (Roadmap v2.0: Milestones 16–22)**
-- **Last Verified Working State**: **Phases 0–16 Completed & Verified; Release `v0.16.5` + Phase 16 Template Parity Deployed** (16/16 test files and 126/126 frontend unit tests passing, 14/14 backend Pytest cases, clean Angular production build, permanent Cloudflare Worker reverse proxy edge deployment, live GitHub Pages deployment at `https://edselrenz.github.io/Itinerary-App/`).
+- **Current Development Phase**: **Phase 18: Missing Figma Windows — Popular Destinations Catalog, Stop Details & Commute Guide (`UI-11` to `UI-15`)**
+- **Last Verified Working State**: **Phases 0–17 Completed & Verified; Release `v0.17.0` Parity** (17/17 test files and 134/134 frontend unit tests passing [100%], 14/14 backend Pytest cases, clean Angular production build with 0 warnings/budget overruns, permanent Cloudflare Worker reverse proxy edge deployment, live GitHub Pages deployment at `https://edselrenz.github.io/Itinerary-App/`).
 - **Recent Audit & Roadmap Expansion**: Adoption of **Development Plan & UI/UX Audit (`v2.0`)** covering 9 missing Figma/MVP windows and modals, 24 audit gap registry items (`UI-01` to `UI-24`), and detailed implementation roadmaps for Milestones 16–22.
-- **Current Active Tasks**: Preparing Milestone 17 (Custom builder stop edit modal `UI-06`, move stop between days `UI-07`, off-grid coordinate & time inputs `UI-08`, and sequential time slot formatting `UI-09`).
+- **Current Active Tasks**: Preparing Milestone 18 (Popular Destinations "See All" catalog modal `UI-11`, suggested wizard stop detail modal `UI-12`, Nueva Ecija commute guide `UI-13`, nearby places interactivity `UI-14`, and home destination CTA alignment `UI-15`).
 - **Current Blockers**: **None**.
 
 ---

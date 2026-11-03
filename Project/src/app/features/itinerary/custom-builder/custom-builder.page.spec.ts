@@ -15,6 +15,8 @@ describe('CustomBuilderPage', () => {
   let component: CustomBuilderPage;
   let fixture: ComponentFixture<CustomBuilderPage>;
   let router: Router;
+  let mockAlertController: any;
+  let mockToastController: any;
 
   const mockPlace: Place = {
     id: 'poi-test-1',
@@ -96,9 +98,9 @@ describe('CustomBuilderPage', () => {
     );
 
     const mockToast = { present: vi.fn().mockResolvedValue(undefined) };
-    const mockToastController = { create: vi.fn().mockResolvedValue(mockToast) };
+    mockToastController = { create: vi.fn().mockResolvedValue(mockToast) };
     const mockAlert = { present: vi.fn().mockResolvedValue(undefined) };
-    const mockAlertController = { create: vi.fn().mockResolvedValue(mockAlert) };
+    mockAlertController = { create: vi.fn().mockResolvedValue(mockAlert) };
 
     await TestBed.configureTestingModule({
       imports: [CustomBuilderPage],
@@ -193,11 +195,13 @@ describe('CustomBuilderPage', () => {
     expect(component.currentDay?.items[1].name).toBe("Lola's Mango Orchard");
   });
 
-  it('removes a stop and recalculates sort order', () => {
+  it('removes a stop and recalculates sort order', async () => {
     component.selectPlaceFromPicker(mockPlace);
     expect(component.currentDay?.items.length).toBe(1);
 
-    component.removeStop(0);
+    await component.removeStop(0);
+    expect(mockAlertController.create).toHaveBeenCalled();
+    component.executeRemoveStop(component.currentDay!, 0);
     expect(component.currentDay?.items.length).toBe(0);
   });
 
@@ -311,5 +315,66 @@ describe('CustomBuilderPage', () => {
 
     expect(component.currentDay?.items.length).toBe(initialCount + 1);
     expect(component.isPlacePickerOpen).toBe(false);
+  });
+
+  it('allows editing scheduled stop and moving stop across days (UI-06, UI-07)', () => {
+    // Add 2 days
+    component.addDay();
+    expect(component.days.length).toBeGreaterThanOrEqual(2);
+
+    // Add stop to Day 1
+    component.activeDayIndex = 0;
+    component.selectPlaceFromPicker(mockPlace);
+    const stop = component.days[0].items[0];
+    expect(stop).toBeTruthy();
+
+    // Open edit modal
+    component.openEditStopModal(stop, 0);
+    expect(component.isEditStopModalOpen).toBe(true);
+    expect(component.editingStop).toBe(stop);
+
+    // Edit fields
+    component.editStopTime = '09:00 AM - 11:00 AM';
+    component.editStopDuration = 120;
+    component.editStopCostMin = 200;
+    component.editStopCostMax = 500;
+    component.editStopNotes = 'Pack picnic lunch';
+    // Move to Day 2
+    component.editStopTargetDayIndex = 1;
+
+    component.saveStopEdits();
+    expect(component.isEditStopModalOpen).toBe(false);
+    expect(component.days[0].items.length).toBe(0);
+    expect(component.days[1].items.length).toBe(1);
+    expect(component.days[1].items[0].planned_time).toBe('09:00 AM - 11:00 AM');
+    expect(component.days[1].items[0].duration_minutes).toBe(120);
+    expect(component.days[1].items[0].notes).toBe('Pack picnic lunch');
+  });
+
+  it('supports planned time and pin coordinates for off-grid custom venue (UI-08)', async () => {
+    component.customVenueTitle = "Nanay's Farmstead";
+    component.customVenueAddress = 'Pantabangan';
+    component.customPlannedTime = '02:00 PM';
+    component.customVenueLat = 15.8200;
+    component.customVenueLng = 121.1500;
+    component.toggleCustomCoords();
+    expect(component.isCustomCoordsExpanded).toBe(true);
+
+    await component.addCustomVenueStop();
+    const cur = component.currentDay;
+    const addedStop = cur?.items.find((i) => i.name === "Nanay's Farmstead");
+    expect(addedStop).toBeTruthy();
+    expect(addedStop?.planned_time).toBe('02:00 PM');
+    expect(addedStop?.custom_lat).toBe(15.8200);
+    expect(addedStop?.custom_lng).toBe(121.1500);
+  });
+
+  it('guards unsaved changes on deactivation (UI-10)', async () => {
+    component.hasUnsavedChanges = false;
+    expect(component.canDeactivate()).toBe(true);
+
+    component.hasUnsavedChanges = true;
+    const canDeactPromise = component.canDeactivate();
+    expect(canDeactPromise).toBeInstanceOf(Promise);
   });
 });

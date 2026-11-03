@@ -27,7 +27,6 @@
   .save-icon { font-size: 16px; margin-right: 4px; }
 }
 
-/* View Mode Segmented Bar */
 .view-mode-bar {
   display: flex;
   background: #fff;
@@ -56,7 +55,6 @@
 .builder-content { --background: #f8fafc; }
 .builder-container { max-width: 720px; margin: 0 auto; padding: 16px 16px 80px; }
 
-/* Browse Header */
 .browse-header-block { margin-bottom: 14px; }
 .browse-main-heading {
   font-size: 1.45rem;
@@ -131,9 +129,9 @@
   padding: 10px 14px;
   margin-bottom: 12px;
   &:focus-within { border-color: #0284c7; }
-  .search-icon { font-size: 18px; color: #64748b; flex-shrink: 0; }
-  .clear-search-btn { background: transparent; border: none; color: #94a3b8; font-size: 18px; cursor: pointer; }
 }
+.search-icon { font-size: 18px; color: #64748b; flex-shrink: 0; }
+.clear-search-btn { background: transparent; border: none; color: #94a3b8; font-size: 18px; cursor: pointer; }
 
 .search-input-field {
   border: none;
@@ -155,7 +153,6 @@
   outline: none;
 }
 
-/* Grid & Places Cards */
 .places-grid-container { margin-bottom: 24px; }
 .places-cards-grid {
   display: grid;
@@ -261,8 +258,8 @@
   border-radius: 12px;
   border: 1px dashed #cbd5e1;
   ion-icon { font-size: 24px; color: #94a3b8; }
-  h4, .empty-title { margin: 4px 0 2px; font-size: 0.92rem; font-weight: 700; color: #0f172a; }
-  p, .empty-copy { font-size: 0.78rem; color: #64748b; margin: 0; }
+  h4 { margin: 4px 0 2px; font-size: 0.92rem; font-weight: 700; color: #0f172a; }
+  p { font-size: 0.78rem; color: #64748b; margin: 0; }
 }
 .reset-filter-link {
   margin-top: 6px;
@@ -294,7 +291,6 @@
 }
 .view-my-itinerary-btn { max-width: 640px; }
 
-/* Timeline Wrapper */
 .timeline-view-wrapper { display: flex; flex-direction: column; gap: 12px; }
 .trip-settings-card {
   background: #fff;
@@ -333,8 +329,6 @@
   padding: 6px 12px;
   min-width: 100px;
   cursor: pointer;
-  .tab-day-number { font-size: 0.8rem; font-weight: 800; color: #0f172a; }
-  .tab-muni-name { font-size: 0.68rem; font-weight: 600; color: #64748b; }
   &.active {
     background: #0f172a;
     border-color: #0f172a;
@@ -342,6 +336,8 @@
     .tab-muni-name { color: #94a3b8; }
   }
 }
+.tab-day-number { font-size: 0.8rem; font-weight: 800; color: #0f172a; }
+.tab-muni-name { font-size: 0.68rem; font-weight: 600; color: #64748b; }
 
 .active-day-timeline-card {
   background: #fff;
@@ -359,20 +355,23 @@
   .day-date-caption { display: flex; align-items: center; gap: 4px; font-size: 0.78rem; color: #64748b; margin: 0; }
 }
 
+.edit-stop-btn,
 .delete-day-action-btn,
 .delete-stop-btn {
   display: inline-flex;
   align-items: center;
   gap: 3px;
   background: transparent;
-  color: #dc2626;
   font-size: 0.74rem;
   font-weight: 600;
   cursor: pointer;
   border: none;
+  padding: 0;
+  ion-icon { font-size: 13px; }
 }
-.delete-day-action-btn { border: 1px solid #fecaca; border-radius: 6px; padding: 3px 6px; }
-.delete-stop-btn ion-icon { font-size: 13px; }
+.delete-day-action-btn { color: #dc2626; border: 1px solid #fecaca; border-radius: 6px; padding: 3px 6px; }
+.delete-stop-btn { color: #dc2626; }
+.edit-stop-btn { color: #2563eb; &:hover { color: #1d4ed8; } }
 
 .stops-ordered-timeline { padding: 12px 14px; display: flex; flex-direction: column; }
 .timeline-item-row { display: flex; gap: 8px; }
@@ -382,20 +381,20 @@
   align-items: center;
   width: 22px;
   flex-shrink: 0;
-  .step-badge {
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: #0f172a;
-    color: #fff;
-    font-size: 0.7rem;
-    font-weight: 800;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .step-connector { width: 2px; flex-grow: 1; background: #cbd5e1; margin: 2px 0; }
 }
+.step-badge {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #0f172a;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.step-connector { width: 2px; flex-grow: 1; background: #cbd5e1; margin: 2px 0; }
 
 .stop-content-card {
   flex-grow: 1;
@@ -414,14 +413,8 @@
 .stop-details-stack { flex-grow: 1; display: flex; flex-direction: column; gap: 2px; }
 .stop-tag-row { display: flex; align-items: center; gap: 4px; }
 
-.stop-category,
-.stop-timing {
-  font-size: 0.68rem;
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-.stop-category { font-weight: 700; color: #0284c7; background: #f0f9ff; }
-.stop-timing { font-weight: 600; color: #b45309; background: #fef3c7; }
+.stop-category { font-size: 0.68rem; padding: 2px 6px; border-radius: 4px; font-weight: 700; color: #0284c7; background: #f0f9ff; }
+.stop-timing { font-size: 0.68rem; padding: 2px 6px; border-radius: 4px; font-weight: 600; color: #b45309; background: #fef3c7; }
 
 .stop-note-bubble {
   font-size: 0.72rem;
@@ -482,15 +475,5 @@
   cursor: pointer;
   padding: 9px;
 }
-.add-more-places-btn {
-  background: #f0f9ff;
-  border: 1.5px dashed #0284c7;
-  color: #0284c7;
-  font-weight: 700;
-}
-.add-custom-venue-btn {
-  background: #fff;
-  border: 1px solid #cbd5e1;
-  color: #475569;
-  font-weight: 600;
-}
+.add-more-places-btn { background: #f0f9ff; border: 1.5px dashed #0284c7; color: #0284c7; font-weight: 700; }
+.add-custom-venue-btn { background: #fff; border: 1px solid #cbd5e1; color: #475569; font-weight: 600; }

@@ -1,4 +1,5 @@
 import type { Routes } from '@angular/router';
+import { pendingChangesGuard } from './core/guards/pending-changes.guard';
 
 export const routes: Routes = [
   {
@@ -23,6 +24,7 @@ export const routes: Routes = [
   },
   {
     path: 'custom-builder',
+    canDeactivate: [pendingChangesGuard],
     loadComponent: () =>
       import('./features/itinerary/custom-builder/custom-builder.page').then(
         (m) => m.CustomBuilderPage
@@ -30,6 +32,7 @@ export const routes: Routes = [
   },
   {
     path: 'custom-builder/:id',
+    canDeactivate: [pendingChangesGuard],
     loadComponent: () =>
       import('./features/itinerary/custom-builder/custom-builder.page').then(
         (m) => m.CustomBuilderPage

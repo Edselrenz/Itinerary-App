@@ -198,7 +198,7 @@ export class ItineraryDetailPage implements OnInit, OnDestroy {
     if (itinerary.daily_budget && itinerary.daily_budget > 0) {
       return `₱ ${itinerary.daily_budget.toLocaleString()}/day`;
     }
-    return '₱ 3,000 - ₱ 5,000/day';
+    return 'Flexible Budget';
   }
 
   public getDayLocation(day: ItineraryDay | undefined): string {
@@ -214,11 +214,18 @@ export class ItineraryDetailPage implements OnInit, OnDestroy {
   }
 
   public getDaySubtitle(day: ItineraryDay | undefined): string {
-    const muni = this.getDayLocation(day);
-    if (muni === 'Bongabon') {
-      return 'Food spots, local culture, and historic sites!';
+    if (!day || !day.items || day.items.length === 0) {
+      return 'Spontaneous discoveries and relaxed travel pace!';
     }
-    return `Food spots, local culture, and historic sites in ${muni}!`;
+    const categories = new Set(
+      day.items
+        .map((it) => it.place?.category || 'destinations')
+        .map((c) => this.placeService.formatCategoryName(c))
+    );
+    const catList = Array.from(categories).slice(0, 3);
+    const catLabels = catList.join(', ');
+    const muni = this.getDayLocation(day);
+    return `${catLabels} in ${muni}!`;
   }
 
   public getStopTitle(item: ItineraryItem): string {
@@ -237,11 +244,36 @@ export class ItineraryDetailPage implements OnInit, OnDestroy {
     return 'Destination';
   }
 
-  public getTimingTime(stop: ItineraryItem): string {
+  public getTimingTime(stop: ItineraryItem, index?: number): string {
     if (stop.planned_time) {
       return stop.planned_time;
     }
-    return '12:00 PM - 2:00 PM';
+    const day = this.currentDay;
+    if (day && day.items && day.items.length > 0) {
+      const idx = index !== undefined ? index : day.items.indexOf(stop);
+      if (idx >= 0) {
+        let totalMinutes = 510; // 08:30 AM
+        for (let i = 0; i < idx; i++) {
+          totalMinutes += (day.items[i].duration_minutes || 90) + 30;
+        }
+        const dur = stop.duration_minutes || 90;
+        const startH = Math.floor(totalMinutes / 60) % 24;
+        const startM = totalMinutes % 60;
+        const endTotal = totalMinutes + dur;
+        const endH = Math.floor(endTotal / 60) % 24;
+        const endM = endTotal % 60;
+
+        const formatHour = (h: number, m: number) => {
+          const ampm = h >= 12 ? 'PM' : 'AM';
+          const h12 = h % 12 || 12;
+          const mm = m < 10 ? `0${m}` : `${m}`;
+          return `${h12}:${mm} ${ampm}`;
+        };
+
+        return `${formatHour(startH, startM)} - ${formatHour(endH, endM)}`;
+      }
+    }
+    return 'Flexible time';
   }
 
   public getTimingDuration(stop: ItineraryItem): string {

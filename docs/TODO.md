@@ -372,23 +372,23 @@ This checklist tracks completed, active, and pending tasks across all developmen
 ---
 
 ## Phase 17: Custom Builder Stop Editing, Day-Move & Schedule Accuracy (`Priority 1 — Core Functional Parity`)
-- [ ] **17.1: Build Edit Scheduled Stop Modal & Move-to-Day Action (`UI-06`, `UI-07`)**:
-  - [ ] Target: `custom-builder.page.ts`, `custom-builder.page.html`, `custom-builder.page.scss`, `itinerary.service.ts`.
-  - [ ] Add `Edit` button (`create-outline`) on each `.timeline-stop-card`.
-  - [ ] Create `<ion-modal [isOpen]="isEditStopModalOpen">` to edit `planned_time`, `duration_minutes`, `estimated_cost_min`, `estimated_cost_max`, `notes`, and `targetDayNumber` (move stop across days).
-  - [ ] Add `updateItineraryItem()` to `ItineraryService` calling `PATCH /api/v1/itineraries/{id}/days/{day_id}/items/{item_id}`.
-- [ ] **17.2: Add Planned Time & Optional Coordinates to Off-Grid Custom Venue Modal (`UI-08`)**:
-  - [ ] Target: `custom-builder.page.ts`, `custom-builder.page.html` (Lines 529–617).
-  - [ ] Add `customPlannedTime` (`<input type="time">`) and collapsible `"Pin Coordinates (Lat / Lng)"` inputs bounded to Nueva Ecija (`15.15–16.15`, `120.70–121.40`).
-- [ ] **17.3: Fix Misleading Schedule, Budget, and Day Subtitle Fallbacks in `ItineraryDetailPage` (`UI-09`)**:
-  - [ ] Target: `itinerary-detail.page.ts` (Lines 169–215).
-  - [ ] Compute cumulative sequential windows starting from `08:30 AM` or return `'Flexible time'` (eliminate hardcoded `'12:00 PM - 2:00 PM'`).
-  - [ ] Update `formatDailyBudget()` to return `'Flexible Budget'` when `0` or null instead of `'₱ 3,000 - ₱ 5,000/day'`.
-  - [ ] Dynamically derive `getDaySubtitle(day)` from stop categories.
-- [ ] **17.4: Upgrade Custom Builder Browse Stage to Server-Backed Search & Add `CanDeactivate` Route Guard (`UI-10`)**:
-  - [ ] Target: `custom-builder.page.ts`, `app.routes.ts`, `unsaved-changes.guard.ts`.
-  - [ ] Pipe `browseSearchQuery` through debounced search querying all 4,400+ seeded OSM places via `placeService.searchPlaces()`.
-  - [ ] Add `unsavedChangesGuard` attached to `/custom-builder` and `/custom-builder/:id`.
+- [x] **17.1: Build Edit Scheduled Stop Modal & Move-to-Day Action (`UI-06`, `UI-07`)**:
+  - [x] Target: `custom-builder.page.ts`, `custom-builder.page.html`, `custom-builder.page.scss`, `itinerary.service.ts`.
+  - [x] Add `Edit` button (`create-outline`) on each `.timeline-stop-card`.
+  - [x] Create `<ion-modal [isOpen]="isEditStopModalOpen">` to edit `planned_time`, `duration_minutes`, `estimated_cost_min`, `estimated_cost_max`, `notes`, and `targetDayNumber` (move stop across days).
+  - [x] Add `updateItineraryItem()` to `ItineraryService` calling `PATCH /api/v1/itineraries/{id}/days/{day_id}/items/{item_id}`.
+- [x] **17.2: Add Planned Time & Optional Coordinates to Off-Grid Custom Venue Modal (`UI-08`)**:
+  - [x] Target: `custom-builder.page.ts`, `custom-builder.page.html` (Lines 529–617).
+  - [x] Add `customPlannedTime` (`<input type="time">`) and collapsible `"Pin Coordinates (Lat / Lng)"` inputs bounded to Nueva Ecija (`15.15–16.15`, `120.70–121.40`).
+- [x] **17.3: Fix Misleading Schedule, Budget, and Day Subtitle Fallbacks in `ItineraryDetailPage` (`UI-09`)**:
+  - [x] Target: `itinerary-detail.page.ts` (Lines 169–215).
+  - [x] Compute cumulative sequential windows starting from `08:30 AM` or return `'Flexible time'` (eliminate hardcoded `'12:00 PM - 2:00 PM'`).
+  - [x] Update `formatDailyBudget()` to return `'Flexible Budget'` when `0` or null instead of `'₱ 3,000 - ₱ 5,000/day'`.
+  - [x] Dynamically derive `getDaySubtitle(day)` from stop categories.
+- [x] **17.4: Upgrade Custom Builder Browse Stage to Server-Backed Search & Add `CanDeactivate` Route Guard (`UI-10`)**:
+  - [x] Target: `custom-builder.page.ts`, `app.routes.ts`, `unsaved-changes.guard.ts`.
+  - [x] Pipe `browseSearchQuery` through debounced search querying all 4,400+ seeded OSM places via `placeService.searchPlaces()`.
+  - [x] Add `unsavedChangesGuard` attached to `/custom-builder` and `/custom-builder/:id`.
 
 ---
 

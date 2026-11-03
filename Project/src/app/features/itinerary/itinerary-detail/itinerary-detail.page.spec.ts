@@ -225,4 +225,22 @@ describe('ItineraryDetailPage', () => {
     expect(assumptionsBox).toBeTruthy();
     expect(assumptionsBox.textContent).toContain('Lunch stop scheduled at 12:00 PM');
   });
+
+  it('correctly computes dynamic schedule, flexible budget and category subtitles (UI-09)', () => {
+    // Budget formatting
+    expect(component.formatDailyBudget({ daily_budget: 0 } as any)).toBe('Flexible Budget');
+    expect(component.formatDailyBudget({ daily_budget: 2500 } as any)).toBe('₱ 2,500/day');
+
+    // Timing formatting
+    const stopWithPlan = { planned_time: '01:00 PM - 03:00 PM' } as any;
+    expect(component.getTimingTime(stopWithPlan)).toBe('01:00 PM - 03:00 PM');
+
+    const stopWithoutPlan = { planned_time: null, duration_minutes: 60 } as any;
+    const computedTime = component.getTimingTime(stopWithoutPlan, 0);
+    expect(computedTime).toBe('8:30 AM - 9:30 AM');
+
+    // Day Subtitle
+    const subtitle = component.getDaySubtitle(component.itinerary?.days[0]);
+    expect(subtitle).toContain('Bongabon');
+  });
 });

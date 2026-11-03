@@ -212,6 +212,31 @@ export class ItineraryService {
   }
 
   /**
+   * Partially updates an existing stop in an itinerary day (UI-06).
+   */
+  public updateStop(
+    itineraryId: string,
+    dayId: string,
+    itemId: string,
+    patchPayload: Partial<ItineraryItemCreatePayload>
+  ): Observable<Itinerary> {
+    if (this.authService.isAuthenticated()) {
+      return this.http
+        .patch<Itinerary>(`${this.baseUrl}/${itineraryId}/days/${dayId}/items/${itemId}`, patchPayload)
+        .pipe(
+          tap((updated) => this.replaceInSubject(updated)),
+          catchError((err) => {
+            if (this.isNetworkError(err)) {
+              return from(this.updateGuestStop(itineraryId, dayId, itemId, patchPayload));
+            }
+            return throwError(() => err);
+          })
+        );
+    }
+    return from(this.updateGuestStop(itineraryId, dayId, itemId, patchPayload));
+  }
+
+  /**
    * Batch reorders stops within or across days.
    */
   public reorderStops(
@@ -504,6 +529,45 @@ export class ItineraryService {
     return mapped;
   }
 
+  private async updateGuestStop(
+    itineraryId: string,
+    dayId: string,
+    itemId: string,
+    patchPayload: Partial<ItineraryItemCreatePayload>
+  ): Promise<Itinerary> {
+    const items = await this.guestStorage.getItineraries();
+    const target = items.find((i) => i.id === itineraryId);
+    if (!target) {
+      throw new Error('Itinerary not found');
+    }
+
+    const mapped = this.mapGuestItinerary(target);
+    const day = mapped.days.find((d) => d.id === dayId);
+    if (!day) {
+      throw new Error('Day not found');
+    }
+
+    const item = day.items.find((it) => it.id === itemId);
+    if (!item) {
+      throw new Error('Item not found');
+    }
+
+    if (patchPayload.custom_title !== undefined) item.custom_title = patchPayload.custom_title;
+    if (patchPayload.custom_lat !== undefined) item.custom_lat = patchPayload.custom_lat;
+    if (patchPayload.custom_lng !== undefined) item.custom_lng = patchPayload.custom_lng;
+    if (patchPayload.planned_time !== undefined) item.planned_time = patchPayload.planned_time;
+    if (patchPayload.duration_minutes !== undefined) item.duration_minutes = patchPayload.duration_minutes;
+    if (patchPayload.notes !== undefined) item.notes = patchPayload.notes;
+    if (patchPayload.estimated_cost_min !== undefined) item.estimated_cost_min = patchPayload.estimated_cost_min;
+    if (patchPayload.estimated_cost_max !== undefined) item.estimated_cost_max = patchPayload.estimated_cost_max;
+    if (patchPayload.sort_order !== undefined) item.sort_order = patchPayload.sort_order;
+    item.updated_at = new Date().toISOString();
+
+    await this.guestStorage.saveItinerary(mapped as unknown as GuestItinerary);
+    this.replaceInSubject(mapped);
+    return mapped;
+  }
+
   private async reorderGuestStops(
     itineraryId: string,
     entries: ItineraryReorderEntry[]
@@ -515,14 +579,32 @@ export class ItineraryService {
     }
 
     const mapped = this.mapGuestItinerary(target);
+    const allItems: ItineraryItem[] = [];
+    for (const day of mapped.days) {
+      allItems.push(...day.items);
+      day.items = [];
+    }
     for (const entry of entries) {
-      for (const day of mapped.days) {
-        const item = day.items.find((i) => i.id === entry.id);
-        if (item) {
-          item.day_id = entry.day_id;
-          item.sort_order = entry.sort_order;
+      const it = allItems.find((i) => i.id === entry.id);
+      if (it) {
+        it.day_id = entry.day_id;
+        it.sort_order = entry.sort_order;
+        const targetDay = mapped.days.find((d) => d.id === entry.day_id);
+        if (targetDay) {
+          targetDay.items.push(it);
         }
       }
+    }
+    for (const it of allItems) {
+      if (!entries.some((e) => e.id === it.id)) {
+        const d = mapped.days.find((day) => day.id === it.day_id);
+        if (d && !d.items.includes(it)) {
+          d.items.push(it);
+        }
+      }
+    }
+    for (const day of mapped.days) {
+      day.items.sort((a, b) => a.sort_order - b.sort_order);
     }
 
     await this.guestStorage.saveItinerary(mapped as unknown as GuestItinerary);

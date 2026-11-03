@@ -1752,3 +1752,45 @@ This log records chronological development sessions, detailing objectives, execu
   - `docs/DEVELOPMENT_LOG.md`
 - **Next Recommended Step**:
   - Proceed to **Phase 17**: Custom Builder Stop Editing, Day-Move & Schedule Accuracy (`UI-06` to `UI-10`).
+
+---
+
+## Session 56 - 2026-11-03
+- **Focus**: Phase 17 — Custom Builder Stop Editing, Day-Move, Schedule Accuracy & Route Guard (`UI-06` to `UI-10`).
+- **Tasks Performed & Implementation Details**:
+  - **1. Timeline Stop Editing & Day-Move Modal (`UI-06`, `UI-07`)**:
+    - Added `.edit-stop-btn` with `create-outline` icon on every stop card in [custom-builder.page.html](file:///c:/Users/Edward/Desktop/CaseStudy/Project/src/app/features/itinerary/custom-builder/custom-builder.page.html).
+    - Implemented `<ion-modal [isOpen]="isEditStopModalOpen">` allowing modification of target day, planned time (`<input type="time">`), duration (minutes), min/max costs, and custom stop notes.
+    - Added `updateStop()` in [itinerary.service.ts](file:///c:/Users/Edward/Desktop/CaseStudy/Project/src/app/core/services/itinerary.service.ts) calling `PATCH /api/v1/itineraries/{id}/days/{day_id}/items/{item_id}`.
+    - Added `updateGuestStop()` and upgraded `reorderGuestStops()` to dynamically move stops across days for offline/guest trips.
+  - **2. Off-Grid Venue Planned Time & Nueva Ecija Bounded Coordinates (`UI-08`)**:
+    - Added `customPlannedTime` input and collapsible `"Pin Coordinates (Lat / Lng) — Optional"` form section in the Add Custom Venue modal in [custom-builder.page.html](file:///c:/Users/Edward/Desktop/CaseStudy/Project/src/app/features/itinerary/custom-builder/custom-builder.page.html).
+    - Enforced Nueva Ecija geographic bounds (`15.15 <= lat <= 16.15`, `120.70 <= lng <= 121.40`).
+  - **3. Schedule, Budget & Day Subtitle Accuracy (`UI-09`)**:
+    - In [itinerary-detail.page.ts](file:///c:/Users/Edward/Desktop/CaseStudy/Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.ts), replaced hardcoded `'12:00 PM - 2:00 PM'` fallback with cumulative sequential scheduling starting at `08:30 AM` (stop duration + 30 min transit) or `'Flexible time'`.
+    - Updated `formatDailyBudget()` to return `'Flexible Budget'` when zero or missing instead of misleading arbitrary ranges.
+    - Updated `getDaySubtitle()` to dynamically construct category subtitles across the municipality.
+  - **4. Deletion Confirmation Alert, Debounced Browse Search & Route Guard (`UI-10`)**:
+    - Replaced silent stop deletion with Ionic `AlertController` destructive confirmation dialog.
+    - Created [pending-changes.guard.ts](file:///c:/Users/Edward/Desktop/CaseStudy/Project/src/app/core/guards/pending-changes.guard.ts) with `canDeactivate` route guard attached to `/custom-builder` and `/custom-builder/:id` in [app.routes.ts](file:///c:/Users/Edward/Desktop/CaseStudy/Project/src/app/app.routes.ts).
+    - Connected browse search input to debounced (300ms) server-backed search via `PlaceService.searchPlaces()`.
+- **Verification & Test Results**:
+  - `npm --prefix Project run test:unit`: **17/17 test files passed, 134/134 unit tests passed [100%]** in 19.05s.
+  - `npm --prefix Project run build`: **Clean production build** generated in `Project/www/` with 0 errors, 0 warnings, and 0 budget violations in 6.30s.
+- **Files Modified / Created**:
+  - `Project/src/app/app.routes.ts`
+  - `Project/src/app/core/guards/pending-changes.guard.ts` (new)
+  - `Project/src/app/core/guards/pending-changes.guard.spec.ts` (new)
+  - `Project/src/app/core/services/itinerary.service.ts`
+  - `Project/src/app/core/services/itinerary.service.spec.ts`
+  - `Project/src/app/features/itinerary/custom-builder/custom-builder.page.html`
+  - `Project/src/app/features/itinerary/custom-builder/custom-builder.page.scss`
+  - `Project/src/app/features/itinerary/custom-builder/custom-builder.page.spec.ts`
+  - `Project/src/app/features/itinerary/custom-builder/custom-builder.page.ts`
+  - `Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.spec.ts`
+  - `Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.ts`
+  - `docs/TODO.md`
+  - `docs/DEVELOPMENT_LOG.md`
+  - `docs/PROJECT_STATE.md`
+- **Next Recommended Step**:
+  - Proceed to **Phase 18**: Missing Figma Windows — Popular Destinations Catalog, Stop Details & Commute Guide (`UI-11` to `UI-15`).

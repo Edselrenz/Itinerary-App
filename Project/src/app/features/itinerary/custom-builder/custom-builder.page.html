@@ -475,6 +475,16 @@
 
                           <button
                             type="button"
+                            class="edit-stop-btn"
+                            (click)="openEditStopModal(stop, sIdx)"
+                            aria-label="Edit stop details"
+                          >
+                            <ion-icon name="create-outline"></ion-icon>
+                            <span>Edit</span>
+                          </button>
+
+                          <button
+                            type="button"
                             class="delete-stop-btn"
                             (click)="removeStop(sIdx)"
                             aria-label="Remove stop"
@@ -837,16 +847,74 @@
             </div>
           </div>
 
+          <div class="modal-two-col">
+            <div class="form-group-item">
+              <label for="custom-time" class="modal-field-label">Planned Time</label>
+              <input
+                id="custom-time"
+                type="text"
+                class="modal-input"
+                [(ngModel)]="customPlannedTime"
+                placeholder="e.g. 10:00 AM"
+              />
+            </div>
+            <div class="form-group-item">
+              <label for="custom-dur" class="modal-field-label">Duration (mins)</label>
+              <input
+                id="custom-dur"
+                type="number"
+                class="modal-input"
+                [(ngModel)]="customVenueDuration"
+                step="30"
+                placeholder="90"
+              />
+            </div>
+          </div>
+
+          <!-- Collapsible Coordinates (UI-08) -->
           <div class="form-group-item">
-            <label for="custom-dur" class="modal-field-label">Duration (minutes)</label>
-            <input
-              id="custom-dur"
-              type="number"
-              class="modal-input"
-              [(ngModel)]="customVenueDuration"
-              step="30"
-              placeholder="90"
-            />
+            <button
+              type="button"
+              class="coords-toggle-btn"
+              (click)="toggleCustomCoords()"
+              style="display: flex; align-items: center; justify-content: space-between; width: 100%; background: none; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 8px 12px; font-size: 0.85rem; color: #475569; margin-bottom: 6px;"
+            >
+              <span style="display: flex; align-items: center; gap: 6px;">
+                <ion-icon name="location-outline"></ion-icon>
+                <span>Pin Coordinates (Lat / Lng) — Optional</span>
+              </span>
+              <ion-icon [name]="isCustomCoordsExpanded ? 'chevron-up-outline' : 'chevron-down-outline'"></ion-icon>
+            </button>
+            @if (isCustomCoordsExpanded) {
+              <div class="modal-two-col" style="margin-top: 4px;">
+                <div class="form-group-item">
+                  <label for="custom-lat" class="modal-field-label">Latitude (15.15–16.15)</label>
+                  <input
+                    id="custom-lat"
+                    type="number"
+                    step="0.0001"
+                    min="15.15"
+                    max="16.15"
+                    class="modal-input"
+                    [(ngModel)]="customVenueLat"
+                    placeholder="15.6320"
+                  />
+                </div>
+                <div class="form-group-item">
+                  <label for="custom-lng" class="modal-field-label">Longitude (120.70–121.40)</label>
+                  <input
+                    id="custom-lng"
+                    type="number"
+                    step="0.0001"
+                    min="120.70"
+                    max="121.40"
+                    class="modal-input"
+                    [(ngModel)]="customVenueLng"
+                    placeholder="121.1440"
+                  />
+                </div>
+              </div>
+            }
           </div>
 
           <div class="form-group-item">
@@ -871,6 +939,131 @@
           </button>
         </div>
         }
+      </div>
+    </ng-template>
+  </ion-modal>
+
+  <!-- ========================================================
+       MODAL: EDIT SCHEDULED STOP & MOVE-TO-DAY (UI-06, UI-07)
+       ======================================================== -->
+  <ion-modal [isOpen]="isEditStopModalOpen" (didDismiss)="closeEditStopModal()" class="picker-modal-sheet">
+    <ng-template>
+      <div class="picker-sheet-container">
+        <div class="sheet-drag-handle"></div>
+        <div class="picker-header-row">
+          <div>
+            <h3 class="picker-title">Edit Scheduled Stop</h3>
+            <p class="picker-subtitle">{{ editingStop?.name }}</p>
+          </div>
+          <button type="button" class="picker-close-btn" (click)="closeEditStopModal()" aria-label="Close modal">
+            <ion-icon name="close-outline"></ion-icon>
+          </button>
+        </div>
+
+        <div class="custom-venue-form-box">
+          <!-- Move to Day Dropdown (UI-07) -->
+          <div class="form-group-item">
+            <label for="edit-target-day" class="modal-field-label">Scheduled Day (Move Stop)</label>
+            <select
+              id="edit-target-day"
+              class="modal-input"
+              [(ngModel)]="editStopTargetDayIndex"
+            >
+              @for (day of days; track day.id; let dIdx = $index) {
+                <option [value]="dIdx">
+                  Day {{ day.day_number }} — {{ day.travel_date }} ({{ day.title }})
+                </option>
+              }
+            </select>
+          </div>
+
+          <!-- Planned Time and Duration -->
+          <div class="modal-two-col">
+            <div class="form-group-item">
+              <label for="edit-stop-time" class="modal-field-label">Planned Time</label>
+              <input
+                id="edit-stop-time"
+                type="text"
+                class="modal-input"
+                [(ngModel)]="editStopTime"
+                placeholder="e.g. 09:30 AM - 11:00 AM"
+              />
+            </div>
+            <div class="form-group-item">
+              <label for="edit-stop-duration" class="modal-field-label">Duration (minutes)</label>
+              <input
+                id="edit-stop-duration"
+                type="number"
+                class="modal-input"
+                [(ngModel)]="editStopDuration"
+                min="10"
+                step="15"
+                placeholder="90"
+              />
+            </div>
+          </div>
+
+          <!-- Cost Min / Max -->
+          <div class="modal-two-col">
+            <div class="form-group-item">
+              <label for="edit-cost-min" class="modal-field-label">Est. Min Cost (₱)</label>
+              <input
+                id="edit-cost-min"
+                type="number"
+                class="modal-input"
+                [(ngModel)]="editStopCostMin"
+                min="0"
+                step="50"
+                placeholder="100"
+              />
+            </div>
+            <div class="form-group-item">
+              <label for="edit-cost-max" class="modal-field-label">Est. Max Cost (₱)</label>
+              <input
+                id="edit-cost-max"
+                type="number"
+                class="modal-input"
+                [(ngModel)]="editStopCostMax"
+                min="0"
+                step="50"
+                placeholder="300"
+              />
+            </div>
+          </div>
+
+          <!-- Notes -->
+          <div class="form-group-item">
+            <label for="edit-stop-notes" class="modal-field-label">Personal Travel Notes</label>
+            <textarea
+              id="edit-stop-notes"
+              class="modal-textarea"
+              [(ngModel)]="editStopNotes"
+              rows="3"
+              placeholder="Add reminders, reservation codes, or tips."
+            ></textarea>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="edit-modal-action-row" style="display: flex; gap: 10px; margin-top: 16px;">
+            <button
+              type="button"
+              class="submit-custom-venue-btn"
+              style="flex: 1;"
+              (click)="saveStopEdits()"
+            >
+              <ion-icon name="checkmark-outline"></ion-icon>
+              <span>Save Changes</span>
+            </button>
+            <button
+              type="button"
+              class="cancel-edit-btn"
+              style="background: #f1f5f9; color: #475569; border: none; border-radius: 12px; padding: 12px 18px; font-weight: 600;"
+              (click)="closeEditStopModal()"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
       </div>
     </ng-template>
   </ion-modal>
