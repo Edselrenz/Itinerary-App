@@ -77,15 +77,31 @@ export class ItineraryService {
   }
 
   /**
-   * Retrieves single itinerary by ID with BOLA protection or guest local lookup.
+   * Synchronously checks in-memory cache for an itinerary by ID.
+   */
+  public getCachedItineraryById(id: string): Itinerary | null {
+    const list = this.itinerariesSubject.value;
+    return list.find((i) => i.id === id) || null;
+  }
+
+  /**
+   * Retrieves single itinerary by ID with BOLA protection, memory fallback, or guest local lookup.
    */
   public getItineraryById(id: string): Observable<Itinerary> {
+    const cached = this.getCachedItineraryById(id);
     if (this.authService.isAuthenticated()) {
       return this.http.get<Itinerary>(`${this.baseUrl}/${id}`).pipe(
+        tap((updated) => this.replaceInSubject(updated)),
         catchError(() => {
+          if (cached) {
+            return of(cached);
+          }
           return this.getGuestItineraryById(id);
         })
       );
+    }
+    if (cached) {
+      return of(cached);
     }
     return this.getGuestItineraryById(id);
   }

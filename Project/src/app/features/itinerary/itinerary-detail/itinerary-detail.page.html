@@ -1,337 +1,92 @@
 <ion-header class="ion-no-border app-header">
-  <ion-toolbar class="detail-toolbar">
-    <div class="figma-header-bar">
-      <button type="button" class="figma-back-btn" (click)="onBack()" aria-label="Go back">
-        <ion-icon name="arrow-back"></ion-icon>
+  <ion-toolbar class="itinerary-toolbar">
+    <div class="toolbar-nav-row">
+      <span class="toolbar-brand-title">Saved Itineraries</span>
+      <button
+        type="button"
+        class="header-plus-btn"
+        routerLink="/custom-builder"
+        aria-label="Create new itinerary"
+      >
+        <ion-icon name="add-outline"></ion-icon>
       </button>
-      <h1 class="figma-header-title">
-        {{ viewMode === 'nearby' ? 'Nearby Places' : (itinerary?.type === 'suggested' ? 'Suggested Itinerary' : (itinerary?.title || 'Trip Details')) }}
-      </h1>
-      @if (itinerary && viewMode === 'itinerary') {
-        <div class="header-action-group">
-          <button type="button" class="figma-header-share-btn" (click)="openShareModal()" aria-label="Share or export itinerary">
-            <ion-icon name="share-social-outline"></ion-icon>
-          </button>
-          <button type="button" class="figma-header-edit-btn" (click)="onEdit()" aria-label="Edit itinerary">
-            <ion-icon name="create-outline"></ion-icon>
-          </button>
-          <button type="button" class="figma-header-delete-btn" (click)="onDelete()" aria-label="Delete itinerary">
-            <ion-icon name="trash-outline"></ion-icon>
-          </button>
-        </div>
-      }
     </div>
   </ion-toolbar>
+
+  <!-- Sub-header bar -->
+  <div class="sub-header-bar">
+    <div class="sub-header-left">
+      <button
+        type="button"
+        class="back-arrow-btn"
+        (click)="isEditMode ? cancelEdit() : onBack()"
+        aria-label="Go back"
+      >
+        <ion-icon name="arrow-back"></ion-icon>
+      </button>
+      <h1 class="sub-header-title">
+        {{ isEditMode ? (editForm.title || 'Edit Trip') : (itinerary?.title || 'Trip Details') }}
+      </h1>
+    </div>
+
+    <div class="sub-header-right">
+      @if (!isEditMode) {
+      <button
+        type="button"
+        class="edit-action-btn"
+        (click)="toggleEditMode()"
+        aria-label="Edit itinerary"
+      >
+        Edit
+      </button>
+      } @else {
+      <div class="edit-btn-group">
+        <button
+          type="button"
+          class="save-changes-btn"
+          (click)="saveChanges()"
+          aria-label="Save changes"
+        >
+          Save Changes
+        </button>
+        <button
+          type="button"
+          class="cancel-edit-btn"
+          (click)="cancelEdit()"
+          aria-label="Cancel editing"
+        >
+          Cancel
+        </button>
+      </div>
+      }
+    </div>
+  </div>
 </ion-header>
 
-<ion-content class="detail-content" [fullscreen]="true">
-  <div class="detail-container">
-
+<ion-content class="itinerary-content" [fullscreen]="true">
+  <div class="itinerary-page-container">
     @if (isLoading) {
-      <div class="loading-state">
+      <div class="loading-state-wrapper">
         <ion-spinner name="crescent" color="primary"></ion-spinner>
         <p>Loading itinerary...</p>
       </div>
     } @else if (!itinerary) {
-      <div class="empty-state">
+      <div class="empty-state-wrapper">
         <ion-icon name="alert-circle-outline"></ion-icon>
         <h2>Itinerary Not Found</h2>
         <p>This itinerary may have been removed or is no longer available.</p>
-        <button type="button" class="find-itinerary-cta-btn" (click)="onBack()">
+        <button type="button" class="back-to-saved-btn" (click)="onBack()">
           Back to Saved Trips
         </button>
       </div>
     } @else {
-
-      <!-- ========================================================
-           VIEW 1: ITINERARY OVERVIEW & DAY TIMELINE (Figma Screen 2)
-           ======================================================== -->
-      @if (viewMode === 'itinerary') {
-        <!-- Destination Top Card -->
-        <div class="figma-trip-card">
-          <div class="trip-card-thumb-wrap">
-            <img
-              src="assets/images/nueva_ecija_arch.png"
-              [alt]="itinerary.destination"
-              class="trip-card-thumb-img"
-            />
-          </div>
-          <div class="trip-card-content">
-            <h2 class="trip-destination-title">{{ itinerary.destination }}, Nueva Ecija</h2>
-            <div class="trip-meta-subrow">
-              <span class="trip-days-count">{{ computedTripDays }} {{ computedTripDays === 1 ? 'day' : 'days' }}</span>
-              <span class="trip-budget-range">{{ formatDailyBudget(itinerary) }}</span>
-            </div>
-            @if (itinerary.preferences && itinerary.preferences.length > 0) {
-              <div class="trip-tags-row">
-                @for (tag of itinerary.preferences; track tag) {
-                  <span class="trip-tag-pill">{{ tag }}</span>
-                }
-              </div>
-            }
-          </div>
-        </div>
-
-        <!-- Verified Estimated Costs Summary (UI-02) -->
-        @if (budgetSummary) {
-          <div class="verified-budget-card">
-            <div class="budget-card-header">
-              <div class="budget-label-wrap">
-                <ion-icon name="shield-checkmark-outline" class="budget-card-icon"></ion-icon>
-                <span class="budget-card-label">Verified Estimated Costs</span>
-              </div>
-              <span class="budget-card-target">
-                Target: ₱{{ itinerary.daily_budget ? itinerary.daily_budget.toLocaleString() : '0' }}/day
-              </span>
-            </div>
-            <div class="budget-card-main-row">
-              <div class="budget-amount-stack">
-                <span class="budget-card-amount">{{ budgetSummary.displayText }}</span>
-                <span class="budget-currency-label">estimated venue admission & activities</span>
-              </div>
-              @if (budgetSummary.unverifiedCount > 0) {
-                <span class="unverified-badge">
-                  <ion-icon name="information-circle-outline"></ion-icon>
-                  {{ budgetSummary.unverifiedCount }} unpriced
-                </span>
-              }
-            </div>
-            @if (budgetSummary.unverifiedCount > 0) {
-              <p class="budget-card-note">
-                * {{ budgetSummary.unverifiedCount }} stop(s) do not list verified pricing in open public records.
-              </p>
-            }
-          </div>
-        }
-
-        <!-- Trip Assumptions & Travel Notes (Collapsible Structured Insight Cards) -->
-        @if (itinerary.assumptions && itinerary.assumptions.length > 0) {
-          <div class="assumptions-info-box" [class.is-expanded]="isAssumptionsExpanded">
-            <div class="assumptions-header" (click)="toggleAssumptions()">
-              <div class="assumptions-title-wrap">
-                <div class="assumptions-icon-badge">
-                  <ion-icon name="compass-outline"></ion-icon>
-                </div>
-                <div class="assumptions-title-text">
-                  <h4 class="assumptions-title">Trip Assumptions & Travel Notes</h4>
-                  <span class="assumptions-subtitle">
-                    {{ isAssumptionsExpanded ? 'Pacing, clustering, and local transit rules' : 'Pacing & routes clustered around ' + (itinerary.destination || 'Nueva Ecija') }}
-                  </span>
-                </div>
-              </div>
-              <div class="assumptions-toggle-btn">
-                <span class="toggle-text">{{ isAssumptionsExpanded ? 'Hide' : 'View ' + itinerary.assumptions.length }}</span>
-                <ion-icon [name]="isAssumptionsExpanded ? 'chevron-up-outline' : 'chevron-down-outline'"></ion-icon>
-              </div>
-            </div>
-
-            <div class="assumptions-content-collapse" [class.collapsed]="!isAssumptionsExpanded">
-              <div class="assumptions-cards-grid">
-                @for (note of itinerary.assumptions; track note) {
-                  @let parsed = parseAssumption(note);
-                  <div class="assumption-insight-card" [attr.data-category]="parsed.tag.toLowerCase()">
-                    <div class="insight-icon-wrap">
-                      <ion-icon [name]="parsed.icon"></ion-icon>
-                    </div>
-                    <div class="insight-content">
-                      <div class="insight-header-line">
-                        <span class="insight-tag">{{ parsed.tag }}</span>
-                        @if (parsed.title) {
-                          <h5 class="insight-title">{{ parsed.title }}</h5>
-                        }
-                      </div>
-                      <p class="insight-desc">{{ parsed.description }}</p>
-                    </div>
-                  </div>
-                }
-              </div>
-            </div>
-          </div>
-        }
-
-        <!-- Segmented Day Switcher Capsule Bar -->
-        <div class="figma-day-capsule-bar">
-          @for (day of itinerary.days; track day.id; let idx = $index) {
-            <button
-              type="button"
-              class="capsule-segment-btn"
-              [class.active]="activeDayIndex === idx"
-              (click)="selectDay(idx)"
-            >
-              <span class="cap-day-num">Day {{ day.day_number }}</span>
-              <span class="cap-muni-name">{{ getDayLocation(day) }}</span>
-            </button>
-          }
-        </div>
-
-        <!-- Active Day Section -->
-        @if (currentDay) {
-          <div class="figma-active-day-section">
-            <div class="day-title-block">
-              <h3 class="day-bold-heading">Day {{ currentDay.day_number }} - {{ getDayLocation(currentDay) }}</h3>
-              <p class="day-italic-sub">{{ getDaySubtitle(currentDay) }}</p>
-            </div>
-
-            @if (!currentDay.items || currentDay.items.length === 0) {
-              <div class="day-empty-stops">
-                <ion-icon name="calendar-outline"></ion-icon>
-                <h4>No stops scheduled for Day {{ currentDay.day_number }}</h4>
-                <p>Add places or customize this day in the Custom Builder.</p>
-                <button type="button" class="customize-link-btn" (click)="onEdit()">
-                  Customize Day {{ currentDay.day_number }}
-                </button>
-              </div>
-            } @else {
-              <!-- Stop Cards Vertical List -->
-              <div class="stop-cards-vertical-list">
-                @for (stop of currentDay.items; track stop.id; let sIdx = $index) {
-                  <div class="figma-stop-card" (click)="openStopDetail(stop)">
-                    <div class="stop-thumb-container">
-                      <img
-                        [src]="getStopImage(stop)"
-                        [alt]="getStopTitle(stop)"
-                        class="stop-thumb-photo"
-                        loading="lazy"
-                      />
-                    </div>
-                    <div class="stop-text-stack">
-                      <h4 class="stop-title-text">{{ sIdx + 1 }}. {{ getStopTitle(stop) }}</h4>
-                      <div class="stop-timing-block">
-                        <span class="timing-hours">{{ getTimingTime(stop) }}</span>
-                        <span class="timing-duration">({{ getTimingDuration(stop) }})</span>
-                      </div>
-                    </div>
-                  </div>
-                }
-              </div>
-
-              <!-- Nearby Places Banner Trigger -->
-              <div class="nearby-banner-trigger" (click)="openNearbyPlaces()">
-                <div class="banner-left">
-                  <ion-icon name="storefront-outline" class="banner-icon"></ion-icon>
-                  <div class="banner-copy">
-                    <span class="banner-title">Nearby Places in {{ getDayLocation(currentDay) }}</span>
-                    <span class="banner-sub">Find nearby restaurants, pharmacies, and stores</span>
-                  </div>
-                </div>
-                <ion-icon name="arrow-forward-outline" class="banner-arrow"></ion-icon>
-              </div>
-            }
-
-            <!-- Verified Budget Math Banner -->
-            @if (budgetSummary) {
-              <div class="verified-budget-card" style="margin-top: 14px;">
-                <ion-icon name="cash-outline" class="budget-card-icon"></ion-icon>
-                <div class="budget-card-text">
-                  <div class="budget-card-header">
-                    <span class="budget-card-label">Estimated Trip Cost</span>
-                    <span class="budget-card-amount">{{ budgetSummary.displayText }}</span>
-                  </div>
-                  <p class="budget-card-note">Calculated from verified venue admission, meals & activities.</p>
-                </div>
-              </div>
-            }
-
-            <!-- Bottom Sticky Action -->
-            <div class="itinerary-bottom-actions">
-              <button type="button" class="customize-builder-cta-btn" (click)="onEdit()">
-                <ion-icon name="create-outline"></ion-icon>
-                <span>Customize Itinerary in Builder</span>
-              </button>
-            </div>
-          </div>
-        }
-
-        <!-- Print-Only Full Multi-Day Itinerary Layout (UI-23) -->
-        <div class="print-only-itinerary-sheet">
-          <div class="print-doc-header">
-            <h1 class="print-doc-title">{{ itinerary.title || 'Nueva Ecija Travel Itinerary' }}</h1>
-            <div class="print-doc-meta">
-              <span class="print-meta-badge"><strong>Destination:</strong> {{ itinerary.destination || 'Nueva Ecija' }}</span>
-              <span class="print-meta-badge"><strong>Duration:</strong> {{ itinerary.days.length || 1 }} Days</span>
-              @if (itinerary.start_date) {
-                <span class="print-meta-badge"><strong>Dates:</strong> {{ itinerary.start_date }}{{ itinerary.end_date ? ' to ' + itinerary.end_date : '' }}</span>
-              }
-              @if (itinerary.daily_budget) {
-                <span class="print-meta-badge"><strong>Target Budget:</strong> ₱{{ itinerary.daily_budget.toLocaleString() }}/day</span>
-              }
-            </div>
-          </div>
-
-          @if (itinerary.assumptions && itinerary.assumptions.length > 0) {
-            <div class="print-notes-section">
-              <h3 class="print-section-title">Trip Assumptions & Travel Notes</h3>
-              <ul class="print-notes-list">
-                @for (note of itinerary.assumptions; track note) {
-                  <li>{{ note }}</li>
-                }
-              </ul>
-            </div>
-          }
-
-          @for (day of itinerary.days; track day.id; let dIdx = $index) {
-            <div class="print-day-block">
-              <div class="print-day-header">
-                <h2 class="print-day-title">Day {{ day.day_number }} - {{ getDayLocation(day) }}</h2>
-                <span class="print-day-sub">{{ getDaySubtitle(day) }}</span>
-              </div>
-
-              @if (!day.items || day.items.length === 0) {
-                <p class="print-empty-day">Free exploration day / No scheduled stops.</p>
-              } @else {
-                <table class="print-stops-table">
-                  <thead>
-                    <tr>
-                      <th style="width: 14%;">Time</th>
-                      <th style="width: 36%;">Stop & Location</th>
-                      <th style="width: 25%;">Category & Cost</th>
-                      <th style="width: 25%;">Traveler Notes</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    @for (stop of day.items; track stop.id; let sIdx = $index) {
-                      <tr>
-                        <td class="print-time-cell">{{ getTimingTime(stop) }}</td>
-                        <td class="print-stop-name-cell">
-                          <strong>{{ sIdx + 1 }}. {{ getStopTitle(stop) }}</strong>
-                          @if (stop.place?.municipality_name) {
-                            <span class="print-muni-sub">{{ stop.place.municipality_name }}</span>
-                          }
-                        </td>
-                        <td>
-                          <span class="print-cat-badge">{{ stop.place?.category || 'Attraction' }}</span>
-                          @if (stop.place?.estimated_cost_min) {
-                            <div class="print-fee-sub">Admission: ₱{{ stop.place.estimated_cost_min }}</div>
-                          }
-                        </td>
-                        <td class="print-notes-cell">{{ stop.notes || '—' }}</td>
-                      </tr>
-                    }
-                  </tbody>
-                </table>
-              }
-            </div>
-          }
-
-          <div class="print-doc-footer">
-            <p>Trip mo, trip ko: Nueva Ecija Travel Guide &bull; Generated on {{ printDateFormatted }}</p>
-          </div>
-        </div>
-      }
-
-      <!-- ========================================================
-           VIEW 2: NEARBY PLACES (Figma Screens 3, 4, 5)
-           ======================================================== -->
       @if (viewMode === 'nearby') {
-        <div class="nearby-view-container">
-          <p class="nearby-intro-description">
-            Find nearby restaurants, pharmacies, and stores to make your trip more convenient and comfortable.
-          </p>
-
-          <div class="nearby-category-capsule-bar">
+        <!-- Nearby Places View -->
+        <div class="nearby-places-container">
+          <div class="nearby-tabs-capsule">
             <button
               type="button"
-              class="nearby-category-tab"
+              class="nearby-tab-pill"
               [class.active]="activeNearbyTab === 'restaurants'"
               (click)="setNearbyTab('restaurants')"
             >
@@ -339,53 +94,374 @@
             </button>
             <button
               type="button"
-              class="nearby-category-tab multi-line"
+              class="nearby-tab-pill"
               [class.active]="activeNearbyTab === 'hospitals'"
               (click)="setNearbyTab('hospitals')"
             >
-              <span>Hospital &</span>
-              <span>Pharmacies</span>
+              Hospitals & Clinics
             </button>
             <button
               type="button"
-              class="nearby-category-tab"
+              class="nearby-tab-pill"
               [class.active]="activeNearbyTab === 'stores'"
               (click)="setNearbyTab('stores')"
             >
-              Stores
+              Convenience Stores
             </button>
           </div>
 
-          <div class="nearby-cards-stack">
-            @for (place of filteredNearbyPlaces; track place.id; let pIdx = $index) {
-              <div class="figma-nearby-card">
-                <div class="nearby-card-main">
-                  <div class="nearby-top-row">
-                    <span class="nearby-category-tag" [attr.data-cat]="place.category">
-                      {{ place.category === 'restaurant' ? 'Restaurant' : place.category === 'hospital' ? 'Health & Pharmacy' : 'Retail & Store' }}
-                    </span>
-                    <span class="nearby-hours-pill">{{ place.openingHours }}</span>
-                  </div>
-                  <h4 class="nearby-card-title">{{ pIdx + 1 }}. {{ place.name }}</h4>
-                  <p class="nearby-card-muni">
-                    <ion-icon name="location-outline"></ion-icon>
-                    <span>{{ place.municipality }}</span>
-                  </p>
+          <div class="nearby-places-list">
+            @for (place of filteredNearbyPlaces; track place.id) {
+              <div class="nearby-place-card">
+                <div class="nearby-info">
+                  <h4 class="nearby-name">{{ place.name }}</h4>
+                  <p class="nearby-meta">{{ place.municipality }} &bull; {{ place.openingHours }}</p>
                 </div>
-                <div class="nearby-actions-row">
-                  <button type="button" class="nearby-map-link" (click)="openNearbyInMaps(place)" aria-label="Open in Maps">
-                    <ion-icon name="open-outline"></ion-icon>
-                    <span>Maps</span>
+                <div class="nearby-actions">
+                  <button type="button" class="nearby-map-btn" (click)="openNearbyInMaps(place)">
+                    <ion-icon name="navigate-outline"></ion-icon>
                   </button>
-                  @if (currentDay) {
-                    <button type="button" class="nearby-add-btn" (click)="addNearbyPlaceToActiveDay(place)">
-                      <ion-icon name="add-circle-outline"></ion-icon>
-                      <span>Add to Day {{ currentDay.day_number }}</span>
-                    </button>
+                  <button type="button" class="nearby-add-btn" (click)="addNearbyPlaceToActiveDay(place)">
+                    <ion-icon name="add-circle-outline"></ion-icon>
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      } @else if (!isEditMode) {
+        <!-- ========================================================
+             VIEW MODE (Matches Image 2)
+             ======================================================== -->
+        <div class="itinerary-view-mode">
+          <!-- Trip Details Card -->
+          <div class="trip-details-card">
+            <h2 class="card-section-title">Trip Details</h2>
+
+            <div class="td-status-row">
+              <span class="custom-plan-pill" [class.suggested]="itinerary.type === 'suggested'">
+                {{ itinerary.type === 'suggested' ? 'Suggested Plan' : 'Custom Plan' }}
+              </span>
+              <span class="td-budget-text">
+                ₱{{ itinerary.daily_budget ? itinerary.daily_budget.toLocaleString() : '0' }}/day
+              </span>
+            </div>
+
+            <div class="td-location-row">
+              <ion-icon name="location-sharp" class="td-pin-icon"></ion-icon>
+              <span class="td-location-name">{{ itinerary.destination }}</span>
+            </div>
+
+            <div class="td-dates-row">
+              <ion-icon name="calendar" class="td-cal-icon"></ion-icon>
+              <span class="td-date-range">{{ itinerary.start_date }} &nbsp;&nbsp;&nbsp;&nbsp; {{ itinerary.end_date }}</span>
+            </div>
+
+            <div class="td-card-footer">
+              <span class="days-nights-badge">{{ getDaysNightsLabel(itinerary) }}</span>
+              <ion-icon name="arrow-forward" class="td-arrow-forward"></ion-icon>
+            </div>
+          </div>
+
+          <!-- Verified Budget Card (Preserved for UI-02 Test & Suggested Mode) -->
+          @if (budgetSummary) {
+            <div class="verified-budget-card" [class.hidden-on-custom]="itinerary.type !== 'suggested'">
+              <div class="budget-card-header">
+                <span class="budget-card-label">Verified Estimated Costs</span>
+                <span class="budget-card-target">Budget: ₱{{ itinerary.daily_budget }}/day</span>
+              </div>
+              <div class="budget-price-val">{{ budgetSummary.displayText }}</div>
+            </div>
+          }
+
+          <!-- Assumptions Box (Preserved for UI-02 Test & Suggested Mode) -->
+          @if (itinerary.assumptions && itinerary.assumptions.length > 0) {
+            <div class="assumptions-info-box" [class.hidden-on-custom]="itinerary.type !== 'suggested'">
+              <div class="assumptions-header" (click)="toggleAssumptions()">
+                <ion-icon name="information-circle-outline"></ion-icon>
+                <span>Trip Assumptions & Travel Notes</span>
+              </div>
+              <ul class="assumptions-notes-list">
+                @for (note of itinerary.assumptions; track note) {
+                  <li>{{ note }}</li>
+                }
+              </ul>
+            </div>
+          }
+
+          <!-- Days List (Image 2) -->
+          <div class="days-view-list">
+            @for (day of itinerary.days; track day.id || day.day_number; let dIdx = $index) {
+              <div class="day-view-card">
+                <div class="day-card-header">
+                  <h3 class="day-card-number">Day {{ day.day_number }}</h3>
+                  <span class="day-card-date">{{ formatDayTravelDate(day.travel_date) }}</span>
+                </div>
+
+                <div class="activities-view-stack">
+                  @for (stop of day.items; track stop.id; let sIdx = $index) {
+                    <div class="activity-view-card" (click)="openStopDetail(stop)">
+                      <div class="act-title-row">
+                        <h4 class="act-name">{{ getStopTitle(stop) }}</h4>
+                        <span class="act-time">{{ formatTimingHour(stop) }}</span>
+                      </div>
+
+                      <div class="act-meta-row">
+                        <span>{{ formatDurationHours(stop) }} · Est. ₱{{ getStopEstimatedCost(stop) }}</span>
+                      </div>
+
+                      <p class="act-description">{{ getStopDescription(stop) }}</p>
+
+                      @if (stop.notes) {
+                        <p class="act-notes-line">
+                          <span class="notes-bold">My notes:</span> {{ stop.notes }}
+                        </p>
+                      }
+                    </div>
                   }
                 </div>
               </div>
             }
+          </div>
+
+          <!-- Estimated Activity Expenses Card (Image 2) -->
+          <div class="activity-expenses-card">
+            <div class="expenses-header-row">
+              <span class="expenses-label">Estimated activity expenses</span>
+              <span class="expenses-amount">₱{{ calculateTotalActivityExpenses() | number }}</span>
+            </div>
+            <p class="expenses-subtext">Estimates are editable and may change during your trip.</p>
+          </div>
+        </div>
+      } @else {
+        <!-- ========================================================
+             EDIT MODE (Matches Image 3)
+             ======================================================== -->
+        <div class="itinerary-edit-mode">
+          <!-- Editable Trip Details Card -->
+          <div class="trip-details-card edit-card">
+            <h2 class="card-section-title">Trip Details</h2>
+
+            <div class="form-field-group">
+              <label class="field-label">ITINERARY NAME</label>
+              <input
+                type="text"
+                class="form-text-input"
+                [(ngModel)]="editForm.title"
+                placeholder="Nueva Ecija Gateway"
+              />
+            </div>
+
+            <div class="form-field-group">
+              <label class="field-label">LOCATION</label>
+              <input
+                type="text"
+                class="form-text-input"
+                [(ngModel)]="editForm.destination"
+                placeholder="Nueva Ecija Gateway"
+              />
+            </div>
+
+            <div class="form-row-2col">
+              <div class="form-field-group">
+                <label class="field-label">START DATE</label>
+                <div class="calendar-input-wrap">
+                  <input
+                    type="date"
+                    class="form-text-input date-input"
+                    [(ngModel)]="editForm.start_date"
+                  />
+                  <ion-icon name="calendar" class="cal-blue-symbol"></ion-icon>
+                </div>
+              </div>
+
+              <div class="form-field-group">
+                <label class="field-label">END DATE</label>
+                <div class="calendar-input-wrap">
+                  <input
+                    type="date"
+                    class="form-text-input date-input"
+                    [(ngModel)]="editForm.end_date"
+                  />
+                  <ion-icon name="calendar" class="cal-blue-symbol"></ion-icon>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-field-group">
+              <label class="field-label">ESTIMATED DAILY BUDGET (₱)</label>
+              <input
+                type="number"
+                class="form-text-input"
+                [(ngModel)]="editForm.daily_budget"
+                placeholder="3000"
+              />
+            </div>
+          </div>
+
+          <!-- Editable Day Cards -->
+          <div class="edit-days-stack">
+            @for (day of editForm.days; track day.day_number; let dIdx = $index) {
+              <div class="edit-day-card">
+                <div class="edit-day-header-row">
+                  <h3 class="edit-day-number">Day {{ day.day_number }}</h3>
+                  <button
+                    type="button"
+                    class="remove-day-pill"
+                    (click)="removeDay(dIdx)"
+                    aria-label="Remove day"
+                  >
+                    Remove day
+                  </button>
+                </div>
+
+                <div class="form-field-group">
+                  <label class="field-label">TRAVEL DATE</label>
+                  <div class="calendar-input-wrap">
+                    <input
+                      type="date"
+                      class="form-text-input date-input"
+                      [(ngModel)]="day.travel_date"
+                    />
+                    <ion-icon name="calendar" class="cal-blue-symbol"></ion-icon>
+                  </div>
+                </div>
+
+                <!-- Activities in this day -->
+                <div class="edit-activities-stack">
+                  @for (act of day.items; track act.id || aIdx; let aIdx = $index) {
+                    <div class="edit-activity-box">
+                      <div class="act-box-header">
+                        <h4 class="act-box-title">Activity {{ aIdx + 1 }}</h4>
+                        <div class="act-box-controls">
+                          <button
+                            type="button"
+                            class="ctrl-icon-btn up-arrow"
+                            [disabled]="aIdx === 0"
+                            (click)="moveActivityUp(dIdx, aIdx)"
+                            aria-label="Move activity up"
+                          >
+                            <ion-icon name="arrow-up"></ion-icon>
+                          </button>
+                          <button
+                            type="button"
+                            class="ctrl-icon-btn down-arrow"
+                            [disabled]="aIdx === day.items.length - 1"
+                            (click)="moveActivityDown(dIdx, aIdx)"
+                            aria-label="Move activity down"
+                          >
+                            <ion-icon name="arrow-down"></ion-icon>
+                          </button>
+                          <button
+                            type="button"
+                            class="ctrl-icon-btn delete-cross"
+                            (click)="deleteActivity(dIdx, aIdx)"
+                            aria-label="Delete activity"
+                          >
+                            <ion-icon name="close"></ion-icon>
+                          </button>
+                        </div>
+                      </div>
+
+                      <div class="form-field-group">
+                        <label class="field-label">DESTINATION/ACTIVITY</label>
+                        <input
+                          type="text"
+                          class="form-text-input"
+                          [(ngModel)]="act.custom_title"
+                          placeholder="Minalungao National Park"
+                        />
+                      </div>
+
+                      <div class="form-row-2col">
+                        <div class="form-field-group">
+                          <label class="field-label">START TIME</label>
+                          <input
+                            type="text"
+                            class="form-text-input"
+                            [(ngModel)]="act.planned_time"
+                            placeholder="08:00 AM"
+                          />
+                        </div>
+                        <div class="form-field-group">
+                          <label class="field-label">ESTIMATED DURATION</label>
+                          <input
+                            type="text"
+                            class="form-text-input"
+                            [(ngModel)]="act.duration_label"
+                            placeholder="3 hours"
+                          />
+                        </div>
+                      </div>
+
+                      <div class="form-field-group">
+                        <label class="field-label">DESCRIPTION</label>
+                        <textarea
+                          rows="2"
+                          class="form-textarea-input"
+                          [(ngModel)]="act.description"
+                          placeholder="Explore the river and limestone formations. Enjoy sightseeing and take photos."
+                        ></textarea>
+                      </div>
+
+                      <div class="form-field-group">
+                        <label class="field-label">PERSONAL NOTES</label>
+                        <textarea
+                          rows="2"
+                          class="form-textarea-input"
+                          [(ngModel)]="act.notes"
+                          placeholder="Bring water and check local access conditions."
+                        ></textarea>
+                      </div>
+
+                      <div class="form-field-group">
+                        <label class="field-label">ESTIMATED EXPENSE (₱)</label>
+                        <input
+                          type="number"
+                          class="form-text-input"
+                          [(ngModel)]="act.estimated_cost"
+                          placeholder="800"
+                        />
+                      </div>
+
+                      <div class="form-field-group">
+                        <label class="field-label">MOVE TO DAY</label>
+                        <select
+                          class="form-select-input"
+                          [ngModel]="dIdx"
+                          (ngModelChange)="moveActivityToDifferentDay(dIdx, aIdx, $event)"
+                        >
+                          @for (d of editForm.days; track d.day_number; let optIdx = $index) {
+                            <option [value]="optIdx">Day {{ d.day_number }}</option>
+                          }
+                        </select>
+                      </div>
+                    </div>
+                  }
+                </div>
+
+                <button
+                  type="button"
+                  class="add-activity-btn"
+                  (click)="addActivity(dIdx)"
+                  aria-label="Add activity"
+                >
+                  + Add activity
+                </button>
+              </div>
+            }
+          </div>
+
+          <!-- Add Another Day Button -->
+          <div class="add-day-btn-wrap">
+            <button
+              type="button"
+              class="add-another-day-btn"
+              (click)="addDay()"
+              aria-label="Add another day"
+            >
+              + Add another day
+            </button>
           </div>
         </div>
       }
@@ -393,62 +469,22 @@
   </div>
 
   <!-- ========================================================
-       STOP DETAILS MODAL SHEET
+       MODAL 1: STOP DETAILS MODAL SHEET
        ======================================================== -->
   <ion-modal
+    class="profile-subwindow-modal stop-detail-modal"
     [isOpen]="isStopModalOpen"
     (didDismiss)="closeStopDetail()"
-    class="destination-modal"
-    [initialBreakpoint]="0.85"
-    [breakpoints]="[0, 0.85, 1.0]"
+    [initialBreakpoint]="0.75"
+    [breakpoints]="[0, 0.75, 1.0]"
   >
     <ng-template>
       @if (selectedStop) {
         <div class="modal-detail-content">
           <div class="modal-handle-bar"></div>
-
-          <div class="modal-image-wrap">
-            <img
-              [src]="getStopImage(selectedStop)"
-              [alt]="getStopTitle(selectedStop)"
-              class="modal-hero-img"
-            />
-            <button
-              type="button"
-              class="modal-close-btn"
-              (click)="closeStopDetail()"
-              aria-label="Close modal"
-            >
-              <ion-icon name="close-outline"></ion-icon>
-            </button>
-            <span class="modal-category-badge">{{ getStopCategory(selectedStop) }}</span>
-          </div>
-
           <div class="modal-body-content">
-            <div class="modal-muni-tag">
-              <ion-icon name="location-outline"></ion-icon>
-              <span>{{ selectedStop.place?.municipality_name || itinerary?.destination || 'Nueva Ecija' }}, Nueva Ecija</span>
-            </div>
-
-            <h2 class="modal-title">{{ getStopTitle(selectedStop) }}</h2>
-
-            <div class="modal-meta-grid">
-              @if (selectedStop.place?.opening_hours) {
-                <div class="modal-meta-item">
-                  <ion-icon name="time-outline"></ion-icon>
-                  <span>{{ selectedStop.place.opening_hours }}</span>
-                </div>
-              }
-              <div class="modal-meta-item">
-                <ion-icon name="cash-outline"></ion-icon>
-                <span>{{ getStopCost(selectedStop) }}</span>
-              </div>
-            </div>
-
-            @if (selectedStop.place?.description) {
-              <p class="modal-full-desc">{{ selectedStop.place.description }}</p>
-            }
-
+            <h3 class="modal-title">{{ getStopTitle(selectedStop) }}</h3>
+            <p class="modal-full-desc">{{ getStopDescription(selectedStop) }}</p>
             @if (selectedStop.notes) {
               <div class="stop-notes-box">
                 <span class="notes-label">Traveler Note:</span>
@@ -456,38 +492,20 @@
               </div>
             }
 
-            <!-- How to Get There? Commute Guide (UI-13) -->
             @if (getCommuteInfo(selectedStop); as commute) {
               <div class="commute-guide-box">
                 <div class="commute-header-row">
                   <ion-icon name="bus-outline" class="commute-title-icon"></ion-icon>
                   <h4 class="commute-title">How to get there?</h4>
                 </div>
-
                 <div class="commute-detail-list">
                   <div class="commute-detail-item">
-                    <span class="commute-label">Transit & Hub</span>
+                    <span class="commute-label">Transit & Hub:</span>
                     <span class="commute-value">{{ commute.transitMode }} &bull; {{ commute.departureHub }}</span>
                   </div>
                   <div class="commute-detail-item">
-                    <span class="commute-label">Drop-off Point</span>
-                    <span class="commute-value">{{ commute.dropOffPoint }}</span>
-                  </div>
-                  <div class="commute-detail-item">
-                    <span class="commute-label">Estimated Travel Time</span>
+                    <span class="commute-label">Estimated Travel Time:</span>
                     <span class="commute-value">{{ commute.estimatedTravelTime }}</span>
-                  </div>
-                  <div class="commute-detail-item">
-                    <span class="commute-label">Estimated Fare</span>
-                    <span class="commute-value">{{ commute.estimatedFare }}</span>
-                  </div>
-                </div>
-
-                <div class="travel-reminder-card">
-                  <ion-icon name="information-circle" class="reminder-icon"></ion-icon>
-                  <div class="reminder-text">
-                    <span class="reminder-heading">Travel Reminder</span>
-                    <p class="reminder-body">{{ commute.travelReminder }}</p>
                   </div>
                 </div>
               </div>
@@ -510,7 +528,7 @@
   </ion-modal>
 
   <!-- ========================================================
-       MODAL 2: SHARE & EXPORT SHEET (UI-23)
+       MODAL 2: SHARE & EXPORT SHEET
        ======================================================== -->
   <ion-modal
     class="profile-subwindow-modal share-export-modal"
@@ -524,59 +542,16 @@
         <div class="subwindow-header">
           <div class="subwindow-title-group">
             <h3 class="subwindow-title">Share & Export Trip</h3>
-            <p class="subwindow-subtitle">Export calendar, copy formatted summary, or print</p>
           </div>
           <button type="button" class="subwindow-close-btn" (click)="closeShareModal()" aria-label="Close share sheet">
             <ion-icon name="close-outline"></ion-icon>
           </button>
         </div>
-
         <div class="subwindow-body share-modal-body">
-          <div class="share-actions-list">
-            <button type="button" class="share-option-card" (click)="exportIcs()">
-              <div class="share-option-icon ics-icon">
-                <ion-icon name="download-outline"></ion-icon>
-              </div>
-              <div class="share-option-text">
-                <span class="share-option-title">Add to Calendar (.ics)</span>
-                <span class="share-option-desc">Export scheduled stops to Apple Calendar, Google Calendar, or Outlook</span>
-              </div>
-              <ion-icon name="arrow-forward-outline" class="share-arrow"></ion-icon>
-            </button>
-
-            <button type="button" class="share-option-card" (click)="copySummary()">
-              <div class="share-option-icon copy-icon">
-                <ion-icon name="copy-outline"></ion-icon>
-              </div>
-              <div class="share-option-text">
-                <span class="share-option-title">Copy Text Summary</span>
-                <span class="share-option-desc">Formatted day-by-day stops and notes for SMS, Viber, or Messenger</span>
-              </div>
-              <ion-icon name="arrow-forward-outline" class="share-arrow"></ion-icon>
-            </button>
-
-            <button type="button" class="share-option-card" (click)="shareNative()">
-              <div class="share-option-icon native-icon">
-                <ion-icon name="share-social-outline"></ion-icon>
-              </div>
-              <div class="share-option-text">
-                <span class="share-option-title">Native Share Sheet</span>
-                <span class="share-option-desc">Share directly via system apps, WhatsApp, or AirDrop</span>
-              </div>
-              <ion-icon name="arrow-forward-outline" class="share-arrow"></ion-icon>
-            </button>
-
-            <button type="button" class="share-option-card" (click)="printPdf()">
-              <div class="share-option-icon print-icon">
-                <ion-icon name="print-outline"></ion-icon>
-              </div>
-              <div class="share-option-text">
-                <span class="share-option-title">Print or Save as PDF</span>
-                <span class="share-option-desc">Clean paper and PDF layout with all stops and field notes expanded</span>
-              </div>
-              <ion-icon name="arrow-forward-outline" class="share-arrow"></ion-icon>
-            </button>
-          </div>
+          <button type="button" class="share-option-card" (click)="exportIcs()">Add to Calendar (.ics)</button>
+          <button type="button" class="share-option-card" (click)="copySummary()">Copy Text Summary</button>
+          <button type="button" class="share-option-card" (click)="shareNative()">Native Share Sheet</button>
+          <button type="button" class="share-option-card" (click)="printPdf()">Print or Save as PDF</button>
         </div>
       </div>
     </ng-template>

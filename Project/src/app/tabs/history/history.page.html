@@ -6,7 +6,7 @@
     </ion-button>
   </ion-toolbar>
 
-  @if (savedItineraries.length > 0) {
+  @if (savedItineraries.length > 2) {
   <!-- Search & Filter Bar -->
   <div class="history-filter-header">
     <div class="search-input-pill">
@@ -63,7 +63,15 @@
 
 <ion-content class="history-content" [fullscreen]="true">
   <div class="history-container">
-    @if (savedItineraries.length > 0) { @if (filteredItineraries.length > 0) {
+    @if (savedItineraries.length > 0) {
+    <div class="saved-trips-heading-block">
+      <h2 class="saved-trips-headline">Your Saved Trips</h2>
+      <p class="saved-trips-subheadline">
+        {{ savedItineraries.length }} {{ savedItineraries.length === 1 ? 'Trip' : 'Trips' }} Planned in {{ savedItineraries[0]?.destination || 'Nueva Ecija' }}
+      </p>
+    </div>
+
+    @if (filteredItineraries.length > 0) {
     <div class="itineraries-grid">
       @for (itin of filteredItineraries; track itin.id) {
       <div class="history-itinerary-card" (click)="openItinerary(itin)" role="button" tabindex="0">
@@ -79,7 +87,7 @@
               (click)="deleteItinerary($event, itin)"
               aria-label="Delete itinerary"
             >
-              <ion-icon name="trash-outline"></ion-icon>
+              <ion-icon name="trash"></ion-icon>
             </button>
           </div>
         </div>
@@ -87,21 +95,18 @@
         <h3 class="itin-title">{{ itin.title }}</h3>
 
         <p class="itin-destination">
-          <ion-icon name="location-outline"></ion-icon>
+          <ion-icon name="location-sharp" class="dest-pin-icon"></ion-icon>
           <span>{{ itin.destination }}</span>
         </p>
 
-        <div class="itin-admission-row">
-          <span class="itin-cost-label">Est. admissions:</span>
-          <span class="itin-cost-val">{{ getTripCostEstimate(itin) }}</span>
-        </div>
+        <div class="card-divider-line"></div>
 
         <div class="itin-footer-row">
           <span class="itin-dates">
-            <ion-icon name="calendar-outline"></ion-icon>
+            <ion-icon name="calendar" class="cal-blue-icon"></ion-icon>
             <span>{{ itin.start_date }} &rarr; {{ itin.end_date }}</span>
           </span>
-          <span class="itin-stops-pill"> {{ itin.days.length || 1 }} Days · {{ getTotalStops(itin) }} Stops </span>
+          <span class="days-nights-pill">{{ getDaysNightsLabel(itin) }}</span>
         </div>
       </div>
       }

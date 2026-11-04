@@ -16,14 +16,17 @@ import { addIcons } from 'ionicons';
 import {
   addOutline,
   arrowForward,
+  calendar,
   calendarOutline,
   cashOutline,
   closeCircleOutline,
   filterOutline,
   locationOutline,
+  locationSharp,
   searchOutline,
   sparkles,
   timeOutline,
+  trash,
   trashOutline,
 } from 'ionicons/icons';
 import { Subscription } from 'rxjs';
@@ -66,8 +69,11 @@ export class HistoryPage implements OnInit, OnDestroy {
     addIcons({
       timeOutline,
       calendarOutline,
+      calendar,
       locationOutline,
+      locationSharp,
       cashOutline,
+      trash,
       trashOutline,
       arrowForward,
       addOutline,
@@ -131,6 +137,14 @@ export class HistoryPage implements OnInit, OnDestroy {
   public resetFilters(): void {
     this.searchTerm = '';
     this.activeSegment = 'all';
+  }
+
+  public getDaysNightsLabel(itinerary: Itinerary): string {
+    const days = itinerary.days?.length || 1;
+    const nights = Math.max(0, days - 1);
+    return nights > 0
+      ? `${days} Days - ${nights} ${nights === 1 ? 'Night' : 'Nights'}`
+      : `${days} Day`;
   }
 
   public openItinerary(itinerary: Itinerary): void {

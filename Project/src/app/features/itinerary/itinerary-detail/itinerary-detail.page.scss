@@ -1,292 +1,636 @@
 :host {
   display: block;
-  background-color: #ffffff;
+  background-color: #f8fafc;
 }
 
-.detail-toolbar {
+.itinerary-toolbar {
   --background: #ffffff;
   --border-width: 0;
   padding: 0;
 }
 
-.header-action-group {
+.toolbar-nav-row {
   display: flex;
   align-items: center;
-  gap: 4px;
-}
+  justify-content: space-between;
+  padding: 8px 16px;
 
-.figma-header-share-btn {
-  background: transparent;
-  border: none;
-  padding: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #0084ff;
-  font-size: 20px;
-  cursor: pointer;
-  transition: opacity 0.15s ease;
+  .toolbar-brand-title {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #000;
+  }
 
-  &:hover {
-    opacity: 0.8;
+  .header-plus-btn {
+    background: transparent;
+    border: none;
+    font-size: 24px;
+    color: #0084ff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
   }
 }
 
-.figma-header-edit-btn {
-  background: transparent;
-  border: none;
-  padding: 6px;
+.sub-header-bar {
   display: flex;
   align-items: center;
-  justify-content: center;
-  color: #0084ff;
-  font-size: 22px;
-  cursor: pointer;
-}
+  justify-content: space-between;
+  padding: 8px 16px 12px;
+  background: #fff;
+  border-bottom: 1px solid #e2e8f0;
 
-.figma-header-delete-btn {
-  background: transparent;
-  border: none;
-  padding: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #ef4444;
-  font-size: 20px;
-  cursor: pointer;
-  transition: opacity 0.15s ease;
+  .sub-header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 
-  &:hover {
-    opacity: 0.8;
+    .back-arrow-btn {
+      background: transparent;
+      border: none;
+      font-size: 20px;
+      color: #0084ff;
+      display: flex;
+      cursor: pointer;
+      padding: 2px;
+    }
+
+    .sub-header-title {
+      font-size: 1.18rem;
+      font-weight: 800;
+      color: #000;
+      margin: 0;
+    }
+  }
+
+  .sub-header-right {
+    .edit-action-btn {
+      background: #dbeafe;
+      color: #0284c7;
+      font-weight: 700;
+      font-size: 0.85rem;
+      padding: 6px 16px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+    }
+
+    .edit-btn-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      .save-changes-btn {
+        background: #0084ff;
+        color: #fff;
+        font-weight: 700;
+        font-size: 0.82rem;
+        padding: 7px 14px;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+      }
+
+      .cancel-edit-btn {
+        background: #e2e8f0;
+        color: #1e293b;
+        font-weight: 600;
+        font-size: 0.82rem;
+        padding: 7px 12px;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+      }
+    }
   }
 }
 
-.detail-content {
-  --background: #ffffff;
-  background: #ffffff;
+.itinerary-content {
+  --background: #f8fafc;
 }
 
-.detail-container {
+.itinerary-page-container {
   max-width: 580px;
   margin: 0 auto;
-  padding: 8px 16px 80px;
+  padding: 16px 16px 80px;
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-.loading-state,
-.empty-state {
+.loading-state-wrapper,
+.empty-state-wrapper {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 60px 20px;
+  padding: 60px 16px;
   text-align: center;
   gap: 12px;
 
   h2 {
-    font-size: 1.3rem;
-    font-weight: 800;
-    color: #0f172a;
-    margin: 0;
-  }
-
-  p {
-    font-size: 0.9rem;
-    color: #64748b;
-    margin: 0;
-  }
-}
-
-.day-empty-stops {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  padding: 30px 16px;
-  background: #f8fafc;
-  border: 1px dashed #cbd5e1;
-  border-radius: 14px;
-  gap: 6px;
-
-  ion-icon {
-    font-size: 32px;
-    color: #94a3b8;
-  }
-
-  h4 {
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: #0f172a;
-    margin: 0;
-  }
-
-  p {
-    font-size: 0.8rem;
-    color: #64748b;
-    margin: 0;
-  }
-
-  .customize-link-btn {
-    margin-top: 8px;
-    background: #0084ff;
-    color: #ffffff;
-    border: none;
-    border-radius: 8px;
-    padding: 8px 14px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    cursor: pointer;
-  }
-}
-
-/* Destination Modal Sheet */
-.modal-detail-content {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  background: #ffffff;
-  overflow-y: auto;
-}
-
-.modal-handle-bar {
-  width: 40px;
-  height: 4px;
-  border-radius: 2px;
-  background: #cbd5e1;
-  margin: 10px auto 6px;
-}
-
-.modal-image-wrap {
-  position: relative;
-  width: 100%;
-  height: 180px;
-
-  .modal-hero-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  .modal-close-btn {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    background: rgba(15, 23, 42, 0.65);
-    border: none;
-    color: #ffffff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-    cursor: pointer;
-  }
-
-  .modal-category-badge {
-    position: absolute;
-    bottom: 12px;
-    left: 14px;
-    background: rgba(0, 132, 255, 0.9);
-    color: #ffffff;
-    font-size: 0.72rem;
-    font-weight: 700;
-    padding: 4px 10px;
-    border-radius: 9999px;
-  }
-}
-
-.modal-body-content {
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-
-  .modal-muni-tag {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.82rem;
-    color: #0084ff;
-    font-weight: 600;
-  }
-
-  .modal-title {
     font-size: 1.25rem;
     font-weight: 800;
     color: #0f172a;
     margin: 0;
   }
 
-  .modal-meta-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-
-    .modal-meta-item {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 0.82rem;
-      color: #475569;
-
-      ion-icon {
-        color: #0084ff;
-      }
-    }
-  }
-
-  .modal-full-desc {
+  p {
     font-size: 0.88rem;
-    color: #334155;
-    line-height: 1.5;
+    color: #64748b;
     margin: 0;
   }
 
-  .stop-notes-box {
-    background: #f8fafc;
-    border-left: 3px solid #0084ff;
-    padding: 8px 12px;
-    border-radius: 0 8px 8px 0;
+  .back-to-saved-btn {
+    background: #0084ff;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 9px 18px;
+    font-size: 0.84rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+}
 
-    .notes-label {
-      font-size: 0.72rem;
+/* VIEW MODE (Image 2) */
+.trip-details-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+
+  .card-section-title {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #000;
+    margin: 0 0 10px;
+  }
+
+  .td-status-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+
+    .custom-plan-pill {
+      background: #dcfce7;
+      color: #16a34a;
+      font-size: 0.74rem;
       font-weight: 700;
-      color: #64748b;
-      text-transform: uppercase;
+      padding: 3px 10px;
+      border-radius: 9999px;
+
+      &.suggested {
+        background: #eff6ff;
+        color: #0084ff;
+      }
     }
 
-    p {
-      font-size: 0.84rem;
-      color: #0f172a;
-      margin: 2px 0 0;
+    .td-budget-text {
+      font-size: 0.88rem;
+      font-weight: 800;
+      color: #000;
     }
   }
 
-  .modal-actions-grid {
-    margin-top: 8px;
+  .td-location-row,
+  .td-dates-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.86rem;
+    font-weight: 500;
+    color: #1e293b;
+    margin-bottom: 8px;
 
-    .external-map-btn {
-      width: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      background: #0084ff;
-      color: #ffffff;
+    ion-icon {
+      color: #0084ff;
+      font-size: 16px;
+    }
+  }
+
+  .td-dates-row {
+    margin-bottom: 12px;
+  }
+
+  .td-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    .days-nights-badge {
+      background: #f1f5f9;
+      color: #334155;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .td-arrow-forward {
+      color: #1e293b;
+      font-size: 16px;
+    }
+  }
+}
+
+.days-view-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.day-view-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+
+  .day-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+
+    .day-card-number {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #000;
+      margin: 0;
+    }
+
+    .day-card-date {
+      font-size: 0.84rem;
+      font-weight: 500;
+      color: #64748b;
+    }
+  }
+}
+
+.activities-view-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.activity-view-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: #fff;
+  cursor: pointer;
+
+  .act-title-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 2px;
+
+    .act-name {
+      font-size: 0.94rem;
+      font-weight: 800;
+      color: #000;
+      margin: 0;
+    }
+
+    .act-time {
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: #334155;
+    }
+  }
+
+  .act-meta-row {
+    font-size: 0.8rem;
+    color: #64748b;
+    margin-bottom: 6px;
+  }
+
+  .act-description {
+    font-size: 0.84rem;
+    color: #334155;
+    line-height: 1.45;
+    margin: 0 0 6px;
+  }
+
+  .act-notes-line {
+    font-size: 0.82rem;
+    color: #1e293b;
+    margin: 0;
+
+    .notes-bold {
+      font-weight: 700;
+    }
+  }
+}
+
+.activity-expenses-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+
+  .expenses-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+
+    .expenses-label,
+    .expenses-amount {
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: #000;
+    }
+  }
+
+  .expenses-subtext {
+    font-size: 0.78rem;
+    color: #64748b;
+    margin: 0;
+  }
+}
+
+/* EDIT MODE (Image 3) */
+.itinerary-edit-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+
+  .field-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+}
+
+.form-text-input,
+.form-textarea-input,
+.form-select-input {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 0.88rem;
+  color: #0f172a;
+  background: #fff;
+  outline: none;
+  font-family: inherit;
+
+  &:focus {
+    border-color: #0084ff;
+  }
+}
+
+.form-row-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.calendar-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+
+  .date-input {
+    padding-right: 32px;
+  }
+
+  .cal-blue-symbol {
+    position: absolute;
+    right: 10px;
+    color: #0084ff;
+    font-size: 18px;
+    pointer-events: none;
+  }
+}
+
+.edit-days-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.edit-day-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+
+  .edit-day-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+
+    .edit-day-number {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #000;
+      margin: 0;
+    }
+
+    .remove-day-pill {
+      background: #fecaca;
+      color: #dc2626;
       border: none;
-      border-radius: 12px;
-      padding: 12px;
-      font-size: 0.92rem;
+      border-radius: 8px;
+      padding: 4px 12px;
+      font-size: 0.78rem;
       font-weight: 700;
       cursor: pointer;
     }
   }
 }
 
-.print-only-itinerary-sheet {
-  display: none;
+.edit-activities-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 6px;
+  margin-bottom: 10px;
+}
+
+.edit-activity-box {
+  border: 1px solid #94a3b8;
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: #fff;
+
+  .act-box-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+
+    .act-box-title {
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: #000;
+      margin: 0;
+    }
+
+    .act-box-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      .ctrl-icon-btn {
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        padding: 2px;
+        display: flex;
+        font-size: 18px;
+
+        &.up-arrow,
+        &.down-arrow {
+          color: #0084ff;
+
+          &:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+          }
+        }
+
+        &.delete-cross {
+          color: #dc2626;
+          font-size: 20px;
+        }
+      }
+    }
+  }
+}
+
+.add-activity-btn,
+.add-another-day-btn {
+  background: #dbeafe;
+  color: #0084ff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  width: fit-content;
+}
+
+.add-activity-btn {
+  padding: 8px 16px;
+  font-size: 0.82rem;
+}
+
+.add-day-btn-wrap {
+  display: flex;
+
+  .add-another-day-btn {
+    padding: 10px 18px;
+    font-size: 0.86rem;
+    margin-bottom: 24px;
+  }
+}
+
+/* Nearby & Modals */
+.nearby-places-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.nearby-tabs-capsule {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+
+  .nearby-tab-pill {
+    padding: 6px 14px;
+    border-radius: 9999px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #64748b;
+    cursor: pointer;
+    white-space: nowrap;
+
+    &.active {
+      background: #0084ff;
+      border-color: #0084ff;
+      color: #fff;
+    }
+  }
+}
+
+.nearby-places-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.nearby-place-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  .nearby-name {
+    font-size: 0.92rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0 0 2px;
+  }
+
+  .nearby-meta {
+    font-size: 0.78rem;
+    color: #64748b;
+    margin: 0;
+  }
+
+  .nearby-actions {
+    display: flex;
+    gap: 6px;
+
+    button {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #0084ff;
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+    }
+  }
+}
+
+/* Preserved elements for tests */
+.verified-budget-card,
+.assumptions-info-box {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 14px;
+
+  &.hidden-on-custom {
+    display: none !important;
+  }
 }

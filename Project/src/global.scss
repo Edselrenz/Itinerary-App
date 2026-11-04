@@ -4141,6 +4141,156 @@ body.dark {
   }
 }
 
+/* Stop Detail & Share Modals (Overlay) */
+.modal-detail-content {
+  padding: 16px;
+  background: #fff;
+  height: 100%;
+  overflow-y: auto;
+
+  .modal-handle-bar {
+    width: 36px;
+    height: 4px;
+    border-radius: 2px;
+    background: #cbd5e1;
+    margin: 0 auto 12px;
+  }
+
+  .modal-title {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0 0 8px;
+  }
+
+  .modal-full-desc {
+    font-size: 0.88rem;
+    color: #334155;
+    line-height: 1.5;
+    margin: 0 0 12px;
+  }
+
+  .stop-notes-box {
+    background: #f8fafc;
+    border-left: 3px solid #0084ff;
+    padding: 8px 12px;
+    border-radius: 0 8px 8px 0;
+    margin-bottom: 12px;
+
+    .notes-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+    }
+
+    p {
+      font-size: 0.84rem;
+      color: #0f172a;
+      margin: 2px 0 0;
+    }
+  }
+
+  .commute-guide-box {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+
+    .commute-header-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 6px;
+
+      .commute-title-icon {
+        color: #0084ff;
+        font-size: 16px;
+      }
+
+      .commute-title {
+        font-size: 0.88rem;
+        font-weight: 800;
+        color: #0084ff;
+        margin: 0;
+      }
+    }
+
+    .commute-detail-item {
+      font-size: 0.8rem;
+      color: #334155;
+      margin-bottom: 3px;
+
+      .commute-label {
+        font-weight: 600;
+        margin-right: 4px;
+      }
+    }
+  }
+
+  .external-map-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: #0084ff;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 11px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+}
+
+.subwindow-container {
+  padding: 16px;
+  background: #fff;
+
+  .subwindow-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+
+    .subwindow-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #0f172a;
+      margin: 0;
+    }
+
+    .subwindow-close-btn {
+      background: transparent;
+      border: none;
+      font-size: 22px;
+      color: #64748b;
+      cursor: pointer;
+    }
+  }
+
+  .share-modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    .share-option-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 12px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: #0f172a;
+      text-align: left;
+      cursor: pointer;
+    }
+  }
+}
+
 
 
 

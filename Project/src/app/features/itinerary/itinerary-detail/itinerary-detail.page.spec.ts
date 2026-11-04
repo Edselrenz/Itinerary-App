@@ -98,6 +98,8 @@ describe('ItineraryDetailPage', () => {
 
   const mockItineraryService = {
     getItineraryById: vi.fn().mockReturnValue(of(mockItinerary)),
+    getCachedItineraryById: vi.fn().mockReturnValue(null),
+    updateItinerary: vi.fn().mockReturnValue(of({ ...mockItinerary, title: 'Updated Bongabon Tour' })),
     calculateBudgetSummary: vi.fn().mockReturnValue({
       verifiedMin: 150,
       verifiedMax: 300,
@@ -120,7 +122,8 @@ describe('ItineraryDetailPage', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    mockItineraryService.getItineraryById.mockReturnValue(of(mockItinerary));
+    const testItinerary = JSON.parse(JSON.stringify(mockItinerary));
+    mockItineraryService.getItineraryById.mockReturnValue(of(testItinerary));
     mockItineraryService.deleteItinerary.mockReturnValue(of(undefined));
     mockPlaceService.getNearbyPlaces.mockReturnValue(mockNearbyPlaces);
 
@@ -360,6 +363,81 @@ describe('ItineraryDetailPage', () => {
       expect(component.printDateFormatted).toBeDefined();
       expect(typeof component.printDateFormatted).toBe('string');
       expect(component.printDateFormatted.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('In-Place Edit Mode (Image 2 & 3)', () => {
+    it('initializes editForm and toggles between view and edit modes', () => {
+      expect(component.isEditMode).toBe(false);
+      component.toggleEditMode();
+      expect(component.isEditMode).toBe(true);
+      expect(component.editForm.title).toBe('Bongabon Gateway Tour');
+      expect(component.editForm.days.length).toBe(2);
+
+      component.cancelEdit();
+      expect(component.isEditMode).toBe(false);
+    });
+
+    it('adds and removes days in editForm', async () => {
+      component.toggleEditMode();
+      const initialDayCount = component.editForm.days.length;
+      component.addDay();
+      expect(component.editForm.days.length).toBe(initialDayCount + 1);
+
+      await component.removeDay(component.editForm.days.length - 1);
+      expect(component.editForm.days.length).toBe(initialDayCount);
+    });
+
+    it('adds, removes, and reorders activities within a day', () => {
+      component.toggleEditMode();
+      component.addActivity(0);
+      const day1Activities = component.editForm.days[0].items;
+      expect(day1Activities.length).toBe(2);
+
+      // Reorder
+      const firstActTitle = day1Activities[0].custom_title;
+      component.moveActivityDown(0, 0);
+      expect(day1Activities[1].custom_title).toBe(firstActTitle);
+
+      component.moveActivityUp(0, 1);
+      expect(day1Activities[0].custom_title).toBe(firstActTitle);
+
+      // Delete activity
+      component.deleteActivity(0, 1);
+      expect(day1Activities.length).toBe(1);
+    });
+
+    it('moves an activity to a different day', () => {
+      component.toggleEditMode();
+      expect(component.editForm.days[0].items.length).toBe(1);
+      expect(component.editForm.days[1].items.length).toBe(0);
+
+      component.moveActivityToDifferentDay(0, 0, 1);
+      expect(component.editForm.days[0].items.length).toBe(0);
+      expect(component.editForm.days[1].items.length).toBe(1);
+    });
+
+    it('saves changes using itineraryService and exits edit mode', async () => {
+      component.toggleEditMode();
+      component.editForm.title = 'Updated Bongabon Tour';
+      await component.saveChanges();
+
+      expect(mockItineraryService.updateItinerary).toHaveBeenCalledWith(
+        'itin-detail-1',
+        expect.objectContaining({ title: 'Updated Bongabon Tour' })
+      );
+      expect(component.isEditMode).toBe(false);
+      expect(mockToastController.create).toHaveBeenCalledWith(
+        expect.objectContaining({ message: expect.stringContaining('saved successfully') })
+      );
+    });
+
+    it('calculates total activity expenses and day/night label accurately', () => {
+      const expenses = component.calculateTotalActivityExpenses();
+      expect(expenses).toBeGreaterThanOrEqual(150);
+
+      const label = component.getDaysNightsLabel(component.itinerary);
+      expect(label).toBe('2 Days - 1 Night');
     });
   });
 });

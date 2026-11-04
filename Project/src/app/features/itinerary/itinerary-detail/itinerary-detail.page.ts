@@ -1,6 +1,7 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   AlertController,
   IonContent,
@@ -14,15 +15,21 @@ import {
 import { addIcons } from 'ionicons';
 import {
   addCircleOutline,
+  addOutline,
   alertCircleOutline,
   arrowBack,
+  arrowDown,
+  arrowForward,
   arrowForwardOutline,
+  arrowUp,
   busOutline,
+  calendar,
   calendarOutline,
   cashOutline,
   checkmarkCircle,
   chevronDownOutline,
   chevronUpOutline,
+  close,
   closeOutline,
   compassOutline,
   copyOutline,
@@ -41,10 +48,12 @@ import {
   sparkles,
   storefrontOutline,
   timeOutline,
+  trash,
   trashOutline,
   walkOutline,
 } from 'ionicons/icons';
-import { Subscription } from 'rxjs';
+import { of, Subscription, throwError } from 'rxjs';
+import { catchError, timeout } from 'rxjs/operators';
 import {
   Itinerary,
   ItineraryBudgetSummary,
@@ -62,6 +71,34 @@ import {
   triggerPrintItinerary,
 } from '../../../core/utils/itinerary-export.util';
 
+export interface EditableActivityItem {
+  id: string;
+  custom_title: string;
+  planned_time: string;
+  duration_label: string;
+  description: string;
+  notes: string;
+  estimated_cost: number | null;
+  target_day_index: number;
+  place_id?: string | null;
+  place?: any;
+}
+
+export interface EditableDay {
+  day_number: number;
+  travel_date: string;
+  items: EditableActivityItem[];
+}
+
+export interface EditableItineraryForm {
+  title: string;
+  destination: string;
+  start_date: string;
+  end_date: string;
+  daily_budget: number;
+  days: EditableDay[];
+}
+
 @Component({
   selector: 'app-itinerary-detail',
   templateUrl: './itinerary-detail.page.html',
@@ -69,6 +106,8 @@ import {
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
+    RouterLink,
     IonContent,
     IonHeader,
     IonToolbar,
@@ -83,6 +122,17 @@ export class ItineraryDetailPage implements OnInit, OnDestroy {
   public isLoading = true;
   public activeDayIndex = 0;
   public budgetSummary: ItineraryBudgetSummary | null = null;
+
+  // In-Place Edit Mode state (Image 2 View vs Image 3 Edit)
+  public isEditMode = false;
+  public editForm: EditableItineraryForm = {
+    title: '',
+    destination: '',
+    start_date: '',
+    end_date: '',
+    daily_budget: 0,
+    days: [],
+  };
 
   // View state: 'itinerary' (Overview / Day Timeline) | 'nearby' (Nearby Places)
   public viewMode: 'itinerary' | 'nearby' = 'itinerary';
@@ -105,7 +155,45 @@ export class ItineraryDetailPage implements OnInit, OnDestroy {
     private alertController: AlertController,
     private toastController: ToastController
   ) {
-    addIcons({arrowBack,createOutline,trashOutline,alertCircleOutline,shieldCheckmarkOutline,informationCircleOutline,compassOutline,calendarOutline,storefrontOutline,arrowForwardOutline,cashOutline,locationOutline,openOutline,addCircleOutline,closeOutline,timeOutline,busOutline,informationCircle,checkmarkCircle,chevronDownOutline,chevronUpOutline,locationSharp,mapOutline,navigateOutline,sparkles,walkOutline,shareSocialOutline,copyOutline,printOutline,downloadOutline,});
+    addIcons({
+      arrowBack,
+      arrowForward,
+      arrowForwardOutline,
+      arrowUp,
+      arrowDown,
+      close,
+      closeOutline,
+      createOutline,
+      trash,
+      trashOutline,
+      alertCircleOutline,
+      shieldCheckmarkOutline,
+      informationCircleOutline,
+      compassOutline,
+      calendar,
+      calendarOutline,
+      storefrontOutline,
+      cashOutline,
+      locationOutline,
+      openOutline,
+      addCircleOutline,
+      addOutline,
+      timeOutline,
+      busOutline,
+      informationCircle,
+      checkmarkCircle,
+      chevronDownOutline,
+      chevronUpOutline,
+      locationSharp,
+      mapOutline,
+      navigateOutline,
+      sparkles,
+      walkOutline,
+      shareSocialOutline,
+      copyOutline,
+      printOutline,
+      downloadOutline,
+    });
   }
 
   public ngOnInit(): void {
@@ -122,21 +210,329 @@ export class ItineraryDetailPage implements OnInit, OnDestroy {
   }
 
   public loadItinerary(id: string): void {
-    this.isLoading = true;
+    const cached = this.itineraryService.getCachedItineraryById?.(id);
+    if (cached) {
+      this.itinerary = cached;
+      this.initEditForm();
+      this.activeDayIndex = 0;
+      this.budgetSummary = this.itineraryService.calculateBudgetSummary(cached);
+      this.refreshNearbyPlaces();
+      this.isLoading = false;
+    } else {
+      this.isLoading = true;
+    }
+
     this.subscriptions.add(
-      this.itineraryService.getItineraryById(id).subscribe({
-        next: (itin) => {
-          this.itinerary = itin;
-          this.activeDayIndex = 0;
-          this.budgetSummary = this.itineraryService.calculateBudgetSummary(itin);
-          this.refreshNearbyPlaces();
-          this.isLoading = false;
+      this.itineraryService
+        .getItineraryById(id)
+        .pipe(
+          timeout(4000),
+          catchError((err) => {
+            if (cached) {
+              return of(cached);
+            }
+            return throwError(() => err);
+          })
+        )
+        .subscribe({
+          next: (itin) => {
+            this.itinerary = itin;
+            this.initEditForm();
+            this.budgetSummary = this.itineraryService.calculateBudgetSummary(itin);
+            this.refreshNearbyPlaces();
+            this.isLoading = false;
+          },
+          error: () => {
+            this.isLoading = false;
+          },
+        })
+    );
+  }
+
+  public initEditForm(): void {
+    if (!this.itinerary) return;
+    this.editForm = {
+      title: this.itinerary.title || '',
+      destination: this.itinerary.destination || '',
+      start_date: this.itinerary.start_date || '',
+      end_date: this.itinerary.end_date || '',
+      daily_budget: this.itinerary.daily_budget || 0,
+      days: (this.itinerary.days || []).map((day, dIdx) => ({
+        day_number: day.day_number || dIdx + 1,
+        travel_date: day.travel_date || '',
+        items: (day.items || []).map((item) => ({
+          id: item.id || `item-${Date.now()}-${Math.random()}`,
+          custom_title: this.getStopTitle(item),
+          planned_time: item.planned_time || '08:00 AM',
+          duration_label: this.formatDurationHours(item),
+          description: this.getStopDescription(item),
+          notes: item.notes || '',
+          estimated_cost: item.estimated_cost_min ?? item.estimated_cost_max ?? null,
+          target_day_index: dIdx,
+          place_id: item.place_id,
+          place: item.place,
+        })),
+      })),
+    };
+  }
+
+  public toggleEditMode(): void {
+    this.initEditForm();
+    this.isEditMode = true;
+  }
+
+  public cancelEdit(): void {
+    this.isEditMode = false;
+    this.initEditForm();
+  }
+
+  public addDay(): void {
+    const nextDayNum = this.editForm.days.length + 1;
+    let nextDate = '';
+    if (this.editForm.days.length > 0) {
+      const lastDate = this.editForm.days[this.editForm.days.length - 1].travel_date;
+      if (lastDate) {
+        const d = new Date(lastDate);
+        d.setDate(d.getDate() + 1);
+        nextDate = d.toISOString().split('T')[0];
+      }
+    } else {
+      nextDate = this.editForm.start_date || new Date().toISOString().split('T')[0];
+    }
+
+    this.editForm.days.push({
+      day_number: nextDayNum,
+      travel_date: nextDate,
+      items: [],
+    });
+  }
+
+  public async removeDay(dIdx: number): Promise<void> {
+    if (this.editForm.days.length <= 1) {
+      const toast = await this.toastController.create({
+        message: 'An itinerary must have at least one day.',
+        duration: 2000,
+        color: 'warning',
+        position: 'top',
+      });
+      await toast.present();
+      return;
+    }
+
+    this.editForm.days.splice(dIdx, 1);
+    this.editForm.days.forEach((day, idx) => {
+      day.day_number = idx + 1;
+      day.items.forEach((item) => {
+        item.target_day_index = idx;
+      });
+    });
+  }
+
+  public addActivity(dIdx: number): void {
+    const day = this.editForm.days[dIdx];
+    if (!day) return;
+    const newAct: EditableActivityItem = {
+      id: `act-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      custom_title: '',
+      planned_time: '08:00 AM',
+      duration_label: '2 hours',
+      description: '',
+      notes: '',
+      estimated_cost: 0,
+      target_day_index: dIdx,
+    };
+    day.items.push(newAct);
+  }
+
+  public deleteActivity(dIdx: number, aIdx: number): void {
+    const day = this.editForm.days[dIdx];
+    if (day && day.items) {
+      day.items.splice(aIdx, 1);
+    }
+  }
+
+  public moveActivityUp(dIdx: number, aIdx: number): void {
+    const day = this.editForm.days[dIdx];
+    if (day && day.items && aIdx > 0) {
+      const temp = day.items[aIdx];
+      day.items[aIdx] = day.items[aIdx - 1];
+      day.items[aIdx - 1] = temp;
+    }
+  }
+
+  public moveActivityDown(dIdx: number, aIdx: number): void {
+    const day = this.editForm.days[dIdx];
+    if (day && day.items && aIdx < day.items.length - 1) {
+      const temp = day.items[aIdx];
+      day.items[aIdx] = day.items[aIdx + 1];
+      day.items[aIdx + 1] = temp;
+    }
+  }
+
+  public moveActivityToDifferentDay(currentDayIdx: number, aIdx: number, targetIdxRaw: number | string): void {
+    const targetIdx = Number(targetIdxRaw);
+    if (isNaN(targetIdx) || targetIdx === currentDayIdx) return;
+    const curDay = this.editForm.days[currentDayIdx];
+    const targetDay = this.editForm.days[targetIdx];
+    if (!curDay || !targetDay) return;
+
+    const [movedItem] = curDay.items.splice(aIdx, 1);
+    if (movedItem) {
+      movedItem.target_day_index = targetIdx;
+      targetDay.items.push(movedItem);
+    }
+  }
+
+  public parseDurationMinutes(label: string): number {
+    if (!label) return 90;
+    const match = label.match(/(\d+)/);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      if (label.toLowerCase().includes('hour') || label.toLowerCase().includes('hr')) {
+        return num * 60;
+      }
+      return num;
+    }
+    return 90;
+  }
+
+  public async saveChanges(): Promise<void> {
+    if (!this.itinerary) return;
+
+    const payloadDays = this.editForm.days.map((day, dIdx) => ({
+      day_number: day.day_number || dIdx + 1,
+      travel_date: day.travel_date,
+      title: `Day ${day.day_number || dIdx + 1}`,
+      items: day.items.map((act, aIdx) => ({
+        place_id: act.place_id || null,
+        custom_title: act.custom_title,
+        planned_time: act.planned_time,
+        duration_minutes: this.parseDurationMinutes(act.duration_label),
+        notes: act.notes,
+        estimated_cost_min: act.estimated_cost,
+        estimated_cost_max: act.estimated_cost,
+        sort_order: aIdx + 1,
+        place: act.place || {
+          name: act.custom_title,
+          description: act.description,
+          municipality_name: this.editForm.destination,
         },
-        error: () => {
-          this.isLoading = false;
+      })),
+    }));
+
+    const updatePayload = {
+      title: this.editForm.title,
+      destination: this.editForm.destination,
+      start_date: this.editForm.start_date,
+      end_date: this.editForm.end_date,
+      daily_budget: Number(this.editForm.daily_budget) || 0,
+      days: payloadDays,
+    };
+
+    this.subscriptions.add(
+      this.itineraryService.updateItinerary(this.itinerary.id, updatePayload).subscribe({
+        next: async (updated) => {
+          this.itinerary = updated;
+          this.budgetSummary = this.itineraryService.calculateBudgetSummary(updated);
+          this.isEditMode = false;
+          const toast = await this.toastController.create({
+            message: 'Itinerary changes saved successfully!',
+            duration: 2500,
+            color: 'success',
+            position: 'top',
+          });
+          await toast.present();
+        },
+        error: async () => {
+          const toast = await this.toastController.create({
+            message: 'Failed to save changes. Please try again.',
+            duration: 2500,
+            color: 'danger',
+            position: 'top',
+          });
+          await toast.present();
         },
       })
     );
+  }
+
+  public getDaysNightsLabel(itin: Itinerary | null): string {
+    const days = itin?.days?.length || 1;
+    const nights = Math.max(0, days - 1);
+    return nights > 0
+      ? `${days} Days - ${nights} ${nights === 1 ? 'Night' : 'Nights'}`
+      : `${days} Day`;
+  }
+
+  public formatDayTravelDate(dateStr?: string): string {
+    if (!dateStr) return '';
+    try {
+      const parts = dateStr.split('-');
+      if (parts.length === 3) {
+        const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+        if (!isNaN(d.getTime())) {
+          return d.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+          });
+        }
+      }
+    } catch {
+      // fallback
+    }
+    return dateStr;
+  }
+
+  public formatTimingHour(item: ItineraryItem): string {
+    if (item.planned_time) {
+      const match = item.planned_time.match(/(\d{1,2}:\d{2})/);
+      if (match) {
+        return match[1];
+      }
+      return item.planned_time;
+    }
+    return '08:00';
+  }
+
+  public formatDurationHours(item: ItineraryItem): string {
+    if (item.duration_minutes) {
+      const hrs = Math.round(item.duration_minutes / 60);
+      return hrs >= 1 ? `${hrs} ${hrs === 1 ? 'hour' : 'hours'}` : `${item.duration_minutes} mins`;
+    }
+    return '2 hours';
+  }
+
+  public getStopEstimatedCost(item: ItineraryItem): number | string {
+    const cost = item.estimated_cost_min ?? item.estimated_cost_max;
+    if (cost != null && cost > 0) {
+      return cost.toLocaleString();
+    }
+    return '200';
+  }
+
+  public getStopDescription(item: ItineraryItem): string {
+    if (item.place?.description) {
+      return item.place.description;
+    }
+    if (item.notes) {
+      return item.notes;
+    }
+    return 'Explore the river and limestone formations. Enjoy sightseeing and take photos.';
+  }
+
+  public calculateTotalActivityExpenses(): number {
+    if (!this.itinerary?.days) return 0;
+    let sum = 0;
+    for (const day of this.itinerary.days) {
+      for (const item of day.items || []) {
+        const cost = item.estimated_cost_min ?? item.estimated_cost_max ?? 200;
+        if (cost && !isNaN(Number(cost))) {
+          sum += Number(cost);
+        }
+      }
+    }
+    return sum;
   }
 
   public selectDay(index: number): void {
