@@ -15,6 +15,7 @@ from app.schemas.auth import (
     UserLoginIn,
     UserOut,
     UserRegisterIn,
+    UserUpdateIn,
 )
 from app.services.auth_service import (
     authenticate_google_user,
@@ -24,6 +25,7 @@ from app.services.auth_service import (
     decode_jwt_token,
     get_current_user,
     register_user,
+    update_user_profile,
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -102,6 +104,17 @@ def get_profile(
 ) -> UserOut:
     """Returns the authenticated traveler profile."""
     return UserOut.model_validate(current_user)
+
+
+@router.patch("/me", response_model=UserOut)
+def update_profile(
+    payload: UserUpdateIn,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> UserOut:
+    """Updates profile details for the authenticated traveler."""
+    updated = update_user_profile(db, current_user, payload)
+    return UserOut.model_validate(updated)
 
 
 @router.post("/oauth/google", response_model=TokenOut)

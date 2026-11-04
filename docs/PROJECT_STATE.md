@@ -206,16 +206,23 @@ All 16 audit findings from [CODE_REVIEW_AUDIT.md](file:///c:/Users/Edward/Deskto
 
 ---
 
-## 6. Next Immediate Tasks (Phase 17 Execution Roadmap)
+5. **Phase 16 to 20 (Comprehensive UX & Feature Remediation) — COMPLETED**:
+   - **Phase 16 (`UI-01` to `UI-05`)**: Bongabon quick destination chips, verified cost summary & assumptions box, off-grid custom place picker, date formatting, and stop deletion confirmation.
+   - **Phase 17 (`UI-06` to `UI-10`)**: Edit scheduled stop modal, move-to-day dropdown, off-grid venue coordinate inputs, sequential schedule auto-formatting, and timeline deletion dialog.
+   - **Phase 18 (`UI-11` to `UI-15`)**: Curated popular destinations catalog, stop details modal with operating hours & prices, and municipality commute guide on map.
+   - **Phase 19 (`UI-16` to `UI-17`)**: Floating map search bar, multi-select filter bottom sheet, accessible POI drawer, and "Add to Itinerary" / "Start Trip Here" map CTAs with dynamic viewport queries.
+   - **Phase 20 (`UI-18` to `UI-20`)**: Profile sub-windows (`Edit Profile` with `PATCH /api/v1/auth/me` & `App Settings` with dark mode), logout unsynced guest trips confirmation, notifications & travel reminders drawer, bottom tab labels (`Home`, `Map`, `Saved`, `Profile`), and saved itineraries search/filtering.
 
-1. **Phase 17.1 (Edit Scheduled Stop Modal & Move-to-Day Action — UI-06, UI-07)**:
-   - Build `<ion-modal>` in Custom Builder for editing scheduled stops (time range, duration, expense estimates, custom notes).
-   - Implement "Move to Day..." select dropdown moving stops across itinerary days with order re-indexing.
-2. **Phase 17.2 (Custom Off-Grid Venue Coordinates & Time Inputs — UI-08, UI-09)**:
-   - Wire latitude/longitude coordinate fields and time pickers in the custom venue form.
-   - Implement sequential schedule time auto-formatting based on stop duration and preceding stop end times.
-3. **Phase 17.3 (Single-Stop Deletion Confirmation Alert — UI-10)**:
-   - Add destructive confirmation prompt before removing a stop from the builder timeline.
+---
+
+## 6. Next Immediate Tasks (Phase 21 Execution Roadmap)
+
+1. **Phase 21.1 (Explicit Username Field & Middle Initial in SignupPage — UI-21)**:
+   - Target: `Project/src/app/features/auth/signup/signup.page.html`, `signup.page.ts`.
+   - Add explicit username input with unique username availability validation to avoid domain collisions; preserve `middleInitial` in full name construction.
+2. **Phase 21.2 (Wire rememberMe Scope, Standardize Eye Icons & Forgot Password Modal — UI-22)**:
+   - Target: `login.page.html`, `login.page.ts`, `auth.service.ts`.
+   - Wire `rememberMe` checkbox to switch between `localStorage` (persistent) and `sessionStorage` (transient); standardize password toggle eye icons; build structured Forgot Password dialog.
 
 
 

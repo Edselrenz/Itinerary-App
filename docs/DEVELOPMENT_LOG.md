@@ -1910,4 +1910,88 @@ This log records chronological development sessions, detailing objectives, execu
   - `Project/src/global.scss`
   - `docs/DEVELOPMENT_LOG.md`
 
+---
+
+## Session 60 - 2026-11-04
+- **Focus**: Phase 20 Implementation — Profile Sub-Windows, Notifications, Tab Labels & Saved Trips Filtering (UI-18 to UI-20).
+- **Tasks Performed & Implementation Details**:
+  - **1. Profile Sub-Windows & Backend PATCH /api/v1/auth/me (UI-18)**:
+    - Added `UserUpdateIn` schema in `backend/app/schemas/auth.py` and `update_user_profile()` service enforcing Argon2id password verification and duplicate username detection.
+    - Added `PATCH /api/v1/auth/me` endpoint in `backend/app/api/v1/auth.py`.
+    - Added `UserUpdateRequest` interface in `auth.models.ts` and `updateProfile()` method in `auth.service.ts`.
+    - Implemented `Edit Profile` modal on `/tabs/profile` with reactive validation, password visibility toggles, and direct synchronization with `currentUser$` and `localStorage`.
+    - Implemented `App Settings` modal on `/tabs/profile` supporting dark mode toggle (`body.dark`, persisted to `ne_theme_mode`), default trip budget presets (`1500, 2500, 3000, 5000 PHP`), offline cache reset, and connection status indicators.
+    - Upgraded `onLogout()` with an `AlertController` confirmation warning users if unsynced guest trips exist on device.
+  - **2. Notifications & Travel Reminders Drawer (UI-19)**:
+    - Built Notifications Drawer bottom sheet on `/tabs/home` triggered by the header bell icon with an unread badge indicator.
+    - Dynamically generates upcoming itinerary reminders from `itineraryService.itineraries$` and provincial travel advisories (e.g. Minalungao river conditions, UV Express transit timing).
+    - Supports clicking notifications to navigate directly to itineraries, with a "Mark All Read" bulk action.
+  - **3. Bottom Tab Labels & Saved Itineraries Filtering (UI-20)**:
+    - Added `<ion-label>` visible text labels (`Home`, `Map`, `Saved`, `Profile`) to `/tabs` navigation bar with 60px height and responsive styling.
+    - Added search input bar and segmented capsule filtering (`All`, `Upcoming`, `Past`, `Suggested`, `Custom`) on Saved Itineraries (`/tabs/history`).
+    - Added verified admission cost estimates and empty search/filter states with one-click reset.
+- **Verification & Test Results**:
+  - `backend/tests/test_auth.py`: **6/6 pytest tests passed [100%]** in 2.28s.
+  - `Project/src/app/tabs/profile/profile.page.spec.ts`: **9/9 tests passed**.
+  - `Project/src/app/tabs/history/history.page.spec.ts`: **7/7 tests passed**.
+  - `Project/src/app/tabs/home/home.page.spec.ts`: **14/14 tests passed**.
+  - `Project/src/app/tabs/tabs.page.spec.ts`: **1/1 test passed**.
+  - `npm --prefix Project run test:unit`: **18/18 test files passed, 172/172 unit tests passed [100%]** in 17.45s.
+  - `npm --prefix Project run build`: **Clean production build** (0 errors, 0 warnings, 0 budget overruns).
+- **Files Modified**:
+  - `backend/app/api/v1/auth.py`
+  - `backend/app/schemas/auth.py`
+  - `backend/app/services/auth_service.py`
+  - `backend/tests/test_auth.py`
+  - `Project/src/app/core/models/auth.models.ts`
+  - `Project/src/app/core/services/auth.service.ts`
+  - `Project/src/app/tabs/tabs.page.html`
+  - `Project/src/app/tabs/tabs.page.ts`
+  - `Project/src/app/tabs/tabs.page.scss`
+  - `Project/src/app/tabs/profile/profile.page.html`
+  - `Project/src/app/tabs/profile/profile.page.ts`
+  - `Project/src/app/tabs/profile/profile.page.spec.ts`
+  - `Project/src/app/tabs/history/history.page.html`
+  - `Project/src/app/tabs/history/history.page.ts`
+  - `Project/src/app/tabs/history/history.page.scss`
+  - `Project/src/app/tabs/history/history.page.spec.ts`
+  - `Project/src/app/tabs/home/home.page.html`
+  - `Project/src/app/tabs/home/home.page.ts`
+  - `Project/src/app/tabs/home/home.page.scss`
+  - `Project/src/app/tabs/home/home.page.spec.ts`
+  - `Project/src/global.scss`
+  - `docs/TODO.md`
+  - `docs/DEVELOPMENT_LOG.md`
+
+---
+
+## Session 61 - 2026-11-04
+- **Focus**: Anti-Generic Frontend Polish for Suggested Wizard & Itinerary Detail (Trip Assumptions, Travel Notes & Cost Ledger).
+- **Tasks Performed & Implementation Details**:
+  - **1. Visual Critique & Elimination of AI Callout Archetype**:
+    - Addressed user feedback and screenshot (`media_1793694620534_7b82c004.png`) showing generic pale-blue alert box with bullet points (`• Pacing: ...`, `• Geographic clustering: ...`) stacked directly beneath a harsh green cost banner.
+    - Replaced the stacked-box visual clutter with an editorial **Trip Briefing & Field Notes** module adhering to `/anti-generic-frontend-design`.
+  - **2. Category-Specific Micro-Accents & Structured Rows**:
+    - Bound `[attr.data-category]="parsed.tag.toLowerCase()"` on `.assumption-insight-card` in both `suggested-wizard.page.html` and `itinerary-detail.page.html`.
+    - Styled distinct left border accents, badge colors, and icon tints in `global.scss`:
+      - Teal (`#0d9488`): Pacing & Daily Tempo
+      - Indigo (`#6366f1`): Geographic Clustering & Backtrack Prevention
+      - Emerald (`#059669`): Budget Scope & Fares Breakdown
+      - Amber (`#d97706`): Hours & Holiday Schedule Guidance
+      - Sky (`#0284c7`): General Travel Advice & Field Notes
+  - **3. Harmonized Financial Ledger Styling & Dark Mode**:
+    - Refined `.verified-budget-card` with an authentic financial ledger treatment, verified shield icon, prominent cost range, and honest caveat badges for unpriced venues.
+    - Added comprehensive dark mode tokens under `body.dark` in `global.scss` ensuring contrast compliance, deep surfaces (`#1e293b`), and emerald tints (`#6ee7b7`).
+- **Verification & Test Results**:
+  - `npm --prefix Project run test:unit`: **18/18 test suites passed, 172/172 unit tests passed [100%]** in 17.98s.
+  - `npm --prefix Project run build`: **Production build succeeded with 0 errors, 0 warnings, and 0 style budget warnings** in 8.22s.
+- **Files Modified**:
+  - `Project/src/app/features/itinerary/suggested-wizard/suggested-wizard.page.html`
+  - `Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.html`
+  - `Project/src/global.scss`
+  - `docs/TODO.md`
+  - `docs/DEVELOPMENT_LOG.md`
+- **Next Recommended Step**:
+  - Proceed to **Phase 21**: Authentication Completeness & Form Integrity (`UI-21` & `UI-22`).
+
 

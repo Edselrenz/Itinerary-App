@@ -430,21 +430,21 @@ This checklist tracks completed, active, and pending tasks across all developmen
 ---
 
 ## Phase 20: Profile Sub-Windows, Notifications & Saved Trips Filtering (`Priority 2 — Account & Navigation UX`)
-- [ ] **20.1: Build `Edit Profile` Modal & Backend `PATCH /api/v1/auth/me` Endpoint (`UI-18`)**:
-  - [ ] Target: `backend/app/api/v1/auth.py`, `backend/app/schemas/auth.py`, `auth.service.ts`, `profile.page.html`, `profile.page.ts`.
-  - [ ] Support updating `full_name`, `username`, and password with Argon2id current password check.
-- [ ] **20.2: Build `App Settings` Modal & Restore Optional Custom API/Tunnel Override (`UI-18`)**:
-  - [ ] Target: `profile.page.html`, `profile.page.ts`, `variables.scss`, `global.scss`.
-  - [ ] Light/Dark high-contrast theme toggle, default trip budget preference, offline data reset, and Advanced Connection Settings override.
-- [ ] **20.3: Add Logout Confirmation Dialog (`UI-18`)**:
-  - [ ] Target: `profile.page.ts`.
-  - [ ] Ionic `AlertController` confirmation dialog with unsynced guest trips alert.
-- [ ] **20.4: Build Notifications & Travel Reminders Drawer on Home (`UI-19`)**:
-  - [ ] Target: `home.page.html`, `home.page.ts`, `home.page.scss`.
-  - [ ] Modal/popover displaying upcoming trip reminders, guest trip sync status, and provincial travel advisories.
-- [ ] **20.5: Add Visible Text Labels to Bottom Tab Bar & Filtering to Saved Itineraries (`UI-20`)**:
-  - [ ] Target: `tabs.page.html`, `tabs.page.scss`, `tabs.routes.ts`, `history.page.html`, `history.page.ts`.
-  - [ ] Add `<ion-label>` (`Home`, `Map`, `Saved`, `Profile`); add search, segment filters (`Upcoming`, `Past`, `Suggested`, `Custom`), and total cost ranges on Saved trips.
+- [x] **20.1: Build `Edit Profile` Modal & Backend `PATCH /api/v1/auth/me` Endpoint (`UI-18`)**:
+  - [x] Target: `backend/app/api/v1/auth.py`, `backend/app/schemas/auth.py`, `auth.service.ts`, `profile.page.html`, `profile.page.ts`.
+  - [x] Support updating `full_name`, `username`, and password with Argon2id current password check.
+- [x] **20.2: Build `App Settings` Modal & Restore Optional Custom API/Tunnel Override (`UI-18`)**:
+  - [x] Target: `profile.page.html`, `profile.page.ts`, `variables.scss`, `global.scss`.
+  - [x] Light/Dark high-contrast theme toggle, default trip budget preference, offline data reset, and Advanced Connection Settings override.
+- [x] **20.3: Add Logout Confirmation Dialog (`UI-18`)**:
+  - [x] Target: `profile.page.ts`.
+  - [x] Ionic `AlertController` confirmation dialog with unsynced guest trips alert.
+- [x] **20.4: Build Notifications & Travel Reminders Drawer on Home (`UI-19`)**:
+  - [x] Target: `home.page.html`, `home.page.ts`, `home.page.scss`.
+  - [x] Modal/popover displaying upcoming trip reminders, guest trip sync status, and provincial travel advisories.
+- [x] **20.5: Add Visible Text Labels to Bottom Tab Bar & Filtering to Saved Itineraries (`UI-20`)**:
+  - [x] Target: `tabs.page.html`, `tabs.page.scss`, `tabs.routes.ts`, `history.page.html`, `history.page.ts`.
+  - [x] Add `<ion-label>` (`Home`, `Map`, `Saved`, `Profile`); add search, segment filters (`Upcoming`, `Past`, `Suggested`, `Custom`), and total cost ranges on Saved trips.
 
 ---
 

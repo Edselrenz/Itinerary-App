@@ -28,3 +28,12 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface UserUpdateRequest {
+  first_name?: string;
+  last_name?: string;
+  username?: string;
+  current_password?: string;
+  new_password?: string;
+}
+
+

@@ -1,5 +1,6 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import {
   AlertController,
@@ -17,7 +18,10 @@ import {
   arrowForward,
   calendarOutline,
   cashOutline,
+  closeCircleOutline,
+  filterOutline,
   locationOutline,
+  searchOutline,
   sparkles,
   timeOutline,
   trashOutline,
@@ -25,6 +29,9 @@ import {
 import { Subscription } from 'rxjs';
 import { Itinerary } from '../../core/models/itinerary.models';
 import { ItineraryService } from '../../core/services/itinerary.service';
+import { toLocalIsoDate } from '../../core/utils/date.utils';
+
+export type HistoryFilterSegment = 'all' | 'upcoming' | 'past' | 'suggested' | 'custom';
 
 @Component({
   selector: 'app-history',
@@ -33,6 +40,7 @@ import { ItineraryService } from '../../core/services/itinerary.service';
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     RouterLink,
     IonHeader,
     IonToolbar,
@@ -44,6 +52,9 @@ import { ItineraryService } from '../../core/services/itinerary.service';
 })
 export class HistoryPage implements OnInit, OnDestroy {
   public savedItineraries: Itinerary[] = [];
+  public searchTerm = '';
+  public activeSegment: HistoryFilterSegment = 'all';
+
   private subscriptions = new Subscription();
 
   constructor(
@@ -61,6 +72,9 @@ export class HistoryPage implements OnInit, OnDestroy {
       arrowForward,
       addOutline,
       sparkles,
+      searchOutline,
+      closeCircleOutline,
+      filterOutline,
     });
   }
 
@@ -74,6 +88,49 @@ export class HistoryPage implements OnInit, OnDestroy {
 
   public ngOnDestroy(): void {
     this.subscriptions.unsubscribe();
+  }
+
+  public get filteredItineraries(): Itinerary[] {
+    const today = toLocalIsoDate();
+    const query = this.searchTerm.trim().toLowerCase();
+
+    return this.savedItineraries.filter((itin) => {
+      // 1. Text Search Filter
+      if (query) {
+        const matchesTitle = itin.title.toLowerCase().includes(query);
+        const matchesDest = itin.destination.toLowerCase().includes(query);
+        if (!matchesTitle && !matchesDest) return false;
+      }
+
+      // 2. Segment Filter
+      const endOrStart = (itin.end_date || itin.start_date || '').split('T')[0];
+      switch (this.activeSegment) {
+        case 'upcoming':
+          return endOrStart >= today;
+        case 'past':
+          return endOrStart < today;
+        case 'suggested':
+          return itin.type === 'suggested';
+        case 'custom':
+          return itin.type === 'custom';
+        case 'all':
+        default:
+          return true;
+      }
+    });
+  }
+
+  public setSegment(seg: HistoryFilterSegment): void {
+    this.activeSegment = seg;
+  }
+
+  public clearSearch(): void {
+    this.searchTerm = '';
+  }
+
+  public resetFilters(): void {
+    this.searchTerm = '';
+    this.activeSegment = 'all';
   }
 
   public openItinerary(itinerary: Itinerary): void {
@@ -125,5 +182,10 @@ export class HistoryPage implements OnInit, OnDestroy {
   public getTotalStops(itinerary: Itinerary): number {
     if (!itinerary.days) return 0;
     return itinerary.days.reduce((acc, day) => acc + (day.items?.length || 0), 0);
+  }
+
+  public getTripCostEstimate(itinerary: Itinerary): string {
+    const summary = this.itineraryService.calculateBudgetSummary(itinerary);
+    return summary ? summary.displayText : 'Cost not listed';
   }
 }

@@ -2,7 +2,13 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, catchError, tap, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import type { AuthResponse, LoginRequest, RegisterRequest, User } from '../models/auth.models';
+import type {
+  AuthResponse,
+  LoginRequest,
+  RegisterRequest,
+  User,
+  UserUpdateRequest,
+} from '../models/auth.models';
 import { GuestStorageService } from './guest-storage.service';
 
 @Injectable({
@@ -125,6 +131,15 @@ export class AuthService {
 
   public getProfile(): Observable<User> {
     return this.http.get<User>(`${environment.apiBaseUrl}/auth/me`).pipe(
+      tap((user) => {
+        localStorage.setItem(AuthService.USER_KEY, JSON.stringify(user));
+        this.currentUserSubject.next(user);
+      })
+    );
+  }
+
+  public updateProfile(payload: UserUpdateRequest): Observable<User> {
+    return this.http.patch<User>(`${environment.apiBaseUrl}/auth/me`, payload).pipe(
       tap((user) => {
         localStorage.setItem(AuthService.USER_KEY, JSON.stringify(user));
         this.currentUserSubject.next(user);

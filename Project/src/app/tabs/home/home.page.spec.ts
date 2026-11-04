@@ -210,4 +210,37 @@ describe('HomePage', () => {
       })
     );
   });
+
+  it('manages notifications drawer, marks all as read, and opens trip (UI-19)', () => {
+    expect(component.isNotificationsDrawerOpen).toBe(false);
+    expect(component.notificationsList.length).toBeGreaterThan(0);
+
+    const initialUnread = component.unreadNotificationCount;
+    expect(initialUnread).toBeGreaterThan(0);
+
+    component.onNotificationClick();
+    expect(component.isNotificationsDrawerOpen).toBe(true);
+
+    component.markAllNotificationsAsRead();
+    expect(component.unreadNotificationCount).toBe(0);
+
+    const tripNotif = {
+      id: 'test-notif',
+      type: 'trip' as const,
+      title: 'Trip Alert',
+      message: 'Pack bags',
+      timestamp: 'Tomorrow',
+      icon: 'calendar-outline',
+      colorClass: 'blue' as const,
+      itineraryId: 'itin-notif-1',
+      isRead: false,
+    };
+
+    component.openNotificationTrip(tripNotif);
+    expect(router.navigate).toHaveBeenCalledWith(['/itinerary', 'itin-notif-1']);
+    expect(component.isNotificationsDrawerOpen).toBe(false);
+
+    component.closeNotificationsDrawer();
+    expect(component.isNotificationsDrawerOpen).toBe(false);
+  });
 });

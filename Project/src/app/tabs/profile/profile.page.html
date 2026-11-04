@@ -1,6 +1,15 @@
 <ion-header class="ion-no-border">
   <ion-toolbar>
     <ion-title>Profile</ion-title>
+    <ion-button
+      slot="end"
+      fill="clear"
+      class="header-settings-btn"
+      (click)="openSettings()"
+      aria-label="Settings"
+    >
+      <ion-icon name="settings-outline" slot="icon-only"></ion-icon>
+    </ion-button>
   </ion-toolbar>
 </ion-header>
 
@@ -19,9 +28,20 @@
           <ion-icon name="checkmark-circle"></ion-icon>
           <span>Verified Account</span>
         </div>
+
+        <div class="profile-quick-actions">
+          <button type="button" class="profile-action-chip" (click)="openEditProfile()">
+            <ion-icon name="create-outline"></ion-icon>
+            <span>Edit Profile</span>
+          </button>
+          <button type="button" class="profile-action-chip" (click)="openSettings()">
+            <ion-icon name="settings-outline"></ion-icon>
+            <span>Preferences</span>
+          </button>
+        </div>
       </div>
 
-      <!-- Unsynced Guest Trips Migration Card (if any guest trips exist on device) -->
+      <!-- Unsynced Guest Trips Migration Card -->
       @if (guestItineraryCount > 0) {
         <div class="sync-prompt-card">
           <div class="sync-prompt-header">
@@ -56,6 +76,11 @@
           <span>Member since {{ currentUser.created_at | date:'mediumDate' }}</span>
         </div>
 
+        <div class="info-row">
+          <ion-icon name="shield-checkmark-outline"></ion-icon>
+          <span>Cloud sync active</span>
+        </div>
+
         <ion-button expand="block" fill="outline" color="danger" class="logout-btn" (click)="onLogout()">
           <ion-icon name="log-out-outline" slot="start"></ion-icon>
           Log out
@@ -88,7 +113,247 @@
         <ion-button expand="block" fill="outline" class="outline-btn" (click)="goToSignup()">
           Create Account
         </ion-button>
+
+        <button type="button" class="guest-settings-btn" (click)="openSettings()">
+          <ion-icon name="settings-outline"></ion-icon>
+          <span>App Preferences & Settings</span>
+        </button>
       </div>
     }
   </div>
+
+  <!-- ========================================================
+       MODAL 1: EDIT PROFILE SUB-WINDOW (UI-18)
+       ======================================================== -->
+  <ion-modal [isOpen]="isEditProfileOpen" (didDismiss)="closeEditProfile()" class="profile-subwindow-modal">
+    <ng-template>
+      <div class="subwindow-container">
+        <div class="subwindow-header">
+          <div class="subwindow-title-group">
+            <h3 class="subwindow-title">Edit Profile</h3>
+            <p class="subwindow-subtitle">Update your personal traveler information</p>
+          </div>
+          <button type="button" class="subwindow-close-btn" (click)="closeEditProfile()" aria-label="Close modal">
+            <ion-icon name="close-outline"></ion-icon>
+          </button>
+        </div>
+
+        <div class="subwindow-body">
+          @if (editProfileError) {
+            <div class="subwindow-error-banner">
+              <ion-icon name="alert-circle-outline"></ion-icon>
+              <span>{{ editProfileError }}</span>
+            </div>
+          }
+
+          <form [formGroup]="editForm" (ngSubmit)="saveProfile()" class="subwindow-form">
+            <div class="form-row-2col">
+              <div class="field-group">
+                <label class="field-label">First Name</label>
+                <input
+                  type="text"
+                  formControlName="first_name"
+                  class="field-input"
+                  placeholder="First name"
+                />
+              </div>
+              <div class="field-group">
+                <label class="field-label">Last Name</label>
+                <input
+                  type="text"
+                  formControlName="last_name"
+                  class="field-input"
+                  placeholder="Last name"
+                />
+              </div>
+            </div>
+
+            <div class="field-group">
+              <label class="field-label">Username</label>
+              <div class="input-prefix-wrapper">
+                <span class="input-prefix">&#64;</span>
+                <input
+                  type="text"
+                  formControlName="username"
+                  class="field-input with-prefix"
+                  placeholder="username"
+                />
+              </div>
+            </div>
+
+            <div class="password-section-divider">
+              <span class="divider-text">Change Password (Optional)</span>
+            </div>
+
+            <div class="field-group">
+              <label class="field-label">Current Password</label>
+              <div class="input-suffix-wrapper">
+                <input
+                  [type]="showCurrentPassword ? 'text' : 'password'"
+                  formControlName="current_password"
+                  class="field-input"
+                  placeholder="Required only to set new password"
+                />
+                <button
+                  type="button"
+                  class="suffix-eye-btn"
+                  (click)="toggleCurrentPasswordVisibility()"
+                  aria-label="Toggle password visibility"
+                >
+                  <ion-icon [name]="showCurrentPassword ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
+                </button>
+              </div>
+            </div>
+
+            <div class="field-group">
+              <label class="field-label">New Password</label>
+              <div class="input-suffix-wrapper">
+                <input
+                  [type]="showNewPassword ? 'text' : 'password'"
+                  formControlName="new_password"
+                  class="field-input"
+                  placeholder="Min. 8 characters"
+                />
+                <button
+                  type="button"
+                  class="suffix-eye-btn"
+                  (click)="toggleNewPasswordVisibility()"
+                  aria-label="Toggle password visibility"
+                >
+                  <ion-icon [name]="showNewPassword ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
+                </button>
+              </div>
+            </div>
+
+            <div class="subwindow-actions">
+              <button
+                type="submit"
+                class="subwindow-save-btn"
+                [disabled]="isSavingProfile || editForm.invalid"
+              >
+                @if (isSavingProfile) {
+                  <ion-spinner name="crescent"></ion-spinner>
+                  <span>Saving Changes...</span>
+                } @else {
+                  <span>Save Profile</span>
+                }
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </ng-template>
+  </ion-modal>
+
+  <!-- ========================================================
+       MODAL 2: APP SETTINGS & PREFERENCES SUB-WINDOW (UI-18)
+       ======================================================== -->
+  <ion-modal [isOpen]="isSettingsOpen" (didDismiss)="closeSettings()" class="profile-subwindow-modal">
+    <ng-template>
+      <div class="subwindow-container">
+        <div class="subwindow-header">
+          <div class="subwindow-title-group">
+            <h3 class="subwindow-title">Preferences & Settings</h3>
+            <p class="subwindow-subtitle">Customize application behavior and storage</p>
+          </div>
+          <button type="button" class="subwindow-close-btn" (click)="closeSettings()" aria-label="Close settings">
+            <ion-icon name="close-outline"></ion-icon>
+          </button>
+        </div>
+
+        <div class="subwindow-body">
+          <!-- Theme Setting -->
+          <div class="settings-group">
+            <span class="settings-group-title">Display & Appearance</span>
+            <div class="setting-item-row">
+              <div class="setting-left">
+                <div class="setting-icon-badge" [class.dark]="isDarkMode">
+                  <ion-icon [name]="isDarkMode ? 'moon-outline' : 'sunny-outline'"></ion-icon>
+                </div>
+                <div class="setting-text-col">
+                  <span class="setting-label">Dark Theme</span>
+                  <span class="setting-desc">Switch between light and high-contrast dark modes</span>
+                </div>
+              </div>
+              <label class="theme-switch-toggle">
+                <input
+                  type="checkbox"
+                  [checked]="isDarkMode"
+                  (change)="toggleDarkMode(!isDarkMode)"
+                />
+                <span class="slider-round"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Trip Planner Defaults -->
+          <div class="settings-group">
+            <span class="settings-group-title">Trip Planning Defaults</span>
+            <div class="setting-card">
+              <div class="setting-header-line">
+                <div class="setting-icon-badge blue">
+                  <ion-icon name="cash-outline"></ion-icon>
+                </div>
+                <div class="setting-text-col">
+                  <span class="setting-label">Default Daily Budget</span>
+                  <span class="setting-desc">Pre-filled budget for new suggested itineraries</span>
+                </div>
+              </div>
+
+              <div class="budget-chips-row">
+                @for (preset of budgetPresets; track preset) {
+                  <button
+                    type="button"
+                    class="budget-preset-chip"
+                    [class.active]="defaultBudget === preset"
+                    (click)="setDefaultBudget(preset)"
+                  >
+                    ₱{{ preset.toLocaleString() }}/day
+                  </button>
+                }
+              </div>
+            </div>
+          </div>
+
+          <!-- Connectivity Status -->
+          <div class="settings-group">
+            <span class="settings-group-title">Connection & Cloud Sync</span>
+            <div class="setting-item-row">
+              <div class="setting-left">
+                <div class="setting-icon-badge" [class.green]="!isHostOffline" [class.amber]="isHostOffline">
+                  <ion-icon [name]="isHostOffline ? 'cloud-offline-outline' : 'shield-checkmark-outline'"></ion-icon>
+                </div>
+                <div class="setting-text-col">
+                  <span class="setting-label">{{ isHostOffline ? 'Offline Mode' : 'Cloud Sync Connected' }}</span>
+                  <span class="setting-desc">
+                    {{ isHostOffline ? 'Operating on local device cache' : 'Permanent Cloudflare Worker API proxy active' }}
+                  </span>
+                </div>
+              </div>
+              <span class="status-indicator-dot" [class.online]="!isHostOffline"></span>
+            </div>
+          </div>
+
+          <!-- Storage & Cache -->
+          <div class="settings-group">
+            <span class="settings-group-title">Device Storage</span>
+            <div class="setting-item-row">
+              <div class="setting-left">
+                <div class="setting-icon-badge red">
+                  <ion-icon name="trash-outline"></ion-icon>
+                </div>
+                <div class="setting-text-col">
+                  <span class="setting-label">Reset Local Cache</span>
+                  <span class="setting-desc">Clear search queries and cached place coordinates</span>
+                </div>
+              </div>
+              <button type="button" class="clear-cache-btn" (click)="clearLocalCache()">
+                Clear
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </ng-template>
+  </ion-modal>
 </ion-content>

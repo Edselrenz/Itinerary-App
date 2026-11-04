@@ -16,10 +16,12 @@ import {
   arrowForward,
   calendarOutline,
   cashOutline,
+  checkmarkDoneOutline,
   closeCircle,
   closeOutline,
   compassOutline,
   informationCircle,
+  leafOutline,
   locationOutline,
   mapOutline,
   navigateOutline,
@@ -27,6 +29,7 @@ import {
   openOutline,
   personCircleOutline,
   searchOutline,
+  shieldCheckmarkOutline,
   sparkles,
   timeOutline,
 } from 'ionicons/icons';
@@ -37,6 +40,19 @@ import { Place } from '../../core/models/place.models';
 import { Itinerary } from '../../core/models/itinerary.models';
 import { ItineraryService } from '../../core/services/itinerary.service';
 import { getOfflineDestinationsForHome } from '../../core/data/offline-places.data';
+import { toLocalIsoDate } from '../../core/utils/date.utils';
+
+export interface TravelNotification {
+  id: string;
+  type: 'trip' | 'advisory' | 'sync';
+  title: string;
+  message: string;
+  timestamp: string;
+  icon: string;
+  colorClass: 'blue' | 'amber' | 'green' | 'teal';
+  itineraryId?: string;
+  isRead: boolean;
+}
 
 export interface DestinationItem {
   id: string;
@@ -77,6 +93,8 @@ export class HomePage implements OnInit, OnDestroy {
   public isDetailModalOpen = false;
 
   public isPopularCatalogOpen = false;
+  public isNotificationsDrawerOpen = false;
+  public notificationsList: TravelNotification[] = [];
   public selectedCatalogMunicipality = 'All';
   public catalogMunicipalities: string[] = [
     'All',
@@ -125,6 +143,9 @@ export class HomePage implements OnInit, OnDestroy {
       openOutline,
       timeOutline,
       cashOutline,
+      leafOutline,
+      shieldCheckmarkOutline,
+      checkmarkDoneOutline,
     });
   }
 
@@ -140,6 +161,7 @@ export class HomePage implements OnInit, OnDestroy {
     this.subscriptions.add(
       this.itineraryService.itineraries$.subscribe((items) => {
         this.savedItineraries = items || [];
+        this.buildNotifications(this.savedItineraries);
       })
     );
 
@@ -269,14 +291,89 @@ export class HomePage implements OnInit, OnDestroy {
     };
   }
 
-  public async onNotificationClick(): Promise<void> {
-    const toast = await this.toastController.create({
-      message: "You're all caught up! No active travel alerts in Nueva Ecija.",
-      duration: 2500,
-      position: 'top',
-      color: 'dark',
+  public get unreadNotificationCount(): number {
+    return this.notificationsList.filter((n) => !n.isRead).length;
+  }
+
+  public onNotificationClick(): void {
+    this.isNotificationsDrawerOpen = true;
+  }
+
+  public closeNotificationsDrawer(): void {
+    this.isNotificationsDrawerOpen = false;
+  }
+
+  public markAllNotificationsAsRead(): void {
+    this.notificationsList.forEach((n) => (n.isRead = true));
+  }
+
+  public openNotificationTrip(notif: TravelNotification): void {
+    if (notif.itineraryId) {
+      notif.isRead = true;
+      this.closeNotificationsDrawer();
+      this.router.navigate(['/itinerary', notif.itineraryId]);
+    }
+  }
+
+  public buildNotifications(itineraries: Itinerary[]): void {
+    const list: TravelNotification[] = [];
+    const today = toLocalIsoDate();
+
+    // 1. Upcoming Trips Alerts
+    const upcomingTrips = (itineraries || []).filter((itin) => {
+      const endOrStart = (itin.end_date || itin.start_date || '').split('T')[0];
+      return endOrStart >= today;
     });
-    await toast.present();
+
+    for (const trip of upcomingTrips) {
+      list.push({
+        id: `trip-${trip.id}`,
+        type: 'trip',
+        title: `Upcoming: ${trip.title}`,
+        message: `Your trip to ${trip.destination} is coming up on ${trip.start_date}. Review your stops and commute notes.`,
+        timestamp: trip.start_date,
+        icon: 'calendar-outline',
+        colorClass: 'blue',
+        itineraryId: trip.id,
+        isRead: false,
+      });
+    }
+
+    // 2. Provincial Travel Advisories
+    list.push({
+      id: 'adv-minalungao',
+      type: 'advisory',
+      title: 'Minalungao River Rafting Active',
+      message: 'Optimal conditions for limestone river cruising and bamboo rafting are now active in General Tinio.',
+      timestamp: 'Season Tip',
+      icon: 'leaf-outline',
+      colorClass: 'teal',
+      isRead: false,
+    });
+
+    list.push({
+      id: 'adv-transit',
+      type: 'advisory',
+      title: 'Provincial UV Express Notice',
+      message: 'UV Express vans depart hourly from Cabanatuan Central Terminal to Bongabon and Gapan City.',
+      timestamp: 'Transit Advisory',
+      icon: 'information-circle',
+      colorClass: 'amber',
+      isRead: false,
+    });
+
+    list.push({
+      id: 'adv-sync',
+      type: 'sync',
+      title: 'Cloudflare Worker Sync Active',
+      message: 'Permanent cloud API proxy is connected. Offline places and itineraries remain accessible.',
+      timestamp: 'System',
+      icon: 'shield-checkmark-outline',
+      colorClass: 'green',
+      isRead: true,
+    });
+
+    this.notificationsList = list;
   }
 
   public get filteredCatalogDestinations(): DestinationItem[] {

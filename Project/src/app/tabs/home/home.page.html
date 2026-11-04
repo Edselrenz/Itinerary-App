@@ -13,6 +13,9 @@
         aria-label="Travel notifications"
       >
         <ion-icon name="notifications"></ion-icon>
+        @if (unreadNotificationCount > 0) {
+          <span class="bell-badge-dot">{{ unreadNotificationCount }}</span>
+        }
       </button>
     </header>
 
@@ -357,6 +360,90 @@
               </div>
             }
           </div>
+        </div>
+      </div>
+    </ng-template>
+  </ion-modal>
+
+  <!-- ========================================================
+       MODAL: NOTIFICATIONS & TRAVEL REMINDERS DRAWER (UI-19)
+       ======================================================== -->
+  <ion-modal
+    [isOpen]="isNotificationsDrawerOpen"
+    (didDismiss)="closeNotificationsDrawer()"
+    class="notifications-drawer-modal"
+  >
+    <ng-template>
+      <div class="notif-drawer-container">
+        <div class="notif-drawer-header">
+          <div class="notif-header-title-group">
+            <h3 class="notif-header-title">Travel Advisories & Notifications</h3>
+            <span class="notif-header-sub">
+              {{ unreadNotificationCount }} unread {{ unreadNotificationCount === 1 ? 'alert' : 'alerts' }}
+            </span>
+          </div>
+          <div class="notif-header-actions">
+            @if (unreadNotificationCount > 0) {
+              <button
+                type="button"
+                class="mark-all-read-btn"
+                (click)="markAllNotificationsAsRead()"
+                aria-label="Mark all read"
+              >
+                <ion-icon name="checkmark-done-outline"></ion-icon>
+                <span>Read All</span>
+              </button>
+            }
+            <button
+              type="button"
+              class="notif-close-btn"
+              (click)="closeNotificationsDrawer()"
+              aria-label="Close notifications drawer"
+            >
+              <ion-icon name="close-outline"></ion-icon>
+            </button>
+          </div>
+        </div>
+
+        <div class="notif-drawer-body">
+          @if (notificationsList.length > 0) {
+            <div class="notif-cards-list">
+              @for (notif of notificationsList; track notif.id) {
+                <div
+                  class="notif-card"
+                  [class.unread]="!notif.isRead"
+                  [class.clickable]="!!notif.itineraryId"
+                  (click)="openNotificationTrip(notif)"
+                  role="button"
+                  tabindex="0"
+                >
+                  <div class="notif-icon-badge" [ngClass]="notif.colorClass">
+                    <ion-icon [name]="notif.icon"></ion-icon>
+                  </div>
+
+                  <div class="notif-content">
+                    <div class="notif-top-line">
+                      <h4 class="notif-card-title">{{ notif.title }}</h4>
+                      <span class="notif-timestamp">{{ notif.timestamp }}</span>
+                    </div>
+                    <p class="notif-message">{{ notif.message }}</p>
+                    @if (notif.itineraryId) {
+                      <div class="notif-action-tag">
+                        <span>Tap to view itinerary</span>
+                        <ion-icon name="arrow-forward"></ion-icon>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="notif-empty-state">
+              <ion-icon name="notifications-outline"></ion-icon>
+              <h4>No notifications right now</h4>
+              <p>You're all caught up with Nueva Ecija travel updates.</p>
+            </div>
+          }
         </div>
       </div>
     </ng-template>

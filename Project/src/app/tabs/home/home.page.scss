@@ -26,6 +26,7 @@
 }
 
 .bell-icon-btn {
+  position: relative;
   background: none;
   border: none;
   padding: 4px;
@@ -39,6 +40,25 @@
 
   &:active {
     transform: scale(0.92);
+  }
+
+  .bell-badge-dot {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: #ef4444;
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 800;
+    min-width: 17px;
+    height: 17px;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    border: 2px solid #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
   }
 }
 

@@ -126,7 +126,7 @@
               <div class="assumptions-cards-grid">
                 @for (note of itinerary.assumptions; track note) {
                   @let parsed = parseAssumption(note);
-                  <div class="assumption-insight-card">
+                  <div class="assumption-insight-card" [attr.data-category]="parsed.tag.toLowerCase()">
                     <div class="insight-icon-wrap">
                       <ion-icon [name]="parsed.icon"></ion-icon>
                     </div>

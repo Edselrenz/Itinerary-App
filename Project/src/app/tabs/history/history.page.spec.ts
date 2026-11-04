@@ -47,6 +47,7 @@ describe('HistoryPage', () => {
   const mockItineraryService = {
     itineraries$: itinerariesSubject.asObservable(),
     deleteItinerary: vi.fn().mockReturnValue(of(undefined)),
+    calculateBudgetSummary: vi.fn().mockReturnValue({ displayText: '₱150 - ₱300' }),
   };
 
   beforeEach(async () => {
@@ -96,5 +97,33 @@ describe('HistoryPage', () => {
     const mockEvent = { stopPropagation: vi.fn() } as unknown as Event;
     await component.deleteItinerary(mockEvent, mockItinerary1);
     expect(mockEvent.stopPropagation).toHaveBeenCalled();
+  });
+
+  it('filters itineraries by search term across title and destination', () => {
+    component.searchTerm = 'Bongabon';
+    expect(component.filteredItineraries.length).toBe(1);
+
+    component.searchTerm = 'Pantabangan';
+    expect(component.filteredItineraries.length).toBe(0);
+
+    component.clearSearch();
+    expect(component.filteredItineraries.length).toBe(1);
+  });
+
+  it('filters itineraries by segment type and resets', () => {
+    component.setSegment('suggested');
+    expect(component.filteredItineraries.length).toBe(0);
+
+    component.setSegment('custom');
+    expect(component.filteredItineraries.length).toBe(1);
+
+    component.resetFilters();
+    expect(component.activeSegment).toBe('all');
+    expect(component.filteredItineraries.length).toBe(1);
+  });
+
+  it('estimates admission costs for saved trip', () => {
+    const cost = component.getTripCostEstimate(mockItinerary1);
+    expect(cost).toBe('₱150 - ₱300');
   });
 });

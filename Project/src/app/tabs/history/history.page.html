@@ -1,103 +1,148 @@
 <ion-header class="ion-no-border app-header">
   <ion-toolbar class="history-toolbar">
     <ion-title class="history-title">Saved Itineraries</ion-title>
-    <ion-button
-      slot="end"
-      fill="clear"
-      class="new-trip-btn"
-      routerLink="/custom-builder"
-      aria-label="New Itinerary"
-    >
+    <ion-button slot="end" fill="clear" class="new-trip-btn" routerLink="/custom-builder" aria-label="New Itinerary">
       <ion-icon name="add-outline" slot="icon-only"></ion-icon>
     </ion-button>
   </ion-toolbar>
+
+  @if (savedItineraries.length > 0) {
+  <!-- Search & Filter Bar -->
+  <div class="history-filter-header">
+    <div class="search-input-pill">
+      <ion-icon name="search-outline" class="search-icon"></ion-icon>
+      <input
+        type="text"
+        [(ngModel)]="searchTerm"
+        placeholder="Search saved trips or municipalities..."
+        class="history-search-field"
+      />
+      @if (searchTerm) {
+      <button type="button" class="clear-search-btn" (click)="clearSearch()" aria-label="Clear search">
+        <ion-icon name="close-circle-outline"></ion-icon>
+      </button>
+      }
+    </div>
+
+    <!-- Segment Tabs Capsule Bar -->
+    <div class="history-segments-scroll">
+      <button type="button" class="segment-pill" [class.active]="activeSegment === 'all'" (click)="setSegment('all')">
+        All ({{ savedItineraries.length }})
+      </button>
+      <button
+        type="button"
+        class="segment-pill"
+        [class.active]="activeSegment === 'upcoming'"
+        (click)="setSegment('upcoming')"
+      >
+        Upcoming
+      </button>
+      <button type="button" class="segment-pill" [class.active]="activeSegment === 'past'" (click)="setSegment('past')">
+        Past
+      </button>
+      <button
+        type="button"
+        class="segment-pill"
+        [class.active]="activeSegment === 'suggested'"
+        (click)="setSegment('suggested')"
+      >
+        Suggested
+      </button>
+      <button
+        type="button"
+        class="segment-pill"
+        [class.active]="activeSegment === 'custom'"
+        (click)="setSegment('custom')"
+      >
+        Custom
+      </button>
+    </div>
+  </div>
+  }
 </ion-header>
 
 <ion-content class="history-content" [fullscreen]="true">
   <div class="history-container">
-    @if (savedItineraries.length > 0) {
-      <div class="history-stats-banner">
-        <h2 class="stats-heading">Your Saved Trips</h2>
-        <p class="stats-subtitle">
-          {{ savedItineraries.length }} {{ savedItineraries.length === 1 ? 'trip' : 'trips' }} planned in Nueva Ecija
-        </p>
-      </div>
-
-      <div class="itineraries-grid">
-        @for (itin of savedItineraries; track itin.id) {
-          <div
-            class="history-itinerary-card"
-            (click)="openItinerary(itin)"
-            role="button"
-            tabindex="0"
-          >
-            <div class="itin-header-row">
-              <span class="itin-badge" [class.suggested]="itin.type === 'suggested'">
-                {{ itin.type === 'suggested' ? 'Suggested Plan' : 'Custom Plan' }}
-              </span>
-              <div class="itin-header-actions">
-                <span class="itin-budget">₱{{ itin.daily_budget }}/day</span>
-                <button
-                  type="button"
-                  class="trash-action-btn"
-                  (click)="deleteItinerary($event, itin)"
-                  aria-label="Delete itinerary"
-                >
-                  <ion-icon name="trash-outline"></ion-icon>
-                </button>
-              </div>
-            </div>
-
-            <h3 class="itin-title">{{ itin.title }}</h3>
-
-            <p class="itin-destination">
-              <ion-icon name="location-outline"></ion-icon>
-              <span>{{ itin.destination }}</span>
-            </p>
-
-            <div class="itin-footer-row">
-              <span class="itin-dates">
-                <ion-icon name="calendar-outline"></ion-icon>
-                <span>{{ itin.start_date }} &rarr; {{ itin.end_date }}</span>
-              </span>
-              <span class="itin-stops-pill">
-                {{ itin.days.length || 1 }} Days · {{ getTotalStops(itin) }} Stops
-              </span>
-            </div>
+    @if (savedItineraries.length > 0) { @if (filteredItineraries.length > 0) {
+    <div class="itineraries-grid">
+      @for (itin of filteredItineraries; track itin.id) {
+      <div class="history-itinerary-card" (click)="openItinerary(itin)" role="button" tabindex="0">
+        <div class="itin-header-row">
+          <span class="itin-badge" [class.suggested]="itin.type === 'suggested'">
+            {{ itin.type === 'suggested' ? 'Suggested Plan' : 'Custom Plan' }}
+          </span>
+          <div class="itin-header-actions">
+            <span class="itin-budget">₱{{ itin.daily_budget ? itin.daily_budget.toLocaleString() : '0' }}/day</span>
+            <button
+              type="button"
+              class="trash-action-btn"
+              (click)="deleteItinerary($event, itin)"
+              aria-label="Delete itinerary"
+            >
+              <ion-icon name="trash-outline"></ion-icon>
+            </button>
           </div>
-        }
-      </div>
-    } @else {
-      <!-- Empty State -->
-      <div class="empty-history-wrapper">
-        <div class="empty-icon-circle">
-          <ion-icon name="time-outline"></ion-icon>
         </div>
-        <h2 class="empty-title">No Saved Itineraries Yet</h2>
-        <p class="empty-subtitle">
-          Your saved trips will appear here. Choose how you would like to plan your Nueva Ecija travel experience:
+
+        <h3 class="itin-title">{{ itin.title }}</h3>
+
+        <p class="itin-destination">
+          <ion-icon name="location-outline"></ion-icon>
+          <span>{{ itin.destination }}</span>
         </p>
 
-        <div class="empty-actions-col">
-          <button
-            type="button"
-            class="empty-cta-btn suggested-btn"
-            routerLink="/suggested-wizard"
-          >
-            <ion-icon name="sparkles"></ion-icon>
-            <span>Suggested Itinerary</span>
-          </button>
+        <div class="itin-admission-row">
+          <span class="itin-cost-label">Est. admissions:</span>
+          <span class="itin-cost-val">{{ getTripCostEstimate(itin) }}</span>
+        </div>
 
-          <button
-            type="button"
-            class="empty-cta-btn custom-btn"
-            routerLink="/custom-builder"
-          >
-            <ion-icon name="add-outline"></ion-icon>
-            <span>Custom Itinerary</span>
-          </button>
+        <div class="itin-footer-row">
+          <span class="itin-dates">
+            <ion-icon name="calendar-outline"></ion-icon>
+            <span>{{ itin.start_date }} &rarr; {{ itin.end_date }}</span>
+          </span>
+          <span class="itin-stops-pill"> {{ itin.days.length || 1 }} Days · {{ getTotalStops(itin) }} Stops </span>
         </div>
       </div>
+      }
+    </div>
+    } @else {
+    <!-- Filter/Search Empty State -->
+    <div class="empty-filter-wrapper">
+      <div class="empty-icon-circle">
+        <ion-icon name="filter-outline"></ion-icon>
+      </div>
+      <h3 class="empty-filter-title">No Matching Itineraries</h3>
+      <p class="empty-filter-desc">
+        No saved trips found for "{{ searchTerm || activeSegment }}". Try clearing your search or switching filter tabs.
+      </p>
+      <button type="button" class="reset-filter-btn" (click)="resetFilters()">
+        Show All Trips ({{ savedItineraries.length }})
+      </button>
+    </div>
+    } } @else {
+    <!-- Empty State -->
+    <div class="empty-history-wrapper">
+      <div class="empty-icon-circle">
+        <ion-icon name="time-outline"></ion-icon>
+      </div>
+      <h2 class="empty-title">No Saved Itineraries Yet</h2>
+      <p class="empty-subtitle">
+        Your saved trips will appear here. Choose how you would like to plan your Nueva Ecija travel experience:
+      </p>
+
+      <div class="empty-actions-col">
+        <button type="button" class="empty-cta-btn suggested-btn" routerLink="/suggested-wizard">
+          <ion-icon name="sparkles"></ion-icon>
+          <span>Suggested Itinerary</span>
+        </button>
+
+        <button type="button" class="empty-cta-btn custom-btn" routerLink="/custom-builder">
+          <ion-icon name="add-outline"></ion-icon>
+          <span>Custom Itinerary</span>
+        </button>
+      </div>
+    </div>
     }
   </div>
 </ion-content>

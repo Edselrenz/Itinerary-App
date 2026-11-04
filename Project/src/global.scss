@@ -269,11 +269,12 @@ body {
     background: #f8fafc;
     border: 1px solid #f1f5f9;
     border-radius: 10px;
-    padding: 9px 11px;
+    padding: 10px 12px;
+    transition: all 0.2s ease;
 
     .insight-icon-wrap {
-      width: 26px;
-      height: 26px;
+      width: 28px;
+      height: 28px;
       border-radius: 8px;
       background: #ffffff;
       border: 1px solid #e2e8f0;
@@ -285,7 +286,7 @@ body {
       margin-top: 1px;
 
       ion-icon {
-        font-size: 14px;
+        font-size: 15px;
       }
     }
 
@@ -304,27 +305,92 @@ body {
         font-size: 0.62rem;
         font-weight: 800;
         text-transform: uppercase;
-        letter-spacing: 0.04em;
+        letter-spacing: 0.05em;
         color: #0284c7;
         background: rgba(2, 132, 199, 0.1);
-        padding: 1px 6px;
-        border-radius: 5px;
+        padding: 2px 7px;
+        border-radius: 6px;
         flex-shrink: 0;
       }
 
       .insight-title {
-        font-size: 0.78rem;
-        font-weight: 700;
+        font-size: 0.8rem;
+        font-weight: 750;
         color: #1e293b;
         margin: 0;
         line-height: 1.25;
       }
 
       .insight-desc {
-        font-size: 0.72rem;
+        font-size: 0.74rem;
         color: #475569;
         margin: 0;
         line-height: 1.45;
+      }
+    }
+
+    &[data-category="pacing"] {
+      border-left: 3px solid #0d9488;
+      .insight-tag {
+        color: #0f766e;
+        background: rgba(13, 148, 136, 0.1);
+      }
+      .insight-icon-wrap {
+        color: #0d9488;
+        border-color: rgba(13, 148, 136, 0.25);
+        background: rgba(13, 148, 136, 0.06);
+      }
+    }
+
+    &[data-category="routing"] {
+      border-left: 3px solid #6366f1;
+      .insight-tag {
+        color: #4338ca;
+        background: rgba(99, 102, 241, 0.1);
+      }
+      .insight-icon-wrap {
+        color: #6366f1;
+        border-color: rgba(99, 102, 241, 0.25);
+        background: rgba(99, 102, 241, 0.06);
+      }
+    }
+
+    &[data-category="budget"] {
+      border-left: 3px solid #059669;
+      .insight-tag {
+        color: #047857;
+        background: rgba(5, 150, 105, 0.1);
+      }
+      .insight-icon-wrap {
+        color: #059669;
+        border-color: rgba(5, 150, 105, 0.25);
+        background: rgba(5, 150, 105, 0.06);
+      }
+    }
+
+    &[data-category="schedule"] {
+      border-left: 3px solid #d97706;
+      .insight-tag {
+        color: #b45309;
+        background: rgba(217, 119, 6, 0.1);
+      }
+      .insight-icon-wrap {
+        color: #d97706;
+        border-color: rgba(217, 119, 6, 0.25);
+        background: rgba(217, 119, 6, 0.06);
+      }
+    }
+
+    &[data-category="advice"] {
+      border-left: 3px solid #0284c7;
+      .insight-tag {
+        color: #0369a1;
+        background: rgba(2, 132, 199, 0.1);
+      }
+      .insight-icon-wrap {
+        color: #0284c7;
+        border-color: rgba(2, 132, 199, 0.25);
+        background: rgba(2, 132, 199, 0.06);
       }
     }
   }
@@ -2725,4 +2791,896 @@ body {
     }
   }
 }
+
+/* ========================================================
+   PROFILE & APP SETTINGS SUB-WINDOWS (UI-18)
+   ======================================================== */
+.profile-quick-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+  width: 100%;
+  justify-content: center;
+
+  .profile-action-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: 9999px;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    color: #1e293b;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    ion-icon {
+      font-size: 14px;
+      color: #0084ff;
+    }
+
+    &:hover {
+      background: #e2e8f0;
+    }
+  }
+}
+
+.guest-settings-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.84rem;
+  color: #64748b;
+  font-weight: 600;
+  margin-top: 10px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+
+  ion-icon {
+    font-size: 16px;
+  }
+}
+
+.profile-subwindow-modal {
+  --border-radius: 24px 24px 0 0;
+  --max-height: 85vh;
+  --background: #ffffff;
+
+  .subwindow-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    max-height: 85vh;
+    background: #ffffff;
+    border-radius: 24px 24px 0 0;
+  }
+
+  .subwindow-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 1.25rem 0.85rem;
+    border-bottom: 1px solid #f1f5f9;
+    flex-shrink: 0;
+
+    .subwindow-title-group {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .subwindow-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #0f172a;
+      margin: 0;
+    }
+
+    .subwindow-subtitle {
+      font-size: 0.78rem;
+      color: #64748b;
+      margin: 0;
+    }
+
+    .subwindow-close-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: #f1f5f9;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: #64748b;
+
+      ion-icon {
+        font-size: 18px;
+      }
+    }
+  }
+
+  .subwindow-body {
+    padding: 1.25rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .subwindow-error-banner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #b91c1c;
+    border-radius: 12px;
+    padding: 10px 12px;
+    font-size: 0.82rem;
+    font-weight: 600;
+
+    ion-icon {
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+  }
+
+  .subwindow-form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .form-row-2col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+
+    .field-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #334155;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .field-input {
+      height: 44px;
+      border-radius: 12px;
+      border: 1.5px solid #e2e8f0;
+      padding: 0 14px;
+      font-size: 0.9rem;
+      color: #0f172a;
+      background: #f8fafc;
+      outline: none;
+      transition: border-color 0.15s ease;
+
+      &:focus {
+        border-color: #0084ff;
+        background: #ffffff;
+      }
+    }
+
+    .input-prefix-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+
+      .input-prefix {
+        position: absolute;
+        left: 14px;
+        color: #94a3b8;
+        font-weight: 700;
+        font-size: 0.95rem;
+      }
+
+      .field-input.with-prefix {
+        padding-left: 30px;
+        width: 100%;
+      }
+    }
+
+    .input-suffix-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+
+      .field-input {
+        width: 100%;
+        padding-right: 42px;
+      }
+
+      .suffix-eye-btn {
+        position: absolute;
+        right: 10px;
+        background: transparent;
+        border: none;
+        color: #64748b;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 4px;
+
+        ion-icon {
+          font-size: 18px;
+        }
+      }
+    }
+  }
+
+  .password-section-divider {
+    display: flex;
+    align-items: center;
+    margin: 8px 0;
+
+    &::before,
+    &::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #e2e8f0;
+    }
+
+    .divider-text {
+      padding: 0 10px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+  }
+
+  .subwindow-actions {
+    margin-top: 10px;
+  }
+
+  .subwindow-save-btn {
+    width: 100%;
+    height: 48px;
+    border-radius: 14px;
+    background: #0084ff;
+    color: #ffffff;
+    font-size: 0.92rem;
+    font-weight: 800;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0, 132, 255, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    ion-spinner {
+      width: 20px;
+      height: 20px;
+      color: #ffffff;
+    }
+  }
+
+  /* App Settings UI Elements */
+  .settings-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    .settings-group-title {
+      font-size: 0.76rem;
+      font-weight: 800;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .setting-item-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+    }
+
+    .setting-card {
+      padding: 14px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .setting-header-line {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .setting-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .setting-icon-badge {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: #f1f5f9;
+      color: #64748b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+
+      ion-icon {
+        font-size: 18px;
+      }
+
+      &.dark {
+        background: #0f172a;
+        color: #f8fafc;
+      }
+      &.blue {
+        background: #eff6ff;
+        color: #0084ff;
+      }
+      &.green {
+        background: #ecfdf5;
+        color: #059669;
+      }
+      &.amber {
+        background: #fffbeb;
+        color: #d97706;
+      }
+      &.red {
+        background: #fef2f2;
+        color: #dc2626;
+      }
+    }
+
+    .setting-text-col {
+      display: flex;
+      flex-direction: column;
+
+      .setting-label {
+        font-size: 0.88rem;
+        font-weight: 700;
+        color: #0f172a;
+      }
+
+      .setting-desc {
+        font-size: 0.74rem;
+        color: #64748b;
+        line-height: 1.35;
+      }
+    }
+
+    /* Switch Toggle */
+    .theme-switch-toggle {
+      position: relative;
+      display: inline-block;
+      width: 48px;
+      height: 28px;
+      flex-shrink: 0;
+
+      input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+
+      .slider-round {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #cbd5e1;
+        transition: 0.25s;
+        border-radius: 34px;
+
+        &::before {
+          position: absolute;
+          content: '';
+          height: 22px;
+          width: 22px;
+          left: 3px;
+          bottom: 3px;
+          background-color: white;
+          transition: 0.25s;
+          border-radius: 50%;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+      }
+
+      input:checked + .slider-round {
+        background-color: #0084ff;
+      }
+
+      input:checked + .slider-round::before {
+        transform: translateX(20px);
+      }
+    }
+
+    .budget-chips-row {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .budget-preset-chip {
+      padding: 9px 12px;
+      border-radius: 10px;
+      background: #ffffff;
+      border: 1.5px solid #e2e8f0;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #334155;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s ease;
+
+      &.active {
+        background: #eff6ff;
+        border-color: #0084ff;
+        color: #0084ff;
+      }
+    }
+
+    .status-indicator-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #f59e0b;
+
+      &.online {
+        background: #10b981;
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+      }
+    }
+
+    .clear-cache-btn {
+      padding: 6px 14px;
+      border-radius: 8px;
+      background: #fee2e2;
+      border: 1px solid #fca5a5;
+      color: #dc2626;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+  }
+}
+
+/* Global Dark Mode Rules */
+body.dark {
+  --ion-background-color: #0b1120;
+  --ion-text-color: #f1f5f9;
+  --ion-card-background: #1e293b;
+  --ion-toolbar-background: #0b1120;
+  --ion-tab-bar-background: #0f172a;
+
+  .profile-content {
+    --background: #0b1120;
+  }
+
+  .user-card,
+  .guest-card,
+  .action-card {
+    background: #1e293b;
+    border-color: #334155;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+
+    .user-name,
+    .guest-title {
+      color: #f8fafc;
+    }
+
+    .user-email,
+    .guest-desc,
+    .info-row {
+      color: #94a3b8;
+    }
+
+    .profile-action-chip {
+      background: #0f172a;
+      border-color: #334155;
+      color: #f1f5f9;
+    }
+  }
+
+  .profile-subwindow-modal {
+    --background: #1e293b;
+
+    .subwindow-container {
+      background: #1e293b;
+    }
+
+    .subwindow-header {
+      border-bottom-color: #334155;
+
+      .subwindow-title {
+        color: #f8fafc;
+      }
+
+      .subwindow-subtitle {
+        color: #94a3b8;
+      }
+
+      .subwindow-close-btn {
+        background: #0f172a;
+        color: #94a3b8;
+      }
+    }
+
+    .field-group {
+      .field-label {
+        color: #cbd5e1;
+      }
+
+      .field-input {
+        background: #0f172a;
+        border-color: #334155;
+        color: #f8fafc;
+
+        &:focus {
+          border-color: #38bdf8;
+        }
+      }
+    }
+
+    .settings-group {
+      .setting-item-row,
+      .setting-card {
+        background: #0f172a;
+        border-color: #334155;
+      }
+
+      .setting-label {
+        color: #f8fafc;
+      }
+
+      .budget-preset-chip {
+        background: #1e293b;
+        border-color: #334155;
+        color: #cbd5e1;
+
+        &.active {
+          background: #0369a1;
+          border-color: #38bdf8;
+          color: #ffffff;
+        }
+      }
+    }
+  }
+
+  .verified-budget-card {
+    background: linear-gradient(135deg, rgba(6, 78, 59, 0.3) 0%, rgba(15, 23, 42, 0.85) 100%);
+    border-color: rgba(52, 211, 153, 0.25);
+
+    .budget-card-amount {
+      color: #6ee7b7;
+    }
+    .budget-currency-label {
+      color: #a7f3d0;
+    }
+    .budget-card-label {
+      color: #34d399;
+    }
+    .budget-card-target {
+      color: #6ee7b7;
+      background: rgba(16, 185, 129, 0.15);
+    }
+    .budget-card-note {
+      color: #a7f3d0;
+    }
+  }
+
+  .assumptions-info-box {
+    background: #1e293b;
+    border-color: rgba(255, 255, 255, 0.1);
+
+    &.is-expanded {
+      border-color: rgba(255, 255, 255, 0.15);
+      .assumptions-header {
+        background: #1e293b;
+        border-bottom-color: rgba(255, 255, 255, 0.08);
+      }
+    }
+
+    .assumptions-header {
+      background: #0f172a;
+      &:active {
+        background: #1e293b;
+      }
+    }
+
+    .assumptions-title-wrap {
+      .assumptions-icon-badge {
+        background: rgba(0, 132, 255, 0.15);
+        color: #60a5fa;
+      }
+      .assumptions-title {
+        color: #f8fafc;
+      }
+      .assumptions-subtitle {
+        color: #94a3b8;
+      }
+    }
+
+    .assumptions-toggle-btn {
+      background: rgba(255, 255, 255, 0.08);
+      color: #60a5fa;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .assumption-insight-card {
+      background: #0f172a;
+      border-color: rgba(255, 255, 255, 0.08);
+
+      .insight-title {
+        color: #f1f5f9;
+      }
+      .insight-desc {
+        color: #94a3b8;
+      }
+      .insight-icon-wrap {
+        background: #1e293b;
+      }
+    }
+  }
+}
+
+/* ========================================================
+   NOTIFICATIONS & TRAVEL REMINDERS DRAWER (UI-19)
+   ======================================================== */
+.notifications-drawer-modal {
+  --border-radius: 24px 24px 0 0;
+  --max-height: 85vh;
+  --background: #ffffff;
+
+  .notif-drawer-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    max-height: 85vh;
+    background: #ffffff;
+    border-radius: 24px 24px 0 0;
+  }
+
+  .notif-drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 1.25rem 0.85rem;
+    border-bottom: 1px solid #f1f5f9;
+    flex-shrink: 0;
+
+    .notif-header-title-group {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .notif-header-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #0f172a;
+      margin: 0;
+    }
+
+    .notif-header-sub {
+      font-size: 0.78rem;
+      color: #64748b;
+    }
+
+    .notif-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .mark-all-read-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.76rem;
+      font-weight: 700;
+      color: #0084ff;
+      background: rgba(0, 132, 255, 0.08);
+      border: none;
+      padding: 5px 10px;
+      border-radius: 20px;
+      cursor: pointer;
+
+      ion-icon {
+        font-size: 15px;
+      }
+    }
+
+    .notif-close-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: #f1f5f9;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: #64748b;
+
+      ion-icon {
+        font-size: 18px;
+      }
+    }
+  }
+
+  .notif-drawer-body {
+    padding: 1.25rem;
+    overflow-y: auto;
+  }
+
+  .notif-cards-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .notif-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: #f8fafc;
+    border: 1px solid #f1f5f9;
+    transition: all 0.15s ease;
+
+    &.unread {
+      background: #eff6ff;
+      border-color: #bfdbfe;
+    }
+
+    &.clickable {
+      cursor: pointer;
+
+      &:active {
+        transform: scale(0.98);
+      }
+    }
+
+    .notif-icon-badge {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+
+      ion-icon {
+        font-size: 19px;
+      }
+
+      &.blue {
+        background: rgba(0, 132, 255, 0.12);
+        color: #0084ff;
+      }
+      &.teal {
+        background: rgba(13, 148, 136, 0.12);
+        color: #0d9488;
+      }
+      &.amber {
+        background: rgba(245, 158, 11, 0.12);
+        color: #d97706;
+      }
+      &.green {
+        background: rgba(16, 185, 129, 0.12);
+        color: #059669;
+      }
+    }
+
+    .notif-content {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+
+      .notif-top-line {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .notif-card-title {
+        font-size: 0.88rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin: 0;
+      }
+
+      .notif-timestamp {
+        font-size: 0.68rem;
+        font-weight: 600;
+        color: #94a3b8;
+        white-space: nowrap;
+      }
+
+      .notif-message {
+        font-size: 0.78rem;
+        color: #475569;
+        margin: 0;
+        line-height: 1.4;
+      }
+
+      .notif-action-tag {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.74rem;
+        font-weight: 700;
+        color: #0084ff;
+        margin-top: 4px;
+
+        ion-icon {
+          font-size: 13px;
+        }
+      }
+    }
+  }
+
+  .notif-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 40px 16px;
+    color: #64748b;
+
+    ion-icon {
+      font-size: 40px;
+      color: #94a3b8;
+      margin-bottom: 10px;
+    }
+
+    h4 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #1e293b;
+      margin: 0 0 4px;
+    }
+
+    p {
+      font-size: 0.82rem;
+      margin: 0;
+    }
+  }
+}
+
+
 

@@ -94,33 +94,7 @@ export class ItineraryDetailPage implements OnInit, OnDestroy {
     private alertController: AlertController,
     private toastController: ToastController
   ) {
-    addIcons({
-      addCircleOutline,
-      arrowBack,
-      arrowForwardOutline,
-      busOutline,
-      calendarOutline,
-      cashOutline,
-      checkmarkCircle,
-      chevronDownOutline,
-      chevronUpOutline,
-      closeOutline,
-      compassOutline,
-      createOutline,
-      informationCircle,
-      informationCircleOutline,
-      locationOutline,
-      locationSharp,
-      mapOutline,
-      navigateOutline,
-      openOutline,
-      shieldCheckmarkOutline,
-      sparkles,
-      storefrontOutline,
-      timeOutline,
-      trashOutline,
-      walkOutline,
-    });
+    addIcons({arrowBack,createOutline,trashOutline,alertCircleOutline,shieldCheckmarkOutline,informationCircleOutline,compassOutline,calendarOutline,storefrontOutline,arrowForwardOutline,cashOutline,locationOutline,openOutline,addCircleOutline,closeOutline,timeOutline,busOutline,informationCircle,checkmarkCircle,chevronDownOutline,chevronUpOutline,locationSharp,mapOutline,navigateOutline,sparkles,walkOutline,});
   }
 
   public ngOnInit(): void {

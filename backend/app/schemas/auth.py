@@ -34,6 +34,16 @@ class GoogleOAuthIn(BaseModel):
     id_token: str
 
 
+class UserUpdateIn(BaseModel):
+    """User profile update request payload."""
+
+    first_name: str | None = Field(default=None, min_length=1, max_length=80)
+    last_name: str | None = Field(default=None, min_length=1, max_length=80)
+    username: str | None = Field(default=None, min_length=3, max_length=50)
+    current_password: str | None = Field(default=None, min_length=1, description="Required when updating password")
+    new_password: str | None = Field(default=None, min_length=8, max_length=128)
+
+
 class UserOut(BaseModel):
     """Public user profile serializer."""
 
