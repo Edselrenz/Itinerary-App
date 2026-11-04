@@ -93,13 +93,13 @@ The bottom navigation bar implements all 4 planned primary tabs (`/tabs/home`, `
 | **13** | **Priority 3: Maintainability** | Clean dead starter files, remove destructive scripts, fix acceptance tautologies (CR-014), memory leaks & typos (CR-015), doc sync (CR-016). | Clean codebase; 0 memory leaks; exact test assertions. | **COMPLETED** |
 | **14** | **Priority 4: Performance & E2E** | Cloudflare Tunnel IP rate limiting, SQL generator pre-filtering, OSM batching (CR-013), rewrite modern E2E test suite (CR-014). | Independent remote rate limiting; sub-100ms generation; passing E2E spec. | **COMPLETED** |
 | **15** | **Audit Remediation & Hardening** | Remediate 10 defects (DEF-01 to DEF-10) and 3 security items (SEC-01 to SEC-03) from Nov 2, 2026 Audit Report. | 30/30 QA cases passing, 0 shadowed routes, consolidated offline POI module. | **COMPLETED** |
-| **16** | **Unwired State & Template Parity** | Render unwired TypeScript state (`quickDestinations`, `budgetSummary`, `assumptions`, `pickerTab`), fix remaining UTC date calls, persist splash state. | All computed TS properties rendered in HTML; 0 UTC off-by-one calls; splash skips reload. | **PLANNED (P1)** |
-| **17** | **Custom Builder Stop Edit & Scheduling** | Build Edit Stop Modal (`PATCH` stop item), Move-to-Day action, custom venue time/coord inputs, server-backed browse search, sequential time formatting, `canDeactivate` guard. | Users can edit time/duration/cost/notes and move stops across days; 0 hardcoded `12:00 PM` fallbacks. | **PLANNED (P1)** |
-| **18** | **Missing Figma Windows & Commute Guide** | Build Popular Destinations ("See All") window, wire Stop Detail Modal in Suggested Wizard, add "How to Get There?" commute/terminal section, make Nearby Places interactive. | Clicking "See all" opens catalog; stop cards open detail modal with commute info; nearby cards add to day. | **PLANNED (P1)** |
-| **19** | **Map Search, Multi-Filter & POI Drawer** | Add floating Map search bar, multi-select filter bottom sheet, accessible POI list drawer, "Add to Itinerary" bottom-sheet CTA, dynamic viewport bounding-box queries. | Map supports keyword search, multi-category filter, list toggle, and direct itinerary insertion. | **PLANNED (P2)** |
-| **20** | **Profile Windows, Notifications & Saved Filters** | Build `Edit Profile` modal (`PATCH /auth/me`), `Settings` modal (theme/contrast, budget, tunnel URL), Logout confirmation, Notifications popover, tab labels, History filters. | Users can edit profile/settings, confirm logout, filter saved trips, and view travel alerts. | **PLANNED (P2)** |
-| **21** | **Auth Form Integrity & Recovery UI** | Add explicit `Username` field on Signup, preserve `middleInitial`, wire `rememberMe` storage scope on Login, standardize eye icons, build Forgot Password modal. | Zero email-prefix username collisions; `middleInitial` saved; `rememberMe` toggles `sessionStorage`. | **PLANNED (P2)** |
-| **22** | **Export/Share, PWA Caching & Capacitor** | Build Share/Export sheet (PDF & `.ics` export), configure Service Worker offline tile cache, scaffold Capacitor Android APK with Secure Storage (`SEC-02`), expand E2E tests. | Printable PDF & `.ics` downloads work offline; Android APK builds cleanly; E2E suite passes 100%. | **PLANNED (P3)** |
+| **16** | **Unwired State & Template Parity** | Render unwired TypeScript state (`quickDestinations`, `budgetSummary`, `assumptions`, `pickerTab`), fix remaining UTC date calls, persist splash state. | All computed TS properties rendered in HTML; 0 UTC off-by-one calls; splash skips reload. | **COMPLETED** |
+| **17** | **Custom Builder Stop Edit & Scheduling** | Build Edit Stop Modal (`PATCH` stop item), Move-to-Day action, custom venue time/coord inputs, server-backed browse search, sequential time formatting, `canDeactivate` guard. | Users can edit time/duration/cost/notes and move stops across days; 0 hardcoded `12:00 PM` fallbacks. | **COMPLETED** |
+| **18** | **Missing Figma Windows & Commute Guide** | Build Popular Destinations ("See All") window, wire Stop Detail Modal in Suggested Wizard, add "How to Get There?" commute/terminal section, make Nearby Places interactive. | Clicking "See all" opens catalog; stop cards open detail modal with commute info; nearby cards add to day. | **COMPLETED** |
+| **19** | **Map Search, Multi-Filter & POI Drawer** | Add floating Map search bar, multi-select filter bottom sheet, accessible POI list drawer, "Add to Itinerary" bottom-sheet CTA, dynamic viewport bounding-box queries. | Map supports keyword search, multi-category filter, list toggle, and direct itinerary insertion. | **COMPLETED** |
+| **20** | **Profile Windows, Notifications & Saved Filters** | Build `Edit Profile` modal (`PATCH /auth/me`), `Settings` modal (theme/contrast, budget, tunnel URL), Logout confirmation, Notifications popover, tab labels, History filters. | Users can edit profile/settings, confirm logout, filter saved trips, and view travel alerts. | **COMPLETED** |
+| **21** | **Auth Form Integrity & Recovery UI** | Add explicit `Username` field on Signup, preserve `middleInitial`, wire `rememberMe` storage scope on Login, standardize eye icons, build Forgot Password modal. | Zero email-prefix username collisions; `middleInitial` saved; `rememberMe` toggles `sessionStorage`. | **COMPLETED** |
+| **22** | **Export/Share, PWA Caching & Capacitor** | Build Share/Export sheet (PDF & `.ics` export), configure Service Worker offline tile cache, scaffold Capacitor Android APK with Secure Storage (`SEC-02`), expand E2E tests. | Printable PDF & `.ics` downloads work offline; Android APK builds cleanly; E2E suite passes 100%. | **COMPLETED** |
 
 ### 3.2 Audit Gap & Defect Registry (`UI-01` to `UI-24`)
 
@@ -367,17 +367,17 @@ The bottom navigation bar implements all 4 planned primary tabs (`/tabs/home`, `
 
 **Objective**: Complete the remaining Phase 16 roadmap items from `docs/TODO.md`: printable PDF and `.ics` calendar export, Service Worker offline map tile caching, and native Android APK packaging with hardware-backed token storage (`SEC-02`).
 
-- [ ] **22.1: Build Itinerary Export & Share Modal on `ItineraryDetailPage` (`UI-23`)**
+- [x] **22.1: Build Itinerary Export & Share Modal on `ItineraryDetailPage` (`UI-23`)**
   - **Target Files**: `Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.html`, `itinerary-detail.page.ts`, `Project/src/app/core/utils/itinerary-export.util.ts` (new)
   - **Implementation**:
     - Add a Share/Export button (`share-social-outline`) in the `.figma-header-bar` of `ItineraryDetailPage`.
     - Implement `itinerary-export.util.ts` supporting RFC 5545 `.ics` calendar export, dedicated `@media print` A4 PDF summary view, and one-tap clipboard text summary copy.
-- [ ] **22.2: Configure PWA Service Worker & Offline Map Tile Pre-Caching (`UI-24`)**
+- [x] **22.2: Configure PWA Service Worker & Offline Map Tile Pre-Caching (`UI-24`)**
   - **Target Files**: `Project/ngsw-config.json`, `Project/angular.json`
   - **Implementation**: Configure Angular Service Worker (`@angular/service-worker`) with `dataGroups` caching `/api/v1/municipalities`, `/api/v1/places`, and OpenStreetMap tile requests within Nueva Ecija zoom levels `10–14`.
-- [ ] **22.3: Scaffold Capacitor Android Project & Secure Token Storage (`UI-24`, `SEC-02`)**
+- [x] **22.3: Scaffold Capacitor Android Project & Secure Token Storage (`UI-24`, `SEC-02`)**
   - **Target Files**: `Project/capacitor.config.ts`, `Project/src/app/core/services/auth.service.ts`
   - **Implementation**: Scaffold the Android target (`npx cap add android`) and abstract token storage behind a `SecureTokenStorageService` using `@capacitor-community/secure-storage-plugin` on native devices and `localStorage`/`sessionStorage` on web (`ADR-010`).
-- [ ] **22.4: Full Regression & E2E Verification Suite**
+- [x] **22.4: Full Regression & E2E Verification Suite**
   - **Target Files**: `Project/e2e/app.spec.ts`, `scripts/verify_acceptance_gate.py`
   - **Implementation**: Extend `Project/e2e/app.spec.ts` and `verify_acceptance_gate.py` to test the Popular Destinations catalog, Stop Detail + Commute Guide modal, Custom Builder Edit Stop modal, Map multi-select filter sheet, and Profile sub-windows.

@@ -15,6 +15,23 @@
   gap: 4px;
 }
 
+.figma-header-share-btn {
+  background: transparent;
+  border: none;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0084ff;
+  font-size: 20px;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+
+  &:hover {
+    opacity: 0.8;
+  }
+}
+
 .figma-header-edit-btn {
   background: transparent;
   border: none;
@@ -268,4 +285,8 @@
       cursor: pointer;
     }
   }
+}
+
+.print-only-itinerary-sheet {
+  display: none;
 }

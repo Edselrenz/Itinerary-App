@@ -25,7 +25,9 @@ import {
   chevronUpOutline,
   closeOutline,
   compassOutline,
+  copyOutline,
   createOutline,
+  downloadOutline,
   informationCircle,
   informationCircleOutline,
   locationOutline,
@@ -33,6 +35,8 @@ import {
   mapOutline,
   navigateOutline,
   openOutline,
+  printOutline,
+  shareSocialOutline,
   shieldCheckmarkOutline,
   sparkles,
   storefrontOutline,
@@ -51,6 +55,12 @@ import { formatDateRange } from '../../../core/utils/date.utils';
 import { ItineraryService } from '../../../core/services/itinerary.service';
 import { NearbyPlaceItem, PlaceService } from '../../../core/services/place.service';
 import { CommuteInfo, getCommuteInfoForMunicipality } from '../../../core/data/commute-guide.data';
+import {
+  copyTextSummary,
+  downloadIcsFile,
+  shareNativeItinerary,
+  triggerPrintItinerary,
+} from '../../../core/utils/itinerary-export.util';
 
 @Component({
   selector: 'app-itinerary-detail',
@@ -83,6 +93,7 @@ export class ItineraryDetailPage implements OnInit, OnDestroy {
   public selectedStop: ItineraryItem | null = null;
   public isStopModalOpen = false;
   public isAssumptionsExpanded = false;
+  public isShareModalOpen = false;
 
   private subscriptions = new Subscription();
 
@@ -94,7 +105,7 @@ export class ItineraryDetailPage implements OnInit, OnDestroy {
     private alertController: AlertController,
     private toastController: ToastController
   ) {
-    addIcons({arrowBack,createOutline,trashOutline,alertCircleOutline,shieldCheckmarkOutline,informationCircleOutline,compassOutline,calendarOutline,storefrontOutline,arrowForwardOutline,cashOutline,locationOutline,openOutline,addCircleOutline,closeOutline,timeOutline,busOutline,informationCircle,checkmarkCircle,chevronDownOutline,chevronUpOutline,locationSharp,mapOutline,navigateOutline,sparkles,walkOutline,});
+    addIcons({arrowBack,createOutline,trashOutline,alertCircleOutline,shieldCheckmarkOutline,informationCircleOutline,compassOutline,calendarOutline,storefrontOutline,arrowForwardOutline,cashOutline,locationOutline,openOutline,addCircleOutline,closeOutline,timeOutline,busOutline,informationCircle,checkmarkCircle,chevronDownOutline,chevronUpOutline,locationSharp,mapOutline,navigateOutline,sparkles,walkOutline,shareSocialOutline,copyOutline,printOutline,downloadOutline,});
   }
 
   public ngOnInit(): void {
@@ -439,6 +450,61 @@ export class ItineraryDetailPage implements OnInit, OnDestroy {
       position: 'bottom',
     });
     await toast.present();
+  }
+
+  public openShareModal(): void {
+    this.isShareModalOpen = true;
+  }
+
+  public closeShareModal(): void {
+    this.isShareModalOpen = false;
+  }
+
+  public async exportIcs(): Promise<void> {
+    if (!this.itinerary) return;
+    const ok = downloadIcsFile(this.itinerary);
+    const toast = await this.toastController.create({
+      message: ok ? 'Calendar (.ics) downloaded successfully!' : 'Could not generate calendar file.',
+      duration: 2500,
+      position: 'top',
+      color: ok ? 'success' : 'warning',
+    });
+    await toast.present();
+    this.closeShareModal();
+  }
+
+  public async copySummary(): Promise<void> {
+    if (!this.itinerary) return;
+    const ok = await copyTextSummary(this.itinerary);
+    const toast = await this.toastController.create({
+      message: ok ? 'Itinerary text summary copied to clipboard!' : 'Unable to copy text summary.',
+      duration: 2500,
+      position: 'top',
+      color: ok ? 'success' : 'warning',
+    });
+    await toast.present();
+    this.closeShareModal();
+  }
+
+  public async shareNative(): Promise<void> {
+    if (!this.itinerary) return;
+    await shareNativeItinerary(this.itinerary);
+    this.closeShareModal();
+  }
+
+  public printPdf(): void {
+    this.closeShareModal();
+    setTimeout(() => {
+      triggerPrintItinerary();
+    }, 250);
+  }
+
+  public get printDateFormatted(): string {
+    return new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
   }
 
   public onEdit(): void {

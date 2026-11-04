@@ -3744,5 +3744,403 @@ body.dark {
   }
 }
 
+/* ========================================================
+   SHARE & EXPORT MODAL (UI-23)
+   ======================================================== */
+.share-export-modal {
+  --border-radius: 24px 24px 0 0;
+  --max-height: 85vh;
+  --background: #ffffff;
+
+  .share-sheet-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    max-height: 85vh;
+    background: #ffffff;
+    border-radius: 24px 24px 0 0;
+  }
+
+  .share-modal-body {
+    padding: 1.25rem;
+    overflow-y: auto;
+  }
+
+  .share-actions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .share-option-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 14px 16px;
+    text-align: left;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+
+    &:hover {
+      border-color: #cbd5e1;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.07);
+    }
+
+    &:active {
+      transform: scale(0.99);
+      background: #f8fafc;
+    }
+
+    .share-option-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+
+      ion-icon {
+        font-size: 22px;
+      }
+
+      &.ics-icon {
+        background: rgba(0, 132, 255, 0.1);
+        color: #0084ff;
+      }
+
+      &.copy-icon {
+        background: rgba(13, 148, 136, 0.1);
+        color: #0d9488;
+      }
+
+      &.native-icon {
+        background: rgba(99, 102, 241, 0.1);
+        color: #6366f1;
+      }
+
+      &.print-icon {
+        background: rgba(245, 158, 11, 0.1);
+        color: #d97706;
+      }
+    }
+
+    .share-option-text {
+      flex: 1;
+      min-width: 0;
+
+      .share-option-title {
+        display: block;
+        font-size: 0.95rem;
+        font-weight: 750;
+        color: #0f172a;
+        margin-bottom: 2px;
+      }
+
+      .share-option-desc {
+        display: block;
+        font-size: 0.78rem;
+        color: #64748b;
+        line-height: 1.35;
+      }
+    }
+
+    .share-arrow {
+      color: #94a3b8;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+  }
+}
+
+/* Dark mode for share-export-modal */
+body.dark {
+  .share-export-modal {
+    --background: #1e293b;
+
+    .share-sheet-container {
+      background: #1e293b;
+    }
+
+    .share-option-card {
+      background: #0f172a;
+      border-color: rgba(255, 255, 255, 0.08);
+
+      &:hover {
+        border-color: rgba(255, 255, 255, 0.16);
+      }
+
+      &:active {
+        background: #1e293b;
+      }
+
+      .share-option-text {
+        .share-option-title {
+          color: #f8fafc;
+        }
+
+        .share-option-desc {
+          color: #94a3b8;
+        }
+      }
+
+      .share-arrow {
+        color: #64748b;
+      }
+    }
+  }
+}
+
+/* ========================================================
+   PRINT STYLES FOR ITINERARY EXPORT & PDF GENERATION (UI-23)
+   ======================================================== */
+@media print {
+  @page {
+    margin: 15mm 12mm;
+    size: A4 portrait;
+  }
+
+  body, html {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+    font-size: 11pt !important;
+    line-height: 1.4 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide interactive shell, navigations, action bars, modals, tabs */
+  ion-header,
+  ion-toolbar,
+  ion-tab-bar,
+  ion-modal,
+  .app-header,
+  .figma-header-bar,
+  .header-action-group,
+  .figma-day-capsule-bar,
+  .figma-active-day-section,
+  .nearby-banner-trigger,
+  .itinerary-bottom-actions,
+  .figma-floating-cta-wrap,
+  .external-map-btn,
+  .customize-link-btn,
+  .customize-builder-cta-btn,
+  .assumptions-toggle-btn,
+  .back-to-form-btn,
+  .loading-state,
+  .empty-state {
+    display: none !important;
+  }
+
+  /* Make sure container expands without viewport constraints */
+  .detail-content,
+  .detail-container,
+  ion-content {
+    --background: transparent !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Destination card in print */
+  .figma-trip-card {
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin-bottom: 12pt !important;
+  }
+
+  /* Verified budget in print */
+  .verified-budget-card {
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin-bottom: 12pt !important;
+  }
+
+  /* Field notes uncollapsed in print */
+  .assumptions-info-box {
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: none !important;
+    margin-bottom: 14pt !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+
+    .assumptions-content-collapse {
+      max-height: none !important;
+      opacity: 1 !important;
+      padding: 10pt !important;
+      display: block !important;
+    }
+  }
+
+  /* Show print-only multi-day layout */
+  .print-only-itinerary-sheet {
+    display: block !important;
+    width: 100% !important;
+
+    .print-doc-header {
+      border-bottom: 2pt solid #0f172a;
+      padding-bottom: 8pt;
+      margin-bottom: 14pt;
+
+      .print-doc-title {
+        font-size: 18pt;
+        font-weight: 800;
+        color: #0f172a;
+        margin: 0 0 6pt;
+      }
+
+      .print-doc-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12pt;
+        font-size: 9.5pt;
+        color: #334155;
+
+        .print-meta-badge {
+          display: inline-block;
+        }
+      }
+    }
+
+    .print-notes-section {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6pt;
+      padding: 8pt 12pt;
+      margin-bottom: 14pt;
+      break-inside: avoid;
+      page-break-inside: avoid;
+
+      .print-section-title {
+        font-size: 11pt;
+        font-weight: 750;
+        margin: 0 0 4pt;
+        color: #0f172a;
+      }
+
+      .print-notes-list {
+        margin: 0;
+        padding-left: 14pt;
+        font-size: 9pt;
+        color: #475569;
+
+        li {
+          margin-bottom: 3pt;
+        }
+      }
+    }
+
+    .print-day-block {
+      margin-bottom: 18pt;
+      break-inside: avoid;
+      page-break-inside: avoid;
+
+      .print-day-header {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        border-bottom: 1.5pt solid #0084ff;
+        padding-bottom: 4pt;
+        margin-bottom: 8pt;
+
+        .print-day-title {
+          font-size: 13pt;
+          font-weight: 800;
+          color: #0f172a;
+          margin: 0;
+        }
+
+        .print-day-sub {
+          font-size: 9pt;
+          color: #64748b;
+          font-style: italic;
+        }
+      }
+
+      .print-empty-day {
+        font-size: 9pt;
+        font-style: italic;
+        color: #64748b;
+        padding: 6pt 0;
+      }
+
+      .print-stops-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 9pt;
+
+        th {
+          background: #f1f5f9;
+          color: #334155;
+          text-align: left;
+          padding: 5pt 8pt;
+          font-weight: 700;
+          border-bottom: 1px solid #cbd5e1;
+        }
+
+        td {
+          padding: 6pt 8pt;
+          border-bottom: 1px solid #e2e8f0;
+          vertical-align: top;
+          color: #1e293b;
+        }
+
+        .print-time-cell {
+          font-weight: 700;
+          color: #0084ff;
+          white-space: nowrap;
+        }
+
+        .print-muni-sub {
+          display: block;
+          font-size: 8pt;
+          color: #64748b;
+        }
+
+        .print-cat-badge {
+          font-size: 8pt;
+          font-weight: 600;
+          color: #0369a1;
+          display: block;
+        }
+
+        .print-fee-sub {
+          font-size: 8pt;
+          color: #0f766e;
+          font-weight: 600;
+        }
+
+        .print-notes-cell {
+          font-size: 8.5pt;
+          color: #475569;
+        }
+      }
+    }
+
+    .print-doc-footer {
+      border-top: 1px solid #cbd5e1;
+      padding-top: 8pt;
+      margin-top: 14pt;
+      font-size: 8pt;
+      color: #94a3b8;
+      text-align: center;
+    }
+  }
+}
+
+
 
 

@@ -9,6 +9,9 @@
       </h1>
       @if (itinerary && viewMode === 'itinerary') {
         <div class="header-action-group">
+          <button type="button" class="figma-header-share-btn" (click)="openShareModal()" aria-label="Share or export itinerary">
+            <ion-icon name="share-social-outline"></ion-icon>
+          </button>
           <button type="button" class="figma-header-edit-btn" (click)="onEdit()" aria-label="Edit itinerary">
             <ion-icon name="create-outline"></ion-icon>
           </button>
@@ -238,6 +241,82 @@
             </div>
           </div>
         }
+
+        <!-- Print-Only Full Multi-Day Itinerary Layout (UI-23) -->
+        <div class="print-only-itinerary-sheet">
+          <div class="print-doc-header">
+            <h1 class="print-doc-title">{{ itinerary.title || 'Nueva Ecija Travel Itinerary' }}</h1>
+            <div class="print-doc-meta">
+              <span class="print-meta-badge"><strong>Destination:</strong> {{ itinerary.destination || 'Nueva Ecija' }}</span>
+              <span class="print-meta-badge"><strong>Duration:</strong> {{ itinerary.days.length || 1 }} Days</span>
+              @if (itinerary.start_date) {
+                <span class="print-meta-badge"><strong>Dates:</strong> {{ itinerary.start_date }}{{ itinerary.end_date ? ' to ' + itinerary.end_date : '' }}</span>
+              }
+              @if (itinerary.daily_budget) {
+                <span class="print-meta-badge"><strong>Target Budget:</strong> ₱{{ itinerary.daily_budget.toLocaleString() }}/day</span>
+              }
+            </div>
+          </div>
+
+          @if (itinerary.assumptions && itinerary.assumptions.length > 0) {
+            <div class="print-notes-section">
+              <h3 class="print-section-title">Trip Assumptions & Travel Notes</h3>
+              <ul class="print-notes-list">
+                @for (note of itinerary.assumptions; track note) {
+                  <li>{{ note }}</li>
+                }
+              </ul>
+            </div>
+          }
+
+          @for (day of itinerary.days; track day.id; let dIdx = $index) {
+            <div class="print-day-block">
+              <div class="print-day-header">
+                <h2 class="print-day-title">Day {{ day.day_number }} - {{ getDayLocation(day) }}</h2>
+                <span class="print-day-sub">{{ getDaySubtitle(day) }}</span>
+              </div>
+
+              @if (!day.items || day.items.length === 0) {
+                <p class="print-empty-day">Free exploration day / No scheduled stops.</p>
+              } @else {
+                <table class="print-stops-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 14%;">Time</th>
+                      <th style="width: 36%;">Stop & Location</th>
+                      <th style="width: 25%;">Category & Cost</th>
+                      <th style="width: 25%;">Traveler Notes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (stop of day.items; track stop.id; let sIdx = $index) {
+                      <tr>
+                        <td class="print-time-cell">{{ getTimingTime(stop) }}</td>
+                        <td class="print-stop-name-cell">
+                          <strong>{{ sIdx + 1 }}. {{ getStopTitle(stop) }}</strong>
+                          @if (stop.place?.municipality_name) {
+                            <span class="print-muni-sub">{{ stop.place.municipality_name }}</span>
+                          }
+                        </td>
+                        <td>
+                          <span class="print-cat-badge">{{ stop.place?.category || 'Attraction' }}</span>
+                          @if (stop.place?.estimated_cost_min) {
+                            <div class="print-fee-sub">Admission: ₱{{ stop.place.estimated_cost_min }}</div>
+                          }
+                        </td>
+                        <td class="print-notes-cell">{{ stop.notes || '—' }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              }
+            </div>
+          }
+
+          <div class="print-doc-footer">
+            <p>Trip mo, trip ko: Nueva Ecija Travel Guide &bull; Generated on {{ printDateFormatted }}</p>
+          </div>
+        </div>
       }
 
       <!-- ========================================================
@@ -427,6 +506,79 @@
           </div>
         </div>
       }
+    </ng-template>
+  </ion-modal>
+
+  <!-- ========================================================
+       MODAL 2: SHARE & EXPORT SHEET (UI-23)
+       ======================================================== -->
+  <ion-modal
+    class="profile-subwindow-modal share-export-modal"
+    [isOpen]="isShareModalOpen"
+    (didDismiss)="closeShareModal()"
+    [initialBreakpoint]="0.65"
+    [breakpoints]="[0, 0.65, 0.9]"
+  >
+    <ng-template>
+      <div class="subwindow-container share-sheet-container">
+        <div class="subwindow-header">
+          <div class="subwindow-title-group">
+            <h3 class="subwindow-title">Share & Export Trip</h3>
+            <p class="subwindow-subtitle">Export calendar, copy formatted summary, or print</p>
+          </div>
+          <button type="button" class="subwindow-close-btn" (click)="closeShareModal()" aria-label="Close share sheet">
+            <ion-icon name="close-outline"></ion-icon>
+          </button>
+        </div>
+
+        <div class="subwindow-body share-modal-body">
+          <div class="share-actions-list">
+            <button type="button" class="share-option-card" (click)="exportIcs()">
+              <div class="share-option-icon ics-icon">
+                <ion-icon name="download-outline"></ion-icon>
+              </div>
+              <div class="share-option-text">
+                <span class="share-option-title">Add to Calendar (.ics)</span>
+                <span class="share-option-desc">Export scheduled stops to Apple Calendar, Google Calendar, or Outlook</span>
+              </div>
+              <ion-icon name="arrow-forward-outline" class="share-arrow"></ion-icon>
+            </button>
+
+            <button type="button" class="share-option-card" (click)="copySummary()">
+              <div class="share-option-icon copy-icon">
+                <ion-icon name="copy-outline"></ion-icon>
+              </div>
+              <div class="share-option-text">
+                <span class="share-option-title">Copy Text Summary</span>
+                <span class="share-option-desc">Formatted day-by-day stops and notes for SMS, Viber, or Messenger</span>
+              </div>
+              <ion-icon name="arrow-forward-outline" class="share-arrow"></ion-icon>
+            </button>
+
+            <button type="button" class="share-option-card" (click)="shareNative()">
+              <div class="share-option-icon native-icon">
+                <ion-icon name="share-social-outline"></ion-icon>
+              </div>
+              <div class="share-option-text">
+                <span class="share-option-title">Native Share Sheet</span>
+                <span class="share-option-desc">Share directly via system apps, WhatsApp, or AirDrop</span>
+              </div>
+              <ion-icon name="arrow-forward-outline" class="share-arrow"></ion-icon>
+            </button>
+
+            <button type="button" class="share-option-card" (click)="printPdf()">
+              <div class="share-option-icon print-icon">
+                <ion-icon name="print-outline"></ion-icon>
+              </div>
+              <div class="share-option-text">
+                <span class="share-option-title">Print or Save as PDF</span>
+                <span class="share-option-desc">Clean paper and PDF layout with all stops and field notes expanded</span>
+              </div>
+              <ion-icon name="arrow-forward-outline" class="share-arrow"></ion-icon>
+            </button>
+          </div>
+        </div>
+      </div>
     </ng-template>
   </ion-modal>
 </ion-content>

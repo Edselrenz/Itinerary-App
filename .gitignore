@@ -43,9 +43,9 @@ id_ed25519*
 
 # --- Mobile Builds & Signing (Capacitor / Android / iOS) ---
 .capacitor/
-android/app/build/
-android/.gradle/
-android/captures/
+**/android/app/build/
+**/android/.gradle/
+**/android/captures/
 **/local.properties
 **/key.properties
 *.keystore

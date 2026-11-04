@@ -313,4 +313,53 @@ describe('ItineraryDetailPage', () => {
     });
     expect(formatted).toBe('2:00 PM - 3:00 PM');
   });
+
+  describe('Share & Export Features (UI-23)', () => {
+    it('manages share modal visibility state', () => {
+      expect(component.isShareModalOpen).toBe(false);
+      component.openShareModal();
+      expect(component.isShareModalOpen).toBe(true);
+      component.closeShareModal();
+      expect(component.isShareModalOpen).toBe(false);
+    });
+
+    it('exports .ics calendar file and presents feedback toast', async () => {
+      component.openShareModal();
+      await component.exportIcs();
+      expect(component.isShareModalOpen).toBe(false);
+      expect(mockToastController.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining('.ics'),
+        })
+      );
+    });
+
+    it('copies formatted text summary to clipboard and closes modal', async () => {
+      Object.assign(navigator, {
+        clipboard: {
+          writeText: vi.fn().mockResolvedValue(undefined),
+        },
+      });
+      component.openShareModal();
+      await component.copySummary();
+      expect(component.isShareModalOpen).toBe(false);
+      expect(mockToastController.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining('copied to clipboard'),
+        })
+      );
+    });
+
+    it('triggers native share and closes modal', async () => {
+      component.openShareModal();
+      await component.shareNative();
+      expect(component.isShareModalOpen).toBe(false);
+    });
+
+    it('provides print formatting date string', () => {
+      expect(component.printDateFormatted).toBeDefined();
+      expect(typeof component.printDateFormatted).toBe('string');
+      expect(component.printDateFormatted.length).toBeGreaterThan(0);
+    });
+  });
 });

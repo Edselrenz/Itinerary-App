@@ -1,0 +1,70 @@
+{
+  "$schema": "./node_modules/@angular/service-worker/config/schema.json",
+  "index": "/index.html",
+  "assetGroups": [
+    {
+      "name": "app",
+      "installMode": "prefetch",
+      "resources": {
+        "files": [
+          "/favicon.ico",
+          "/index.html",
+          "/manifest.webmanifest",
+          "/*.css",
+          "/*.js"
+        ]
+      }
+    },
+    {
+      "name": "assets",
+      "installMode": "lazy",
+      "updateMode": "prefetch",
+      "resources": {
+        "files": [
+          "/assets/**",
+          "/*.(svg|cur|jpg|jpeg|png|apng|webp|avif|gif|otf|ttf|woff|woff2)"
+        ]
+      }
+    }
+  ],
+  "dataGroups": [
+    {
+      "name": "municipalities-api",
+      "urls": [
+        "/api/v1/municipalities"
+      ],
+      "cacheConfig": {
+        "maxSize": 100,
+        "maxAge": "7d",
+        "timeout": "5s",
+        "strategy": "performance"
+      }
+    },
+    {
+      "name": "places-api",
+      "urls": [
+        "/api/v1/places",
+        "/api/v1/places/**"
+      ],
+      "cacheConfig": {
+        "maxSize": 500,
+        "maxAge": "3d",
+        "timeout": "4s",
+        "strategy": "freshness"
+      }
+    },
+    {
+      "name": "osm-tiles-nueva-ecija",
+      "urls": [
+        "https://*.tile.openstreetmap.org/**",
+        "https://tile.openstreetmap.org/**"
+      ],
+      "cacheConfig": {
+        "maxSize": 1500,
+        "maxAge": "14d",
+        "timeout": "6s",
+        "strategy": "performance"
+      }
+    }
+  ]
+}

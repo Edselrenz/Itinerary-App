@@ -10,6 +10,7 @@ import type {
   UserUpdateRequest,
 } from '../models/auth.models';
 import { GuestStorageService } from './guest-storage.service';
+import { SecureTokenStorageService } from './secure-token-storage.service';
 
 @Injectable({
   providedIn: 'root',
@@ -24,8 +25,10 @@ export class AuthService {
 
   constructor(
     private http: HttpClient,
-    private guestStorage: GuestStorageService
+    private guestStorage: GuestStorageService,
+    private secureTokenStorage: SecureTokenStorageService
   ) {
+    this.secureTokenStorage.init();
     this.loadStoredUser();
   }
 
@@ -44,17 +47,11 @@ export class AuthService {
   }
 
   public getAccessToken(): string | null {
-    return (
-      localStorage.getItem(AuthService.ACCESS_TOKEN_KEY) ||
-      sessionStorage.getItem(AuthService.ACCESS_TOKEN_KEY)
-    );
+    return this.secureTokenStorage.getAccessTokenSync();
   }
 
   public getRefreshToken(): string | null {
-    return (
-      localStorage.getItem(AuthService.REFRESH_TOKEN_KEY) ||
-      sessionStorage.getItem(AuthService.REFRESH_TOKEN_KEY)
-    );
+    return this.secureTokenStorage.getRefreshTokenSync();
   }
 
   private isTokenExpired(token: string): boolean {
@@ -163,20 +160,16 @@ export class AuthService {
 
   private handleAuthSuccess(res: AuthResponse, rememberMe = true): void {
     this.clearAuthStorage();
+    this.secureTokenStorage.saveTokens(res.access_token, res.refresh_token, rememberMe);
     const storage: Storage = rememberMe ? localStorage : sessionStorage;
-    storage.setItem(AuthService.ACCESS_TOKEN_KEY, res.access_token);
-    storage.setItem(AuthService.REFRESH_TOKEN_KEY, res.refresh_token);
     storage.setItem(AuthService.USER_KEY, JSON.stringify(res.user));
     this.currentUserSubject.next(res.user);
     this.guestStorage.setGuestMode(false);
   }
 
   private clearAuthStorage(): void {
-    localStorage.removeItem(AuthService.ACCESS_TOKEN_KEY);
-    localStorage.removeItem(AuthService.REFRESH_TOKEN_KEY);
+    this.secureTokenStorage.clearTokens();
     localStorage.removeItem(AuthService.USER_KEY);
-    sessionStorage.removeItem(AuthService.ACCESS_TOKEN_KEY);
-    sessionStorage.removeItem(AuthService.REFRESH_TOKEN_KEY);
     sessionStorage.removeItem(AuthService.USER_KEY);
   }
 }

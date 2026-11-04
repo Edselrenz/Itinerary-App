@@ -459,16 +459,16 @@ This checklist tracks completed, active, and pending tasks across all developmen
 ---
 
 ## Phase 22: Trip Export/Sharing, PWA Caching & Capacitor Packaging (`Priority 3 — Post-MVP & Release`)
-- [ ] **22.1: Build Itinerary Export & Share Modal on `ItineraryDetailPage` (`UI-23`)**:
-  - [ ] Target: `itinerary-detail.page.html`, `itinerary-detail.page.ts`, `itinerary-export.util.ts`.
-  - [ ] Printable PDF summary view (`@media print`), RFC 5545 `.ics` calendar file download, and clipboard summary copy.
-- [ ] **22.2: Configure PWA Service Worker & Offline Map Tile Pre-Caching (`UI-24`)**:
-  - [ ] Target: `ngsw-config.json`, `angular.json`.
-  - [ ] Caching for `/api/v1/municipalities`, `/api/v1/places`, and OSM raster tiles within Nueva Ecija bounds (`15.15–16.15`, `120.70–121.40`).
-- [ ] **22.3: Scaffold Capacitor Android Project & Secure Token Storage (`UI-24`, `SEC-02`)**:
-  - [ ] Target: `capacitor.config.ts`, `auth.service.ts`.
-  - [ ] `npx cap add android`, sync web assets, abstract hardware Keystore token storage with `@capacitor-community/secure-storage-plugin`.
-- [ ] **22.4: Full Regression & E2E Verification Suite**:
-  - [ ] Target: `Project/e2e/app.spec.ts`, `scripts/verify_acceptance_gate.py`.
-  - [ ] Comprehensive test coverage for new catalog, modals, filter sheet, profile sub-windows, and offline behaviors.
+- [x] **22.1: Build Itinerary Export & Share Modal on `ItineraryDetailPage` (`UI-23`)**:
+  - [x] Target: `itinerary-detail.page.html`, `itinerary-detail.page.ts`, `itinerary-export.util.ts`.
+  - [x] Printable PDF summary view (`@media print`), RFC 5545 `.ics` calendar file download, and clipboard summary copy.
+- [x] **22.2: Configure PWA Service Worker & Offline Map Tile Pre-Caching (`UI-24`)**:
+  - [x] Target: `ngsw-config.json`, `angular.json`.
+  - [x] Caching for `/api/v1/municipalities`, `/api/v1/places`, and OSM raster tiles within Nueva Ecija bounds (`15.15–16.15`, `120.70–121.40`).
+- [x] **22.3: Scaffold Capacitor Android Project & Secure Token Storage (`UI-24`, `SEC-02`)**:
+  - [x] Target: `capacitor.config.ts`, `auth.service.ts`.
+  - [x] `npx cap add android`, sync web assets, abstract hardware Keystore token storage with `@capacitor-community/secure-storage-plugin`.
+- [x] **22.4: Full Regression & E2E Verification Suite**:
+  - [x] Target: `Project/e2e/app.spec.ts`, `scripts/verify_acceptance_gate.py`.
+  - [x] Comprehensive test coverage for new catalog, modals, filter sheet, profile sub-windows, and offline behaviors.
 
