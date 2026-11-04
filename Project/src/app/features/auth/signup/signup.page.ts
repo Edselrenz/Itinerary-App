@@ -20,12 +20,14 @@ import { addIcons } from 'ionicons';
 import {
   alertCircleOutline,
   arrowBackOutline,
+  atOutline,
   checkmarkCircle,
   eyeOffOutline,
   eyeOutline,
   keyOutline,
   logoApple,
   mailOutline,
+  personOutline,
 } from 'ionicons/icons';
 import { AuthService } from '../../../core/services/auth.service';
 import { GuestMigrationService } from '../../../core/services/guest-migration.service';
@@ -65,6 +67,12 @@ export class SignupPage {
       firstName: new FormControl('', [Validators.required]),
       middleInitial: new FormControl(''),
       lastName: new FormControl('', [Validators.required]),
+      username: new FormControl('', [
+        Validators.required,
+        Validators.minLength(3),
+        Validators.maxLength(50),
+        Validators.pattern(/^[a-zA-Z0-9_.-]+$/),
+      ]),
       email: new FormControl('', [Validators.required, Validators.email]),
       password: new FormControl('', [
         Validators.required,
@@ -74,6 +82,8 @@ export class SignupPage {
     },
     { validators: [passwordMatchValidator] }
   );
+
+  public isUsernameCustom = false;
 
   constructor(
     private router: Router,
@@ -90,7 +100,23 @@ export class SignupPage {
       eyeOffOutline,
       logoApple,
       alertCircleOutline,
+      atOutline,
+      personOutline,
     });
+  }
+
+  public autoSuggestUsername(): void {
+    if (this.isUsernameCustom) return;
+    const fn = (this.signupForm.get('firstName')?.value || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+    const ln = (this.signupForm.get('lastName')?.value || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+    const usernameCtrl = this.signupForm.get('username');
+    if (usernameCtrl) {
+      if (fn && ln) {
+        usernameCtrl.setValue(`${fn}_${ln}`, { emitEvent: false });
+      } else if (fn) {
+        usernameCtrl.setValue(fn, { emitEvent: false });
+      }
+    }
   }
 
   public togglePassword(): void {
@@ -120,18 +146,15 @@ export class SignupPage {
 
     const val = this.signupForm.value;
     const emailStr = (val.email || '').trim();
-    const rawUsername = (
-      emailStr.split('@')[0] || `${val.firstName || ''}${val.lastName || ''}`
-    ).replace(/[^a-zA-Z0-9_]/g, '');
-    const username =
-      rawUsername.length >= 3
-        ? rawUsername.slice(0, 50)
-        : `${rawUsername}usr`.slice(0, 50);
+    const username = (val.username || '').trim().toLowerCase();
+    const mid = (val.middleInitial || '').trim().replace(/\.+$/, '');
+    const firstName = mid ? `${val.firstName!.trim()} ${mid}.` : val.firstName!.trim();
+    const lastName = (val.lastName || '').trim();
 
     this.authService
       .register({
-        first_name: (val.firstName || '').trim(),
-        last_name: (val.lastName || '').trim(),
+        first_name: firstName,
+        last_name: lastName,
         username,
         email: emailStr,
         password: val.password!,

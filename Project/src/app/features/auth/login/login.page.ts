@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import {
   FormControl,
   FormGroup,
+  FormsModule,
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
@@ -10,6 +11,7 @@ import { Router } from '@angular/router';
 import {
   IonContent,
   IonIcon,
+  IonModal,
   IonSpinner,
   ToastController,
 } from '@ionic/angular';
@@ -17,11 +19,13 @@ import { addIcons } from 'ionicons';
 import {
   alertCircleOutline,
   arrowBackOutline,
+  closeOutline,
   eyeOffOutline,
   eyeOutline,
   keyOutline,
   logoApple,
   mailOutline,
+  shieldCheckmarkOutline,
 } from 'ionicons/icons';
 import { AuthService } from '../../../core/services/auth.service';
 import { GuestMigrationService } from '../../../core/services/guest-migration.service';
@@ -33,9 +37,11 @@ import { GuestMigrationService } from '../../../core/services/guest-migration.se
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     ReactiveFormsModule,
     IonContent,
     IonIcon,
+    IonModal,
     IonSpinner,
   ],
 })
@@ -43,6 +49,10 @@ export class LoginPage {
   public showPassword = false;
   public isLoading = false;
   public errorMessage: string | null = null;
+  public isForgotModalOpen = false;
+  public recoveryEmail = '';
+  public recoverySubmitted = false;
+  public recoveryError: string | null = null;
 
   public loginForm = new FormGroup({
     email: new FormControl('', [Validators.required, Validators.email]),
@@ -64,6 +74,8 @@ export class LoginPage {
       eyeOffOutline,
       logoApple,
       alertCircleOutline,
+      closeOutline,
+      shieldCheckmarkOutline,
     });
   }
 
@@ -79,6 +91,28 @@ export class LoginPage {
     this.router.navigate(['/signup']);
   }
 
+  public openForgotPasswordModal(): void {
+    const emailVal = this.loginForm.get('email')?.value || '';
+    this.recoveryEmail = typeof emailVal === 'string' ? emailVal.trim() : '';
+    this.recoverySubmitted = false;
+    this.recoveryError = null;
+    this.isForgotModalOpen = true;
+  }
+
+  public closeForgotPasswordModal(): void {
+    this.isForgotModalOpen = false;
+  }
+
+  public submitRecoveryRequest(): void {
+    this.recoveryError = null;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!this.recoveryEmail || !emailRegex.test(this.recoveryEmail)) {
+      this.recoveryError = 'Please enter a valid email address.';
+      return;
+    }
+    this.recoverySubmitted = true;
+  }
+
   public onSubmit(): void {
     if (this.loginForm.invalid) {
       this.loginForm.markAllAsTouched();
@@ -88,9 +122,9 @@ export class LoginPage {
     this.isLoading = true;
     this.errorMessage = null;
 
-    const { email, password } = this.loginForm.value;
+    const { email, password, rememberMe } = this.loginForm.value;
     this.authService
-      .login({ email: email!.trim(), password: password! })
+      .login({ email: email!.trim(), password: password! }, !!rememberMe)
       .subscribe({
         next: async () => {
           try {
@@ -131,6 +165,7 @@ export class LoginPage {
   public async onForgotPassword(): Promise<void> {
     const emailControl = this.loginForm.get('email');
     if (!emailControl || emailControl.invalid || !emailControl.value) {
+      this.openForgotPasswordModal();
       const toast = await this.toastController.create({
         message: 'Please enter a valid email address first.',
         duration: 3000,
@@ -142,6 +177,7 @@ export class LoginPage {
     }
 
     const email = String(emailControl.value).trim();
+    this.openForgotPasswordModal();
     const toast = await this.toastController.create({
       message: `Self-service password reset is disabled in this pilot build. Please contact your administrator to reset credentials for ${email}.`,
       duration: 4000,

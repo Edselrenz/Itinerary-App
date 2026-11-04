@@ -30,7 +30,9 @@ export class AuthService {
   }
 
   private loadStoredUser(): void {
-    const rawUser = localStorage.getItem(AuthService.USER_KEY);
+    const rawUser =
+      localStorage.getItem(AuthService.USER_KEY) ||
+      sessionStorage.getItem(AuthService.USER_KEY);
     const token = this.getAccessToken();
     if (rawUser && token) {
       try {
@@ -42,11 +44,17 @@ export class AuthService {
   }
 
   public getAccessToken(): string | null {
-    return localStorage.getItem(AuthService.ACCESS_TOKEN_KEY);
+    return (
+      localStorage.getItem(AuthService.ACCESS_TOKEN_KEY) ||
+      sessionStorage.getItem(AuthService.ACCESS_TOKEN_KEY)
+    );
   }
 
   public getRefreshToken(): string | null {
-    return localStorage.getItem(AuthService.REFRESH_TOKEN_KEY);
+    return (
+      localStorage.getItem(AuthService.REFRESH_TOKEN_KEY) ||
+      sessionStorage.getItem(AuthService.REFRESH_TOKEN_KEY)
+    );
   }
 
   private isTokenExpired(token: string): boolean {
@@ -108,13 +116,13 @@ export class AuthService {
   public register(payload: RegisterRequest): Observable<AuthResponse> {
     return this.http
       .post<AuthResponse>(`${environment.apiBaseUrl}/auth/register`, payload)
-      .pipe(tap((res) => this.handleAuthSuccess(res)));
+      .pipe(tap((res) => this.handleAuthSuccess(res, true)));
   }
 
-  public login(payload: LoginRequest): Observable<AuthResponse> {
+  public login(payload: LoginRequest, rememberMe = true): Observable<AuthResponse> {
     return this.http
       .post<AuthResponse>(`${environment.apiBaseUrl}/auth/login`, payload)
-      .pipe(tap((res) => this.handleAuthSuccess(res)));
+      .pipe(tap((res) => this.handleAuthSuccess(res, rememberMe)));
   }
 
   public async continueAsGuest(): Promise<void> {
@@ -132,7 +140,10 @@ export class AuthService {
   public getProfile(): Observable<User> {
     return this.http.get<User>(`${environment.apiBaseUrl}/auth/me`).pipe(
       tap((user) => {
-        localStorage.setItem(AuthService.USER_KEY, JSON.stringify(user));
+        const storage = sessionStorage.getItem(AuthService.ACCESS_TOKEN_KEY)
+          ? sessionStorage
+          : localStorage;
+        storage.setItem(AuthService.USER_KEY, JSON.stringify(user));
         this.currentUserSubject.next(user);
       })
     );
@@ -141,16 +152,21 @@ export class AuthService {
   public updateProfile(payload: UserUpdateRequest): Observable<User> {
     return this.http.patch<User>(`${environment.apiBaseUrl}/auth/me`, payload).pipe(
       tap((user) => {
-        localStorage.setItem(AuthService.USER_KEY, JSON.stringify(user));
+        const storage = sessionStorage.getItem(AuthService.ACCESS_TOKEN_KEY)
+          ? sessionStorage
+          : localStorage;
+        storage.setItem(AuthService.USER_KEY, JSON.stringify(user));
         this.currentUserSubject.next(user);
       })
     );
   }
 
-  private handleAuthSuccess(res: AuthResponse): void {
-    localStorage.setItem(AuthService.ACCESS_TOKEN_KEY, res.access_token);
-    localStorage.setItem(AuthService.REFRESH_TOKEN_KEY, res.refresh_token);
-    localStorage.setItem(AuthService.USER_KEY, JSON.stringify(res.user));
+  private handleAuthSuccess(res: AuthResponse, rememberMe = true): void {
+    this.clearAuthStorage();
+    const storage: Storage = rememberMe ? localStorage : sessionStorage;
+    storage.setItem(AuthService.ACCESS_TOKEN_KEY, res.access_token);
+    storage.setItem(AuthService.REFRESH_TOKEN_KEY, res.refresh_token);
+    storage.setItem(AuthService.USER_KEY, JSON.stringify(res.user));
     this.currentUserSubject.next(res.user);
     this.guestStorage.setGuestMode(false);
   }
@@ -159,5 +175,8 @@ export class AuthService {
     localStorage.removeItem(AuthService.ACCESS_TOKEN_KEY);
     localStorage.removeItem(AuthService.REFRESH_TOKEN_KEY);
     localStorage.removeItem(AuthService.USER_KEY);
+    sessionStorage.removeItem(AuthService.ACCESS_TOKEN_KEY);
+    sessionStorage.removeItem(AuthService.REFRESH_TOKEN_KEY);
+    sessionStorage.removeItem(AuthService.USER_KEY);
   }
 }

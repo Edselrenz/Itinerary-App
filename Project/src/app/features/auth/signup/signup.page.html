@@ -36,6 +36,7 @@
           <input
             type="text"
             formControlName="firstName"
+            (input)="autoSuggestUsername()"
             placeholder="First Name"
             autocomplete="given-name"
             class="native-field-input"
@@ -64,6 +65,7 @@
           <input
             type="text"
             formControlName="lastName"
+            (input)="autoSuggestUsername()"
             placeholder="Last Name"
             autocomplete="family-name"
             class="native-field-input"
@@ -72,6 +74,23 @@
         </div>
         @if (signupForm.get('lastName')?.touched && signupForm.get('lastName')?.invalid) {
           <div class="field-validation-error">Last name is required</div>
+        }
+
+        <!-- Field: Username -->
+        <div class="field-container">
+          <ion-icon name="at-outline" class="field-leading-icon"></ion-icon>
+          <input
+            type="text"
+            formControlName="username"
+            (input)="isUsernameCustom = true"
+            placeholder="Username (e.g. juan_traveler)"
+            autocomplete="username"
+            class="native-field-input"
+            aria-label="Username"
+          />
+        </div>
+        @if (signupForm.get('username')?.touched && signupForm.get('username')?.invalid) {
+          <div class="field-validation-error">Username is required (min. 3 characters: letters, numbers, _, -)</div>
         }
 
         <!-- Field 4: Email Address with mail icon -->
@@ -107,7 +126,7 @@
             (click)="togglePassword()"
             aria-label="Toggle password visibility"
           >
-            <ion-icon [name]="showPassword ? 'eye-outline' : 'eye-off-outline'"></ion-icon>
+            <ion-icon [name]="showPassword ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
           </button>
         </div>
         @if (signupForm.get('password')?.touched && signupForm.get('password')?.invalid) {
@@ -131,7 +150,7 @@
             (click)="toggleConfirmPassword()"
             aria-label="Toggle confirm password visibility"
           >
-            <ion-icon [name]="showConfirmPassword ? 'eye-outline' : 'eye-off-outline'"></ion-icon>
+            <ion-icon [name]="showConfirmPassword ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
           </button>
         </div>
         @if (signupForm.get('confirmPassword')?.touched && signupForm.errors?.['passwordsMismatch']) {

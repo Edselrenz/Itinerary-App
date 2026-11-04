@@ -1994,4 +1994,47 @@ This log records chronological development sessions, detailing objectives, execu
 - **Next Recommended Step**:
   - Proceed to **Phase 21**: Authentication Completeness & Form Integrity (`UI-21` & `UI-22`).
 
+---
+
+## Session 62 - 2026-11-04
+- **Focus**: Phase 21 Implementation — Authentication Completeness & Form Integrity (UI-21 & UI-22).
+- **Tasks Performed & Implementation Details**:
+  - **1. Explicit Username Field & Middle Initial Preservation (UI-21)**:
+    - Added dedicated `username` FormControl (`Validators.required`, `minLength(3)`, `maxLength(50)`, regex pattern `/^[a-zA-Z0-9_.-]+$/`) to `signupForm` in `Project/src/app/features/auth/signup/signup.page.ts`.
+    - Added username input with `at-outline` icon in `signup.page.html` with real-time validation error messaging.
+    - Implemented `autoSuggestUsername()` on First Name and Last Name inputs that populates a sanitized handle (e.g. `juan_delacruz`) while respecting manual edits (`isUsernameCustom`).
+    - Updated `onSubmit()` in `signup.page.ts` to include `middleInitial` in full name construction (`first_name: firstName + (mid ? ' ' + mid + '.' : '')`), eliminating data loss and preventing 409 domain collisions from `email.split('@')[0]`.
+    - Added unit test coverage for auto-suggestion and middle initial preservation in `signup.page.spec.ts`.
+  - **2. rememberMe Storage Scoping (UI-22)**:
+    - Updated `AuthService` in `Project/src/app/core/services/auth.service.ts` to accept `rememberMe: boolean` (default `true`).
+    - Configured tokens and user state to persist in `localStorage` when `rememberMe === true` and in `sessionStorage` when `rememberMe === false`.
+    - Unified `getAccessToken()`, `getRefreshToken()`, and `loadStoredUser()` to check both storages dynamically, with complete teardown in `clearAuthStorage()`.
+    - Passed `rememberMe` from `LoginPage.onSubmit()` to `AuthService.login()`.
+  - **3. Standardized Password Visibility Toggle Icons (UI-22)**:
+    - Aligned eye icons across both `login.page.html` and `signup.page.html` to consistently display `eye-outline` when password text is masked/hidden and `eye-off-outline` when unmasked/visible.
+  - **4. Account Recovery / Forgot Password Modal (UI-22)**:
+    - Replaced the toast-only flow with an anti-generic `<ion-modal class="profile-subwindow-modal forgot-password-modal">` in `login.page.html`.
+    - Form features email input prefilled from `loginForm`, email format validation, a "Send Recovery Request" CTA, and an honest confirmation view explaining pilot credential dispatch through provincial administrators.
+    - Added dark mode rules under `body.dark` in `Project/src/global.scss`.
+- **Verification & Test Results**:
+  - `backend/tests/test_auth.py`: **6/6 pytest tests passed [100%]** in 2.79s.
+  - `Project/src/app/features/auth/signup/signup.page.spec.ts`: **5/5 tests passed**.
+  - `Project/src/app/features/auth/login/login.page.spec.ts`: **7/7 tests passed**.
+  - `npm --prefix Project run test:unit`: **18/18 test files passed, 176/176 unit tests passed [100%]** in 15.39s.
+  - `npm --prefix Project run build`: **Clean production build** in `Project/www/` (0 errors, 0 warnings, 0 budget overruns) in 7.21s.
+- **Files Modified**:
+  - `Project/src/app/core/services/auth.service.ts`
+  - `Project/src/app/features/auth/signup/signup.page.html`
+  - `Project/src/app/features/auth/signup/signup.page.ts`
+  - `Project/src/app/features/auth/signup/signup.page.spec.ts`
+  - `Project/src/app/features/auth/login/login.page.html`
+  - `Project/src/app/features/auth/login/login.page.ts`
+  - `Project/src/app/features/auth/login/login.page.spec.ts`
+  - `Project/src/global.scss`
+  - `docs/TODO.md`
+  - `docs/DEVELOPMENT_LOG.md`
+  - `docs/PROJECT_STATE.md`
+- **Next Recommended Step**:
+  - Proceed to **Phase 22**: Trip Export/Sharing, PWA Caching & Capacitor Packaging (`UI-23` & `UI-24`).
+
 

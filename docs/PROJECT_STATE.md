@@ -206,23 +206,29 @@ All 16 audit findings from [CODE_REVIEW_AUDIT.md](file:///c:/Users/Edward/Deskto
 
 ---
 
-5. **Phase 16 to 20 (Comprehensive UX & Feature Remediation) — COMPLETED**:
+5. **Phase 16 to 21 (Comprehensive UX, Navigation & Auth Remediation) — COMPLETED**:
    - **Phase 16 (`UI-01` to `UI-05`)**: Bongabon quick destination chips, verified cost summary & assumptions box, off-grid custom place picker, date formatting, and stop deletion confirmation.
    - **Phase 17 (`UI-06` to `UI-10`)**: Edit scheduled stop modal, move-to-day dropdown, off-grid venue coordinate inputs, sequential schedule auto-formatting, and timeline deletion dialog.
    - **Phase 18 (`UI-11` to `UI-15`)**: Curated popular destinations catalog, stop details modal with operating hours & prices, and municipality commute guide on map.
    - **Phase 19 (`UI-16` to `UI-17`)**: Floating map search bar, multi-select filter bottom sheet, accessible POI drawer, and "Add to Itinerary" / "Start Trip Here" map CTAs with dynamic viewport queries.
    - **Phase 20 (`UI-18` to `UI-20`)**: Profile sub-windows (`Edit Profile` with `PATCH /api/v1/auth/me` & `App Settings` with dark mode), logout unsynced guest trips confirmation, notifications & travel reminders drawer, bottom tab labels (`Home`, `Map`, `Saved`, `Profile`), and saved itineraries search/filtering.
+   - **Phase 21 (`UI-21` to `UI-22`)**: Explicit `username` field on `SignupPage` with auto-suggest, `middleInitial` full name preservation, `rememberMe` storage scoping (`localStorage` vs. `sessionStorage`), standardized eye toggle icons, and account recovery modal on `LoginPage`.
 
 ---
 
-## 6. Next Immediate Tasks (Phase 21 Execution Roadmap)
+## 6. Next Immediate Tasks (Phase 22 Execution Roadmap)
 
-1. **Phase 21.1 (Explicit Username Field & Middle Initial in SignupPage — UI-21)**:
-   - Target: `Project/src/app/features/auth/signup/signup.page.html`, `signup.page.ts`.
-   - Add explicit username input with unique username availability validation to avoid domain collisions; preserve `middleInitial` in full name construction.
-2. **Phase 21.2 (Wire rememberMe Scope, Standardize Eye Icons & Forgot Password Modal — UI-22)**:
-   - Target: `login.page.html`, `login.page.ts`, `auth.service.ts`.
-   - Wire `rememberMe` checkbox to switch between `localStorage` (persistent) and `sessionStorage` (transient); standardize password toggle eye icons; build structured Forgot Password dialog.
+1. **Phase 22.1 (Build Itinerary Export & Share Modal on ItineraryDetailPage — UI-23)**:
+   - Target: `Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.html`, `itinerary-detail.page.ts`, `itinerary-export.util.ts`.
+   - Printable PDF summary view (`@media print`), RFC 5545 `.ics` calendar file download, and clipboard summary copy.
+2. **Phase 22.2 (Configure PWA Service Worker & Offline Map Tile Pre-Caching — UI-24)**:
+   - Target: `ngsw-config.json`, `angular.json`.
+   - Asset and data caching for `/api/v1/municipalities`, `/api/v1/places`, and OSM raster tiles within Nueva Ecija bounds (`15.15-16.15`, `120.70-121.40`).
+3. **Phase 22.3 (Scaffold Capacitor Android Project & Secure Token Storage — UI-24, SEC-02)**:
+   - Target: `capacitor.config.ts`, `auth.service.ts`.
+   - `npx cap add android`, sync web assets, abstract hardware Keystore token storage with `@capacitor-community/secure-storage-plugin`.
+4. **Phase 22.4 (Full Regression & Acceptance Gate Verification)**:
+   - Run acceptance verification gates and end-to-end regression across all 22 milestones.
 
 
 

@@ -72,6 +72,42 @@ describe('LoginPage', () => {
     expect(component.loginForm.valid).toBe(true);
   });
 
+  it('should pass rememberMe parameter to authService.login on submit (UI-22)', () => {
+    component.loginForm.setValue({
+      email: 'juan@example.ph',
+      password: 'Password123!',
+      rememberMe: true,
+    });
+
+    component.onSubmit();
+
+    expect(mockAuthService.login).toHaveBeenCalledWith(
+      { email: 'juan@example.ph', password: 'Password123!' },
+      true
+    );
+  });
+
+  it('should open and handle recovery modal with validation (UI-22)', () => {
+    component.loginForm.get('email')?.setValue('pedro@example.ph');
+    component.openForgotPasswordModal();
+
+    expect(component.isForgotModalOpen).toBe(true);
+    expect(component.recoveryEmail).toBe('pedro@example.ph');
+
+    component.recoveryEmail = 'invalid-email';
+    component.submitRecoveryRequest();
+    expect(component.recoveryError).toBe('Please enter a valid email address.');
+    expect(component.recoverySubmitted).toBe(false);
+
+    component.recoveryEmail = 'pedro@valid.ph';
+    component.submitRecoveryRequest();
+    expect(component.recoveryError).toBeNull();
+    expect(component.recoverySubmitted).toBe(true);
+
+    component.closeForgotPasswordModal();
+    expect(component.isForgotModalOpen).toBe(false);
+  });
+
   it('should reject forgot password with warning toast if email is empty or invalid (DEF-01)', async () => {
     component.loginForm.get('email')?.setValue('');
     await component.onForgotPassword();

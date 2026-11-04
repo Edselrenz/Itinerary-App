@@ -449,12 +449,12 @@ This checklist tracks completed, active, and pending tasks across all developmen
 ---
 
 ## Phase 21: Authentication Completeness & Form Integrity (`Priority 2 — Auth Polish`)
-- [ ] **21.1: Add Explicit `Username` Field & Preserve `middleInitial` in `SignupPage` (`UI-21`)**:
-  - [ ] Target: `signup.page.html`, `signup.page.ts`.
-  - [ ] Dedicated `username` input with validation to prevent domain prefix collisions; include `middleInitial` in `fullName`.
-- [ ] **21.2: Wire `rememberMe` Storage Scope, Standardize Eye Icons & Add Forgot Password Modal (`UI-22`)**:
-  - [ ] Target: `login.page.ts`, `login.page.html`, `signup.page.html`, `auth.service.ts`.
-  - [ ] Toggle `localStorage` (remember) vs. `sessionStorage` (session only); standardize password eye icons; structured recovery modal.
+- [x] **21.1: Add Explicit `Username` Field & Preserve `middleInitial` in `SignupPage` (`UI-21`)**:
+  - [x] Target: `signup.page.html`, `signup.page.ts`.
+  - [x] Dedicated `username` input with validation to prevent domain prefix collisions; include `middleInitial` in `fullName`.
+- [x] **21.2: Wire `rememberMe` Storage Scope, Standardize Eye Icons & Add Forgot Password Modal (`UI-22`)**:
+  - [x] Target: `login.page.ts`, `login.page.html`, `signup.page.html`, `auth.service.ts`.
+  - [x] Toggle `localStorage` (remember) vs. `sessionStorage` (session only); standardize password eye icons; structured recovery modal.
 
 ---
 

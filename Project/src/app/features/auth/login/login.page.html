@@ -131,4 +131,81 @@
       </footer>
     </div>
   </div>
+
+  <!-- Forgot Password / Account Recovery Modal (UI-22) -->
+  <ion-modal
+    class="profile-subwindow-modal forgot-password-modal"
+    [isOpen]="isForgotModalOpen"
+    (didDismiss)="closeForgotPasswordModal()"
+  >
+    <ng-template>
+      <div class="subwindow-container">
+        <header class="subwindow-header">
+          <div class="subwindow-title-wrap">
+            <ion-icon name="key-outline" class="subwindow-header-icon"></ion-icon>
+            <div>
+              <h3 class="subwindow-title">Account Recovery</h3>
+              <span class="subwindow-subtitle">Reset your traveler account credentials</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            class="subwindow-close-btn"
+            (click)="closeForgotPasswordModal()"
+            aria-label="Close recovery modal"
+          >
+            <ion-icon name="close-outline"></ion-icon>
+          </button>
+        </header>
+
+        <div class="subwindow-body">
+          @if (!recoverySubmitted) {
+            <p class="recovery-intro-text">
+              Enter the email address associated with your Nueva Ecija travel account. In this pilot release, credential verifications are logged and dispatched to provincial administrators.
+            </p>
+
+            <div class="field-container">
+              <ion-icon name="mail-outline" class="field-leading-icon"></ion-icon>
+              <input
+                type="email"
+                [(ngModel)]="recoveryEmail"
+                [ngModelOptions]="{standalone: true}"
+                placeholder="Enter your registered email"
+                class="native-field-input"
+                aria-label="Recovery Email"
+              />
+            </div>
+            @if (recoveryError) {
+              <div class="field-validation-error">{{ recoveryError }}</div>
+            }
+
+            <button
+              type="button"
+              class="subwindow-save-btn"
+              (click)="submitRecoveryRequest()"
+            >
+              Send Recovery Request
+            </button>
+          } @else {
+            <div class="recovery-success-box">
+              <div class="success-icon-wrap">
+                <ion-icon name="shield-checkmark-outline"></ion-icon>
+              </div>
+              <h4 class="success-title">Recovery Request Logged</h4>
+              <p class="success-desc">
+                A verification ticket has been dispatched for <strong>{{ recoveryEmail }}</strong>. For security during the pilot program, self-service automated password resets are gated. Please contact your municipal administrator or check back shortly.
+              </p>
+              <button
+                type="button"
+                class="subwindow-save-btn"
+                (click)="closeForgotPasswordModal()"
+              >
+                Return to Log in
+              </button>
+            </div>
+          }
+        </div>
+      </div>
+    </ng-template>
+  </ion-modal>
 </ion-content>

@@ -3272,6 +3272,51 @@ body {
       cursor: pointer;
     }
   }
+
+  .recovery-intro-text {
+    font-size: 0.84rem;
+    color: #475569;
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  .recovery-success-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+    padding: 10px 0;
+
+    .success-icon-wrap {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: rgba(16, 185, 129, 0.12);
+      color: #059669;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      ion-icon {
+        font-size: 28px;
+      }
+    }
+
+    .success-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #0f172a;
+      margin: 0;
+    }
+
+    .success-desc {
+      font-size: 0.84rem;
+      color: #475569;
+      line-height: 1.5;
+      margin: 0 0 10px;
+    }
+  }
 }
 
 /* Global Dark Mode Rules */
@@ -3372,6 +3417,23 @@ body.dark {
           border-color: #38bdf8;
           color: #ffffff;
         }
+      }
+    }
+
+    .recovery-intro-text {
+      color: #94a3b8;
+    }
+
+    .recovery-success-box {
+      .success-title {
+        color: #f8fafc;
+      }
+      .success-desc {
+        color: #94a3b8;
+      }
+      .success-icon-wrap {
+        background: rgba(16, 185, 129, 0.2);
+        color: #34d399;
       }
     }
   }

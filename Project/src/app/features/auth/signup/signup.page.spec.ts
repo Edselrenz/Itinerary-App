@@ -63,6 +63,7 @@ describe('SignupPage', () => {
     component.signupForm.patchValue({
       firstName: 'Maria',
       lastName: 'Santos',
+      username: 'maria_santos',
       email: 'maria@example.ph',
       password: 'Password123!',
       confirmPassword: 'MismatchPassword!',
@@ -74,6 +75,37 @@ describe('SignupPage', () => {
       confirmPassword: 'Password123!',
     });
     expect(component.signupForm.valid).toBe(true);
+  });
+
+  it('should auto-suggest username from firstName and lastName when pristine', () => {
+    component.signupForm.patchValue({
+      firstName: 'Juan',
+      lastName: 'Dela Cruz',
+    });
+    component.autoSuggestUsername();
+    expect(component.signupForm.get('username')?.value).toBe('juan_delacruz');
+  });
+
+  it('should preserve middleInitial in first_name and send explicit username on submit (UI-21)', () => {
+    component.signupForm.setValue({
+      firstName: 'Juan',
+      middleInitial: 'M',
+      lastName: 'Dela Cruz',
+      username: 'juan_custom',
+      email: 'juan@example.ph',
+      password: 'Password123!',
+      confirmPassword: 'Password123!',
+    });
+
+    component.onSubmit();
+
+    expect(mockAuthService.register).toHaveBeenCalledWith({
+      first_name: 'Juan M.',
+      last_name: 'Dela Cruz',
+      username: 'juan_custom',
+      email: 'juan@example.ph',
+      password: 'Password123!',
+    });
   });
 
   it('should display truthful disabled notice on Google and Apple signup buttons (DEF-02)', async () => {
