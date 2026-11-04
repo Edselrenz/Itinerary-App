@@ -1,6 +1,11 @@
-import { Injectable } from '@angular/core';
+import { Inject, Injectable, InjectionToken, Optional } from '@angular/core';
 import { Capacitor } from '@capacitor/core';
 import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
+
+export const SECURE_STORAGE_PLUGIN = new InjectionToken<any>('SECURE_STORAGE_PLUGIN', {
+  providedIn: 'root',
+  factory: () => SecureStoragePlugin,
+});
 
 export interface StoredTokens {
   accessToken: string | null;
@@ -19,7 +24,12 @@ export class SecureTokenStorageService {
   private cachedRefreshToken: string | null = null;
   private isInitialized = false;
 
-  constructor() {
+  public securePlugin: any;
+
+  constructor(
+    @Optional() @Inject(SECURE_STORAGE_PLUGIN) injectedPlugin?: any
+  ) {
+    this.securePlugin = injectedPlugin || SecureStoragePlugin;
     this.initSyncFallback();
   }
 
@@ -45,14 +55,14 @@ export class SecureTokenStorageService {
 
     if (this.isNativeSecureStorage()) {
       try {
-        const accessRes = await SecureStoragePlugin.get({
+        const accessRes = await (this.securePlugin || SecureStoragePlugin).get({
           key: SecureTokenStorageService.ACCESS_TOKEN_KEY,
         });
         if (accessRes?.value) {
           this.cachedAccessToken = accessRes.value;
         }
 
-        const refreshRes = await SecureStoragePlugin.get({
+        const refreshRes = await (this.securePlugin || SecureStoragePlugin).get({
           key: SecureTokenStorageService.REFRESH_TOKEN_KEY,
         });
         if (refreshRes?.value) {
@@ -121,11 +131,11 @@ export class SecureTokenStorageService {
     // Save to hardware Keystore if on native device (SEC-02)
     if (this.isNativeSecureStorage()) {
       try {
-        await SecureStoragePlugin.set({
+        await (this.securePlugin || SecureStoragePlugin).set({
           key: SecureTokenStorageService.ACCESS_TOKEN_KEY,
           value: accessToken,
         });
-        await SecureStoragePlugin.set({
+        await (this.securePlugin || SecureStoragePlugin).set({
           key: SecureTokenStorageService.REFRESH_TOKEN_KEY,
           value: refreshToken,
         });
@@ -152,10 +162,10 @@ export class SecureTokenStorageService {
 
     if (this.isNativeSecureStorage()) {
       try {
-        await SecureStoragePlugin.remove({
+        await (this.securePlugin || SecureStoragePlugin).remove({
           key: SecureTokenStorageService.ACCESS_TOKEN_KEY,
         });
-        await SecureStoragePlugin.remove({
+        await (this.securePlugin || SecureStoragePlugin).remove({
           key: SecureTokenStorageService.REFRESH_TOKEN_KEY,
         });
       } catch {

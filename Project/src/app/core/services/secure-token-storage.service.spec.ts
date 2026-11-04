@@ -1,27 +1,36 @@
 import { TestBed } from '@angular/core/testing';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin';
-import { SecureTokenStorageService } from './secure-token-storage.service';
-
-vi.mock('capacitor-secure-storage-plugin', () => ({
-  SecureStoragePlugin: {
-    get: vi.fn().mockResolvedValue({ value: null }),
-    set: vi.fn().mockResolvedValue({ value: true }),
-    remove: vi.fn().mockResolvedValue({ value: true }),
-    clear: vi.fn().mockResolvedValue({ value: true }),
-  },
-}));
+import {
+  SECURE_STORAGE_PLUGIN,
+  SecureTokenStorageService,
+} from './secure-token-storage.service';
 
 describe('SecureTokenStorageService (SEC-02)', () => {
   let service: SecureTokenStorageService;
+  let mockSecurePlugin: {
+    get: ReturnType<typeof vi.fn>;
+    set: ReturnType<typeof vi.fn>;
+    remove: ReturnType<typeof vi.fn>;
+    clear: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
     localStorage.clear();
     sessionStorage.clear();
     vi.clearAllMocks();
 
+    mockSecurePlugin = {
+      get: vi.fn().mockResolvedValue({ value: null }),
+      set: vi.fn().mockResolvedValue({ value: true }),
+      remove: vi.fn().mockResolvedValue({ value: true }),
+      clear: vi.fn().mockResolvedValue({ value: true }),
+    };
+
     TestBed.configureTestingModule({
-      providers: [SecureTokenStorageService],
+      providers: [
+        SecureTokenStorageService,
+        { provide: SECURE_STORAGE_PLUGIN, useValue: mockSecurePlugin },
+      ],
     });
     service = TestBed.inject(SecureTokenStorageService);
   });
@@ -30,7 +39,7 @@ describe('SecureTokenStorageService (SEC-02)', () => {
     localStorage.setItem(SecureTokenStorageService.ACCESS_TOKEN_KEY, 'stored_access');
     localStorage.setItem(SecureTokenStorageService.REFRESH_TOKEN_KEY, 'stored_refresh');
 
-    const freshService = new SecureTokenStorageService();
+    const freshService = new SecureTokenStorageService(mockSecurePlugin);
     expect(freshService.getAccessTokenSync()).toBe('stored_access');
     expect(freshService.getRefreshTokenSync()).toBe('stored_refresh');
   });
@@ -67,7 +76,7 @@ describe('SecureTokenStorageService (SEC-02)', () => {
     vi.spyOn(service, 'isNativeSecureStorage').mockReturnValue(true);
 
     await service.saveTokens('native_access', 'native_refresh', true);
-    expect(SecureStoragePlugin.set).toHaveBeenCalledWith(
+    expect(mockSecurePlugin.set).toHaveBeenCalledWith(
       expect.objectContaining({
         key: SecureTokenStorageService.ACCESS_TOKEN_KEY,
         value: 'native_access',
@@ -75,7 +84,7 @@ describe('SecureTokenStorageService (SEC-02)', () => {
     );
 
     await service.clearTokens();
-    expect(SecureStoragePlugin.remove).toHaveBeenCalledWith(
+    expect(mockSecurePlugin.remove).toHaveBeenCalledWith(
       expect.objectContaining({
         key: SecureTokenStorageService.ACCESS_TOKEN_KEY,
       })
