@@ -7,5 +7,13 @@
   "typescript.preferences.autoImportFileExcludePatterns": [
     "@ionic/angular/types/ionic-angular-lazy.d.ts",
     "@ionic/angular/types/ionic-angular-common.d.ts"
-  ]
+  ],
+  "java.import.exclusions": [
+    "**/node_modules/**",
+    "**/.metadata/**",
+    "**/archetype/**",
+    "**/META-INF/maven/**",
+    "**/android/**"
+  ],
+  "java.autobuild.enabled": false
 }

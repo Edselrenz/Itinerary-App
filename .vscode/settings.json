@@ -8,5 +8,14 @@
     "@ionic/angular/types/ionic-angular-lazy.d.ts",
     "@ionic/angular/types/ionic-angular-common.d.ts"
   ],
-  "python.terminal.useEnvFile": true
+  "python.terminal.useEnvFile": true,
+  "java.import.exclusions": [
+    "**/node_modules/**",
+    "**/.metadata/**",
+    "**/archetype/**",
+    "**/META-INF/maven/**",
+    "**/Project/android/**",
+    "**/android/**"
+  ],
+  "java.autobuild.enabled": false
 }
