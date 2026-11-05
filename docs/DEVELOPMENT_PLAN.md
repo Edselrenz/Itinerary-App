@@ -299,35 +299,35 @@ The bottom navigation bar implements all 4 planned primary tabs (`/tabs/home`, `
     - Change `startPlanningWithDestination(dest)` in `home.page.ts` so the primary CTA (**"Build Itinerary Here"**) navigates to `/suggested-wizard?destination=<municipality>&placeId=<id>` (and pre-fills `SuggestedWizardPage` via `ActivatedRoute.queryParams`), while adding a secondary `"View Pin on Map"` button for `/tabs/map?lat=...&lng=...`.
     - Widen `.dest-card` in `home.page.scss` from `120px` to `160px` and display the destination's category badge and honest cost tag on the card overlay.
 
-#### Milestone 19: Map Discovery, Multi-Select Filter Sheet & Accessible POI List Drawer (`Priority 2 — MVP Map Spec`)
+#### Milestone 19: Map Discovery, Multi-Select Filter Sheet & Accessible POI List Drawer (`Priority 2 — MVP Map Spec`) (COMPLETED)
 
 **Objective**: Bring `/tabs/map` to 100% compliance with Sections 6.7 and 12.6 of `nueva_ecija_travel_itinerary_mvp_plan.docx` by adding keyword search, multi-select filtering, an accessible list drawer, itinerary integration in the POI bottom sheet, and viewport-bounded queries.
 
-- [ ] **19.1: Add Floating Map Search Bar & Multi-Select Filter Bottom Sheet (`UI-16`)**
+- [x] **19.1: Add Floating Map Search Bar & Multi-Select Filter Bottom Sheet (`UI-16`)**
   - **Target Files**: `Project/src/app/tabs/map/map.page.html`, `map.page.ts`, `map.page.scss`
   - **Implementation**:
     - Add a floating search bar at the top of `/tabs/map` with a `"Filter"` button badge showing the active filter count.
     - Build an `<ion-modal [isOpen]="isFilterSheetOpen">` with multi-select category checkboxes (`selectedCategories: Set<string>`), municipality filter chips, price tier toggles (`Free`, `Budget <= ₱500`, `Mid-Range`), and `Reset` / `Apply Filters` buttons (`MVP Plan §12.6`).
     - Update `PlaceService.getPlaces()` to pass comma-separated categories (`Array.from(selectedCategories).join(',')`), which `GET /api/v1/places` (`backend/app/api/v1/places.py:42`) already supports.
-- [ ] **19.2: Build Accessible Collapsible POI List Drawer on `/tabs/map` (`UI-16`)**
+- [x] **19.2: Build Accessible Collapsible POI List Drawer on `/tabs/map` (`UI-16`)**
   - **Target Files**: `Project/src/app/tabs/map/map.page.html`, `map.page.ts`, `map.page.scss`
   - **Implementation**: Add a floating `"List View ({{ places.length }})"` toggle pill at the bottom of the map that opens a scrollable drawer of visible POIs with keyboard navigation, category badges, and one-tap focus (`selectPlace(place)`), satisfying the accessibility requirement in MVP Plan §12.6.
-- [ ] **19.3: Add "Add to Itinerary" CTA in Map Bottom Sheet & Dynamic Viewport Bounds Querying (`UI-17`)**
+- [x] **19.3: Add "Add to Itinerary" CTA in Map Bottom Sheet & Dynamic Viewport Bounds Querying (`UI-17`)**
   - **Target Files**: `Project/src/app/tabs/map/map.page.html` (Lines 52–95), `map.page.ts` (Lines 90–145)
   - **Implementation**:
     - Add `"Start Trip Here"` and `"Add to Custom Itinerary"` buttons inside the Map POI Bottom Sheet (`map.page.html:90`) alongside the existing `"Get Directions (Google Maps)"` link.
     - Listen to Leaflet `moveend` (debounced by 350ms) and pass `min_lat`, `max_lat`, `min_lng`, `max_lng` from `map.getBounds()` to `placeService.getPlaces()` with `limit: 250` so panning/zooming dynamically loads POIs across all 32 Nueva Ecija municipalities.
 
-#### Milestone 20: Profile Sub-Windows, Notifications & Saved Trips Filtering (`Priority 2 — Account & Navigation UX`)
+#### Milestone 20: Profile Sub-Windows, Notifications & Saved Trips Filtering (`Priority 2 — Account & Navigation UX`) (COMPLETED)
 
 **Objective**: Implement the missing Profile screens from `Travel Itinerary App.fig` (`Edit Profile`, `Settings`, `Log Out` confirmation), turn the Home notification bell into a functional drawer, add text labels to the bottom tab bar, and add filtering to Saved Itineraries.
 
-- [ ] **20.1: Build `Edit Profile` Modal & Backend `PATCH /api/v1/auth/me` Endpoint (`UI-18`)**
+- [x] **20.1: Build `Edit Profile` Modal & Backend `PATCH /api/v1/auth/me` Endpoint (`UI-18`)**
   - **Target Files**: `backend/app/api/v1/auth.py`, `backend/app/schemas/auth.py`, `Project/src/app/core/services/auth.service.ts`, `Project/src/app/tabs/profile/profile.page.html`, `profile.page.ts`, `profile.page.scss`
   - **Implementation**:
     - Add `PATCH /api/v1/auth/me` in `backend/app/api/v1/auth.py` allowing authenticated users to update `full_name`, `username` (checking case-insensitive uniqueness), and optionally change their password (verifying `current_password` via Argon2id).
     - Add an `"Edit Profile"` button and `<ion-modal [isOpen]="isEditProfileOpen">` on `/tabs/profile` matching the `Edit Profile` frame in `Travel Itinerary App.fig`.
-- [ ] **20.2: Build `App Settings` Modal & Restore Optional Custom API/Tunnel Override (`UI-18`)**
+- [x] **20.2: Build `App Settings` Modal & Restore Optional Custom API/Tunnel Override (`UI-18`)**
   - **Target Files**: `Project/src/app/tabs/profile/profile.page.html`, `profile.page.ts`, `Project/src/theme/variables.scss`, `Project/src/global.scss`
   - **Implementation**:
     - Add a `"Settings"` button and modal on `/tabs/profile` (`Travel Itinerary App.fig` frame `1350`) supporting:
@@ -335,35 +335,35 @@ The bottom navigation bar implements all 4 planned primary tabs (`/tabs/home`, `
       - **Default Trip Preferences**: Default daily budget (`₱500`, `₱1,000`, `₱1,500`, `₱3,000`) pre-filled in wizards.
       - **Storage & Sync**: Button to clear cached offline data or trigger manual guest trip migration.
       - **Advanced Connection Settings**: Input to set or reset a custom backend/tunnel URL (`ConnectivityService.setCustomApiUrl()`), restoring the field-testing capability removed from `app.component` in `v0.16.4`.
-- [ ] **20.3: Add Logout Confirmation Dialog (`UI-18`)**
+- [x] **20.3: Add Logout Confirmation Dialog (`UI-18`)**
   - **Target Files**: `Project/src/app/tabs/profile/profile.page.ts` (Line 59)
   - **Implementation**: Wrap `onLogout()` in an Ionic `AlertController` confirmation dialog (`"Log Out of Your Account?"`). If `unsyncedCount > 0`, warn the user that unsynced guest itineraries remain in local browser storage and offer a `"Sync First"` action alongside `"Log Out Anyway"`.
-- [ ] **20.4: Build Notifications & Travel Reminders Drawer on Home (`UI-19`)**
+- [x] **20.4: Build Notifications & Travel Reminders Drawer on Home (`UI-19`)**
   - **Target Files**: `Project/src/app/tabs/home/home.page.html` (Line 18), `home.page.ts` (Line 242), `home.page.scss`
   - **Implementation**: Replace the static toast in `onNotificationClick()` with a slide-up modal or popover displaying upcoming trip reminders (within 7 days), unsynced local guest trip alerts, and curated Nueva Ecija seasonal travel advisories.
-- [ ] **20.5: Add Visible Text Labels to Bottom Tab Bar & Filtering to Saved Itineraries (`UI-20`)**
+- [x] **20.5: Add Visible Text Labels to Bottom Tab Bar & Filtering to Saved Itineraries (`UI-20`)**
   - **Target Files**: `Project/src/app/tabs/tabs.page.html`, `tabs.page.scss`, `Project/src/app/tabs/tabs.routes.ts`, `Project/src/app/tabs/history/history.page.html`, `history.page.ts`, `history.page.scss`
   - **Implementation**:
     - Add `<ion-label>` elements (`Home`, `Map`, `Saved`, `Profile`) inside `tabs.page.html` with `10.5px` semi-bold typography and add `/tabs/saved` as a route alias redirecting to `/tabs/history`.
     - In `HistoryPage`, add a search input, segment filter pills (`All`, `Upcoming`, `Past`, `Suggested`, `Custom`), and render `ItineraryService.calculateBudgetSummary(itin)` (`Est. ₱min – ₱max total`) on each saved itinerary card.
 
-#### Milestone 21: Authentication Completeness & Form Integrity (`Priority 2 — Auth Polish`)
+#### Milestone 21: Authentication Completeness & Form Integrity (`Priority 2 — Auth Polish`) (COMPLETED)
 
 **Objective**: Eliminate username collisions and silent data drops during registration, honor `rememberMe` on login, standardize form icons, and provide a structured password recovery modal.
 
-- [ ] **21.1: Add Explicit `Username` Field & Preserve `middleInitial` in `SignupPage` (`UI-21`)**
+- [x] **21.1: Add Explicit `Username` Field & Preserve `middleInitial` in `SignupPage` (`UI-21`)**
   - **Target Files**: `Project/src/app/features/auth/signup/signup.page.html`, `signup.page.ts` (Lines 45–135)
   - **Implementation**:
     - Add a `username` form control (`Validators.required`, `Validators.minLength(3)`, `Validators.pattern(/^[a-zA-Z0-9_.-]+$/)`) to `signupForm` and `signup.page.html` (`MVP Plan §6.2`), auto-suggesting a sanitized handle from `firstName` + `lastName` only if untouched.
     - Update `onSubmit()` in `signup.page.ts:116` to include `val.middleInitial` when constructing `fullName` (`[firstName, middleInitial ? middleInitial + '.' : '', lastName].filter(Boolean).join(' ')`).
-- [ ] **21.2: Wire `rememberMe` Storage Scope, Standardize Eye Icons & Add Forgot Password Modal (`UI-22`)**
+- [x] **21.2: Wire `rememberMe` Storage Scope, Standardize Eye Icons & Add Forgot Password Modal (`UI-22`)**
   - **Target Files**: `Project/src/app/features/auth/login/login.page.ts`, `login.page.html`, `Project/src/app/features/auth/signup/signup.page.html`, `Project/src/app/core/services/auth.service.ts`
   - **Implementation**:
     - Pass `rememberMe` from `LoginPage.onSubmit()` to `AuthService.login()`. Store tokens in `localStorage` when `rememberMe === true` and in `sessionStorage` when `rememberMe === false`.
     - Align password toggle icons across `login.page.html` and `signup.page.html` so both display `eye-outline` when hidden and `eye-off-outline` when visible.
     - Replace the toast-only `onForgotPassword()` in `login.page.ts:112` with a clean recovery modal that validates the user's email and explains pilot account reset options.
 
-#### Milestone 22: Trip Export/Sharing, PWA Caching & Capacitor Packaging (`Priority 3 — Post-MVP & Release`)
+#### Milestone 22: Trip Export/Sharing, PWA Caching & Capacitor Packaging (`Priority 3 — Post-MVP & Release`) (COMPLETED)
 
 **Objective**: Complete the remaining Phase 16 roadmap items from `docs/TODO.md`: printable PDF and `.ics` calendar export, Service Worker offline map tile caching, and native Android APK packaging with hardware-backed token storage (`SEC-02`).
 

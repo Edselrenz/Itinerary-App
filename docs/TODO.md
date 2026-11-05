@@ -472,3 +472,29 @@ This checklist tracks completed, active, and pending tasks across all developmen
   - [x] Target: `Project/e2e/app.spec.ts`, `scripts/verify_acceptance_gate.py`.
   - [x] Comprehensive test coverage for new catalog, modals, filter sheet, profile sub-windows, and offline behaviors.
 
+---
+
+## Phase 23: UI Layout Alignment, CI Robustness & Native Tooling (COMPLETED)
+- [x] **23.1: Saved Itineraries & Trip Details Layout Alignment**:
+  - [x] Redesigned Saved Itineraries card list (`/tabs/history`): Header, green `Custom Plan` pill, `₱3000/day` badge, trash icon, blue pin location, divider, and `2 Days - 1 Night` pill matching user layout (`media_1793789707820_06ef26d7.png`).
+  - [x] Redesigned Trip Details view (`/itinerary/:id`): Day cards with destination, schedule time, duration, cost estimation, description, and personal notes (`media_1793789729229_67bc0ba8.png`).
+  - [x] Implemented In-Place Trip Editor (`/itinerary/:id` Edit mode): Reorder stops (`↑`/`↓`), delete stop (`✕`), move stop across days, add activity, and add/remove days matching user layout (`media_1793789759164_2c7fb0e6.png`).
+  - [x] Synchronous 0ms cached itinerary lookup (`getCachedItineraryById`) and 4s safety timeout fallback, eliminating infinite loading spinner.
+- [x] **23.2: Headless CI Dependency Injection Token**:
+  - [x] Introduced `SECURE_STORAGE_PLUGIN` Angular `InjectionToken` in `SecureTokenStorageService`, resolving esbuild mock proxy decoupling in Linux CI.
+- [x] **23.3: VS Code Java 25 & Gradle Conflict Isolation**:
+  - [x] Added `java.import.exclusions` for `**/Project/android/**` in `.vscode/settings.json` and `Project/.vscode/settings.json`, suppressing Gradle 9.6 incompatibility popups.
+
+---
+
+## Phase 24: Pilot Field Testing, UAT & Native Distribution (ACTIVE / NEXT)
+- [ ] **24.1: Live Production Smoke Testing & UAT**:
+  - [ ] Verify live GitHub Pages deployment at `https://edselrenz.github.io/Itinerary-App/` on both mobile browsers and desktop.
+  - [ ] Verify Cloudflare Worker reverse proxy (`https://ne-itinerary-api.edselrenz0.workers.dev/api/v1`) edge routing and data persistence.
+- [ ] **24.2: Android Device Installation & Native Packaging**:
+  - [ ] Verify Progressive Web App (PWA) Add-to-Home-Screen (A2HS) installation on Android device.
+  - [ ] Build and sign Android Debug/Release APK via Android Studio (`npx cap open android`) using Java 17/21.
+- [ ] **24.3: End-to-End Automated Browser Journey Execution**:
+  - [ ] Provision Playwright browser binaries (`npx playwright install chromium`) and execute full browser journey tests (`npm run test:e2e`).
+
+
