@@ -532,5 +532,31 @@ This checklist tracks completed, active, and pending tasks across all developmen
 - [x] **25.4.4 (Wizard Quality Controls & Inter-Stop Leg Badges)**: Added Travel Mode and Minimum Rating controls to `SuggestedWizardPage`, rating pills, and road travel connectors between consecutive stops.
 - [x] **25.4.5 (Regression, E2E & Production Build Verification)**: 21/21 backend pytest tests passing (100%), 24/24 frontend test files (230/230 unit tests) passing (100%), 5/5 Playwright E2E tests passing (100%), and `ng build` production bundle generated with 0 errors and 0 warnings.
 
+---
+
+## Phase 26: Provincial OpenStreetMap Ingestion & Interactive Real-World Map Display (COMPLETED)
+- [x] **26.1: Provincial OpenStreetMap Overpass Extraction**:
+  - [x] Extracted 2,995 raw features from OpenStreetMap via Overpass API into `data/raw/nueva_ecija_osm.json`.
+  - [x] Validated and ingested 2,656 real-world places into `nueva_ecija_travel.db`, reaching 2,673 total destinations across all 32 municipalities.
+  - [x] Ingested all mapped cafes (58), restaurants (374), hotels/lodgings (120), nature parks (122), tourist attractions (104), churches (487), museums (5), clinics/hospitals (102), pharmacies (146), banks (148), gas stations (293), and terminals (37).
+- [x] **26.2: Bundled Client Asset Generation (`assets/data/osm_places.json`)**:
+  - [x] Implemented `scripts/export_osm_to_client_asset.py` generating lean 1.5 MB static client asset with all 2,673 destinations.
+  - [x] Verified asset bundling in Angular production build output (`Project/www/assets/data/osm_places.json`).
+- [x] **26.3: Client-Side `PlaceService` & Live Overpass Service**:
+  - [x] Enhanced `PlaceService.searchPlaces()` with `loadOsmPlaces()` fallback, enabling instant in-memory filtering by keyword, category, municipality, and bbox when offline or decoupled from backend.
+  - [x] Created `OsmOverpassService` (`Project/src/app/core/services/osm-overpass.service.ts`) with unit tests for real-time live OpenStreetMap querying for any viewport.
+- [x] **26.4: Interactive Map Display & Category Pins**:
+  - [x] Raised `MapPage.loadPlaces()` limit to 3,000, displaying all 2,673 destinations across Nueva Ecija in Leaflet MarkerCluster badges.
+  - [x] Raised backend `GET /api/v1/places` query cap to `le=5000` in `backend/app/api/v1/places.py`.
+  - [x] Added Live OpenStreetMap discovery button (`sparkles-outline`) and status feedback pill.
+  - [x] Added category-specific vector pin classes and color palettes for all 16 canonical categories.
+  - [x] Elevated `.map-floating-controls` and centered `.poi-list-toggle-pill` to clear mobile bottom navigation tabs cleanly.
+- [x] **26.5: Database Resiliency & Automated Verification**:
+  - [x] Updated `.env` default to `DATABASE_URL=sqlite:///./nueva_ecija_travel.db` and added automatic SQLite root path resolution and graceful fallback in `backend/app/core/database.py`.
+  - [x] 21/21 backend pytest tests passing (100%).
+  - [x] 25/25 frontend unit test files (235/235 unit tests) passing (100%).
+  - [x] Angular production build passes with 0 errors and 0 warnings.
+  - [x] 7/7 Playwright E2E browser tests passing (100%) with verified visual screenshots (`map_places_display.png`, `place_detail_sheet_open.png`).
+
 
 

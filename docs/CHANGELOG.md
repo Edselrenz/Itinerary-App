@@ -8,6 +8,33 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-11-06
+### Added
+- **Full Client-Side OpenStreetMap POI Dataset (`assets/data/osm_places.json`)**:
+  - Exported all 2,673 real-world OpenStreetMap POIs and curated venues into a bundled 1.5 MB JSON asset (`Project/src/assets/data/osm_places.json`).
+  - Added automated generator script [`scripts/export_osm_to_client_asset.py`](file:///c:/Users/Edward/Desktop/CaseStudy/scripts/export_osm_to_client_asset.py).
+  - Guarantees complete offline and standalone availability of all cafes, restaurants, hotels, tourist spots, parks, churches, museums, clinics, and transit terminals across Nueva Ecija without backend dependency.
+- **Client-Side Live OpenStreetMap Overpass Service (`OsmOverpassService`)**:
+  - Created `Project/src/app/core/services/osm-overpass.service.ts` to query live OpenStreetMap Overpass API (`https://overpass-api.de/api/interpreter`) directly from the browser for any bounding box.
+  - Added tag-to-canonical category mapping and timeout resilience.
+  - Added floating "Live OSM" discovery button (`sparkles-outline`) and status feedback pill (`live-osm-pill`) in `MapPage`.
+- **Category-Specific Map Pin Color Styling**:
+  - Added custom CSS vector pin classes for all 16 canonical categories (`.pin-cat-cafe`, `.pin-cat-restaurant`, `.pin-cat-hotel_accommodation`, `.pin-cat-nature_park`, `.pin-cat-church_religious`, etc.) with distinct color themes.
+
+### Changed
+- **`PlaceService` In-Memory & Offline Resilience**:
+  - Added `loadOsmPlaces()` with in-memory caching and `shareReplay(1)`.
+  - Updated `searchPlaces()` fallback to search, filter (by keyword, categories, municipality, and bounding box), and paginate across the full 2,673 OpenStreetMap POIs.
+  - Updated `getPlaceById(id)` to resolve against OSM in-memory cache before erroring.
+- **Map Viewport & Query Cap Expansion**:
+  - Increased `MapPage.loadPlaces()` search limit to 3,000, displaying all 2,673 province destinations grouped into Leaflet MarkerCluster badges.
+  - Increased backend API query limit cap in `backend/app/api/v1/places.py` from 1,000 to 5,000 (`le=5000`).
+- **Backend Database Resiliency**:
+  - Configured `.env` default to `DATABASE_URL=sqlite:///./nueva_ecija_travel.db` where all 2,673 places reside.
+  - Added relative SQLite path resolution to the canonical root database and automatic fallback in `backend/app/core/database.py` if PostgreSQL is unreachable.
+- **Map Floating Controls UI Optimization**:
+  - Elevated `.map-floating-controls` and centered `.poi-list-toggle-pill` to `bottom: calc(env(safe-area-inset-bottom, 0px) + 5.2rem)` to clear mobile bottom navigation tabs cleanly without element overlap.
+
 ## [0.20.0] - 2026-11-06
 ### Added
 - **Provincial Real-World OpenStreetMap Dataset (2,656 POIs)**:

@@ -4,6 +4,7 @@ import {
   HttpTestingController,
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { PlaceService } from './place.service';
 import { environment } from '../../../environments/environment';
 import {
@@ -109,6 +110,20 @@ describe('PlaceService', () => {
       const req = httpMock.expectOne(`${environment.apiBaseUrl}/places`);
       expect(req.request.method).toBe('GET');
       req.flush(mockPaginated);
+    });
+
+    it('should fall back to OSM dataset or canonical offline places when API fails', () => {
+      service.searchPlaces({ q: 'Minalungao' }).subscribe((res) => {
+        expect(res.total).toBeGreaterThan(0);
+        expect(res.items.some((p) => p.name.includes('Minalungao'))).toBe(true);
+      });
+
+      const req = httpMock.expectOne((r) => r.url === `${environment.apiBaseUrl}/places`);
+      req.error(new ProgressEvent('Network error'));
+
+      // The fallback will attempt to load assets/data/osm_places.json
+      const osmReq = httpMock.expectOne('assets/data/osm_places.json');
+      osmReq.flush([mockPlace]);
     });
   });
 

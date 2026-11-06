@@ -60,8 +60,13 @@ The system is organized as a monorepo containing a standalone client, an asynchr
 - **Isolation**: PostgreSQL port 5432 is strictly bound to `127.0.0.1` and never exposed over Wi-Fi or public interfaces.
 
 ### 2.4 Offline Ingestion Pipeline (`scripts/`)
-- **`import_osm.py`**: Reads raw OpenStreetMap Overpass JSON exports, filters coordinates strictly within the Nueva Ecija bounding box (`15.15 <= lat <= 16.15`, `120.70 <= lng <= 121.40`), maps tags to 16 canonical categories, and idempotently upserts records.
+- **`fetch_osm_places.py`**: Queries live Overpass API for all amenities, tourism, leisure, and shopping nodes/ways in Nueva Ecija (`15.15°N–16.15°N, 120.70°E–121.40°E`), saving raw JSON to `data/raw/nueva_ecija_osm.json`.
+- **`import_osm.py`**: Reads raw OpenStreetMap Overpass JSON exports, filters coordinates strictly within the Nueva Ecija bounding box, maps tags to 16 canonical categories, and idempotently upserts records (2,656 real-world places ingested).
 - **`seed_featured_places.py`**: Seeds the 12 core Nueva Ecija municipalities and 17 curated featured places with verified descriptions, opening hours, and honest cost ranges.
+- **`export_osm_to_client_asset.py`**: Exports all 2,673 places into a lean, pre-indexed client static asset (`Project/src/assets/data/osm_places.json`) ensuring 100% offline and standalone map availability.
+
+### 2.5 Real-Time OpenStreetMap Overpass Client Service
+- **`OsmOverpassService` (`Project/src/app/core/services/osm-overpass.service.ts`)**: Enables client-side real-time querying of OpenStreetMap's live Overpass API (`https://overpass-api.de/api/interpreter`) for current map viewport bounds on demand, merging live crowd-sourced findings into the active map state.
 
 ---
 

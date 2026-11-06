@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, catchError, map, of } from 'rxjs';
+import { Observable, catchError, map, of, shareReplay } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   Municipality,
@@ -69,10 +69,46 @@ export class PlaceService {
   // Canonical curated offline places dataset (DEF-05)
   private readonly curatedOfflinePlaces: Place[] = getOfflinePlacesAsPlaceEntities();
 
+  // Comprehensive pre-indexed OpenStreetMap places dataset (2,673 POIs)
+  private osmPlacesCache: Place[] = [];
+  private osmLoading$: Observable<Place[]> | null = null;
+
   constructor(private http: HttpClient) {}
 
   /**
-   * Searches and filters places via GET /api/v1/places with zero-cost local database queries.
+   * Loads the comprehensive bundled OpenStreetMap places dataset (assets/data/osm_places.json).
+   * Caches results in memory for offline and standalone mode.
+   */
+  public loadOsmPlaces(): Observable<Place[]> {
+    if (this.osmPlacesCache.length > 0) {
+      return of(this.osmPlacesCache);
+    }
+    if (this.osmLoading$) {
+      return this.osmLoading$;
+    }
+
+    this.osmLoading$ = this.http.get<Place[]>('assets/data/osm_places.json').pipe(
+      map((places) => {
+        if (places && places.length > 0) {
+          this.osmPlacesCache = places;
+        } else {
+          this.osmPlacesCache = this.curatedOfflinePlaces;
+        }
+        return this.osmPlacesCache;
+      }),
+      catchError((err) => {
+        console.warn('[PlaceService] Failed to load assets/data/osm_places.json, falling back to curated places:', err);
+        this.osmPlacesCache = this.curatedOfflinePlaces;
+        return of(this.curatedOfflinePlaces);
+      }),
+      shareReplay(1)
+    );
+
+    return this.osmLoading$;
+  }
+
+  /**
+   * Searches and filters places via GET /api/v1/places with graceful fallback to full OpenStreetMap dataset.
    */
   public searchPlaces(params?: PlaceSearchParams): Observable<PaginatedPlaces> {
     let httpParams = new HttpParams();
@@ -115,12 +151,22 @@ export class PlaceService {
     }
 
     return this.http.get<PaginatedPlaces>(this.baseUrl, { params: httpParams }).pipe(
-      catchError(() => of(this.getFallbackPaginatedPlaces(params)))
+      catchError(() => {
+        if (this.osmPlacesCache.length > 0) {
+          return of(this.getFilteredLocalPlaces(this.osmPlacesCache, params));
+        }
+        return this.loadOsmPlaces().pipe(
+          map((places) => this.getFilteredLocalPlaces(places, params))
+        );
+      })
     );
   }
 
-  private getFallbackPaginatedPlaces(params?: PlaceSearchParams): PaginatedPlaces {
-    let items = [...this.curatedOfflinePlaces];
+  /**
+   * Filters in-memory POIs (OSM dataset or canonical curated) across keywords, categories, municipality, and bbox.
+   */
+  public getFilteredLocalPlaces(source: Place[], params?: PlaceSearchParams): PaginatedPlaces {
+    let items = source && source.length > 0 ? [...source] : [...this.curatedOfflinePlaces];
 
     if (params?.q?.trim()) {
       const q = params.q.trim().toLowerCase();
@@ -128,7 +174,9 @@ export class PlaceService {
         (p) =>
           p.name.toLowerCase().includes(q) ||
           (p.municipality_name && p.municipality_name.toLowerCase().includes(q)) ||
-          (p.description && p.description.toLowerCase().includes(q))
+          (p.description && p.description.toLowerCase().includes(q)) ||
+          (p.address_text && p.address_text.toLowerCase().includes(q)) ||
+          (p.tags && p.tags.some((t) => t.toLowerCase().includes(q)))
       );
     }
 
@@ -137,6 +185,29 @@ export class PlaceService {
         ? params.categories
         : params.categories.split(',');
       items = items.filter((p) => cats.includes(p.category));
+    }
+
+    if (params?.municipality_id) {
+      items = items.filter((p) => p.municipality_id === params.municipality_id);
+    }
+
+    if (params?.featured !== undefined) {
+      items = items.filter((p) => p.is_featured === params.featured);
+    }
+
+    if (
+      params?.min_lat !== undefined &&
+      params?.max_lat !== undefined &&
+      params?.min_lng !== undefined &&
+      params?.max_lng !== undefined
+    ) {
+      items = items.filter(
+        (p) =>
+          p.latitude >= params.min_lat! &&
+          p.latitude <= params.max_lat! &&
+          p.longitude >= params.min_lng! &&
+          p.longitude <= params.max_lng!
+      );
     }
 
     const limit = params?.limit || 20;
@@ -148,6 +219,11 @@ export class PlaceService {
       offset,
       items: items.slice(offset, offset + limit),
     };
+  }
+
+  private getFallbackPaginatedPlaces(params?: PlaceSearchParams): PaginatedPlaces {
+    const dataset = this.osmPlacesCache.length > 0 ? this.osmPlacesCache : this.curatedOfflinePlaces;
+    return this.getFilteredLocalPlaces(dataset, params);
   }
 
   /**
@@ -165,11 +241,19 @@ export class PlaceService {
   public getPlaceById(id: string): Observable<Place> {
     return this.http.get<Place>(`${this.baseUrl}/${id}`).pipe(
       catchError(() => {
-        const found = this.curatedOfflinePlaces.find((p) => p.id === id);
+        const found =
+          this.osmPlacesCache.find((p) => p.id === id) ||
+          this.curatedOfflinePlaces.find((p) => p.id === id);
         if (found) {
           return of(found);
         }
-        throw new Error('Place not found');
+        return this.loadOsmPlaces().pipe(
+          map((places) => {
+            const match = places.find((p) => p.id === id);
+            if (match) return match;
+            throw new Error('Place not found');
+          })
+        );
       })
     );
   }

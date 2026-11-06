@@ -60,6 +60,32 @@
 
     <!-- Floating Top-Right / Bottom-Right Controls -->
     <div class="map-floating-controls">
+      <div class="live-osm-pill" *ngIf="liveOsmMessage">
+        <ion-icon name="globe-outline"></ion-icon>
+        <span>{{ liveOsmMessage }}</span>
+      </div>
+
+      <div class="loading-pill" *ngIf="isLoading">
+        <ion-spinner name="crescent"></ion-spinner>
+        <span>Loading places...</span>
+      </div>
+
+      <div class="tile-error-pill" *ngIf="hasTileError">
+        <ion-icon name="cloud-offline-outline"></ion-icon>
+        <span>Map tiles unavailable offline. Cached locations remain accessible.</span>
+      </div>
+
+      <button
+        type="button"
+        class="floating-btn live-osm-btn"
+        [class.loading]="isLiveOsmLoading"
+        (click)="fetchLiveOsmData()"
+        title="Discover live places from OpenStreetMap"
+        aria-label="Discover live places from OpenStreetMap"
+      >
+        <ion-icon [name]="isLiveOsmLoading ? 'reload-outline' : 'sparkles-outline'" [class.spin-icon]="isLiveOsmLoading"></ion-icon>
+      </button>
+
       <button
         type="button"
         class="floating-btn recenter-btn"
@@ -81,20 +107,6 @@
       >
         <ion-icon [name]="activeRouteMode === 'follow' ? 'navigate-outline' : 'map-outline'"></ion-icon>
       </button>
-
-      <div class="poi-counter-pill" *ngIf="!isLoading && places.length > 0">
-        <span>{{ places.length }} destinations</span>
-      </div>
-
-      <div class="loading-pill" *ngIf="isLoading">
-        <ion-spinner name="crescent"></ion-spinner>
-        <span>Loading places...</span>
-      </div>
-
-      <div class="tile-error-pill" *ngIf="hasTileError">
-        <ion-icon name="cloud-offline-outline"></ion-icon>
-        <span>Map tiles unavailable offline. Cached locations remain accessible.</span>
-      </div>
     </div>
 
     <!-- Floating List View Toggle Pill (UI-16) -->

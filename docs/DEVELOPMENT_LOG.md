@@ -2404,7 +2404,60 @@ This log records chronological development sessions, detailing objectives, execu
 
 ---
 
-## Session 70 - 2026-11-06
+## Session 71 - 2026-11-06
+- **Focus**: End-to-End OpenStreetMap Places Integration on Map (Client Asset Bundling, Live Overpass Service, Resilient Database Fallback & Interactive Verification).
+- **Tasks Performed & Implementation Details**:
+  - **1. Identified Root Cause of 13-17 Destination Limitation**:
+    - Discovered that when the frontend runs decoupled from the backend or in offline mode (e.g. standalone browser, Playwright, GitHub Pages), `PlaceService.searchPlaces()` catches connection errors and falls back to `getFallbackPaginatedPlaces()`.
+    - That fallback was previously querying `CANONICAL_OFFLINE_PLACES` (`offline-places.data.ts`), which only had 17 hardcoded items (13 of which fit in default bounds).
+    - Furthermore, `.env` defaulted to PostgreSQL on port 5432 (which was closed), causing direct backend runs outside `start_server.ps1` to fail with `OperationalError`.
+  - **2. Bundled Comprehensive OpenStreetMap Client Asset (`Project/src/assets/data/osm_places.json`)**:
+    - Created [`scripts/export_osm_to_client_asset.py`](file:///c:/Users/Edward/Desktop/CaseStudy/scripts/export_osm_to_client_asset.py) extracting all 2,673 real-world places from `nueva_ecija_travel.db` into a compact 1.5 MB JSON asset.
+    - Verified all 16 categories are present: 58 cafes, 374 restaurants, 120 hotels/lodgings, 122 nature parks, 104 tourist attractions, 487 churches, 5 museums, 165 markets, 146 pharmacies, 148 banks/ATMs, 293 fuel stations, 478 convenience stores, etc.
+  - **3. Upgraded `PlaceService` (`Project/src/app/core/services/place.service.ts`)**:
+    - Added `loadOsmPlaces()` with in-memory caching and `shareReplay(1)` for offline and standalone execution.
+    - Updated `searchPlaces()` fallback to search, filter (by keyword, categories, municipality, and bbox), and paginate across the full 2,673 OpenStreetMap POIs.
+    - Updated `getPlaceById(id)` to resolve against both OSM cache and canonical presets.
+    - Added comprehensive unit tests in `place.service.spec.ts`.
+  - **4. Implemented `OsmOverpassService` (`Project/src/app/core/services/osm-overpass.service.ts`)**:
+    - Added client-side live Overpass API query service with tag-to-category mapper and timeout resilience.
+    - Added unit test suite in `osm-overpass.service.spec.ts` (3/3 tests passed).
+  - **5. Enhanced Map Interface & Categorized Visual Pins (`Project/src/app/tabs/map/map.page.ts`, `html`, `scss`)**:
+    - Raised search limit to `3000` so all 2,673 destinations display on the map canvas grouped via Leaflet MarkerCluster.
+    - Added floating "Live OSM" discovery button (`sparkles-outline`) and feedback pill (`live-osm-pill`).
+    - Added category-specific vector pin classes (`pin-cat-cafe`, `pin-cat-restaurant`, `pin-cat-hotel_accommodation`, `pin-cat-nature_park`, `pin-cat-church_religious`, etc.).
+    - Adjusted floating control and list pill elevation to `calc(env(safe-area-inset-bottom, 0px) + 5.2rem)` to clear mobile bottom navigation tabs cleanly.
+  - **6. Backend Database Resiliency (`backend/app/core/database.py`, `backend/app/api/v1/places.py`, `.env`)**:
+    - Updated `.env` default to `DATABASE_URL=sqlite:///./nueva_ecija_travel.db`.
+    - Added automatic resolution of relative SQLite URLs to the canonical root database file.
+    - Added graceful fallback to root SQLite DB if PostgreSQL connection fails.
+    - Raised query limit cap in `list_places` to `le=5000`.
+  - **7. Comprehensive Verification & Testing**:
+    - Backend Pytest: **21/21 passed [100%]** in 9.46s.
+    - Frontend Vitest: **25/25 test files, 235/235 unit tests passed [100%]** in 21.05s.
+    - Angular Production Build: **0 errors, 0 warnings** in 8.03s.
+    - Playwright E2E: **7/7 browser journeys passed [100%]** in 17.3s.
+    - Captured visual verification screenshots:
+      - `map_places_display.png`: Shows "List View (2673)" and clusters (520, 186, 109, 95, 83, etc.) across the province.
+      - `place_detail_sheet_open.png`: Confirms clicking/tapping any venue opens the full interactive detail sheet with directions and trip planning CTAs.
+- **Files Modified / Created**:
+  - `Project/src/assets/data/osm_places.json` (created)
+  - `Project/src/app/core/services/osm-overpass.service.ts` (created)
+  - `Project/src/app/core/services/osm-overpass.service.spec.ts` (created)
+  - `Project/src/app/core/services/place.service.ts` (modified)
+  - `Project/src/app/core/services/place.service.spec.ts` (modified)
+  - `Project/src/app/tabs/map/map.page.ts` (modified)
+  - `Project/src/app/tabs/map/map.page.html` (modified)
+  - `Project/src/app/tabs/map/map.page.scss` (modified)
+  - `Project/src/app/tabs/map/map.page.spec.ts` (modified)
+  - `Project/e2e/app.spec.ts` (modified)
+  - `backend/app/core/database.py` (modified)
+  - `backend/app/api/v1/places.py` (modified)
+  - `.env` (modified)
+  - `scripts/export_osm_to_client_asset.py` (created)
+  - `docs/DEVELOPMENT_LOG.md` (modified)
+- **Next Recommended Step**:
+  - Update `docs/CHANGELOG.md`, `docs/PROJECT_OVERVIEW.md`, `docs/TECHNICAL_DECISIONS.md`, and `docs/TODO.md`.
 - **Focus**: Real-World OpenStreetMap Dataset Ingestion (2,656 POIs across Nueva Ecija) & Map Viewport Expansion.
 - **Tasks Performed & Implementation Details**:
   - **1. OpenStreetMap Provincial Dataset Extraction (`scripts/fetch_osm_places.py`)**:

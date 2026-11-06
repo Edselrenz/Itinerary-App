@@ -99,6 +99,10 @@ test.describe('Nueva Ecija Travel Itinerary Planner E2E Journey', () => {
     // Verify POI list toggle button shows loaded destinations
     const listPill = page.locator('.poi-list-toggle-pill');
     await expect(listPill).toBeVisible();
+    await expect(listPill).toContainText(/List View \([1-9]/);
+
+    // Verify Live OSM discovery button is present
+    await expect(page.locator('.live-osm-btn')).toBeVisible();
 
     // Capture screenshot of the map view with destinations
     await page.screenshot({

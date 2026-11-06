@@ -185,5 +185,25 @@ This document records key technical decisions, their context, alternatives evalu
   - *Advantages*: Eliminated over 250 lines of duplicate template markup, standardized the user experience across all three pages, and simplified test coverage.
   - *Disadvantages*: Unit tests must trigger change detection via `fixture.componentRef.setInput()` due to `OnPush`.
 
+---
+
+## ADR-013: Provincial OpenStreetMap Asset Bundling & Overpass Live Query Architecture
+
+- **Date**: 2026-11-06
+- **Context**: The user identified that the map only displayed 13-17 seeded destinations when testing offline or decoupled from the backend server, rather than all real-world establishments (every cafe, tourist spot, lodging, nature park, museum, etc.) mapped in OpenStreetMap across Nueva Ecija.
+- **Problem**: How to make thousands of real-world OpenStreetMap POIs available instantly across the mobile/web interface even in standalone/offline mode, while simultaneously providing a path for live, crowd-sourced OpenStreetMap updates without incurring paid API fees.
+- **Options Considered**:
+  1. *Rely strictly on live backend REST API queries*: Fails whenever the local backend process is stopped, on GitHub Pages static hosting, or in mobile offline field conditions.
+  2. *Live client-side Overpass API querying only*: High initial latency, potential rate limiting from public Overpass servers, and complete failure when mobile device lacks internet connection.
+  3. *Hybrid Architecture (Pre-indexed Bundled Asset + Backend SQLite/PostgreSQL + Client-Side Live Overpass Discovery)*:
+     - Bundle all 2,673 OpenStreetMap POIs across Nueva Ecija as a lean 1.5 MB static asset (`assets/data/osm_places.json`).
+     - Load and cache in `PlaceService` with `shareReplay(1)`, powering instant in-memory filtering by keyword, category, municipality, and bbox.
+     - Provide an on-demand "Live OSM" action powered by `OsmOverpassService` querying live Overpass API for real-time discoveries in any map view.
+     - Configure backend database connection with automatic fallback to root SQLite DB (`nueva_ecija_travel.db`).
+- **Selected Approach**: Option 3.
+- **Consequences**:
+  - *Advantages*: Zero latency on startup; thousands of destinations render immediately via Leaflet MarkerCluster; 100% functionality offline and on GitHub Pages; users can discover new live OSM venues on demand; 0 external API costs.
+  - *Disadvantages*: Increases initial client bundle assets by ~1.5 MB (mitigated by asynchronous lazy loading and HTTP caching).
+
 
 

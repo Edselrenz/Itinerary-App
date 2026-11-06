@@ -7,6 +7,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import { MapPage, CATEGORY_FILTERS } from './map.page';
 import { PlaceService } from '../../core/services/place.service';
+import { OsmOverpassService } from '../../core/services/osm-overpass.service';
 import { Place } from '../../core/models/place.models';
 
 describe('MapPage', () => {
@@ -39,11 +40,17 @@ describe('MapPage', () => {
       of({ total: 1, limit: 100, offset: 0, items: [mockPlace] })
     ),
     getFeaturedPlaces: vi.fn().mockReturnValue(of([mockPlace])),
+    loadOsmPlaces: vi.fn().mockReturnValue(of([mockPlace])),
     getPlaceImage: vi.fn().mockReturnValue('assets/images/minalungao.png'),
     formatCategoryName: vi.fn().mockReturnValue('Nature & Parks'),
     getMunicipalities: vi.fn().mockReturnValue(
       of([{ id: 'm-1', name: 'General Tinio' }, { id: 'm-2', name: 'Bongabon' }])
     ),
+  };
+
+  const mockOsmOverpassService = {
+    fetchLiveOsmPlaces: vi.fn().mockReturnValue(of([])),
+    mapOsmTagsToCategory: vi.fn().mockReturnValue('cafe'),
   };
 
   const mockRouter = {
@@ -56,6 +63,7 @@ describe('MapPage', () => {
       of({ total: 1, limit: 100, offset: 0, items: [mockPlace] })
     );
     mockPlaceService.getFeaturedPlaces.mockReturnValue(of([mockPlace]));
+    mockPlaceService.loadOsmPlaces.mockReturnValue(of([mockPlace]));
     mockPlaceService.getMunicipalities.mockReturnValue(
       of([{ id: 'm-1', name: 'General Tinio' }, { id: 'm-2', name: 'Bongabon' }])
     );
@@ -66,6 +74,7 @@ describe('MapPage', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: PlaceService, useValue: mockPlaceService },
+        { provide: OsmOverpassService, useValue: mockOsmOverpassService },
         { provide: Router, useValue: mockRouter },
         {
           provide: ActivatedRoute,
@@ -93,7 +102,7 @@ describe('MapPage', () => {
   });
 
   it('should load places from PlaceService on initialization', () => {
-    expect(mockPlaceService.searchPlaces).toHaveBeenCalledWith({ limit: 500 });
+    expect(mockPlaceService.searchPlaces).toHaveBeenCalledWith({ limit: 3000 });
     expect(component.places.length).toBe(1);
     expect(component.places[0].name).toBe('Minalungao National Park');
   });
@@ -105,18 +114,18 @@ describe('MapPage', () => {
     expect(component.selectedPlace).toBeNull();
     expect(mockPlaceService.searchPlaces).toHaveBeenCalledWith({
       categories: ['nature_park'],
-      limit: 500,
+      limit: 3000,
     });
   });
 
-  it('should fall back to featured places if searchPlaces fails', () => {
+  it('should fall back to full OSM places if searchPlaces fails', () => {
     mockPlaceService.searchPlaces.mockReturnValue(
       throwError(() => new Error('Network error'))
     );
 
     component.loadPlaces();
 
-    expect(mockPlaceService.getFeaturedPlaces).toHaveBeenCalledWith(50);
+    expect(mockPlaceService.loadOsmPlaces).toHaveBeenCalled();
     expect(component.places.length).toBe(1);
   });
 
@@ -311,7 +320,7 @@ describe('MapPage', () => {
       max_lat: 15.6,
       min_lng: 120.8,
       max_lng: 121.2,
-      limit: 400,
+      limit: 3000,
     });
   });
 
@@ -373,5 +382,39 @@ describe('MapPage', () => {
     component.clearRouteFromMap();
     expect(component.routePolylineLayer).toBeNull();
     expect(component.itineraryStopsLayer).toBeNull();
+  });
+
+  it('should trigger live OpenStreetMap Overpass discovery when requested', () => {
+    const mockLivePlace: Place = {
+      ...mockPlace,
+      id: 'osm-node-999',
+      name: 'Live Cabanatuan Cafe',
+      category: 'cafe',
+      latitude: 15.486,
+      longitude: 120.97,
+    };
+
+    mockOsmOverpassService.fetchLiveOsmPlaces.mockReturnValue(of([mockLivePlace]));
+
+    const mockLMap = {
+      getBounds: () => ({
+        getSouth: () => 15.4,
+        getNorth: () => 15.6,
+        getWest: () => 120.8,
+        getEast: () => 121.1,
+      }),
+    } as unknown as L.Map;
+    component.map = mockLMap;
+
+    component.fetchLiveOsmData();
+
+    expect(mockOsmOverpassService.fetchLiveOsmPlaces).toHaveBeenCalledWith({
+      minLat: 15.4,
+      maxLat: 15.6,
+      minLng: 120.8,
+      maxLng: 121.1,
+    });
+    expect(component.places.some((p) => p.id === 'osm-node-999')).toBe(true);
+    expect(component.liveOsmMessage).toContain('Loaded 1 OpenStreetMap live places');
   });
 });

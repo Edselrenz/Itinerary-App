@@ -117,7 +117,7 @@ def list_places(
     max_lat: float | None = Query(default=None),
     min_lng: float | None = Query(default=None),
     max_lng: float | None = Query(default=None),
-    limit: int = Query(default=50, ge=1, le=1000),
+    limit: int = Query(default=50, ge=1, le=5000),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
 ) -> PaginatedPlacesOut:

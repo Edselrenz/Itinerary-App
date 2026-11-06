@@ -226,7 +226,7 @@
 .map-floating-controls {
   position: absolute;
   right: 1rem;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 4.5rem);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 5.2rem);
   z-index: 999;
   display: flex;
   flex-direction: column;
@@ -257,6 +257,50 @@
   &:active {
     transform: scale(0.93);
     background-color: #f8fafc;
+  }
+
+  &.live-osm-btn {
+    color: #7c3aed;
+    border-color: #ddd6fe;
+
+    &:hover {
+      background-color: #f5f3ff;
+    }
+
+    .spin-icon {
+      animation: spin-cw 1s linear infinite;
+    }
+  }
+}
+
+@keyframes spin-cw {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.live-osm-pill {
+  pointer-events: auto;
+  padding: 0.45rem 0.9rem;
+  border-radius: 9999px;
+  background: rgba(30, 27, 75, 0.92);
+  backdrop-filter: blur(8px);
+  color: #e0e7ff;
+  font-size: 0.72rem;
+  font-weight: 600;
+  box-shadow: 0 3px 12px rgba(99, 102, 241, 0.25);
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  max-width: 90vw;
+
+  ion-icon {
+    font-size: 0.95rem;
+    color: #a5b4fc;
+    flex-shrink: 0;
   }
 }
 
@@ -307,7 +351,7 @@
 /* Floating List View Toggle Pill (UI-16) */
 .poi-list-toggle-pill {
   position: absolute;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 4.5rem);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 5.2rem);
   left: 50%;
   transform: translateX(-50%);
   z-index: 999;
@@ -383,6 +427,52 @@
     &.pin-featured .pin-marker {
       background: linear-gradient(135deg, #0084ff 0%, #1e40af 100%);
       box-shadow: 0 4px 14px rgba(30, 64, 175, 0.5);
+    }
+
+    &.pin-cat-cafe .pin-marker {
+      background: #d97706;
+      box-shadow: 0 4px 10px rgba(217, 119, 6, 0.4);
+    }
+    &.pin-cat-restaurant .pin-marker {
+      background: #ea580c;
+      box-shadow: 0 4px 10px rgba(234, 88, 12, 0.4);
+    }
+    &.pin-cat-hotel_accommodation .pin-marker {
+      background: #0284c7;
+      box-shadow: 0 4px 10px rgba(2, 132, 199, 0.4);
+    }
+    &.pin-cat-nature_park .pin-marker {
+      background: #16a34a;
+      box-shadow: 0 4px 10px rgba(22, 163, 74, 0.4);
+    }
+    &.pin-cat-resort_swimming .pin-marker {
+      background: #0891b2;
+      box-shadow: 0 4px 10px rgba(8, 145, 178, 0.4);
+    }
+    &.pin-cat-church_religious .pin-marker {
+      background: #7c3aed;
+      box-shadow: 0 4px 10px rgba(124, 58, 237, 0.4);
+    }
+    &.pin-cat-museum_cultural .pin-marker {
+      background: #b45309;
+      box-shadow: 0 4px 10px rgba(180, 83, 9, 0.4);
+    }
+    &.pin-cat-shopping_market .pin-marker {
+      background: #e11d48;
+      box-shadow: 0 4px 10px rgba(225, 29, 72, 0.4);
+    }
+    &.pin-cat-hospital_clinic .pin-marker,
+    &.pin-cat-pharmacy .pin-marker {
+      background: #dc2626;
+      box-shadow: 0 4px 10px rgba(220, 38, 38, 0.4);
+    }
+    &.pin-cat-bank_atm .pin-marker {
+      background: #059669;
+      box-shadow: 0 4px 10px rgba(5, 150, 105, 0.4);
+    }
+    &.pin-cat-fuel_station .pin-marker {
+      background: #475569;
+      box-shadow: 0 4px 10px rgba(71, 85, 105, 0.4);
     }
   }
 

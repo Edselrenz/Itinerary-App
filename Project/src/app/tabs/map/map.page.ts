@@ -59,12 +59,14 @@ import {
   warningOutline,
   waterOutline,
   cartOutline,
+  globeOutline,
 } from 'ionicons/icons';
 import * as L from 'leaflet';
 import 'leaflet.markercluster';
 
 import { Municipality, Place } from '../../core/models/place.models';
 import { PlaceService } from '../../core/services/place.service';
+import { OsmOverpassService } from '../../core/services/osm-overpass.service';
 import {
   RouteTrackingService,
   RouteTrackingState,
@@ -153,6 +155,10 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
   // Accessible Collapsible POI List Drawer (UI-16)
   public isPoiDrawerOpen = false;
 
+  // Live OpenStreetMap Overpass State
+  public isLiveOsmLoading = false;
+  public liveOsmMessage: string | null = null;
+
   // Route Navigation & Turn-by-Turn Tracking Layer State (Phase 25.3)
   public routePolylineLayer: L.Polyline | null = null;
   public itineraryStopsLayer: L.LayerGroup | null = null;
@@ -171,6 +177,7 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
 
   constructor(
     private placeService: PlaceService,
+    private osmOverpassService: OsmOverpassService,
     public routeTrackingService: RouteTrackingService,
     private route: ActivatedRoute,
     private router: Router,
@@ -199,6 +206,7 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
       filterOutline,
       flagOutline,
       funnelOutline,
+      globeOutline,
       layersOutline,
       leafOutline,
       libraryOutline,
@@ -483,9 +491,9 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
       searchParams.max_lat = bounds.getNorth();
       searchParams.min_lng = bounds.getWest();
       searchParams.max_lng = bounds.getEast();
-      searchParams.limit = 400;
+      searchParams.limit = 3000;
     } else {
-      searchParams.limit = 500;
+      searchParams.limit = 3000;
     }
 
     this.placeService.searchPlaces(searchParams).subscribe({
@@ -502,10 +510,10 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
         this.cdr.detectChanges();
       },
       error: () => {
-        // Fallback to featured places if local server is unreachable
-        this.placeService.getFeaturedPlaces(50).subscribe({
-          next: (featured) => {
-            let items = featured;
+        // Fallback to full OSM places dataset if local server is unreachable
+        this.placeService.loadOsmPlaces().subscribe({
+          next: (allOsmPlaces) => {
+            let items = allOsmPlaces;
             if (this.selectedCategories.size > 0) {
               items = items.filter((p) => this.selectedCategories.has(p.category));
             } else if (this.selectedCategory) {
@@ -529,6 +537,68 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
             this.cdr.detectChanges();
           },
         });
+      },
+    });
+  }
+
+  /**
+   * Fetches live places directly from OpenStreetMap Overpass API for current viewport (UI-17).
+   */
+  public fetchLiveOsmData(): void {
+    if (!this.map || this.isLiveOsmLoading) {
+      return;
+    }
+
+    this.isLiveOsmLoading = true;
+    this.liveOsmMessage = 'Fetching live places from OpenStreetMap...';
+    this.cdr.detectChanges();
+
+    const bounds = this.map.getBounds();
+    const queryBounds = {
+      minLat: bounds.getSouth(),
+      maxLat: bounds.getNorth(),
+      minLng: bounds.getWest(),
+      maxLng: bounds.getEast(),
+    };
+
+    this.osmOverpassService.fetchLiveOsmPlaces(queryBounds).subscribe({
+      next: (livePlaces) => {
+        this.isLiveOsmLoading = false;
+        if (livePlaces && livePlaces.length > 0) {
+          const existingIds = new Set(this.places.map((p) => p.id));
+          const existingCoords = new Set(
+            this.places.map((p) => `${p.latitude.toFixed(4)},${p.longitude.toFixed(4)}`)
+          );
+
+          let added = 0;
+          for (const lp of livePlaces) {
+            const coordKey = `${lp.latitude.toFixed(4)},${lp.longitude.toFixed(4)}`;
+            if (!existingIds.has(lp.id) && !existingCoords.has(coordKey)) {
+              this.places.push(lp);
+              existingIds.add(lp.id);
+              existingCoords.add(coordKey);
+              added++;
+            }
+          }
+          this.updateMarkers();
+          this.liveOsmMessage = `Loaded ${livePlaces.length} OpenStreetMap live places (+${added} new)`;
+        } else {
+          this.liveOsmMessage = 'No additional live places in this area';
+        }
+        this.cdr.detectChanges();
+        setTimeout(() => {
+          this.liveOsmMessage = null;
+          this.cdr.detectChanges();
+        }, 3500);
+      },
+      error: () => {
+        this.isLiveOsmLoading = false;
+        this.liveOsmMessage = 'Could not reach live OpenStreetMap server. Using offline data.';
+        this.cdr.detectChanges();
+        setTimeout(() => {
+          this.liveOsmMessage = null;
+          this.cdr.detectChanges();
+        }, 3500);
       },
     });
   }
@@ -588,7 +658,7 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
         className: 'custom-map-pin-container',
         html: `
           <div
-            class="custom-map-pin ${isFeatured ? 'pin-featured' : ''}"
+            class="custom-map-pin ${isFeatured ? 'pin-featured' : ''} pin-cat-${place.category}"
             tabindex="0"
             role="button"
             aria-label="${safeName}, ${safeMuni}"
