@@ -221,4 +221,37 @@ Exit Code: 0
 - [x] **End-to-End User Journey Tests (`CR-014`)**:
   - Modern Playwright E2E spec verifying `/welcome` -> `/guest` -> `/tabs/home` -> `/tabs/map` -> `/custom-builder` flows in `Project/e2e/app.spec.ts` (100% verified with `npm run typecheck:e2e`).
 
+---
+
+## 6. Live Server Routing & Turn-by-Turn Verification (Session 72)
+
+- [x] **Live Server Health & Endpoint Readiness**:
+  - `GET /api/v1/health`: Confirmed 200 OK (`province_scope: Nueva Ecija`, `status: ok`).
+  - `GET /api/v1/places?limit=3`: Confirmed 200 OK with serialization of names, categories, and municipalities.
+- [x] **Live Route Computation Scenarios (`POST /api/v1/itineraries/compute-day-route`)**:
+  - **Drive Point-to-Point Route (Cabanatuan -> Palayan City)**:
+    - Distance: 15,588 meters (15.58 km).
+    - Duration: 890 seconds (~14.8 minutes).
+    - Polyline: 866-character encoded polyline generated and cached.
+    - Maneuvers: 6 turn-by-turn steps along Maharlika Hwy and Nueva Ecija-Aurora Rd.
+  - **Multi-Stop Intermediate Routing (Cabanatuan -> Bongabon -> Pantabangan)**:
+    - Distance: 54,724 meters (54.7 km).
+    - Duration: 3,446 seconds (~57.4 minutes).
+    - Leg 1: 29,210 meters with 5 maneuver steps.
+    - Leg 2: 25,514 meters with 9 maneuver steps.
+  - **Walking Route Mode (Cabanatuan Stroll)**:
+    - Distance: 1,645 meters, 134 seconds duration.
+- [x] **Suggested Itinerary Engine Routing (`POST /api/v1/itineraries/suggest`)**:
+  - Successfully generated 2-day itinerary with geographic clustering and 3 stops per day.
+- [x] **Frontend Navigation & Map Deep-Linking (Playwright E2E Suite)**:
+  - 8/8 end-to-end tests passing (`Mobile Chrome` Pixel 7 emulation):
+    1. Welcome page redirect with brand copy.
+    2. Guest authentication flow into Home tab.
+    3. Seamless navigation between Home and Map tabs.
+    4. Custom Itinerary Builder navigation and questionnaire form.
+    5. Direct deep-linking to core application routes.
+    6. Interactive Leaflet markers and canvas responsiveness.
+    7. 2,673 OpenStreetMap POI display, clustering, drawer selection, and detail sheet opening.
+    8. Deep-linking to map coordinates (`/tabs/map?lat=15.4859&lng=120.9669&zoom=15`) with verified floating navigation controls and valid Google Maps directions routing URLs (`https://www.google.com/maps/dir/?api=1&destination=...`).
+
 

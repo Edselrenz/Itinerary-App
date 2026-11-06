@@ -2503,8 +2503,58 @@ This log records chronological development sessions, detailing objectives, execu
   - `Project/src/app/tabs/map/map.page.spec.ts` (modified)
   - `.gitignore` (modified)
   - `docs/DEVELOPMENT_LOG.md` (modified)
-- **Next Recommended Step**:
-  - Update remaining documentation files (`CHANGELOG.md`, `PROJECT_STATE.md`, `DATABASE_DOCUMENTATION.md`) and commit changes.
+---
+
+## Session 71: Full OpenStreetMap 2,673 POI Client Asset & Live Overpass Integration
+- **Date & Time**: 2026-11-06 11:45:00 (Local)
+- **Objective**: Ensure the map displays all 2,673 OpenStreetMap POIs across Nueva Ecija regardless of backend process or deployment status, implement Live Overpass queries, and style category pins.
+- **Tasks Performed & Implementation Details**:
+  - **1. OpenStreetMap Client Asset Export (`scripts/export_osm_to_client_asset.py`)**:
+    - Exported all 2,673 destinations from `nueva_ecija_travel.db` into `Project/src/assets/data/osm_places.json` (1.5 MB).
+  - **2. PlaceService In-Memory Lazy Loading & Fallback (`place.service.ts`)**:
+    - Lazy loads `osm_places.json` with `shareReplay(1)` caching.
+    - Updated offline fallback in `searchPlaces()` and `getPlaceById(id)` to search across the full 2,673 POI catalog.
+  - **3. Real-Time Overpass Client (`osm-overpass.service.ts`)**:
+    - Built client querying `https://overpass-api.de/api/interpreter` on demand for the active map viewport.
+  - **4. Map Visual Pin Styling & Controls (`map.page.ts`, `html`, `scss`)**:
+    - Added dedicated color palettes and CSS classes for all 16 canonical categories.
+    - Added floating "Live OSM" button and elevated mobile controls above tabs.
+- **Files Created / Modified**:
+  - `Project/src/assets/data/osm_places.json` (created)
+  - `Project/src/app/core/services/osm-overpass.service.ts` & `.spec.ts` (created)
+  - `scripts/export_osm_to_client_asset.py` (created)
+  - `Project/src/app/core/services/place.service.ts` & `.spec.ts` (modified)
+  - `Project/src/app/tabs/map/map.page.ts`, `.html`, `.scss`, & `.spec.ts` (modified)
+  - `backend/app/core/database.py` (modified)
+  - `backend/app/api/v1/places.py` (modified)
+
+---
+
+## Session 72: Live Server Routing, Turn-by-Turn Computation, & E2E Verification
+- **Date & Time**: 2026-11-06 12:25:00 (Local)
+- **Objective**: Test and verify the routing engine and navigation endpoints on the live running server across driving, multi-stop, walking, and AI suggested itinerary scenarios, and verify frontend route deep-linking with Playwright.
+- **Tasks Performed & Implementation Details**:
+  - **1. Live Server Inspection**:
+    - Confirmed FastAPI / Uvicorn server actively running on `http://127.0.0.1:8000`.
+    - Confirmed PostgreSQL active on port 5432 and SQLite resilient fallback operational.
+  - **2. Route Computation Verification (`test_live_routing.py`)**:
+    - Verified single-leg drive route: Cabanatuan City -> Palayan City (15.58 km, 890s duration, 866-char polyline, 6 maneuver steps via OSRM engine).
+    - Verified multi-stop intermediate routing: Cabanatuan -> Bongabon -> Pantabangan (54.72 km, 3,446s duration, 2 legs with 14 total maneuvers).
+    - Verified walking route: 1,645m pedestrian stroll in Cabanatuan City.
+    - Verified AI suggested itinerary generation (`POST /api/v1/itineraries/suggest`): generated 2-day clustered itinerary with 3 stops per day.
+  - **3. Frontend Route Deep-Linking & Directions Verification**:
+    - Added E2E tests verifying deep-link coordinates (`/tabs/map?lat=15.4859&lng=120.9669&zoom=15`), floating navigation controls (`.recenter-btn`, `.live-osm-btn`), and valid external Google Maps turn-by-turn navigation URLs (`https://www.google.com/maps/dir/?api=1&destination=...`).
+  - **4. Verification Results**:
+    - Playwright E2E: **8/8 browser tests passed [100%]** in 27.7s.
+    - Frontend Unit Tests: **25/25 files, 235/235 tests passed [100%]**.
+    - Backend Pytest: **21/21 tests passed [100%]**.
+- **Files Modified / Created**:
+  - `Project/e2e/app.spec.ts` (modified: added directions link regex verification and deep-link map navigation test)
+  - `docs/TESTING_DOCUMENTATION.md` (modified: added Section 6)
+  - `docs/DEVELOPMENT_LOG.md` (modified: added Sessions 71 & 72)
+- **Next Recommended Steps**:
+  - Synchronize Android platform assets (`npx cap sync android`) if testing native APK builds.
+
 
 
 

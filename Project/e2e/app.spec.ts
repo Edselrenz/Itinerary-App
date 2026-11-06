@@ -130,6 +130,12 @@ test.describe('Nueva Ecija Travel Itinerary Planner E2E Journey', () => {
     await expect(detailSheet.locator('.btn-suggested')).toBeVisible();
     await expect(detailSheet.locator('.btn-directions')).toBeVisible();
 
+    // Verify directions action link contains valid navigation coordinates
+    const directionsLink = detailSheet.locator('.btn-directions');
+    await expect(directionsLink).toBeVisible();
+    const href = await directionsLink.getAttribute('href');
+    expect(href).toMatch(/google\.com\/maps\/dir\/\?api=1&destination=/);
+
     // Capture screenshot of the opened place detail sheet
     await page.screenshot({
       path: 'C:/Users/Edward/.gemini/antigravity/brain/b414e2ac-5be5-4176-b1a9-9ec4a2178554/place_detail_sheet_open.png',
@@ -157,5 +163,20 @@ test.describe('Nueva Ecija Travel Itinerary Planner E2E Journey', () => {
 
     // Verify map remains responsive and intact
     await expect(page.locator('#leaflet-map')).toBeVisible();
+  });
+
+  test('deep-links to map with coordinates and verifies navigation controls', async ({ page }) => {
+    // Cabanatuan City Plaza coordinates
+    await page.goto('/tabs/map?lat=15.4859&lng=120.9669&zoom=15');
+    await expect(page).toHaveURL(/tabs\/map\?lat=15\.4859/);
+    await expect(page.locator('#leaflet-map')).toBeVisible();
+
+    // Verify map canvas is loaded and responsive
+    const markerPane = page.locator('.leaflet-marker-pane');
+    await expect(markerPane).toBeAttached();
+
+    // Verify floating navigation controls are visible and operational
+    await expect(page.locator('.recenter-btn')).toBeVisible();
+    await expect(page.locator('.live-osm-btn')).toBeVisible();
   });
 });
