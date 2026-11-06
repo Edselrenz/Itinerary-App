@@ -961,6 +961,26 @@ This log records chronological development sessions, detailing objectives, execu
 
 ---
 
+## Session 35: Leaflet Marker Cluster Hardening & Production Live Verification
+- **Date & Time**: 2026-11-06 16:20:00 (Local)
+- **Objective**: Fix GitHub Pages map display issue where all 2,673 places were loaded into the place service but map canvas rendered 0 clusters due to an uncaught constructor exception, and verify zero watermark routing.
+- **Tasks Performed**:
+  - Investigated production browser bundle execution using Playwright on `https://edselrenz.github.io/Itinerary-App/tabs/map`.
+  - Discovered console warning: `TypeError: L.MarkerClusterGroup is not a constructor at L.markerClusterGroup`.
+  - Spied on `window.L` mutations: discovered that `leaflet.markercluster` was successfully loaded and attached `MarkerClusterGroup` to `window.L`, but subsequent component constructors (`MapPage`, `ItineraryDetailPage`, `ItineraryRouteMapComponent`) performed `(window as any).L = L` which overwrote `window.L` with the static unextended module namespace `L`, stripping away `MarkerClusterGroup`.
+  - Refactored `Project/src/main.ts` with an `Object.defineProperty` getter/setter on `window.L` that safely intercepts re-assignments and merges properties, preventing any code from wiping out Leaflet plugin attachments.
+  - Removed destructive `(window as any).L = L` assignments across `map.page.ts`, `itinerary-detail.page.ts`, and `itinerary-route-map.component.ts`.
+  - Replaced CartoDB Voyager tiles with OpenStreetMap raster tiles (`tile.openstreetmap.org`) in `ItineraryRouteMapComponent` and verified zero "API KEY REQUIRED" watermarks.
+  - Ran unit test suite (Vitest): 252/252 tests passed.
+  - Built Angular production bundle: 0 errors.
+  - Ran Playwright verification against live site with property protection: 2,673 places rendered across 73 interactive cluster circles and 91 visible pins.
+- **Verification**:
+  - Vitest: 252/252 passed.
+  - Angular build: 0 errors.
+  - Live Playwright test: clusters = 73, markers = 91, list view count = 2673.
+
+---
+
 ## Session 34: Milestone 8 - Unified Itinerary Overview, Day Timeline & Guest Migration
 - **Date & Time**: 2026-10-31 16:15:00 (Local)
 - **Objective**: Implement Milestone 8 from `docs/TODO.md`: Unified Itinerary Overview screen with day switcher chips (`ItineraryDetailPage`), day timeline view with stop cards, stop details modal, Nearby Places sub-view (Figma Screens 3-5), guest-to-account migration helper (`GuestMigrationService`), and reactive navigation synchronization between Home, History, and Itinerary Detail.

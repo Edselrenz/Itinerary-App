@@ -66,8 +66,11 @@ import {
 import * as L from 'leaflet';
 import 'leaflet.markercluster';
 
-const LeafletLib: any = (L as any).default ?? L;
-if (typeof window !== 'undefined') {
+const LeafletLib: any =
+  (typeof window !== 'undefined' && (window as any).L) ||
+  (L as any).default ||
+  L;
+if (typeof window !== 'undefined' && !(window as any).L) {
   (window as any).L = LeafletLib;
 }
 
@@ -198,8 +201,8 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
     @Inject(PLATFORM_ID) private platformId: object
   ) {
     this.isBrowser = isPlatformBrowser(this.platformId);
-    if (this.isBrowser && typeof window !== 'undefined') {
-      (window as unknown as { L: unknown }).L = L;
+    if (this.isBrowser && typeof window !== 'undefined' && !(window as any).L) {
+      (window as unknown as { L: unknown }).L = LeafletLib;
     }
     addIcons({
       addOutline,

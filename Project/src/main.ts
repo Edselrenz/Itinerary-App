@@ -3,7 +3,27 @@ import { bootstrapApplication } from '@angular/platform-browser';
 import * as L from 'leaflet';
 
 if (typeof window !== 'undefined') {
-  (window as unknown as { L: unknown }).L = (L as unknown as { default?: unknown }).default ?? L;
+  let leafletInstance: unknown = (L as unknown as { default?: unknown }).default ?? L;
+  Object.defineProperty(window, 'L', {
+    configurable: true,
+    enumerable: true,
+    get() {
+      return leafletInstance;
+    },
+    set(newVal: unknown) {
+      if (
+        leafletInstance &&
+        typeof (leafletInstance as { MarkerClusterGroup?: unknown }).MarkerClusterGroup !== 'undefined' &&
+        newVal &&
+        typeof (newVal as { MarkerClusterGroup?: unknown }).MarkerClusterGroup === 'undefined'
+      ) {
+        // Prevent destructive overwrites that strip plugin extensions (e.g. MarkerClusterGroup)
+        Object.assign(leafletInstance as object, newVal as object);
+      } else {
+        leafletInstance = newVal;
+      }
+    },
+  });
 }
 
 import { provideHttpClient, withInterceptors } from '@angular/common/http';

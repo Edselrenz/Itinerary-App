@@ -8,6 +8,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-11-06
+### Fixed
+- **Leaflet Marker Clustering Hardening on Production Bundles (MAP-01 / Phase 28.4)**:
+  - Guarded `window.L` in `Project/src/main.ts` with a non-destructive property descriptor setter that intercepts re-assignments and preserves plugin extensions (`L.MarkerClusterGroup`, `L.markerClusterGroup`).
+  - Removed destructive `(window as any).L = L` component constructor overrides in `map.page.ts`, `itinerary-detail.page.ts`, and `itinerary-route-map.component.ts`.
+  - Resolves runtime exception `TypeError: L.MarkerClusterGroup is not a constructor` on GitHub Pages (`https://edselrenz.github.io/Itinerary-App/tabs/map`).
+  - Verified with Playwright: all 2,673 places render across 73 interactive cluster circles and 91 visible pins.
+- **Zero-Paid-API OSRM Road Routing & Watermark Elimination (ADR-001 / ROUTE-01)**:
+  - Switched `ItineraryRouteMapComponent` from CartoDB Voyager tiles to OpenStreetMap raster tiles (`tile.openstreetmap.org`), eliminating the "API KEY REQUIRED" background watermark.
+  - Connected public OSRM driving service (`https://router.project-osrm.org/route/v1/driving/`) with 2.5s timeout and offline geodesic spline fallback for 100% free road routing.
+
+
 ## [0.24.0] - 2026-11-06
 ### Added
 - **Reusable Standalone Itinerary Route Map Component (ROUTE-01 / 27.2.1 & 27.2.2)**:

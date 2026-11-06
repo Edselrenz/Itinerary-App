@@ -56,8 +56,8 @@ export class ItineraryRouteMapComponent implements AfterViewInit, OnChanges, OnD
     @Inject(PLATFORM_ID) private platformId: object
   ) {
     this.isBrowser = isPlatformBrowser(this.platformId);
-    if (this.isBrowser && typeof window !== 'undefined') {
-      (window as unknown as { L: unknown }).L = L;
+    if (this.isBrowser && typeof window !== 'undefined' && !(window as any).L) {
+      (window as unknown as { L: unknown }).L = (L as unknown as { default?: unknown }).default ?? L;
     }
     addIcons({
       chevronDownOutline,

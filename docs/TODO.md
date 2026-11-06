@@ -654,3 +654,14 @@ This checklist tracks completed, active, and pending tasks across all developmen
   - Ensure `<app-place-detail-sheet>` displays hero photo, verified hours, price range, and WCAG 2.2 accessible close button across all calling contexts.
 - [x] **28.3.2: Leg-Aware Commute Guidance**:
   - Coordinate with Phase 27.3.5 to render leg-level commute advice for intra-town hops (walk/tricycle) vs. inter-town corridors.
+
+### Phase 28.4: Leaflet Marker Clustering & Zero-Watermark Production Hardening (COMPLETED)
+- [x] **28.4.1 (Production Marker Clustering Hardening)**:
+  - Guard `window.L` in `Project/src/main.ts` with an ES5 property descriptor getter/setter that prevents destructive overwrites from wiping out plugin attachments (`L.MarkerClusterGroup`, `L.markerClusterGroup`).
+  - Eliminate redundant destructive `window.L = L` assignments across `map.page.ts`, `itinerary-detail.page.ts`, and `itinerary-route-map.component.ts`.
+  - Fixes runtime `TypeError: L.MarkerClusterGroup is not a constructor` in production ES module builds on GitHub Pages (`edselrenz.github.io/Itinerary-App/tabs/map`).
+  - Verified with Playwright: 2,673 places render across 73 interactive cluster circles and 91 visible pins.
+- [x] **28.4.2 (Zero-Paid-API OSRM Road Routing & OSM Tiles)**:
+  - Replace CartoDB Voyager raster tiles with OpenStreetMap raster tiles (`tile.openstreetmap.org`) in `ItineraryRouteMapComponent` to eliminate the "API KEY REQUIRED" watermark.
+  - Wire client-side OSRM driving API (`router.project-osrm.org`) with geodesic spline fallback and IndexedDB caching for 100% free road routing adhering to ADR-001.
+
