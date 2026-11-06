@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""PostgreSQL local database initialization and verification script.
+"""Database initialization and verification script for PostgreSQL and SQLite.
 
-Checks if local PostgreSQL is up, runs Alembic migrations, seeds
-all curated Nueva Ecija places, and outputs verification stats.
+Checks if configured database is up, runs schema setup / Alembic migrations,
+verifies seed data, and outputs verification stats.
 
 Usage:
     python scripts/setup_postgres.py
@@ -21,21 +21,28 @@ if str(BACKEND_DIR) not in sys.path:
 
 from sqlalchemy import create_engine, select, text
 from app.core.config import settings
+from app.core.database import Base
 from app.models.entities import Municipality, Place, Itinerary, User
 
 
-def check_postgres_connection(max_retries: int = 5, retry_interval: float = 2.0) -> bool:
-    """Check whether PostgreSQL is reachable at settings.database_url."""
+def is_sqlite() -> bool:
+    return settings.database_url.startswith("sqlite")
+
+
+def check_database_connection(max_retries: int = 5, retry_interval: float = 2.0) -> bool:
+    """Check whether configured database is reachable at settings.database_url."""
     db_url = settings.database_url
     print(f"Connecting to database: {db_url.split('@')[-1] if '@' in db_url else db_url} ...")
     
-    # Try connecting to the target database first
     engine = create_engine(db_url, pool_pre_ping=True)
+    check_query = text("SELECT sqlite_version();") if is_sqlite() else text("SELECT version();")
+    db_type = "SQLite" if is_sqlite() else "PostgreSQL"
+    
     for attempt in range(1, max_retries + 1):
         try:
             with engine.connect() as conn:
-                result = conn.execute(text("SELECT version();")).scalar()
-                print(f"[OK] Connected to PostgreSQL: {result}")
+                result = conn.execute(check_query).scalar()
+                print(f"[OK] Connected to {db_type}: {result}")
                 return True
         except Exception as e:
             print(f"[Attempt {attempt}/{max_retries}] Waiting for database... ({e})")
@@ -45,8 +52,14 @@ def check_postgres_connection(max_retries: int = 5, retry_interval: float = 2.0)
 
 
 def run_migrations() -> bool:
-    """Run alembic upgrade head."""
-    print("\n--- Running Alembic Migrations ---")
+    """Run alembic upgrade head for PostgreSQL or Base.metadata.create_all for SQLite."""
+    print("\n--- Running Database Schema Setup / Migrations ---")
+    if is_sqlite():
+        engine = create_engine(settings.database_url)
+        Base.metadata.create_all(bind=engine)
+        print("[OK] SQLite schema verified and up to date.")
+        return True
+
     res = subprocess.run(
         [sys.executable, "-m", "alembic", "upgrade", "head"],
         cwd=str(BACKEND_DIR),
@@ -62,7 +75,19 @@ def run_migrations() -> bool:
 
 
 def run_seed() -> bool:
-    """Run scripts/seed_featured_places.py."""
+    """Run scripts/seed_featured_places.py if seed data is missing."""
+    engine = create_engine(settings.database_url)
+    with engine.connect() as conn:
+        try:
+            place_count = conn.execute(text("SELECT count(*) FROM places;")).scalar() or 0
+        except Exception:
+            place_count = 0
+
+    if place_count >= 17:
+        print(f"\n--- Seed Data Check ---")
+        print(f"[OK] Database already populated with {place_count} destinations.")
+        return True
+
     print("\n--- Seeding Municipalities & Featured Places ---")
     seed_script = ROOT_DIR / "scripts" / "seed_featured_places.py"
     res = subprocess.run(
@@ -93,19 +118,24 @@ def verify_database():
         print(f"  * Places:         {place_count}")
         print(f"  * Users:          {user_count}")
         print(f"  * Itineraries:    {itin_count}")
-    print("\n[SUCCESS] Local PostgreSQL is fully configured and ready for the backend!")
+    db_type = "SQLite" if is_sqlite() else "PostgreSQL"
+    print(f"\n[SUCCESS] Local {db_type} database is fully configured and ready for the backend!")
 
 
 def main():
     print("=" * 60)
-    print("  Nueva Ecija Travel App — PostgreSQL Setup")
+    db_label = "SQLite" if is_sqlite() else "PostgreSQL"
+    print(f"  Nueva Ecija Travel App — {db_label} Setup")
     print("=" * 60)
     
-    if not check_postgres_connection():
-        print("\n[!] Could not connect to PostgreSQL on 127.0.0.1:5432.")
-        print("\nPlease make sure PostgreSQL is running on your machine.")
-        print("Option 1 (Docker): Run 'docker compose up -d' in the project directory.")
-        print("Option 2 (Native Windows Service): Ensure PostgreSQL service is started.")
+    if not check_database_connection():
+        if is_sqlite():
+            print("\n[!] Could not connect to SQLite database.")
+        else:
+            print("\n[!] Could not connect to PostgreSQL on 127.0.0.1:5432.")
+            print("\nPlease make sure PostgreSQL is running on your machine.")
+            print("Option 1 (Docker): Run 'docker compose up -d' in the project directory.")
+            print("Option 2 (Native Windows Service): Ensure PostgreSQL service is started.")
         sys.exit(1)
         
     if not run_migrations():
@@ -119,4 +149,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 

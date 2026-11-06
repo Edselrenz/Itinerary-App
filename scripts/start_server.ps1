@@ -16,50 +16,77 @@ Write-Host "  Nueva Ecija Travel App - Local Server & Dual Tunnel       " -Foreg
 Write-Host "============================================================" -ForegroundColor Cyan
 
 # 1. Start or Verify Database
-Write-Host "`n[1/4] Checking PostgreSQL Database..." -ForegroundColor Yellow
-$pgListening = $false
-try {
-    $tcp = New-Object System.Net.Sockets.TcpClient
-    $iar = $tcp.BeginConnect("127.0.0.1", 5432, $null, $null)
-    $success = $iar.AsyncWaitHandle.WaitOne(1000)
-    if ($success -and $tcp.Connected) {
-        $tcp.EndConnect($iar)
-        $pgListening = $true
-    }
-    $tcp.Close()
-} catch {}
-
-if (-not $pgListening) {
-    Write-Host "PostgreSQL is not listening on port 5432. Checking Docker..." -ForegroundColor Gray
-    $dockerCmd = Get-Command docker -ErrorAction SilentlyContinue
-    if ($dockerCmd) {
-        Write-Host "Starting PostgreSQL container via Docker Compose..." -ForegroundColor Gray
-        docker compose up -d 2>$null
-        Start-Sleep -Seconds 3
-        try {
-            $tcp = New-Object System.Net.Sockets.TcpClient
-            $iar = $tcp.BeginConnect("127.0.0.1", 5432, $null, $null)
-            $success = $iar.AsyncWaitHandle.WaitOne(1000)
-            if ($success -and $tcp.Connected) {
-                $tcp.EndConnect($iar)
-                $pgListening = $true
-            }
-            $tcp.Close()
-        } catch {}
+$targetDbUrl = ""
+if (Test-Path (Join-Path $ProjectRoot ".env")) {
+    $envLines = Get-Content (Join-Path $ProjectRoot ".env")
+    foreach ($line in $envLines) {
+        if ($line -match '^DATABASE_URL\s*=\s*(.+)$') {
+            $targetDbUrl = $matches[1].Trim()
+        }
     }
 }
 
-if ($pgListening) {
-    Write-Host "[OK] PostgreSQL is active on port 5432." -ForegroundColor Green
+$isSqlite = ($targetDbUrl -like "sqlite:*") -or [string]::IsNullOrWhiteSpace($targetDbUrl)
+
+if ($isSqlite) {
+    Write-Host "`n[1/4] Checking SQLite Database..." -ForegroundColor Yellow
+    $dbFile = Join-Path $ProjectRoot "nueva_ecija_travel.db"
+    if (Test-Path $dbFile) {
+        Write-Host "[OK] Using existing seeded SQLite database: nueva_ecija_travel.db" -ForegroundColor Green
+    } else {
+        Write-Host "[INFO] SQLite database file not found. It will be initialized and seeded." -ForegroundColor Yellow
+    }
     Write-Host "`n[2/4] Verifying database schema & seed data..." -ForegroundColor Yellow
     python scripts/setup_postgres.py
     if ($LASTEXITCODE -ne 0) {
         Write-Host "[WARNING] Database setup returned non-zero code. Proceeding with server start..." -ForegroundColor Yellow
     }
 } else {
-    Write-Host "[INFO] PostgreSQL not available on port 5432. Falling back to local SQLite database (nueva_ecija_travel.db)..." -ForegroundColor Yellow
-    $env:DATABASE_URL = "sqlite:///./nueva_ecija_travel.db"
-    Write-Host "[OK] Using seeded SQLite database (nueva_ecija_travel.db)." -ForegroundColor Green
+    Write-Host "`n[1/4] Checking PostgreSQL Database..." -ForegroundColor Yellow
+    $pgListening = $false
+    try {
+        $tcp = New-Object System.Net.Sockets.TcpClient
+        $iar = $tcp.BeginConnect("127.0.0.1", 5432, $null, $null)
+        $success = $iar.AsyncWaitHandle.WaitOne(1000)
+        if ($success -and $tcp.Connected) {
+            $tcp.EndConnect($iar)
+            $pgListening = $true
+        }
+        $tcp.Close()
+    } catch {}
+
+    if (-not $pgListening) {
+        Write-Host "PostgreSQL is not listening on port 5432. Checking Docker..." -ForegroundColor Gray
+        $dockerCmd = Get-Command docker -ErrorAction SilentlyContinue
+        if ($dockerCmd) {
+            Write-Host "Starting PostgreSQL container via Docker Compose..." -ForegroundColor Gray
+            docker compose up -d 2>$null
+            Start-Sleep -Seconds 3
+            try {
+                $tcp = New-Object System.Net.Sockets.TcpClient
+                $iar = $tcp.BeginConnect("127.0.0.1", 5432, $null, $null)
+                $success = $iar.AsyncWaitHandle.WaitOne(1000)
+                if ($success -and $tcp.Connected) {
+                    $tcp.EndConnect($iar)
+                    $pgListening = $true
+                }
+                $tcp.Close()
+            } catch {}
+        }
+    }
+
+    if ($pgListening) {
+        Write-Host "[OK] PostgreSQL is active on port 5432." -ForegroundColor Green
+        Write-Host "`n[2/4] Verifying database schema & seed data..." -ForegroundColor Yellow
+        python scripts/setup_postgres.py
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "[WARNING] Database setup returned non-zero code. Proceeding with server start..." -ForegroundColor Yellow
+        }
+    } else {
+        Write-Host "[INFO] PostgreSQL not available on port 5432. Falling back to local SQLite database (nueva_ecija_travel.db)..." -ForegroundColor Yellow
+        $env:DATABASE_URL = "sqlite:///./nueva_ecija_travel.db"
+        Write-Host "[OK] Using seeded SQLite database (nueva_ecija_travel.db)." -ForegroundColor Green
+    }
 }
 
 # 2. Check if FastAPI backend on port 8000 is already active

@@ -1,5 +1,5 @@
 @echo off
-title Nueva Ecija Travel App - Server & Tunnel Launcher
+title Nueva Ecija Travel App - Server ^& Tunnel Launcher
 cd /d "%~dp0"
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\start_server.ps1"
 pause

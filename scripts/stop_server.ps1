@@ -48,22 +48,26 @@ function Stop-ProcessOnPort {
     }
 }
 
-# 1. Terminate Cloudflare Tunnel processes
-Write-Host "`n[1/4] Stopping Cloudflare Tunnel..." -ForegroundColor Yellow
-$cloudflaredProcs = Get-Process -Name "*cloudflared*" -ErrorAction SilentlyContinue
-if ($cloudflaredProcs) {
-    foreach ($proc in $cloudflaredProcs) {
+# 1. Terminate Tunnel processes (Cloudflare and ngrok)
+Write-Host "`n[1/4] Stopping Tunnels (Cloudflare & ngrok)..." -ForegroundColor Yellow
+$tunnelProcs = Get-Process -Name "*cloudflared*", "*ngrok*" -ErrorAction SilentlyContinue
+if ($tunnelProcs) {
+    foreach ($proc in $tunnelProcs) {
         Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
-        Write-Host "[OK] Stopped Cloudflare Tunnel process (PID: $($proc.Id))." -ForegroundColor Green
+        Write-Host "[OK] Stopped $($proc.ProcessName) process (PID: $($proc.Id))." -ForegroundColor Green
     }
 } else {
-    Write-Host "No active Cloudflare Tunnel processes found." -ForegroundColor DarkGray
+    Write-Host "No active Tunnel processes found." -ForegroundColor DarkGray
 }
 
-# Clean up temporary tunnel log
+# Clean up temporary tunnel logs
 $tunnelLog = Join-Path $env:TEMP "ne_cloudflared.log"
 if (Test-Path $tunnelLog) {
     Remove-Item $tunnelLog -Force -ErrorAction SilentlyContinue
+}
+$ngrokLog = Join-Path $env:TEMP "ne_ngrok.log"
+if (Test-Path $ngrokLog) {
+    Remove-Item $ngrokLog -Force -ErrorAction SilentlyContinue
 }
 
 # 2. Stop FastAPI Backend (Port 8000)
