@@ -25,6 +25,7 @@ import {
 } from 'ionicons/icons';
 import { ItineraryDay, ItineraryItem } from '../../../core/models/itinerary.models';
 import { decodePolyline, generateGeodesicArc } from '../../../core/utils/polyline.util';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'app-itinerary-route-map',
@@ -123,12 +124,40 @@ export class ItineraryRouteMapComponent implements AfterViewInit, OnChanges, OnD
         doubleClickZoom: false,
       }).setView([15.58, 121.0], 11);
 
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      const tileUrl =
+        environment.tileUrlTemplate ||
+        'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+      const attribution =
+        environment.tileAttribution ||
+        '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors';
+
+      L.tileLayer(tileUrl, {
+        attribution,
         maxZoom: 19,
       }).addTo(this.map);
     }
 
     this.renderRoute();
+  }
+
+  private async fetchOsrmRoute(coords: Array<[number, number]>): Promise<Array<[number, number]> | null> {
+    if (coords.length < 2) return null;
+    const waypoints = coords.map(([lat, lng]) => `${lng},${lat}`).join(';');
+    const url = `https://router.project-osrm.org/route/v1/driving/${waypoints}?overview=full&geometries=polyline`;
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2500);
+      const res = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+        return decodePolyline(data.routes[0].geometry);
+      }
+    } catch {
+      // Graceful fallback to already rendered geodesic spline
+    }
+    return null;
   }
 
   private renderRoute(): void {
@@ -148,6 +177,7 @@ export class ItineraryRouteMapComponent implements AfterViewInit, OnChanges, OnD
     const items = this.day.items || [];
     const stopCoords: Array<[number, number]> = [];
     const fullRoutePoints: Array<[number, number]> = [];
+    let hasMissingPolyline = false;
 
     items.forEach((item, idx) => {
       const lat = item.place?.latitude ?? item.custom_lat;
@@ -180,6 +210,7 @@ export class ItineraryRouteMapComponent implements AfterViewInit, OnChanges, OnD
             fullRoutePoints.push([lat, lng]);
           }
         } else if (stopCoords.length > 1) {
+          hasMissingPolyline = true;
           const prevCoord = stopCoords[stopCoords.length - 2];
           const arc = generateGeodesicArc(prevCoord, [lat, lng]);
           fullRoutePoints.push(...arc);
@@ -200,6 +231,15 @@ export class ItineraryRouteMapComponent implements AfterViewInit, OnChanges, OnD
     }
 
     this.fitRouteBounds(stopCoords);
+
+    // If online and missing polylines, query public OSRM router for real road geometry
+    if (hasMissingPolyline && stopCoords.length > 1 && this.isBrowser) {
+      this.fetchOsrmRoute(stopCoords).then((roadPoints) => {
+        if (roadPoints && roadPoints.length > 1 && this.polylineLayer) {
+          this.polylineLayer.setLatLngs(roadPoints);
+        }
+      });
+    }
   }
 
   private fitRouteBounds(coords?: Array<[number, number]>): void {
