@@ -1,5 +1,11 @@
 import { importProvidersFrom, isDevMode } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
+import * as L from 'leaflet';
+
+if (typeof window !== 'undefined') {
+  (window as unknown as { L: unknown }).L = (L as unknown as { default?: unknown }).default ?? L;
+}
+
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideServiceWorker } from '@angular/service-worker';
 import {

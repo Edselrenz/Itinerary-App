@@ -435,19 +435,23 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
 
     // MarkerClusterGroup with safe layerGroup fallback (MAP-01)
     const clusterFactory =
+      (typeof window !== 'undefined' && (window as any).L?.markerClusterGroup) ||
       LeafletLib?.markerClusterGroup ||
-      (L as any)?.markerClusterGroup ||
-      (typeof window !== 'undefined' && (window as any).L?.markerClusterGroup);
+      (L as any)?.markerClusterGroup;
 
-    if (typeof clusterFactory === 'function') {
-      this.markerCluster = clusterFactory({
-        showCoverageOnHover: false,
-        maxClusterRadius: 40,
-        spiderfyOnMaxZoom: true,
-        chunkedLoading: true,
-      });
-    } else {
-      console.warn('[MapPage] leaflet.markercluster not detected, falling back to L.layerGroup()');
+    try {
+      if (typeof clusterFactory === 'function') {
+        this.markerCluster = clusterFactory({
+          showCoverageOnHover: false,
+          maxClusterRadius: 40,
+          spiderfyOnMaxZoom: true,
+          chunkedLoading: true,
+        });
+      } else {
+        throw new Error('MarkerClusterGroup factory not available');
+      }
+    } catch (err) {
+      console.warn('[MapPage] leaflet.markercluster not detected or failed, falling back to L.layerGroup():', err);
       this.markerCluster = (LeafletLib.layerGroup ? LeafletLib.layerGroup() : L.layerGroup()) as any;
     }
 
