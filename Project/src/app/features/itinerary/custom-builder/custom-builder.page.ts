@@ -44,6 +44,7 @@ import { ItineraryBudgetSummary, ItineraryService } from '../../../core/services
 import { PlaceService } from '../../../core/services/place.service';
 import { ComponentCanDeactivate } from '../../../core/guards/pending-changes.guard';
 import { ItineraryRouteMapComponent } from '../../../shared/components/itinerary-route-map/itinerary-route-map.component';
+import { PlaceDetailSheetComponent } from '../../../shared/components/place-detail-sheet/place-detail-sheet.component';
 
 export interface BuilderStop {
   id: string;
@@ -91,6 +92,7 @@ export interface BuilderDay {
     IonModal,
     IonSpinner,
     ItineraryRouteMapComponent,
+    PlaceDetailSheetComponent,
   ],
 })
 export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactivate {
@@ -160,6 +162,7 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
 
   // Place Picker Modal state (for adding custom off-grid venue or modal search)
   public isPlacePickerOpen = false;
+  public selectedPlaceForDetail: Place | null = null;
   public pickerSearchTerm = '';
   public pickerSearchResults: Place[] = [];
   public pickerSearching = false;
@@ -216,7 +219,17 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
   public ngOnInit(): void {
     this.itineraryId = this.route.snapshot.paramMap.get('id');
 
-    if (this.itineraryId) {
+    const nav = this.router.getCurrentNavigation();
+    const draft =
+      nav?.extras?.state?.['draftItinerary'] ||
+      (typeof history !== 'undefined' && history?.state ? history.state['draftItinerary'] : null);
+
+    if (draft) {
+      this.isEditMode = false;
+      this.activeView = 'timeline';
+      this.populateFromItinerary(draft);
+      this.hasUnsavedChanges = true;
+    } else if (this.itineraryId) {
       this.isEditMode = true;
       this.activeView = 'timeline';
       this.loadItinerary(this.itineraryId);
@@ -568,49 +581,71 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
     }
   }
 
+  public populateFromItinerary(itin: Itinerary): void {
+    this.form.patchValue({
+      title: itin.title || 'Nueva Ecija Getaway',
+      destination: itin.destination || 'Nueva Ecija',
+      start_date: itin.start_date || toLocalIsoDate(),
+      end_date: itin.end_date || toLocalIsoDate(addDaysLocal(new Date(), 1)),
+      daily_budget: itin.daily_budget || 3000,
+    });
+
+    if (itin.preferences && Array.isArray(itin.preferences)) {
+      this.selectedPreferences = new Set(itin.preferences);
+    }
+
+    this.days = (itin.days || []).map((d, dIdx) => ({
+      id: d.id || this.generateTempId(),
+      day_number: d.day_number || dIdx + 1,
+      travel_date: d.travel_date || '',
+      title: d.title || `Day ${d.day_number || dIdx + 1}`,
+      items: (d.items || []).map((item, iIdx) => {
+        const itemPlace =
+          item.place || (item.place_id ? this.placeService.findPlaceById(item.place_id) : null);
+        const name = item.custom_title || (item as any).name || itemPlace?.name || 'Destination Stop';
+        return {
+          id: item.id || this.generateTempId(),
+          place_id: item.place_id || itemPlace?.id || null,
+          custom_title: item.custom_title || name,
+          custom_lat: item.custom_lat ?? itemPlace?.latitude ?? null,
+          custom_lng: item.custom_lng ?? itemPlace?.longitude ?? null,
+          sort_order: item.sort_order || iIdx + 1,
+          planned_time: item.planned_time || null,
+          duration_minutes: item.duration_minutes || 90,
+          notes: item.notes || null,
+          estimated_cost_min: item.estimated_cost_min ?? itemPlace?.estimated_cost_min ?? null,
+          estimated_cost_max: item.estimated_cost_max ?? itemPlace?.estimated_cost_max ?? null,
+          name: name,
+          category: itemPlace?.category
+            ? this.placeService.formatCategoryName(itemPlace.category)
+            : 'Custom Stop',
+          municipality: itemPlace?.municipality_name || itin.destination || 'Nueva Ecija',
+          image: this.placeService.getPlaceImage(name, itemPlace?.image_url),
+          isCustomVenue: !item.place_id && !itemPlace?.id,
+          place: itemPlace,
+        };
+      }),
+    }));
+
+    // Auto-calculate times for any stops missing planned_time
+    for (const day of this.days) {
+      const chainedItems: BuilderStop[] = [];
+      for (const item of day.items) {
+        if (!item.planned_time) {
+          item.planned_time = this.calculateNextStopTime(chainedItems);
+        }
+        chainedItems.push(item);
+      }
+    }
+
+    this.activeDayIndex = 0;
+    this.updateBudgetSummary();
+  }
+
   private loadItinerary(id: string): void {
     this.itineraryService.getItineraryById(id).subscribe({
       next: (itin) => {
-        this.form.patchValue({
-          title: itin.title,
-          destination: itin.destination,
-          start_date: itin.start_date,
-          end_date: itin.end_date,
-          daily_budget: itin.daily_budget,
-        });
-
-        this.days = (itin.days || []).map((d) => ({
-          id: d.id,
-          day_number: d.day_number,
-          travel_date: d.travel_date,
-          title: d.title || `Day ${d.day_number}`,
-          items: (d.items || []).map((item) => ({
-            id: item.id,
-            place_id: item.place_id,
-            custom_title: item.custom_title,
-            custom_lat: item.custom_lat,
-            custom_lng: item.custom_lng,
-            sort_order: item.sort_order,
-            planned_time: item.planned_time,
-            duration_minutes: item.duration_minutes || 90,
-            notes: item.notes,
-            estimated_cost_min: item.estimated_cost_min,
-            estimated_cost_max: item.estimated_cost_max,
-            name: item.custom_title || item.place?.name || 'Destination Stop',
-            category: item.place?.category
-              ? this.placeService.formatCategoryName(item.place.category)
-              : 'Custom Stop',
-            municipality: item.place?.municipality_name || 'Nueva Ecija',
-            image: this.placeService.getPlaceImage(
-              item.custom_title || item.place?.name || '',
-              item.place?.image_url
-            ),
-            isCustomVenue: !item.place_id,
-          })),
-        }));
-
-        this.activeDayIndex = 0;
-        this.updateBudgetSummary();
+        this.populateFromItinerary(itin);
         this.hasUnsavedChanges = false;
       },
       error: async () => {
@@ -628,6 +663,10 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
 
   public get currentDay(): BuilderDay | undefined {
     return this.days[this.activeDayIndex];
+  }
+
+  public get activeDayNumber(): number {
+    return this.activeDayIndex + 1;
   }
 
   public selectDay(index: number): void {
@@ -1082,10 +1121,74 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
     this.closePlacePicker();
   }
 
+  public calculateNextStopTime(items: BuilderStop[]): string {
+    if (!items || items.length === 0) {
+      return '09:00 AM';
+    }
+    const lastItem = items[items.length - 1];
+    if (!lastItem.planned_time) {
+      return '09:00 AM';
+    }
+    const match = lastItem.planned_time.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+    if (!match) {
+      return '09:00 AM';
+    }
+    let hours = parseInt(match[1], 10);
+    const minutes = parseInt(match[2], 10);
+    const meridiem = match[3]?.toUpperCase();
+
+    if (meridiem === 'PM' && hours < 12) hours += 12;
+    if (meridiem === 'AM' && hours === 12) hours = 0;
+
+    const duration = lastItem.duration_minutes || 90;
+    const transitBuffer = 30; // 30-min transit buffer
+    const totalMinutes = hours * 60 + minutes + duration + transitBuffer;
+
+    const newHours24 = Math.floor(totalMinutes / 60) % 24;
+    const newMinutes = totalMinutes % 60;
+    const newMeridiem = newHours24 >= 12 ? 'PM' : 'AM';
+    let newHours12 = newHours24 % 12;
+    if (newHours12 === 0) newHours12 = 12;
+
+    const padM = newMinutes < 10 ? `0${newMinutes}` : `${newMinutes}`;
+    const padH = newHours12 < 10 ? `0${newHours12}` : `${newHours12}`;
+    return `${padH}:${padM} ${newMeridiem}`;
+  }
+
+  public autoOptimizeDaySchedule(dayIndex = this.activeDayIndex): void {
+    const day = this.days[dayIndex];
+    if (!day || !day.items || day.items.length === 0) return;
+
+    const chainedItems: BuilderStop[] = [];
+    for (let i = 0; i < day.items.length; i++) {
+      const item = day.items[i];
+      item.planned_time = this.calculateNextStopTime(chainedItems);
+      item.sort_order = i + 1;
+      chainedItems.push(item);
+    }
+    this.hasUnsavedChanges = true;
+  }
+
+  public inspectPlace(place: Place): void {
+    this.selectedPlaceForDetail = place;
+  }
+
+  public closePlaceDetailSheet(): void {
+    this.selectedPlaceForDetail = null;
+  }
+
+  public addPlaceFromDetailSheet(place: Place): void {
+    if (!this.isPlaceInActiveDay(place.id)) {
+      this.addPlaceStop(place);
+    }
+    this.selectedPlaceForDetail = null;
+  }
+
   private addPlaceStop(place: Place): void {
     const cur = this.currentDay;
     if (!cur) return;
 
+    const plannedTime = this.calculateNextStopTime(cur.items);
     const stop: BuilderStop = {
       id: this.generateTempId(),
       place_id: place.id,
@@ -1097,6 +1200,7 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
       municipality: place.municipality_name || 'Nueva Ecija',
       image: this.placeService.getPlaceImage(place.name, place.image_url),
       sort_order: cur.items.length + 1,
+      planned_time: plannedTime,
       duration_minutes: 90,
       estimated_cost_min: place.estimated_cost_min,
       estimated_cost_max: place.estimated_cost_max,
@@ -1146,7 +1250,7 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
       municipality: this.customVenueAddress.trim() || 'Nueva Ecija',
       image: 'assets/images/casa_batik.png',
       sort_order: cur.items.length + 1,
-      planned_time: this.customPlannedTime.trim() || null,
+      planned_time: this.customPlannedTime.trim() || this.calculateNextStopTime(cur.items),
       custom_lat: this.customVenueLat != null ? Number(this.customVenueLat) : null,
       custom_lng: this.customVenueLng != null ? Number(this.customVenueLng) : null,
       duration_minutes: Number(this.customVenueDuration) || 90,
@@ -1274,9 +1378,13 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
       next: async (saved) => {
         this.isSaving = false;
         this.hasUnsavedChanges = false;
-        this.router.navigate(['/tabs/home']);
+        if (saved && saved.id) {
+          this.router.navigate(['/itinerary', saved.id]);
+        } else {
+          this.router.navigate(['/tabs/home']);
+        }
         const toast = await this.toastController.create({
-          message: `Itinerary "${saved.title}" saved successfully!`,
+          message: `Itinerary "${saved?.title || 'Trip'}" saved successfully!`,
           duration: 2500,
           color: 'success',
           position: 'top',

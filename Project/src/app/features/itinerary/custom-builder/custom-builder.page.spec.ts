@@ -81,7 +81,17 @@ describe('CustomBuilderPage', () => {
         days: [],
       })
     ),
-    updateItinerary: vi.fn().mockReturnValue(of({})),
+    updateItinerary: vi.fn().mockReturnValue(
+      of({
+        id: 'itin-1',
+        title: 'Nueva Ecija Getaway',
+        destination: 'Nueva Ecija',
+        start_date: '2026-11-01',
+        end_date: '2026-11-02',
+        daily_budget: 2500,
+        days: [],
+      })
+    ),
     calculateBudgetSummary: vi.fn().mockReturnValue({
       verifiedMin: 150,
       verifiedMax: 450,
@@ -205,12 +215,12 @@ describe('CustomBuilderPage', () => {
     expect(component.currentDay?.items.length).toBe(0);
   });
 
-  it('saves itinerary successfully and navigates back to /tabs/home', async () => {
+  it('saves itinerary successfully and redirects to /itinerary/:id', async () => {
     component.selectPlaceFromPicker(mockPlace);
     await component.saveItinerary();
 
     expect(mockItineraryService.createItinerary).toHaveBeenCalled();
-    expect(router.navigate).toHaveBeenCalledWith(['/tabs/home']);
+    expect(router.navigate).toHaveBeenCalledWith(['/itinerary', 'itin-created']);
     expect(component.hasUnsavedChanges).toBe(false);
   });
 
@@ -257,7 +267,7 @@ describe('CustomBuilderPage', () => {
         ]),
       })
     );
-    expect(router.navigate).toHaveBeenCalledWith(['/tabs/home']);
+    expect(router.navigate).toHaveBeenCalledWith(['/itinerary', 'itin-1']);
     expect(component.hasUnsavedChanges).toBe(false);
   });
 
@@ -446,5 +456,97 @@ describe('CustomBuilderPage', () => {
 
     component.openPlacePicker('browse');
     expect(component.pickerTab).toBe('browse');
+  });
+
+  it('S-BUG-06: populateFromItinerary restores draft plan and auto-calculates stop times', () => {
+    const draftPlan: any = {
+      id: 'draft-plan-1',
+      title: 'Pantabangan Adventure',
+      destination: 'Pantabangan',
+      start_date: '2026-11-15',
+      end_date: '2026-11-16',
+      daily_budget: 4000,
+      preferences: ['nature', 'food'],
+      days: [
+        {
+          id: 'day-1',
+          day_number: 1,
+          travel_date: '2026-11-15',
+          title: 'Day 1',
+          items: [
+            {
+              id: 'd-stop-1',
+              place_id: mockPlace.id,
+              place: mockPlace,
+              duration_minutes: 90,
+            },
+            {
+              id: 'd-stop-2',
+              custom_title: 'Scenic Viewpoint',
+              duration_minutes: 60,
+            },
+          ],
+        },
+      ],
+    };
+
+    component.populateFromItinerary(draftPlan);
+
+    expect(component.form.get('title')?.value).toBe('Pantabangan Adventure');
+    expect(component.form.get('destination')?.value).toBe('Pantabangan');
+    expect(component.days.length).toBe(1);
+    expect(component.days[0].items.length).toBe(2);
+    expect(component.days[0].items[0].planned_time).toBe('09:00 AM');
+    // Stop 2 starts at 09:00 AM + 90 min + 30 min buffer = 11:00 AM
+    expect(component.days[0].items[1].planned_time).toBe('11:00 AM');
+  });
+
+  it('C-BUG-04: inspectPlace opens inspection sheet and addPlaceFromDetailSheet adds to day', () => {
+    expect(component.selectedPlaceForDetail).toBeNull();
+
+    component.inspectPlace(mockPlace);
+    expect(component.selectedPlaceForDetail).toBe(mockPlace);
+
+    component.addPlaceFromDetailSheet(mockPlace);
+    expect(component.selectedPlaceForDetail).toBeNull();
+    expect(component.currentDay?.items.some((it) => it.place_id === mockPlace.id)).toBe(true);
+
+    component.closePlaceDetailSheet();
+    expect(component.selectedPlaceForDetail).toBeNull();
+  });
+
+  it('autoOptimizeDaySchedule recalculates sequential times with 30-min transit buffer', () => {
+    const cur = component.currentDay!;
+    cur.items = [
+      {
+        id: 'stop-a',
+        name: 'Stop A',
+        category: 'Food',
+        municipality: 'Bongabon',
+        image: '',
+        sort_order: 1,
+        duration_minutes: 60,
+        planned_time: '10:00 AM',
+        isCustomVenue: false,
+      },
+      {
+        id: 'stop-b',
+        name: 'Stop B',
+        category: 'Nature',
+        municipality: 'Bongabon',
+        image: '',
+        sort_order: 2,
+        duration_minutes: 90,
+        planned_time: '10:00 AM', // Unoptimized duplicate time
+        isCustomVenue: false,
+      },
+    ];
+
+    component.autoOptimizeDaySchedule();
+
+    expect(cur.items[0].planned_time).toBe('09:00 AM');
+    // Stop 1 is 60m duration + 30m buffer = 90m -> 10:30 AM
+    expect(cur.items[1].planned_time).toBe('10:30 AM');
+    expect(component.hasUnsavedChanges).toBe(true);
   });
 });

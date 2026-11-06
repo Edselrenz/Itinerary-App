@@ -696,15 +696,18 @@ This checklist tracks completed, active, and pending tasks across all developmen
   - Update `openPlacePicker(defaultTab: 'browse' | 'custom' = 'browse')` in `custom-builder.page.ts` and bind "Add Off-Grid Custom Venue" directly to `openPlacePicker('custom')`.
   - Enable `.picker-add-action-btn` for already-added places so clicking triggers the duplicate confirmation alert (`selectPlaceFromPicker`).
 
-### Phase 29.3: P2 Unified Editor & Draft State Handoff (STAGED)
-- [ ] **29.3.1 (S-BUG-06: In-Memory Router State for Customize in Builder)**:
+### Phase 29.3: P2 Unified Editor & Draft State Handoff (COMPLETED)
+- [x] **29.3.1 (S-BUG-06: In-Memory Router State for Customize in Builder)**:
   - Update `SuggestedWizardPage.customizeInBuilder()` to pass `this.generatedPlan` via `router.navigate(['/custom-builder'], { state: { draftItinerary: this.generatedPlan } })` to eliminate duplicate premature saves.
-- [ ] **29.3.2 (UC-C5: Unified Saved Trip Editor)**:
-  - Direct the Edit action on `ItineraryDetailPage` to open `/custom-builder/:id` (or embed the catalog place picker and `pendingChangesGuard` directly while preserving separate `estimated_cost_min` and `estimated_cost_max` fields).
-- [ ] **29.3.3 (C-BUG-04: Card Inspection in Browse Grid)**:
-  - Make destination cards in `CustomBuilderPage` Browse view clickable to open `<app-place-detail-sheet>` with an inline "+ Add to Day {{ activeDayNumber }}" button.
-- [ ] **29.3.4 (Automated Schedule Chaining & Post-Save Redirect)**:
-  - Auto-chain sequential stop time windows with a 30-min transit buffer when adding places in Custom Builder.
+  - Implement `CustomBuilderPage.populateFromItinerary()` checking `history.state.draftItinerary` / navigation state to hydrate draft days and form controls without premature persistence.
+- [x] **29.3.2 (UC-C5: Unified Saved Trip Editor)**:
+  - Direct the Edit action on `ItineraryDetailPage` to open `/custom-builder/:id`, giving users full visual timeline, catalog picker, and off-grid coordinate validator.
+  - Preserve separate `estimated_cost_min` and `estimated_cost_max` fields across `EditableActivityItem`, `initEditForm()`, and `saveChanges()`.
+- [x] **29.3.3 (C-BUG-04: Card Inspection in Browse Grid)**:
+  - Make destination cards in `CustomBuilderPage` Browse view clickable to open `<app-place-detail-sheet>` with an inline "+ Add to Day {{ activeDayNumber }}" button and full photo gallery, hours, reviews, and commute info.
+- [x] **29.3.4 (Automated Schedule Chaining & Post-Save Redirect)**:
+  - Implement `calculateNextStopTime()` auto-chaining sequential stop time windows with a 30-min transit buffer when adding places in Custom Builder.
+  - Add one-tap `autoOptimizeDaySchedule()` action button to timeline day banner.
   - Redirect user to `/itinerary/:id` upon successful save instead of exiting to `/tabs/home`.
 
 

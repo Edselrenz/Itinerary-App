@@ -168,6 +168,12 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+  }
 }
 .place-card-thumb {
   position: relative;
@@ -355,6 +361,36 @@
   .day-date-caption { display: flex; align-items: center; gap: 4px; font-size: 0.78rem; color: #64748b; margin: 0; }
 }
 
+.day-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.auto-schedule-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: #dcfce7;
+    border-color: #86efac;
+  }
+
+  ion-icon {
+    font-size: 0.9rem;
+  }
+}
+
 .edit-stop-btn,
 .delete-day-action-btn,
 .delete-stop-btn {
@@ -529,5 +565,14 @@
       color: #ffffff;
     }
   }
+}
+
+.bottom-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  z-index: 1099;
 }
 

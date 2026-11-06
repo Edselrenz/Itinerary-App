@@ -646,7 +646,9 @@ export class SuggestedWizardPage implements OnInit {
 
   public customizeInBuilder(): void {
     if (!this.generatedPlan) return;
-    this.acceptAndSave('/custom-builder');
+    this.router.navigate(['/custom-builder'], {
+      state: { draftItinerary: this.generatedPlan },
+    });
   }
 
   public backToForm(): void {

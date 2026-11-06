@@ -250,7 +250,13 @@
         } @else if (displayedPlaces.length > 0) {
           <div class="places-cards-grid">
             @for (place of displayedPlaces; track place.id) {
-              <div class="place-browser-card">
+              <div
+                class="place-browser-card"
+                (click)="inspectPlace(place)"
+                tabindex="0"
+                role="button"
+                [attr.aria-label]="'Inspect ' + place.name"
+              >
                 <div class="place-card-thumb">
                   <img
                     [src]="placeService.getPlaceImage(place.name, place.image_url)"
@@ -285,7 +291,7 @@
                       type="button"
                       class="add-toggle-btn"
                       [class.added]="isPlaceInActiveDay(place.id)"
-                      (click)="togglePlaceInActiveDay(place)"
+                      (click)="$event.stopPropagation(); togglePlaceInActiveDay(place)"
                       [attr.aria-label]="isPlaceInActiveDay(place.id) ? 'Remove stop' : 'Add stop'"
                     >
                       @if (isPlaceInActiveDay(place.id)) {
@@ -435,17 +441,31 @@
                 </p>
               </div>
 
-              @if (days.length > 1) {
-                <button
-                  type="button"
-                  class="delete-day-action-btn"
-                  (click)="removeDay(activeDayIndex)"
-                  aria-label="Delete this day"
-                >
-                  <ion-icon name="trash-outline"></ion-icon>
-                  <span>Delete Day</span>
-                </button>
-              }
+              <div class="day-header-actions">
+                @if (curDay.items.length > 1) {
+                  <button
+                    type="button"
+                    class="auto-schedule-btn"
+                    (click)="autoOptimizeDaySchedule(activeDayIndex)"
+                    title="Auto-calculate stop times with 30-min transit buffer"
+                    aria-label="Auto-schedule stop times"
+                  >
+                    <ion-icon name="time-outline"></ion-icon>
+                    <span>Auto-Schedule</span>
+                  </button>
+                }
+                @if (days.length > 1) {
+                  <button
+                    type="button"
+                    class="delete-day-action-btn"
+                    (click)="removeDay(activeDayIndex)"
+                    aria-label="Delete this day"
+                  >
+                    <ion-icon name="trash-outline"></ion-icon>
+                    <span>Delete Day</span>
+                  </button>
+                }
+              </div>
             </div>
 
             <!-- Embedded Interactive Route Preview Map (Phase 27.2) -->
@@ -1114,4 +1134,18 @@
       </div>
     </ng-template>
   </ion-modal>
+
+  <!-- Place Detail Inspection Sheet (C-BUG-04) -->
+  @if (selectedPlaceForDetail) {
+    <div class="bottom-sheet-backdrop" (click)="closePlaceDetailSheet()"></div>
+    <app-place-detail-sheet
+      class="poi-bottom-sheet"
+      [place]="selectedPlaceForDetail"
+      [dayNumber]="activeDayNumber"
+      [showAddToTripActions]="false"
+      [showNavigationAction]="true"
+      (closeSheet)="closePlaceDetailSheet()"
+      (addToDay)="addPlaceFromDetailSheet($event)"
+    ></app-place-detail-sheet>
+  }
 </ion-content>

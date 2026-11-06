@@ -199,6 +199,16 @@ describe('SuggestedWizardPage', () => {
     expect(router.navigate).toHaveBeenCalledWith(['/tabs/home']);
   });
 
+  it('should navigate to custom builder with in-memory draft state on customizeInBuilder (S-BUG-06)', () => {
+    component.generatedPlan = mockGeneratedPlan;
+    component.customizeInBuilder();
+
+    expect(mockItineraryService.createItinerary).not.toHaveBeenCalled();
+    expect(router.navigate).toHaveBeenCalledWith(['/custom-builder'], {
+      state: { draftItinerary: mockGeneratedPlan },
+    });
+  });
+
   it('should reset plan on backToForm', () => {
     component.generatedPlan = mockGeneratedPlan;
     component.backToForm();

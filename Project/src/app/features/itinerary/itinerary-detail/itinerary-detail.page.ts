@@ -105,6 +105,8 @@ export interface EditableActivityItem {
   description: string;
   notes: string;
   estimated_cost: number | null;
+  estimated_cost_min?: number | null;
+  estimated_cost_max?: number | null;
   target_day_index: number;
   place_id?: string | null;
   place?: any;
@@ -368,6 +370,8 @@ export class ItineraryDetailPage implements OnInit, AfterViewInit, OnDestroy, Co
           description: this.getStopDescription(item),
           notes: item.notes || '',
           estimated_cost: item.estimated_cost_min ?? item.estimated_cost_max ?? null,
+          estimated_cost_min: item.estimated_cost_min ?? null,
+          estimated_cost_max: item.estimated_cost_max ?? null,
           target_day_index: dIdx,
           place_id: item.place_id,
           place: item.place,
@@ -509,8 +513,8 @@ export class ItineraryDetailPage implements OnInit, AfterViewInit, OnDestroy, Co
         planned_time: act.planned_time,
         duration_minutes: this.parseDurationMinutes(act.duration_label),
         notes: act.notes,
-        estimated_cost_min: act.estimated_cost,
-        estimated_cost_max: act.estimated_cost,
+        estimated_cost_min: act.estimated_cost_min != null ? act.estimated_cost_min : act.estimated_cost,
+        estimated_cost_max: act.estimated_cost_max != null ? act.estimated_cost_max : act.estimated_cost,
         sort_order: aIdx + 1,
         place: act.place || {
           name: act.custom_title,

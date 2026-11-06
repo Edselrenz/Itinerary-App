@@ -2945,5 +2945,48 @@ This log records chronological development sessions, detailing objectives, execu
   - `docs/DEVELOPMENT_LOG.md`
 - **Status**: Completed Phase 29.2; Staged for Phase 29.3.
 
+---
+
+## Session 82: Phase 29.3 Implementation - Unified Editor & Route Map
+- **Date & Time**: 2026-11-06 18:25:00 (Local)
+- **Objective**: Implement Phase 29.3 deliverables: fix `S-BUG-06` (in-memory router state for "Customize in Builder" eliminating premature persistence), `UC-C5` (unified saved trip editor routing to `/custom-builder/:id` while preserving separate min/max cost fields), `C-BUG-04` (card inspection in Browse view via `<app-place-detail-sheet>`), sequential schedule timing calculation with 30-min transit buffer (`calculateNextStopTime` and `autoOptimizeDaySchedule`), and post-save redirection to `/itinerary/:id`.
+- **Tasks Performed**:
+  - **`S-BUG-06` (In-Memory Router State for Customize in Builder)**:
+    - Updated `SuggestedWizardPage.customizeInBuilder()` to navigate via `this.router.navigate(['/custom-builder'], { state: { draftItinerary: this.generatedPlan } })`, completely eliminating premature saves to local storage before user edits.
+    - Updated `CustomBuilderPage.ngOnInit()` to read `router.getCurrentNavigation()?.extras.state?.['draftItinerary']` or `history.state['draftItinerary']`.
+    - Implemented `CustomBuilderPage.populateFromItinerary()` to populate form controls, restore preferences into `selectedPreferences`, map days and stops with place hydration from `PlaceService`, and trigger budget summary calculations.
+  - **`UC-C5` (Unified Saved Trip Editor & Min/Max Cost Retention)**:
+    - Directed header Edit button on `ItineraryDetailPage` to `(click)="onEdit()"` which navigates to `/custom-builder/:id`, giving users full visual timeline, catalog picker, and off-grid coordinate validator.
+    - Updated `EditableActivityItem` interface and methods `initEditForm()` and `saveChanges()` in `itinerary-detail.page.ts` to preserve separate `estimated_cost_min` and `estimated_cost_max` fields, preventing collapsing of cost ranges.
+  - **`C-BUG-04` (Card Inspection in Browse Grid)**:
+    - Imported `PlaceDetailSheetComponent` into `CustomBuilderPage`.
+    - Made `.place-browser-card` in `custom-builder.page.html` clickable with `(click)="inspectPlace(place)"`, while keeping the `+ Add` button isolated via `$event.stopPropagation()`.
+    - Rendered `<app-place-detail-sheet>` with `.bottom-sheet-backdrop` when `selectedPlaceForDetail` is set, wired with `[dayNumber]="activeDayNumber"`, `(closeSheet)="closePlaceDetailSheet()"`, and `(addToDay)="addPlaceFromDetailSheet($event)"`.
+    - Added styling for `.bottom-sheet-backdrop` and hover effects on `.place-browser-card` in `custom-builder.page.scss` (under 13 kB, well below 16 kB budget).
+  - **Automated Schedule Timing Chaining & Post-Save Flow**:
+    - Implemented `calculateNextStopTime(items)` in `custom-builder.page.ts` calculating sequential start times with a 30-min transit buffer.
+    - Auto-chained stop times when adding places via `addPlaceStop()` or `addCustomVenueStop()`.
+    - Added `autoOptimizeDaySchedule()` action method and rendered one-tap "Auto-Schedule" button in the timeline day banner (`custom-builder.page.html`).
+    - Updated `saveItinerary()` to redirect post-save to `/itinerary/${saved.id}` instead of `/tabs/home`.
+  - **Automated Verification**:
+    - Vitest unit test suite: **264/264 tests passed [100%]** across 26 test suites.
+    - Pytest backend suite: **21/21 passed [100%]** in 14.95s (`python -m pytest backend/tests/ -v`).
+    - Production build: `npm --prefix Project run build` completed with code 0 (Initial bundle 1.09 MB, 0 stylesheet budget warnings).
+- **Files Modified**:
+  - `Project/src/app/features/itinerary/custom-builder/custom-builder.page.html`
+  - `Project/src/app/features/itinerary/custom-builder/custom-builder.page.scss`
+  - `Project/src/app/features/itinerary/custom-builder/custom-builder.page.ts`
+  - `Project/src/app/features/itinerary/custom-builder/custom-builder.page.spec.ts`
+  - `Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.html`
+  - `Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.ts`
+  - `Project/src/app/features/itinerary/suggested-wizard/suggested-wizard.page.html`
+  - `Project/src/app/features/itinerary/suggested-wizard/suggested-wizard.page.ts`
+  - `Project/src/app/features/itinerary/suggested-wizard/suggested-wizard.page.spec.ts`
+  - `docs/TODO.md`
+  - `docs/KNOWN_ISSUES.md`
+  - `docs/DEVELOPMENT_LOG.md`
+- **Status**: Completed Phase 29.3; Full Phase 29 remediation completed and verified.
+
+
 
 
