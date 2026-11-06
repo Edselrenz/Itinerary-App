@@ -1,5 +1,8 @@
 # Database Documentation: Nueva Ecija Travel Itinerary
 
+> [!TIP]
+> For operational and developer commands (GUI/CLI inspection, Alembic migrations, seeding, backup/restore drills, and troubleshooting), see the [Database Management & Operations Guide](./DATABASE_MANAGEMENT_GUIDE.md).
+
 ## 1. Database Architecture & Technologies
 
 - **Production Engine**: PostgreSQL 15+ (accessed locally via `postgresql+psycopg://` on `127.0.0.1:5432`).
