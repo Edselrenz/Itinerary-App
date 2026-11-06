@@ -75,6 +75,8 @@ env/
 *.coverage
 htmlcov/
 .nox/
+test-results/
+playwright-report/
 
 # --- Databases, Docker & Local State ---
 *.db

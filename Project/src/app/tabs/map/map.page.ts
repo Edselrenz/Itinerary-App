@@ -483,9 +483,9 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
       searchParams.max_lat = bounds.getNorth();
       searchParams.min_lng = bounds.getWest();
       searchParams.max_lng = bounds.getEast();
-      searchParams.limit = 150;
+      searchParams.limit = 400;
     } else {
-      searchParams.limit = 100;
+      searchParams.limit = 500;
     }
 
     this.placeService.searchPlaces(searchParams).subscribe({

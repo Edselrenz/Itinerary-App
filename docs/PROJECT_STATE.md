@@ -32,9 +32,10 @@ This document serves as the primary handoff reference for developers and coding 
   - `GET /api/v1/auth/me` (Bearer token authentication).
   - `POST /api/v1/auth/oauth/google` (server-side ID token verification).
   - `POST /api/v1/auth/oauth/apple` (truthful 501 gate).
-- [x] **Offline Data Pipeline (`scripts/`)**:
-  - `import_osm.py`: Overpass JSON import with strict Nueva Ecija bounds (`15.15 <= lat <= 16.15`, `120.70 <= lng <= 121.40`) and 16 canonical categories.
-  - `seed_featured_places.py`: Seeds 12 municipalities and 17 curated destinations (including all Bongabon Day 1 stops and Pantabangan resorts).
+- [x] **Data Pipeline & OpenStreetMap Ingestion (`scripts/`)**:
+  - `fetch_osm_places.py`: Overpass API fetcher querying live OSM servers for all nodes and ways in Nueva Ecija (`2,995` raw elements).
+  - `import_osm.py`: Batch validator and upsert pipeline with strict provincial bounding box (`15.15 <= lat <= 16.15`, `120.70 <= lng <= 121.40`) and 16 canonical categories (**2,673 total real-world places populated**).
+  - `seed_featured_places.py`: Idempotent seeder for 12 municipalities and 17 curated destinations.
 
 ### Mobile Client (`Project/`)
 - [x] **Environment Configuration & Gitignore Integrity**:

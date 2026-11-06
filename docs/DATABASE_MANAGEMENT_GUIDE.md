@@ -174,10 +174,20 @@ python scripts/seed_featured_places.py
 - **Behavior**: Idempotent. If records already exist, it updates them in-place and creates zero duplicate rows.
 
 ### 5.2 Live OpenStreetMap (OSM) POI Importer
-Fetches real-world geographic data from the live Overpass API bounded strictly to Nueva Ecija coordinates (`15.15 <= lat <= 16.15`, `120.70 <= lng <= 121.40`):
+Fetches and imports real-world geographic venues from the live Overpass API bounded strictly to Nueva Ecija coordinates (`15.15 <= lat <= 16.15`, `120.70 <= lng <= 121.40`):
 
-```powershell
-python scripts/import_osm.py
+1. **Download Raw OSM Features**:
+   ```powershell
+   python scripts/fetch_osm_places.py
+   ```
+   Queries live Overpass endpoints for nodes and ways across cafes, restaurants, hotels, parks, attractions, and essentials, saving ~3,000 raw features to `data/raw/nueva_ecija_osm.json`.
+
+2. **Validate & Upsert into Database**:
+   ```powershell
+   python scripts/import_osm.py data/raw/nueva_ecija_osm.json
+   ```
+   Filters out unmapped/out-of-bounds items, matches municipality centroids, and upserts ~2,650 verified real-world places into the `places` table.
+
 ```
 - **Filters**: Maps raw OSM tags into 16 canonical categories (`cafe`, `restaurant`, `hotel`, `viewpoint`, `park`, `historic`, `museum`, `terminal`, etc.).
 - **Honesty Guard**: Venues without verified prices have `estimated_cost_min` and `estimated_cost_max` set to `NULL` to avoid misleading travelers.
@@ -266,3 +276,4 @@ Run the foundational pytest suite:
 python -m pytest backend/tests/test_foundation.py -v
 ```
 This tests database connectivity, municipality filtering, POI category queries, and out-of-province coordinate rejection.
+

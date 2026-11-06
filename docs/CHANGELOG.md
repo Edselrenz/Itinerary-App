@@ -8,6 +8,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-11-06
+### Added
+- **Provincial Real-World OpenStreetMap Dataset (2,656 POIs)**:
+  - Created automated extraction script `scripts/fetch_osm_places.py` downloading 2,995 raw geographic features from live Overpass API for Nueva Ecija (`15.15°N–16.15°N, 120.70°E–121.40°E`).
+  - Batch imported and validated 2,656 real-world places into the database, expanding catalog from 17 curated venues to **2,673 total places** across all 32 municipalities.
+  - Covers every mapped cafe (58), restaurant/grill (374), hotel/inn/resort (140), tourist attraction/viewpoint (104), nature park/waterfall/peak (122), church/shrine (487), shopping mall/market (165), bank/ATM (148), pharmacy (146), clinic/hospital (102), and bus/transit terminal (37).
+- **Expanded Map Viewport & API Search Limits**:
+  - Increased `GET /api/v1/places` max query limit from 200 to 1,000 (`le=1000`) in `backend/app/api/v1/places.py`.
+  - Updated `MapPage.loadPlaces()` in `Project/src/app/tabs/map/map.page.ts` to request up to 500 places for full provincial view and 400 places within viewport bounding boxes.
+- **Dedicated Database Management & Operations Guide**:
+  - Authored `docs/DATABASE_MANAGEMENT_GUIDE.md` covering dual-engine operations, GUI inspection, Alembic migrations, seeding, backup/restore drills, and clean resets.
+
 ## [0.19.0] - 2026-11-06
 ### Added
 - **Full Modal Consolidation Across All Pages (Phase 25.4.2)**:

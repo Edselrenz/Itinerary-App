@@ -2402,6 +2402,58 @@ This log records chronological development sessions, detailing objectives, execu
 - **Next Recommended Step**:
   - Stage changes and commit database management documentation.
 
+---
+
+## Session 70 - 2026-11-06
+- **Focus**: Real-World OpenStreetMap Dataset Ingestion (2,656 POIs across Nueva Ecija) & Map Viewport Expansion.
+- **Tasks Performed & Implementation Details**:
+  - **1. OpenStreetMap Provincial Dataset Extraction (`scripts/fetch_osm_places.py`)**:
+    - Created automated Overpass query script querying live OSM servers (`https://overpass-api.de/api/interpreter`) for the entire Nueva Ecija bounding box (`15.15°N–16.15°N, 120.70°E–121.40°E`).
+    - Successfully downloaded 2,995 raw geographic elements saved into `data/raw/nueva_ecija_osm.json`.
+  - **2. Alembic Migration Application to SQLite**:
+    - Stamped SQLite database with `0001_initial_schema` and upgraded to `0002_google_places_and_routing` via `python -m alembic upgrade head`.
+  - **3. Full OpenStreetMap Ingestion (`scripts/import_osm.py`)**:
+    - Executed batch ingestion into [`nueva_ecija_travel.db`](file:///c:/Users/Edward/Desktop/CaseStudy/nueva_ecija_travel.db).
+    - Inserted **2,656 real-world places** into the database (bringing total places from 17 to **2,673 places**).
+    - Category breakdown:
+      - Churches & religious shrines: 487
+      - Convenience stores & essentials: 478
+      - Restaurants, grills & eateries: 374
+      - Fuel stations: 293
+      - Shopping malls & markets: 165
+      - Banks & ATMs: 148
+      - Pharmacies: 146
+      - Nature parks, waterfalls & peaks: 122
+      - Hotels, resorts & lodgings: 120
+      - Tourist attractions & viewpoints: 104
+      - Hospitals & clinics: 102
+      - Cafes & coffee shops: 58
+      - Transport terminals (bus/van): 37
+      - Resorts & swimming: 20
+      - Public facilities: 14
+      - Museums & cultural centers: 5
+  - **4. Backend & Frontend Query Limit Expansion**:
+    - In `backend/app/api/v1/places.py`: Increased maximum query limit from `le=200` to `le=1000`.
+    - In `Project/src/app/tabs/map/map.page.ts`: Increased `searchParams.limit` to `500` for initial full-province view and `400` for viewport-bounded panning/zooming.
+    - In `Project/src/app/tabs/map/map.page.spec.ts`: Updated unit test assertions matching new query limits.
+  - **5. Automated Verification & Testing**:
+    - Backend Pytest: **21/21 passed [100%]** in 15.53s.
+    - Frontend Vitest: **24/24 test files, 230/230 unit tests passed [100%]** in 23.96s.
+    - Frontend Angular Build: **0 errors, 0 warnings** (751.4 kB initial chunk) in 9.06s.
+    - Playwright E2E: **5/5 browser journeys passed [100%]** in 14.5s.
+- **Files Modified / Created**:
+  - `scripts/fetch_osm_places.py` (created)
+  - `data/raw/nueva_ecija_osm.json` (created)
+  - `nueva_ecija_travel.db` (updated with 2,656 new places)
+  - `backend/app/api/v1/places.py` (modified)
+  - `Project/src/app/tabs/map/map.page.ts` (modified)
+  - `Project/src/app/tabs/map/map.page.spec.ts` (modified)
+  - `.gitignore` (modified)
+  - `docs/DEVELOPMENT_LOG.md` (modified)
+- **Next Recommended Step**:
+  - Update remaining documentation files (`CHANGELOG.md`, `PROJECT_STATE.md`, `DATABASE_DOCUMENTATION.md`) and commit changes.
+
+
 
 
 

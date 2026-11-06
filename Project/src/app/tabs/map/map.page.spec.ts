@@ -93,7 +93,7 @@ describe('MapPage', () => {
   });
 
   it('should load places from PlaceService on initialization', () => {
-    expect(mockPlaceService.searchPlaces).toHaveBeenCalledWith({ limit: 100 });
+    expect(mockPlaceService.searchPlaces).toHaveBeenCalledWith({ limit: 500 });
     expect(component.places.length).toBe(1);
     expect(component.places[0].name).toBe('Minalungao National Park');
   });
@@ -105,7 +105,7 @@ describe('MapPage', () => {
     expect(component.selectedPlace).toBeNull();
     expect(mockPlaceService.searchPlaces).toHaveBeenCalledWith({
       categories: ['nature_park'],
-      limit: 100,
+      limit: 500,
     });
   });
 
@@ -311,7 +311,7 @@ describe('MapPage', () => {
       max_lat: 15.6,
       min_lng: 120.8,
       max_lng: 121.2,
-      limit: 150,
+      limit: 400,
     });
   });
 
