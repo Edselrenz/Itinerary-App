@@ -292,6 +292,28 @@ export class PlaceService {
   }
 
   /**
+   * Synchronously looks up an in-memory place by ID from loaded OSM cache or curated fallback.
+   */
+  public findPlaceById(id: string): Place | undefined {
+    return (
+      this.osmPlacesCache.find((p) => p.id === id) ||
+      this.curatedOfflinePlaces.find((p) => p.id === id)
+    );
+  }
+
+  /**
+   * Synchronously returns the in-memory pool of places (OSM cache or curated offline), optionally filtered by municipality.
+   */
+  public getLoadedPlaces(municipality?: string): Place[] {
+    const dataset = this.osmPlacesCache.length > 0 ? this.osmPlacesCache : this.curatedOfflinePlaces;
+    if (!municipality || municipality.toLowerCase().includes('nueva ecija')) {
+      return [...dataset];
+    }
+    const m = municipality.toLowerCase().trim();
+    return dataset.filter((p) => (p.municipality_name || '').toLowerCase().includes(m));
+  }
+
+  /**
    * Retrieves the list of Nueva Ecija municipalities and cities.
    */
   public getMunicipalities(query?: string): Observable<Municipality[]> {

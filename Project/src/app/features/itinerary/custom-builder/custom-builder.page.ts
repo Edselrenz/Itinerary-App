@@ -63,6 +63,7 @@ export interface BuilderStop {
   municipality: string;
   image: string;
   isCustomVenue: boolean;
+  place?: Place | null;
 }
 
 export interface BuilderDay {
@@ -986,6 +987,9 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
     const stop: BuilderStop = {
       id: this.generateTempId(),
       place_id: place.id,
+      custom_title: place.name,
+      custom_lat: place.latitude,
+      custom_lng: place.longitude,
       name: place.name,
       category: this.placeService.formatCategoryName(place.category),
       municipality: place.municipality_name || 'Nueva Ecija',
@@ -995,6 +999,7 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
       estimated_cost_min: place.estimated_cost_min,
       estimated_cost_max: place.estimated_cost_max,
       isCustomVenue: false,
+      place: place,
     };
 
     cur.items.push(stop);
@@ -1136,15 +1141,16 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
         title: d.title,
         items: d.items.map((it) => ({
           place_id: it.place_id,
-          custom_title: it.custom_title,
-          custom_lat: it.custom_lat,
-          custom_lng: it.custom_lng,
+          custom_title: it.custom_title || it.name,
+          custom_lat: it.custom_lat ?? it.place?.latitude ?? null,
+          custom_lng: it.custom_lng ?? it.place?.longitude ?? null,
           sort_order: it.sort_order,
           planned_time: it.planned_time,
           duration_minutes: it.duration_minutes,
           notes: it.notes,
           estimated_cost_min: it.estimated_cost_min,
           estimated_cost_max: it.estimated_cost_max,
+          place: it.place || null,
         })),
       })),
     };

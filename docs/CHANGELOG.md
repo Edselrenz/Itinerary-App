@@ -8,6 +8,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [0.26.0] - 2026-11-06
+### Fixed
+- **Custom Itinerary Metadata Retention in Guest/Offline Saves (`C-BUG-06` / Phase 29.1)**:
+  - Added `place?: Place | null` to `BuilderStop` interface in `CustomBuilderPage`.
+  - Updated `addPlaceStop()` to retain `place`, `custom_title: place.name`, and coordinates `custom_lat`/`custom_lng`.
+  - Updated `saveItinerary()` to serialize `custom_title`, `custom_lat`, `custom_lng`, and `place: it.place || null`.
+  - Added synchronous `findPlaceById()` and `getLoadedPlaces()` in `PlaceService`.
+  - In `ItineraryService.createGuestItinerary()` and `mapGuestItinerary()`, hydrated stops with `place_id` against `PlaceService.findPlaceById()` and guaranteed fallback `custom_title: it.custom_title || it.name || itemPlace?.name || 'Destination Stop'`.
+- **Offline Suggested Itinerary Generator Matching & Pool Slicing (`S-BUG-03` / Phase 29.1)**:
+  - Connected `matchedPool` dynamically to destination municipalities and user category preferences in `ItineraryService.generateOfflineSuggestedItinerary()`.
+  - Added `usedPlaceIds` tracking to ensure dynamic stops are not duplicated across days.
+  - Added budget evaluation against `request.daily_budget` to substitute over-budget items with budget-friendly alternatives from the pool.
+- **Immediate 0ms Offline Short-Circuit (`S-BUG-04` / Phase 29.1)**:
+  - Added `isHostOfflineSnapshot` getter to `ConnectivityService`.
+  - Injected `ConnectivityService` into `ItineraryService.suggestItinerary()`, bypassing the 4-second HTTP timeout when `!navigator.onLine` or `isHostOfflineSnapshot` is true.
+- **Suggested Wizard Date Modal Timezone Drift (`S-BUG-02` / Phase 29.1)**:
+  - Enforced `parseLocalIsoDate()`, `toLocalIsoDate()`, and `addDaysLocal()` in `SuggestedWizardPage.openDatePicker()` and `setPresetDuration()`, eliminating UTC/local string timezone drift.
+- **Suggested Deep-Link Anchor Place ID (`S-BUG-01` / Phase 29.1)**:
+  - Added `anchor_place_id?: string;` to `SuggestedItineraryRequest`.
+  - Extracted `params['placeId']` in `SuggestedWizardPage.ngOnInit()`, stored `this.anchorPlaceId`, and forwarded it in `generateItinerary()`.
+  - In `ItineraryService.generateOfflineSuggestedItinerary()`, anchored the specified POI as Stop 1 of Day 1.
+
+
 ## [0.25.0] - 2026-11-06
 ### Fixed
 - **Leaflet Marker Clustering Hardening on Production Bundles (MAP-01 / Phase 28.4)**:

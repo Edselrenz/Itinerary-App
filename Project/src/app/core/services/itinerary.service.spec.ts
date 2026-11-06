@@ -17,6 +17,8 @@ import { ItineraryService } from './itinerary.service';
 import { AuthService } from './auth.service';
 
 import { GuestItinerary, GuestStorageService } from './guest-storage.service';
+import { ConnectivityService } from './connectivity.service';
+import { PlaceService } from './place.service';
 
 import { environment } from '../../../environments/environment';
 
@@ -54,6 +56,16 @@ describe('ItineraryService', () => {
 
     deleteItinerary: vi.fn(),
 
+  };
+
+  const mockConnectivityService = {
+    isHostOfflineSnapshot: false,
+  };
+
+  const mockPlaceService = {
+    findPlaceById: vi.fn(),
+    getLoadedPlaces: vi.fn().mockReturnValue([]),
+    formatCategoryName: vi.fn().mockReturnValue('Attraction'),
   };
 
   const mockItinerary: Itinerary = {
@@ -158,6 +170,10 @@ describe('ItineraryService', () => {
 
     mockGuestStorageService.deleteItinerary.mockResolvedValue(undefined);
 
+    mockConnectivityService.isHostOfflineSnapshot = false;
+    mockPlaceService.findPlaceById.mockReset();
+    mockPlaceService.getLoadedPlaces.mockReturnValue([]);
+
     TestBed.configureTestingModule({
 
       providers: [
@@ -171,6 +187,10 @@ describe('ItineraryService', () => {
         { provide: AuthService, useValue: mockAuthService },
 
         { provide: GuestStorageService, useValue: mockGuestStorageService },
+
+        { provide: ConnectivityService, useValue: mockConnectivityService },
+
+        { provide: PlaceService, useValue: mockPlaceService },
 
       ],
 
@@ -848,6 +868,144 @@ describe('ItineraryService', () => {
       expect(day2.items[3].custom_title).toBe('Highland Bali Villas Resort and Spa');
       expect(day2.items[3].sort_order).toBe(4);
 
+    });
+
+    it('S-BUG-01: anchors place as Stop 1 of Day 1 when anchor_place_id is provided', async () => {
+      mockAuthService.isAuthenticated.mockReturnValue(false);
+      mockPlaceService.findPlaceById.mockReturnValue({
+        id: 'dest-minalungao',
+        name: 'Minalungao National Park',
+        category: 'nature_park',
+        latitude: 15.3012,
+        longitude: 121.0543,
+        municipality_name: 'General Tinio',
+      });
+
+      const planPromise = new Promise<Itinerary>((resolve) => {
+        service
+          .suggestItinerary({
+            destination: 'General Tinio',
+            start_date: '2026-11-10',
+            end_date: '2026-11-11',
+            daily_budget: 2500,
+            preferences: ['nature'],
+            anchor_place_id: 'dest-minalungao',
+          })
+          .subscribe(resolve);
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}/itineraries/suggest`);
+      req.error(new ProgressEvent('error'));
+
+      const plan = await planPromise;
+      expect(plan).toBeTruthy();
+      expect(plan.days[0].items[0].place_id).toBe('dest-minalungao');
+      expect(plan.days[0].items[0].custom_title).toBe('Minalungao National Park');
+    });
+
+    it('S-BUG-03: generates dynamic stops from matched destination without repeating places across days', async () => {
+      mockAuthService.isAuthenticated.mockReturnValue(false);
+
+      const planPromise = new Promise<Itinerary>((resolve) => {
+        service
+          .suggestItinerary({
+            destination: 'Pantabangan',
+            start_date: '2026-11-10',
+            end_date: '2026-11-12',
+            daily_budget: 2500,
+            preferences: ['scenic', 'nature'],
+          })
+          .subscribe(resolve);
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}/itineraries/suggest`);
+      req.error(new ProgressEvent('error'));
+
+      const plan = await planPromise;
+      expect(plan).toBeTruthy();
+      expect(plan.days.length).toBe(3);
+      const day1PlaceIds = plan.days[0].items.map((i) => i.place_id);
+      const day2PlaceIds = plan.days[1].items.map((i) => i.place_id);
+      expect(day1PlaceIds).not.toEqual(day2PlaceIds);
+    });
+
+    it('S-BUG-04: short-circuits to offline suggested itinerary in 0ms when host is offline snapshot', async () => {
+      mockConnectivityService.isHostOfflineSnapshot = true;
+
+      const planPromise = new Promise<Itinerary>((resolve) => {
+        service
+          .suggestItinerary({
+            destination: 'Bongabon',
+            start_date: '2026-11-10',
+            end_date: '2026-11-11',
+            daily_budget: 2500,
+            preferences: ['food'],
+          })
+          .subscribe(resolve);
+      });
+
+      httpMock.expectNone(`${environment.apiBaseUrl}/itineraries/suggest`);
+      const plan = await planPromise;
+      expect(plan).toBeTruthy();
+      expect(plan.type).toBe('suggested');
+    });
+
+    it('C-BUG-06: hydrates place and custom_title on guest itinerary stops', async () => {
+      mockAuthService.isAuthenticated.mockReturnValue(false);
+      mockPlaceService.findPlaceById.mockReturnValue({
+        id: 'place-hydrated-1',
+        name: 'Camp Pangatian Memorial Shrine',
+        category: 'historic_site',
+        latitude: 15.4833,
+        longitude: 120.9667,
+        municipality_name: 'Cabanatuan City',
+      });
+
+      const rawGuest: GuestItinerary = {
+        id: 'guest-itin-1',
+        title: 'Guest Trip',
+        destination: 'Cabanatuan City',
+        start_date: '2026-11-10',
+        end_date: '2026-11-11',
+        daily_budget: 1500,
+        preferences: [],
+        type: 'custom',
+        assumptions: [],
+        created_at: '2026-11-06T00:00:00Z',
+        updated_at: '2026-11-06T00:00:00Z',
+        days: [
+          {
+            id: 'day-1',
+            day_number: 1,
+            travel_date: '2026-11-10',
+            title: 'Day 1',
+            items: [
+              {
+                id: 'item-1',
+                place_id: 'place-hydrated-1',
+                custom_title: undefined,
+                sort_order: 1,
+                place: null,
+              } as any,
+            ],
+          },
+        ],
+      };
+
+      mockGuestStorageService.getItineraries.mockResolvedValue([rawGuest]);
+
+      const planPromise = new Promise<Itinerary>((resolve) => {
+        service.getItineraryById('guest-itin-1').subscribe(resolve);
+      });
+
+      const plan = await planPromise;
+      expect(plan).toBeTruthy();
+      const item = plan.days[0].items[0];
+      expect(item.custom_title).toBe('Camp Pangatian Memorial Shrine');
+      expect(item.place).toBeTruthy();
+      expect(item.place?.name).toBe('Camp Pangatian Memorial Shrine');
+      expect(item.custom_lat).toBe(15.4833);
+      expect(item.custom_lng).toBe(120.9667);
     });
 
   });

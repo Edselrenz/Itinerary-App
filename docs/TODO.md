@@ -670,18 +670,18 @@ This checklist tracks completed, active, and pending tasks across all developmen
 ## Phase 29: Custom & Suggested Itinerary Workflow Remediation
 > Ref: [custom_and_suggested_itinerary_proposal.pdf](file:///c:/Users/Edward/Desktop/CaseStudy/custom_and_suggested_itinerary_proposal.pdf) & [CUSTOM_AND_SUGGESTED_ITINERARY_PROPOSAL.md](./CUSTOM_AND_SUGGESTED_ITINERARY_PROPOSAL.md)
 
-### Phase 29.1: P0 Data Integrity & Offline Engines (STAGED)
-- [ ] **29.1.1 (C-BUG-06: Custom Stop Metadata Retention in Guest Save)**:
+### Phase 29.1: P0 Data Integrity & Offline Engines (COMPLETED)
+- [x] **29.1.1 (C-BUG-06: Custom Stop Metadata Retention in Guest Save)**:
   - In `custom-builder.page.ts` (`BuilderStop` interface & `addPlaceStop`), retain full `place: Place` reference and set `custom_title: place.name`.
   - In `saveItinerary()`, serialize `place` object, `custom_title || it.name`, and coordinates `custom_lat/custom_lng` from `it.place`.
   - In `ItineraryService.mapGuestItinerary()`, hydrate stops with `place_id` against `PlaceService` to eliminate fallback to generic "Destination Stop" with ₱200 fabricated fee.
-- [ ] **29.1.2 (S-BUG-03: Wire matchedPool in Offline Suggested Generator)**:
+- [x] **29.1.2 (S-BUG-03: Wire matchedPool in Offline Suggested Generator)**:
   - In `itinerary.service.ts` (`generateOfflineSuggestedItinerary`), connect `matchedPool` (filtered by municipality, budget, and Haversine proximity) to `dayPlaces` instead of discarding it and falling back to Bongabon `curatedPool[0..2]`.
-- [ ] **29.1.3 (S-BUG-04: 0ms Immediate Offline Short-Circuit)**:
+- [x] **29.1.3 (S-BUG-04: 0ms Immediate Offline Short-Circuit)**:
   - Inject `ConnectivityService` into `ItineraryService.suggestItinerary()`; if `isHostOfflineSnapshot` or `!navigator.onLine`, invoke `generateOfflineSuggestedItinerary()` immediately without waiting for the 4-second HTTP timeout.
-- [ ] **29.1.4 (S-BUG-02: Enforce Local ISO Date Helpers in Suggested Wizard)**:
+- [x] **29.1.4 (S-BUG-02: Enforce Local ISO Date Helpers in Suggested Wizard)**:
   - Replace UTC `new Date(str).toISOString()` in `SuggestedWizardPage.openDatePicker()` and `setPresetDuration()` with `parseLocalIsoDate()` / `toLocalIsoDate()` to prevent UTC+8 off-by-one shifts.
-- [ ] **29.1.5 (S-BUG-01: Anchor placeId in Suggested Deep-Link)**:
+- [x] **29.1.5 (S-BUG-01: Anchor placeId in Suggested Deep-Link)**:
   - In `SuggestedWizardPage.ngOnInit()`, read `params['placeId']` and lock the selected POI as Stop 1 of Day 1 in the generated itinerary request.
 
 ### Phase 29.2: P1 Form, Browse & Date Sync (STAGED)

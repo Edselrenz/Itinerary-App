@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, catchError, from, map, of, switchMap, tap, throwError, timeout } from 'rxjs';
 import { addDaysLocal, diffDaysLocal, parseLocalIsoDate, toLocalIsoDate } from '../utils/date.utils';
@@ -23,6 +23,8 @@ import {
 import { encodePolyline, haversineDistanceMeters } from '../utils/polyline.util';
 import { AuthService } from './auth.service';
 import { GuestItinerary, GuestStorageService } from './guest-storage.service';
+import { ConnectivityService } from './connectivity.service';
+import { PlaceService } from './place.service';
 
 export { ItineraryBudgetSummary } from '../models/itinerary.models';
 
@@ -30,6 +32,9 @@ export { ItineraryBudgetSummary } from '../models/itinerary.models';
   providedIn: 'root',
 })
 export class ItineraryService {
+  private connectivityService = inject(ConnectivityService, { optional: true });
+  private placeService = inject(PlaceService, { optional: true });
+
   private get baseUrl(): string {
     return `${environment.apiBaseUrl}/itineraries`;
   }
@@ -279,9 +284,24 @@ export class ItineraryService {
 
   /**
    * Generates a suggested itinerary using deterministic clustering and transparent assumptions.
-   * If in guest mode (e.g. static GitHub Pages), immediately generates locally for instant response.
+   * If in guest mode or host offline, immediately generates locally for instant response (S-BUG-04).
    */
   public suggestItinerary(request: SuggestedItineraryRequest): Observable<Itinerary> {
+    const isOffline =
+      (typeof navigator !== 'undefined' && !navigator.onLine) ||
+      Boolean(this.connectivityService?.isHostOfflineSnapshot);
+
+    if (isOffline) {
+      return from(this.generateOfflineSuggestedItinerary(request)).pipe(
+        tap((plan) => {
+          if (request.save_immediately) {
+            this.guestStorage.saveItinerary(plan as unknown as GuestItinerary);
+            this.replaceInSubject(plan);
+          }
+        })
+      );
+    }
+
     return this.http.post<Itinerary>(`${this.baseUrl}/suggest`, request).pipe(
       timeout(4000),
       tap((plan) => {
@@ -369,21 +389,31 @@ export class ItineraryService {
     const itineraryId = this.generateId();
     const days: ItineraryDay[] = (payload.days || []).map((d, dIdx) => {
       const dayId = this.generateId();
-      const items: ItineraryItem[] = (d.items || []).map((it, itIdx) => ({
-        id: this.generateId(),
-        day_id: dayId,
-        place_id: it.place_id,
-        custom_title: it.custom_title,
-        custom_lat: it.custom_lat,
-        custom_lng: it.custom_lng,
-        sort_order: it.sort_order ?? itIdx + 1,
-        planned_time: it.planned_time,
-        duration_minutes: it.duration_minutes ?? 90,
-        notes: it.notes,
-        estimated_cost_min: it.estimated_cost_min,
-        estimated_cost_max: it.estimated_cost_max,
-        place: it.place || null,
-      }));
+      const items: ItineraryItem[] = (d.items || []).map((it, itIdx) => {
+        let itemPlace = it.place;
+        if (!itemPlace && it.place_id && this.placeService) {
+          itemPlace = this.placeService.findPlaceById(it.place_id) || null;
+        }
+        const title = it.custom_title || (it as any).name || itemPlace?.name || 'Destination Stop';
+        const lat = it.custom_lat ?? itemPlace?.latitude ?? null;
+        const lng = it.custom_lng ?? itemPlace?.longitude ?? null;
+
+        return {
+          id: this.generateId(),
+          day_id: dayId,
+          place_id: it.place_id,
+          custom_title: title,
+          custom_lat: lat,
+          custom_lng: lng,
+          sort_order: it.sort_order ?? itIdx + 1,
+          planned_time: it.planned_time,
+          duration_minutes: it.duration_minutes ?? 90,
+          notes: it.notes,
+          estimated_cost_min: it.estimated_cost_min,
+          estimated_cost_max: it.estimated_cost_max,
+          place: itemPlace || null,
+        };
+      });
 
       return {
         id: dayId,
@@ -653,21 +683,31 @@ export class ItineraryService {
         day_number: d.day_number ?? idx + 1,
         travel_date: d.travel_date || g.start_date,
         title: d.title,
-        items: (d.items || []).map((it: any, itIdx: number) => ({
-          id: it.id || `item-${itIdx + 1}`,
-          day_id: d.id || `day-${idx + 1}`,
-          place_id: it.place_id,
-          custom_title: it.custom_title,
-          custom_lat: it.custom_lat,
-          custom_lng: it.custom_lng,
-          sort_order: it.sort_order ?? itIdx + 1,
-          planned_time: it.planned_time,
-          duration_minutes: it.duration_minutes ?? 90,
-          notes: it.notes,
-          estimated_cost_min: it.estimated_cost_min,
-          estimated_cost_max: it.estimated_cost_max,
-          place: it.place,
-        })),
+        items: (d.items || []).map((it: any, itIdx: number) => {
+          let itemPlace = it.place;
+          if (!itemPlace && it.place_id && this.placeService) {
+            itemPlace = this.placeService.findPlaceById(it.place_id) || null;
+          }
+          const title = it.custom_title || it.name || itemPlace?.name || 'Destination Stop';
+          const lat = it.custom_lat ?? itemPlace?.latitude ?? null;
+          const lng = it.custom_lng ?? itemPlace?.longitude ?? null;
+
+          return {
+            id: it.id || `item-${itIdx + 1}`,
+            day_id: d.id || `day-${idx + 1}`,
+            place_id: it.place_id,
+            custom_title: title,
+            custom_lat: lat,
+            custom_lng: lng,
+            sort_order: it.sort_order ?? itIdx + 1,
+            planned_time: it.planned_time,
+            duration_minutes: it.duration_minutes ?? 90,
+            notes: it.notes,
+            estimated_cost_min: it.estimated_cost_min,
+            estimated_cost_max: it.estimated_cost_max,
+            place: itemPlace || null,
+          };
+        }),
       })),
     };
   }
@@ -742,37 +782,123 @@ export class ItineraryService {
   private async generateOfflineSuggestedItinerary(
     request: SuggestedItineraryRequest
   ): Promise<Itinerary> {
-    const totalDays = diffDaysLocal(request.start_date, request.end_date);
+    const totalDays = Math.max(1, diffDaysLocal(request.start_date, request.end_date));
     const start = parseLocalIsoDate(request.start_date);
 
     // Canonical curated offline places dataset (DEF-05)
     const curatedPool: OfflineCuratedPlace[] = getOfflineCuratedPoolForItinerary();
 
+    // Augment with loaded OSM places if PlaceService is available
+    if (this.placeService) {
+      const loaded = this.placeService.getLoadedPlaces();
+      for (const lp of loaded) {
+        if (!curatedPool.some((cp) => cp.id === lp.id)) {
+          curatedPool.push({
+            id: lp.id,
+            name: lp.name,
+            category: this.placeService.formatCategoryName(lp.category),
+            categoryKey: lp.category,
+            municipality: lp.municipality_name || 'Nueva Ecija',
+            lat: lp.latitude,
+            lng: lp.longitude,
+            image: lp.image_url || 'assets/images/placeholder.png',
+            description: lp.description || `${lp.name} in ${lp.municipality_name || 'Nueva Ecija'}`,
+            tags: lp.tags || [],
+            directionsUrl: lp.directions_url || `https://www.google.com/maps/dir/?api=1&destination=${lp.latitude},${lp.longitude}`,
+            openingHours: lp.opening_hours || null,
+            min: lp.estimated_cost_min ?? null,
+            max: lp.estimated_cost_max ?? null,
+            time: '10:00 AM - 12:00 PM',
+            dur: 120,
+          });
+        }
+      }
+    }
+
     const targetDest = (request.destination || '').toLowerCase().trim();
     const prefs = (request.preferences || []).map((p) => p.toLowerCase());
+    const dailyBudget = request.daily_budget && request.daily_budget > 0 ? request.daily_budget : null;
 
-    // Dynamically filter or prioritize pool based on destination municipality and category preferences (CR-009)
-    let matchedPool = curatedPool;
-    if (targetDest && !targetDest.includes('nueva ecija')) {
-      const muniMatches = curatedPool.filter((p) => p.municipality.toLowerCase().includes(targetDest));
+    // Anchor place lookup (S-BUG-01)
+    let anchorPlace: OfflineCuratedPlace | null = null;
+    if (request.anchor_place_id) {
+      anchorPlace = curatedPool.find((p) => p.id === request.anchor_place_id) || null;
+      if (!anchorPlace && this.placeService) {
+        const p = this.placeService.findPlaceById(request.anchor_place_id);
+        if (p) {
+          anchorPlace = {
+            id: p.id,
+            name: p.name,
+            category: this.placeService.formatCategoryName(p.category),
+            categoryKey: p.category,
+            municipality: p.municipality_name || 'Nueva Ecija',
+            lat: p.latitude,
+            lng: p.longitude,
+            image: p.image_url || 'assets/images/placeholder.png',
+            description: p.description || '',
+            tags: p.tags || [],
+            directionsUrl: p.directions_url || `https://www.google.com/maps/dir/?api=1&destination=${p.latitude},${p.longitude}`,
+            openingHours: p.opening_hours || null,
+            min: p.estimated_cost_min ?? null,
+            max: p.estimated_cost_max ?? null,
+            time: '09:00 AM - 11:00 AM',
+            dur: 120,
+          };
+          curatedPool.unshift(anchorPlace);
+        }
+      }
+    }
+
+    // Filter & score pool based on destination municipality and category preferences (CR-009, S-BUG-03)
+    let matchedPool = [...curatedPool];
+    const isTargetingSpecificMuni = Boolean(
+      targetDest &&
+      !targetDest.includes('nueva ecija') &&
+      !targetDest.includes('province')
+    );
+
+    if (isTargetingSpecificMuni) {
+      const muniMatches = curatedPool.filter((p) =>
+        p.municipality.toLowerCase().includes(targetDest)
+      );
       if (muniMatches.length > 0) {
         matchedPool = muniMatches;
       }
     }
 
-    if (prefs.length > 0) {
-      matchedPool = [...matchedPool].sort((a: OfflineCuratedPlace, b: OfflineCuratedPlace) => {
-        const aMatches = prefs.some(
-          (pr: string) => a.categoryKey.toLowerCase().includes(pr) || a.tags.some((t: string) => t.toLowerCase().includes(pr))
-        ) ? 1 : 0;
-        const bMatches = prefs.some(
-          (pr: string) => b.categoryKey.toLowerCase().includes(pr) || b.tags.some((t: string) => t.toLowerCase().includes(pr))
-        ) ? 1 : 0;
-        return bMatches - aMatches;
-      });
-    }
+    // Sort by preferences and budget
+    matchedPool.sort((a, b) => {
+      let aScore = 0;
+      let bScore = 0;
 
-    const isProvincialOrBongabon = !targetDest || targetDest.includes('nueva') || targetDest.includes('ecija') || targetDest.includes('bongabon');
+      if (isTargetingSpecificMuni) {
+        if (a.municipality.toLowerCase().includes(targetDest)) aScore += 10;
+        if (b.municipality.toLowerCase().includes(targetDest)) bScore += 10;
+      }
+
+      if (prefs.length > 0) {
+        for (const pr of prefs) {
+          if (a.categoryKey.toLowerCase().includes(pr) || a.tags.some((t) => t.toLowerCase().includes(pr))) {
+            aScore += 5;
+          }
+          if (b.categoryKey.toLowerCase().includes(pr) || b.tags.some((t) => t.toLowerCase().includes(pr))) {
+            bScore += 5;
+          }
+        }
+      }
+
+      if (dailyBudget) {
+        if ((a.min ?? 0) <= dailyBudget) aScore += 2;
+        if ((b.min ?? 0) <= dailyBudget) bScore += 2;
+      }
+
+      return bScore - aScore;
+    });
+
+    const isExplicitBongabonPreset =
+      !anchorPlace &&
+      targetDest.includes('bongabon') &&
+      prefs.length <= 2;
 
     // Clustered day-by-day presets from canonical dataset (DEF-03, DEF-05)
     const dayClusterPresets = getOfflineDayClusterPresets(curatedPool);
@@ -780,6 +906,7 @@ export class ItineraryService {
     const itineraryId = this.generateId();
     const days: ItineraryDay[] = [];
     const now = new Date().toISOString();
+    const usedPlaceIds = new Set<string>();
 
     for (let d = 0; d < totalDays; d++) {
       const dayDate = addDaysLocal(start, d);
@@ -787,29 +914,64 @@ export class ItineraryService {
       const dayId = this.generateId();
       const items: ItineraryItem[] = [];
 
-      let dayPlaces: OfflineCuratedPlace[];
-      const cluster = isProvincialOrBongabon
+      let dayPlaces: OfflineCuratedPlace[] = [];
+      const cluster = isExplicitBongabonPreset
         ? dayClusterPresets[d % dayClusterPresets.length]
         : null;
 
       if (cluster) {
-        dayPlaces = cluster.places;
+        dayPlaces = [...cluster.places];
       } else {
-        // Respect target destination matchedPool (CR-009, DEF-05)
-        const poolSize = matchedPool.length;
-        if (poolSize >= 3) {
-          const startIdx = (d * 3) % poolSize;
-          dayPlaces = [
-            matchedPool[startIdx],
-            matchedPool[(startIdx + 1) % poolSize],
-            matchedPool[(startIdx + 2) % poolSize],
-          ];
-        } else {
-          dayPlaces = [...matchedPool];
-          for (const cp of curatedPool) {
-            if (dayPlaces.length >= 3) break;
-            if (!dayPlaces.some((p) => p.id === cp.id)) {
-              dayPlaces.push(cp);
+        // Dynamic assignment preventing cross-day repetition
+        if (d === 0 && anchorPlace) {
+          dayPlaces.push(anchorPlace);
+          usedPlaceIds.add(anchorPlace.id);
+        }
+
+        // Find unused candidates from matchedPool
+        let candidates = matchedPool.filter((p) => !usedPlaceIds.has(p.id));
+        if (candidates.length < 3) {
+          // Fill from general curatedPool
+          const extra = curatedPool.filter(
+            (p) => !usedPlaceIds.has(p.id) && !candidates.some((c) => c.id === p.id)
+          );
+          candidates = [...candidates, ...extra];
+        }
+
+        // If pool is completely exhausted, recycle from matchedPool
+        if (candidates.length < 3) {
+          candidates = [...candidates, ...matchedPool.filter((p) => !candidates.some((c) => c.id === p.id))];
+        }
+
+        // Add places up to 3 stops per day
+        while (dayPlaces.length < 3 && candidates.length > 0) {
+          const next = candidates.shift()!;
+          if (!dayPlaces.some((p) => p.id === next.id)) {
+            dayPlaces.push(next);
+            usedPlaceIds.add(next.id);
+          }
+        }
+      }
+
+      // Check daily budget and substitute if exceeding daily_budget (only during dynamic generation)
+      if (!cluster && dailyBudget && dayPlaces.length > 0) {
+        const currentDayMinCost = dayPlaces.reduce((sum, p) => sum + (p.min ?? 0), 0);
+        if (currentDayMinCost > dailyBudget) {
+          // Try to find a free/cheaper alternative for the most expensive non-anchor place
+          const nonAnchorPlaces = dayPlaces.filter((p) => !anchorPlace || p.id !== anchorPlace.id);
+          if (nonAnchorPlaces.length > 0) {
+            nonAnchorPlaces.sort((a, b) => (b.min ?? 0) - (a.min ?? 0));
+            const mostExp = nonAnchorPlaces[0];
+            const cheapReplacements = curatedPool.filter(
+              (p) => !usedPlaceIds.has(p.id) && !dayPlaces.some((dp) => dp.id === p.id) && (p.min ?? 0) < (mostExp.min ?? 0)
+            );
+            if (cheapReplacements.length > 0) {
+              const repIdx = dayPlaces.findIndex((p) => p.id === mostExp.id);
+              if (repIdx >= 0) {
+                usedPlaceIds.delete(mostExp.id);
+                dayPlaces[repIdx] = cheapReplacements[0];
+                usedPlaceIds.add(cheapReplacements[0].id);
+              }
             }
           }
         }
@@ -819,14 +981,21 @@ export class ItineraryService {
         const place = dayPlaces[s];
         if (!place) continue;
 
+        let plannedTime = place.time;
+        if (!plannedTime) {
+          if (s === 0) plannedTime = '09:00 AM - 11:30 AM';
+          else if (s === 1) plannedTime = '12:30 PM - 02:30 PM';
+          else plannedTime = '04:00 PM - 06:30 PM';
+        }
+
         items.push({
           id: this.generateId(),
           day_id: dayId,
           place_id: place.id,
           custom_title: place.name,
           sort_order: s + 1,
-          planned_time: place.time,
-          duration_minutes: place.dur,
+          planned_time: plannedTime,
+          duration_minutes: place.dur || 120,
           notes: `Recommended based on local popularity and cluster proximity in ${place.municipality}.`,
           estimated_cost_min: place.min,
           estimated_cost_max: place.max,

@@ -137,6 +137,7 @@ export class SuggestedWizardPage implements OnInit {
   public isStopModalOpen = false;
   public selectedStop: ItineraryItem | null = null;
   public isAssumptionsExpanded = false;
+  public anchorPlaceId?: string;
 
   constructor(
     private fb: FormBuilder,
@@ -198,6 +199,13 @@ export class SuggestedWizardPage implements OnInit {
       if (params['destination']) {
         this.setDestination(params['destination']);
       }
+      if (params['placeId']) {
+        this.anchorPlaceId = params['placeId'];
+        const p = this.placeService.findPlaceById(params['placeId']);
+        if (p?.municipality_name && (!params['destination'] || this.form.get('destination')?.value === 'Nueva Ecija')) {
+          this.setDestination(p.municipality_name);
+        }
+      }
     });
   }
 
@@ -230,9 +238,8 @@ export class SuggestedWizardPage implements OnInit {
     if (currentEnd) {
       this.popupEndDate = currentEnd;
     } else {
-      const end = new Date(this.popupStartDate);
-      end.setDate(end.getDate() + 2);
-      this.popupEndDate = end.toISOString().split('T')[0];
+      const start = parseLocalIsoDate(this.popupStartDate);
+      this.popupEndDate = toLocalIsoDate(addDaysLocal(start, 2));
     }
     this.isDatePickerOpen = true;
   }
@@ -247,16 +254,15 @@ export class SuggestedWizardPage implements OnInit {
     }
   }
 
-    public isPresetActive(days: number): boolean {
+  public isPresetActive(days: number): boolean {
     return this.tempTripSummary.isValid && this.tempTripSummary.days === days;
   }
 
   public setPresetDuration(days: number): void {
-    const start = this.popupStartDate ? new Date(this.popupStartDate) : new Date();
-    this.popupStartDate = start.toISOString().split('T')[0];
-    const end = new Date(start);
-    end.setDate(end.getDate() + Math.max(0, days - 1));
-    this.popupEndDate = end.toISOString().split('T')[0];
+    const start = this.popupStartDate ? parseLocalIsoDate(this.popupStartDate) : new Date();
+    this.popupStartDate = toLocalIsoDate(start);
+    const end = addDaysLocal(start, Math.max(0, days - 1));
+    this.popupEndDate = toLocalIsoDate(end);
   }
 
   public applyDatePicker(): void {
@@ -360,6 +366,7 @@ export class SuggestedWizardPage implements OnInit {
       travel_mode: this.travelMode,
       min_rating: this.minRating > 0 ? this.minRating : undefined,
       include_live_places: true,
+      anchor_place_id: this.anchorPlaceId,
     };
 
     this.itineraryService.suggestItinerary(req).subscribe({

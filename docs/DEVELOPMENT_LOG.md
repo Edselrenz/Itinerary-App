@@ -2861,3 +2861,49 @@ This log records chronological development sessions, detailing objectives, execu
   - `docs/DEVELOPMENT_LOG.md` (Modified)
 - **Status**: Documented & Staged for Phased Implementation (Phase 29).
 
+---
+
+## Session 80: Phase 29.1 Implementation - P0 Data Integrity & Offline Engines
+- **Date & Time**: 2026-11-06 17:45:00 (Local)
+- **Objective**: Implement Phase 29.1 deliverables: fix critical data integrity bug `C-BUG-06` (stop title/coords/place persistence in Guest mode), offline suggested itinerary bug `S-BUG-03` (wire matchedPool, budget filtering, and no cross-day venue repetition), `S-BUG-04` (0ms immediate offline short-circuit), `S-BUG-02` (local ISO date helpers in date modal), and `S-BUG-01` (anchor placeId deep-linking), achieving 100% test pass rate across unit tests and backend pytest.
+- **Tasks Performed**:
+  - **`C-BUG-06` (Custom Stop Metadata Retention in Guest Save)**:
+    - Added `place?: Place | null` to `BuilderStop` in `custom-builder.page.ts`.
+    - Updated `addPlaceStop()` to retain `place`, `custom_title: place.name`, `custom_lat: place.latitude`, `custom_lng: place.longitude`.
+    - Updated `saveItinerary()` to serialize `custom_title: it.custom_title || it.name`, `custom_lat: it.custom_lat ?? it.place?.latitude ?? null`, `custom_lng: it.custom_lng ?? it.place?.longitude ?? null`, and `place: it.place || null`.
+    - Added synchronous lookups `findPlaceById()` and `getLoadedPlaces()` in `PlaceService`.
+    - In `ItineraryService.createGuestItinerary()` and `mapGuestItinerary()`, hydrated stops with `place_id` against `PlaceService.findPlaceById()` and guaranteed `custom_title: it.custom_title || it.name || itemPlace?.name || 'Destination Stop'`.
+  - **`S-BUG-03` (Wire matchedPool & Prevent Day Duplication in Offline Suggested Generator)**:
+    - Augmented curated pool with loaded OSM places from `PlaceService`.
+    - Dynamically filtered and prioritized `matchedPool` based on destination municipality and user category preferences.
+    - Added `usedPlaceIds` tracking to ensure dynamic stops are not duplicated across days.
+    - Added daily budget cost checking to dynamically substitute over-budget items with budget-friendly alternatives from the pool.
+  - **`S-BUG-04` (0ms Immediate Offline Short-Circuit)**:
+    - Added `isHostOfflineSnapshot` getter to `ConnectivityService`.
+    - Injected `ConnectivityService` into `ItineraryService.suggestItinerary()`; if `!navigator.onLine` or `isHostOfflineSnapshot`, immediately generated the itinerary locally in 0ms without waiting for the 4-second HTTP timeout.
+  - **`S-BUG-02` (Local ISO Date Helpers in Suggested Wizard)**:
+    - In `SuggestedWizardPage.openDatePicker()` and `setPresetDuration()`, replaced `new Date(str).toISOString()` with `parseLocalIsoDate()`, `toLocalIsoDate()`, and `addDaysLocal()` to eliminate timezone drift in UTC+8.
+  - **`S-BUG-01` (Anchor placeId Deep-Link)**:
+    - Added `anchor_place_id?: string;` to `SuggestedItineraryRequest`.
+    - Updated `SuggestedWizardPage.ngOnInit()` to read `params['placeId']` and store `this.anchorPlaceId`, syncing destination municipality if needed.
+    - Passed `anchor_place_id` in `SuggestedWizardPage.generateItinerary()`.
+    - In `ItineraryService.generateOfflineSuggestedItinerary()`, placed the anchor POI as Stop 1 of Day 1.
+  - **Automated Verification**:
+    - Authored 4 new comprehensive unit tests in `itinerary.service.spec.ts` covering `S-BUG-01`, `S-BUG-03`, `S-BUG-04`, and `C-BUG-06`.
+    - Vitest unit tests: **256/256 passed [100%]** across 26 suites (0 failures).
+    - Backend Pytest: **21/21 passed [100%]** in 9.92s.
+    - Production build: `npm --prefix Project run build` completed with code 0 (1.09 MB bundle, 0 budget errors).
+- **Files Modified**:
+  - `Project/src/app/core/models/itinerary.models.ts`
+  - `Project/src/app/core/services/connectivity.service.ts`
+  - `Project/src/app/core/services/place.service.ts`
+  - `Project/src/app/core/services/itinerary.service.ts`
+  - `Project/src/app/core/services/itinerary.service.spec.ts`
+  - `Project/src/app/features/itinerary/custom-builder/custom-builder.page.ts`
+  - `Project/src/app/features/itinerary/suggested-wizard/suggested-wizard.page.ts`
+  - `docs/TODO.md`
+  - `docs/KNOWN_ISSUES.md`
+  - `docs/DEVELOPMENT_LOG.md`
+- **Status**: Completed Phase 29.1; Staged for Phase 29.2.
+
+

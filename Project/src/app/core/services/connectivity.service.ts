@@ -28,6 +28,10 @@ export class ConnectivityService {
 
   public isHostOffline$: Observable<boolean> = this.isHostOfflineSubject.asObservable();
 
+  public get isHostOfflineSnapshot(): boolean {
+    return this.isHostOfflineSubject.value;
+  }
+
   private isCheckingHealthSubject = new BehaviorSubject<boolean>(false);
 
   public isCheckingHealth$: Observable<boolean> = this.isCheckingHealthSubject.asObservable();

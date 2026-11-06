@@ -148,6 +148,7 @@ export interface SuggestedItineraryRequest {
   travel_mode?: TravelMode | string;
   min_rating?: number;
   include_live_places?: boolean;
+  anchor_place_id?: string;
 }
 
 export interface RouteComputeRequest {
