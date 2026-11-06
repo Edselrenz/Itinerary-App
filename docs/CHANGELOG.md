@@ -8,6 +8,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-11-06
+### Added
+- **Reusable Standalone Itinerary Route Map Component (ROUTE-01 / 27.2.1 & 27.2.2)**:
+  - Created `ItineraryRouteMapComponent` (`Project/src/app/shared/components/itinerary-route-map/`) rendering numbered stop pins, decoded road polylines, and offline geodesic spline arcs (`generateGeodesicArc`).
+  - Added interactive "Full Map" action button deep-linking to `/tabs/map?followRoute=true&dayNumber={d}&itineraryId={id}`.
+  - Embedded into `ItineraryDetailPage`, `SuggestedWizardPage` (Step 2 Preview), and `CustomBuilderPage` (Timeline view).
+  - Emits `stopSelected` to trigger the place detail sheet directly from map markers.
+- **Stop Detail Sheet Parity (UIUX-11 / 28.3.1)**:
+  - Ensured `<app-place-detail-sheet>` reflects stop prices by forwarding `estimated_cost_min` and `estimated_cost_max` from `ItineraryItem` onto `selectedStopPlace`.
+  - Added WCAG 2.2 accessible focus-ring styling (`:focus-visible`) on `.sheet-close-btn`.
+  - Added unit test in `place-detail-sheet.component.spec.ts` asserting `aria-label="Close details"`.
+
+### Changed
+- **Leaflet Preview Map Deduplication & Style Budget Optimization**:
+  - Replaced duplicate Leaflet rendering code in `ItineraryDetailPage` with `<app-itinerary-route-map>`.
+  - Removed legacy `.day-route-preview-wrap` styles from `itinerary-detail.page.scss`, keeping component stylesheet size well under the 16.00 kB limit.
+
+
 ## [0.23.0] - 2026-11-06
 ### Added
 - **True GPS Locate Me & Province Reset Controls (ROUTE-04 / 27.3.3)**:

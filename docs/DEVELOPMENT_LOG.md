@@ -2750,3 +2750,46 @@ This log records chronological development sessions, detailing objectives, execu
   - `Project/src/app/tabs/map/map.page.spec.ts`
   - `docs/TODO.md`
   - `docs/DEVELOPMENT_LOG.md`
+
+## Session 77: Phase 27.2 Reusable Route Map Component, Multi-Stop Visualization & Phase 28.3 Place Detail Parity
+- **Date**: 2026-11-06
+- **Objective**: Complete remaining deliverables of Phase 27 (Map & Routing Architecture Overhaul) and Phase 28 (UI/UX Alignment), specifically ROUTE-01 (reusable standalone `ItineraryRouteMapComponent` rendering numbered pins, decoded polylines, and geodesic spline offline fallbacks) and UIUX-11 / 28.3.1 (Stop Detail Sheet parity and WCAG 2.2 accessibility) with 100% test pass rate across backend pytest, frontend vitest, Angular production build, and Playwright E2E browser tests.
+- **Architectural Changes & Implementation Details**:
+  - **1. ROUTE-01 / 27.2.1 & 27.2.2 (Reusable ItineraryRouteMapComponent)**:
+    - Created `Project/src/app/shared/components/itinerary-route-map/itinerary-route-map.component.ts`, `.html`, `.scss`, and `.spec.ts`.
+    - Implemented numbered circular pins (`.preview-stop-pin`) with accessibility labels (`aria-label="Stop {n}: {title}"`) and marker click events emitting `stopSelected`.
+    - Implemented route line visualization: decodes `route_polyline_from_prev` using `decodePolyline` when present; falls back seamlessly to offline Catmull-Rom curved geodesic splines via `generateGeodesicArc(start, end)`.
+    - Added bounds fitting via Leaflet `map.fitBounds()` with padding when multiple coordinates exist, or centering on single stops.
+    - Added collapsible container support (`isCollapsible`) with `toggleExpand()` calling `map.invalidateSize()`.
+    - Added "Full Map" action button deep-linking to `/tabs/map?followRoute=true&dayNumber={d}&itineraryId={id}`.
+  - **2. Component Reuse Across Itinerary Workflows**:
+    - **Saved Itinerary Detail (`ItineraryDetailPage`)**: Replaced duplicate embedded Leaflet map logic and inline CSS in `itinerary-detail.page.html` with `<app-itinerary-route-map>`. Removed 48 lines of duplicate CSS from `itinerary-detail.page.scss`.
+    - **Suggested Wizard (`SuggestedWizardPage`)**: Embedded `<app-itinerary-route-map>` on Screen 2 (Preview) inside each active day section, with marker tap opening `openStopDetail()`.
+    - **Custom Itinerary Builder (`CustomBuilderPage`)**: Embedded `<app-itinerary-route-map>` on Timeline builder view with helper `getAsItineraryDay(builderDay)` adapting builder data models to `ItineraryDay`.
+  - **3. UIUX-11 / 28.3.1 (Place Detail Sheet Parity & WCAG 2.2 Compliance)**:
+    - In `Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.ts` and `suggested-wizard.page.ts`, forwarded `estimated_cost_min` and `estimated_cost_max` onto `selectedStopPlace` so bottom sheets reflect verified itinerary costs rather than displaying "Price not listed".
+    - In `Project/src/app/shared/components/place-detail-sheet/place-detail-sheet.component.scss`, added `:focus-visible` styling with 2px brand outline and 2px offset on `.sheet-close-btn` for WCAG 2.2 keyboard navigation compliance.
+    - In `Project/src/app/shared/components/place-detail-sheet/place-detail-sheet.component.spec.ts`, added unit test asserting `aria-label="Close details"` exists on close button.
+- **Verification & Test Results**:
+  - `python -m pytest backend/tests`: **21 passed in 9.13s [100%]**.
+  - `npm --prefix Project run test:unit`: **26 test files passed, 252 tests passed [100%]**.
+  - `npm --prefix Project run build`: **Application bundle generation complete with 0 errors and 0 warnings**.
+  - `npm --prefix Project run test:e2e`: **8 Playwright E2E browser tests passed in 18.2s [100%]**.
+- **Files Modified / Created**:
+  - `Project/src/app/core/utils/polyline.util.ts`
+  - `Project/src/app/shared/components/itinerary-route-map/itinerary-route-map.component.ts`
+  - `Project/src/app/shared/components/itinerary-route-map/itinerary-route-map.component.html`
+  - `Project/src/app/shared/components/itinerary-route-map/itinerary-route-map.component.scss`
+  - `Project/src/app/shared/components/itinerary-route-map/itinerary-route-map.component.spec.ts`
+  - `Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.html`
+  - `Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.ts`
+  - `Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.scss`
+  - `Project/src/app/features/itinerary/suggested-wizard/suggested-wizard.page.html`
+  - `Project/src/app/features/itinerary/suggested-wizard/suggested-wizard.page.ts`
+  - `Project/src/app/features/itinerary/custom-builder/custom-builder.page.html`
+  - `Project/src/app/features/itinerary/custom-builder/custom-builder.page.ts`
+  - `Project/src/app/shared/components/place-detail-sheet/place-detail-sheet.component.scss`
+  - `Project/src/app/shared/components/place-detail-sheet/place-detail-sheet.component.spec.ts`
+  - `docs/TODO.md`
+  - `docs/CHANGELOG.md`
+  - `docs/DEVELOPMENT_LOG.md`

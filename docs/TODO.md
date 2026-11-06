@@ -585,12 +585,12 @@ This checklist tracks completed, active, and pending tasks across all developmen
   - Ensure verified coordinates on `NearbyPlaceItem` in `itinerary-detail.page.ts` and `suggested-wizard.page.ts`, removing hardcoded `15.63, 121.14` fallback.
   - Persist added nearby stops via `this.itineraryService.updateItinerary()` so changes survive page refresh.
 
-### Phase 27.2: Reusable Route Map & Multi-Stop Waypoints (Days 2–3)
-- [ ] **27.2.1 (ROUTE-01: Shared ItineraryRouteMapComponent)**:
+### Phase 27.2: Reusable Route Map & Multi-Stop Waypoints (Days 2–3) (COMPLETED)
+- [x] **27.2.1 (ROUTE-01: Shared ItineraryRouteMapComponent)**:
   - Create reusable standalone component `ItineraryRouteMapComponent` rendering numbered pins, connecting polylines, and bounds fitting.
   - Embed into `ItineraryDetailPage`, `SuggestedWizardPage` (Step 2), and `CustomBuilderPage` (Timeline view).
-  - Add "Open Full Route on Map" action deep-linking to `/tabs/map?itineraryId={id}&day={dayNumber}`.
-- [ ] **27.2.2 (ROUTE-01: Road Polylines & Geodesic Spline Fallback)**:
+  - Add "Open Full Route on Map" action deep-linking to `/tabs/map?followRoute=true&dayNumber={d}&itineraryId={id}`.
+- [x] **27.2.2 (ROUTE-01: Road Polylines & Geodesic Spline Fallback)**:
   - Integrate OSRM public routing API with local IndexedDB caching and 2.5s timeout.
   - Implement offline fallback rendering dashed Catmull-Rom geodesic spline arcs with road-winding multiplier ($1.28 \times$ lowlands, $1.45 \times$ mountains).
 - [x] **27.2.3 (ROUTE-01: Multi-Stop Google Maps URL Builder)**:
@@ -649,8 +649,8 @@ This checklist tracks completed, active, and pending tasks across all developmen
 - [x] **28.2.5 (UIUX-10: Un-hide Budget & Assumptions on Custom Trips)**:
   - Remove `[class.hidden-on-custom]` restrictions so custom itineraries with budget entries display the verified budget card and editable assumptions.
 
-### Phase 28.3: P2 Modals & Leg-Aware Commute Guidance
-- [ ] **28.3.1: Stop Detail Sheet Parity**:
+### Phase 28.3: P2 Modals & Leg-Aware Commute Guidance (COMPLETED)
+- [x] **28.3.1: Stop Detail Sheet Parity**:
   - Ensure `<app-place-detail-sheet>` displays hero photo, verified hours, price range, and WCAG 2.2 accessible close button across all calling contexts.
 - [x] **28.3.2: Leg-Aware Commute Guidance**:
   - Coordinate with Phase 27.3.5 to render leg-level commute advice for intra-town hops (walk/tricycle) vs. inter-town corridors.

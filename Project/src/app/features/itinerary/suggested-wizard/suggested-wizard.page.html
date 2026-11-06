@@ -304,6 +304,13 @@
         <p class="day-italic-sub">{{ getDaySubtitle(curDay) }}</p>
       </div>
 
+      <!-- Embedded Interactive Route Preview Map (Phase 27.2) -->
+      <app-itinerary-route-map
+        [day]="curDay"
+        [itineraryId]="generatedPlan.id"
+        (stopSelected)="openStopDetail($event)"
+      ></app-itinerary-route-map>
+
       <!-- Stop Cards List -->
       <div class="stop-cards-vertical-list">
         @for (stop of curDay.items; track stop.id; let sIdx = $index) {

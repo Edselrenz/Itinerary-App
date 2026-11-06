@@ -38,12 +38,13 @@ import {
   trashOutline,
 } from 'ionicons/icons';
 import { Subject, Subscription, debounceTime, distinctUntilChanged } from 'rxjs';
-import { Itinerary } from '../../../core/models/itinerary.models';
+import { Itinerary, ItineraryDay, ItineraryItem } from '../../../core/models/itinerary.models';
 import { addDaysLocal, diffDaysLocal, formatDateRange, parseLocalIsoDate, toLocalIsoDate } from '../../../core/utils/date.utils';
 import { Place } from '../../../core/models/place.models';
 import { ItineraryBudgetSummary, ItineraryService } from '../../../core/services/itinerary.service';
 import { PlaceService } from '../../../core/services/place.service';
 import { ComponentCanDeactivate } from '../../../core/guards/pending-changes.guard';
+import { ItineraryRouteMapComponent } from '../../../shared/components/itinerary-route-map/itinerary-route-map.component';
 
 export interface BuilderStop {
   id: string;
@@ -89,6 +90,7 @@ export interface BuilderDay {
     IonIcon,
     IonModal,
     IonSpinner,
+    ItineraryRouteMapComponent,
   ],
 })
 export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactivate {
@@ -854,6 +856,36 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
     }
     const itemWithMuni = day.items.find((it) => it.municipality && it.municipality !== 'Nueva Ecija');
     return itemWithMuni?.municipality || day.items[0]?.municipality || this.form.get('destination')?.value || 'Nueva Ecija';
+  }
+
+  public getAsItineraryDay(day: BuilderDay): ItineraryDay {
+    return {
+      id: day.id,
+      itinerary_id: this.itineraryId || 'draft',
+      day_number: day.day_number,
+      travel_date: day.travel_date,
+      title: day.title,
+      items: (day.items || []).map((it, idx) => ({
+        id: it.id,
+        day_id: day.id,
+        order: it.sort_order ?? idx,
+        custom_title: it.custom_title || it.name,
+        custom_lat: it.custom_lat,
+        custom_lng: it.custom_lng,
+        estimated_cost_min: it.estimated_cost_min,
+        estimated_cost_max: it.estimated_cost_max,
+        place: it.place_id
+          ? ({
+              id: it.place_id,
+              name: it.name,
+              municipality: it.municipality,
+              latitude: it.custom_lat ?? 0,
+              longitude: it.custom_lng ?? 0,
+              category: it.category,
+            } as unknown as Place)
+          : null,
+      } as unknown as ItineraryItem)),
+    };
   }
 
   public formatStopTiming(stop: BuilderStop): string {

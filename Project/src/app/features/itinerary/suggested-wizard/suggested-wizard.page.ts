@@ -52,6 +52,7 @@ import { ItineraryService } from '../../../core/services/itinerary.service';
 import { NearbyPlaceItem, PlaceService } from '../../../core/services/place.service';
 import { CommuteInfo, getCommuteInfoForMunicipality } from '../../../core/data/commute-guide.data';
 import { PlaceDetailSheetComponent } from '../../../shared/components/place-detail-sheet/place-detail-sheet.component';
+import { ItineraryRouteMapComponent } from '../../../shared/components/itinerary-route-map/itinerary-route-map.component';
 
 export interface PreferenceOption {
   key: string;
@@ -73,6 +74,7 @@ export interface PreferenceOption {
     IonIcon,
     IonSpinner,
     PlaceDetailSheetComponent,
+    ItineraryRouteMapComponent,
   ],
 })
 export class SuggestedWizardPage implements OnInit {
@@ -502,7 +504,14 @@ export class SuggestedWizardPage implements OnInit {
   public get selectedStopPlace(): Place | null {
     if (!this.selectedStop) return null;
     if (this.selectedStop.place) {
-      return this.selectedStop.place;
+      const p = { ...this.selectedStop.place };
+      if (p.estimated_cost_min == null && this.selectedStop.estimated_cost_min != null) {
+        p.estimated_cost_min = this.selectedStop.estimated_cost_min;
+      }
+      if (p.estimated_cost_max == null && this.selectedStop.estimated_cost_max != null) {
+        p.estimated_cost_max = this.selectedStop.estimated_cost_max;
+      }
+      return p;
     }
     return {
       id: this.selectedStop.place_id || `stop-${this.selectedStop.id}`,
@@ -512,6 +521,8 @@ export class SuggestedWizardPage implements OnInit {
       category: 'attraction',
       municipality_name: this.generatedPlan?.destination || 'Nueva Ecija',
       description: this.selectedStop.notes,
+      estimated_cost_min: this.selectedStop.estimated_cost_min,
+      estimated_cost_max: this.selectedStop.estimated_cost_max,
       is_featured: false,
       source_name: 'CustomStop',
       imported_at: new Date().toISOString(),

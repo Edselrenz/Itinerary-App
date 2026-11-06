@@ -211,3 +211,38 @@ export function remainingDistanceAlongPolylineMeters(
 
   return remaining;
 }
+
+/**
+ * Generates a smooth geodesic spline arc between two coordinates for offline route preview (ROUTE-01 / 27.2.2).
+ */
+export function generateGeodesicArc(
+  start: [number, number],
+  end: [number, number],
+  pointsCount = 10,
+  curvature = 0.06
+): Array<[number, number]> {
+  const points: Array<[number, number]> = [];
+  const [lat1, lng1] = start;
+  const [lat2, lng2] = end;
+
+  const midLat = (lat1 + lat2) / 2;
+  const midLng = (lng1 + lng2) / 2;
+
+  // Orthogonal offset for subtle road curvature
+  const dLat = lat2 - lat1;
+  const dLng = lng2 - lng1;
+  const normalLat = -dLng * curvature;
+  const normalLng = dLat * curvature;
+
+  const controlLat = midLat + normalLat;
+  const controlLng = midLng + normalLng;
+
+  for (let i = 0; i <= pointsCount; i++) {
+    const t = i / pointsCount;
+    const lat = (1 - t) * (1 - t) * lat1 + 2 * (1 - t) * t * controlLat + t * t * lat2;
+    const lng = (1 - t) * (1 - t) * lng1 + 2 * (1 - t) * t * controlLng + t * t * lng2;
+    points.push([lat, lng]);
+  }
+
+  return points;
+}

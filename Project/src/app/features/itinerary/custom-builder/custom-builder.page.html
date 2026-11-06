@@ -407,6 +407,13 @@
               }
             </div>
 
+            <!-- Embedded Interactive Route Preview Map (Phase 27.2) -->
+            <app-itinerary-route-map
+              *ngIf="curDay.items.length > 0"
+              [day]="getAsItineraryDay(curDay)"
+              [itineraryId]="itineraryId"
+            ></app-itinerary-route-map>
+
             <!-- Scheduled Stops List -->
             @if (curDay.items.length > 0) {
               <div class="stops-ordered-timeline">

@@ -1,0 +1,52 @@
+<div class="itinerary-route-map-card" [class.collapsed]="!isExpanded">
+  <div class="route-map-header">
+    <div class="route-map-title-wrap">
+      <span class="route-map-title">
+        <ion-icon name="map-outline" aria-hidden="true"></ion-icon>
+        <span>Day {{ day?.day_number ?? 1 }} Route</span>
+      </span>
+      <span class="route-map-badge" *ngIf="day && day.items.length > 0">
+        {{ day.items.length }} {{ day.items.length === 1 ? 'stop' : 'stops' }}
+      </span>
+    </div>
+
+    <div class="route-map-actions">
+      <button
+        *ngIf="showFullRouteAction && (day?.items?.length || 0) > 0"
+        type="button"
+        class="action-btn full-map-btn"
+        (click)="openFullRouteOnMap()"
+        title="Open route on full interactive map"
+        aria-label="Open route on full interactive map"
+      >
+        <ion-icon name="open-outline" aria-hidden="true"></ion-icon>
+        <span class="btn-label">Full Map</span>
+      </button>
+
+      <button
+        *ngIf="isCollapsible"
+        type="button"
+        class="action-btn toggle-collapse-btn"
+        (click)="toggleExpand()"
+        [attr.aria-expanded]="isExpanded"
+        [attr.aria-label]="isExpanded ? 'Collapse map' : 'Expand map'"
+        [title]="isExpanded ? 'Collapse map' : 'Expand map'"
+      >
+        <ion-icon [name]="isExpanded ? 'chevron-up-outline' : 'chevron-down-outline'" aria-hidden="true"></ion-icon>
+      </button>
+    </div>
+  </div>
+
+  <div
+    class="route-map-body"
+    [style.display]="isExpanded ? 'block' : 'none'"
+  >
+    <div
+      #mapElement
+      class="route-leaflet-container"
+      [style.height]="mapHeight"
+      tabindex="0"
+      aria-label="Interactive day route preview map"
+    ></div>
+  </div>
+</div>

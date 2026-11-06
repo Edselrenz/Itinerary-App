@@ -94,6 +94,7 @@ import {
   triggerPrintItinerary,
 } from '../../../core/utils/itinerary-export.util';
 import { PlaceDetailSheetComponent } from '../../../shared/components/place-detail-sheet/place-detail-sheet.component';
+import { ItineraryRouteMapComponent } from '../../../shared/components/itinerary-route-map/itinerary-route-map.component';
 import { ComponentCanDeactivate } from '../../../core/guards/pending-changes.guard';
 
 export interface EditableActivityItem {
@@ -139,6 +140,7 @@ export interface EditableItineraryForm {
     IonSpinner,
     IonModal,
     PlaceDetailSheetComponent,
+    ItineraryRouteMapComponent,
   ],
 })
 export class ItineraryDetailPage implements OnInit, AfterViewInit, OnDestroy, ComponentCanDeactivate {
@@ -885,7 +887,14 @@ export class ItineraryDetailPage implements OnInit, AfterViewInit, OnDestroy, Co
   public get selectedStopPlace(): Place | null {
     if (!this.selectedStop) return null;
     if (this.selectedStop.place) {
-      return this.selectedStop.place;
+      const p = { ...this.selectedStop.place };
+      if (p.estimated_cost_min == null && this.selectedStop.estimated_cost_min != null) {
+        p.estimated_cost_min = this.selectedStop.estimated_cost_min;
+      }
+      if (p.estimated_cost_max == null && this.selectedStop.estimated_cost_max != null) {
+        p.estimated_cost_max = this.selectedStop.estimated_cost_max;
+      }
+      return p;
     }
     return {
       id: this.selectedStop.place_id || `stop-${this.selectedStop.id}`,
@@ -895,6 +904,8 @@ export class ItineraryDetailPage implements OnInit, AfterViewInit, OnDestroy, Co
       category: 'attraction',
       municipality_name: this.itinerary?.destination || 'Nueva Ecija',
       description: this.getStopDescription(this.selectedStop),
+      estimated_cost_min: this.selectedStop.estimated_cost_min,
+      estimated_cost_max: this.selectedStop.estimated_cost_max,
       is_featured: false,
       source_name: 'CustomStop',
       imported_at: new Date().toISOString(),

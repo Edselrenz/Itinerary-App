@@ -142,4 +142,10 @@ describe('PlaceDetailSheetComponent', () => {
     expect(compiled.querySelector('.sheet-commute-box')?.textContent).toContain('How to get there?');
     expect(compiled.querySelector('.sheet-commute-box')?.textContent).toContain('Minalungao Junction');
   });
+
+  it('renders accessible close button with aria-label (WCAG 2.2)', () => {
+    const closeBtn = fixture.nativeElement.querySelector('.sheet-close-btn');
+    expect(closeBtn).toBeTruthy();
+    expect(closeBtn.getAttribute('aria-label')).toBe('Close details');
+  });
 });

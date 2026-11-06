@@ -259,29 +259,13 @@
                   <span class="metric-stops">{{ day.items.length }} stops</span>
                 </div>
 
-                <!-- Embedded Interactive Route Preview Map (Phase 25.3) -->
-                <div *ngIf="dIdx === activeDayIndex" class="day-route-preview-wrap">
-                  <div class="preview-map-header">
-                    <span class="preview-map-title">
-                      <ion-icon name="map-outline"></ion-icon>
-                      Route Map
-                    </span>
-                    <button
-                      type="button"
-                      class="preview-toggle-btn"
-                      (click)="togglePreviewMap()"
-                      aria-label="Toggle map preview"
-                    >
-                      <ion-icon [name]="isPreviewMapExpanded ? 'chevron-up-outline' : 'chevron-down-outline'"></ion-icon>
-                    </button>
-                  </div>
-                  <div
-                    [style.display]="isPreviewMapExpanded ? 'block' : 'none'"
-                    #previewMapElement
-                    id="route-preview-map"
-                    class="route-preview-map"
-                  ></div>
-                </div>
+                <!-- Embedded Interactive Route Preview Map (Phase 27.2) -->
+                <app-itinerary-route-map
+                  *ngIf="dIdx === activeDayIndex && day.items.length > 0"
+                  [day]="day"
+                  [itineraryId]="itinerary.id"
+                  (stopSelected)="openStopDetail($event)"
+                ></app-itinerary-route-map>
 
                 <div class="activities-view-stack">
                   @for (stop of day.items; track stop.id; let sIdx = $index) {
