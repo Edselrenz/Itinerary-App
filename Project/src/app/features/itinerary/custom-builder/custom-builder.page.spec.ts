@@ -377,4 +377,74 @@ describe('CustomBuilderPage', () => {
     const canDeactPromise = component.canDeactivate();
     expect(canDeactPromise).toBeInstanceOf(Promise);
   });
+
+  it('C-BUG-01: renders Trip Title input and sets destination & budget quick chips', () => {
+    fixture.detectChanges();
+    const titleInput = fixture.nativeElement.querySelector('#custom-title-input');
+    expect(titleInput).toBeTruthy();
+
+    component.setDestination('Pantabangan');
+    expect(component.form.get('destination')?.value).toBe('Pantabangan');
+
+    component.setBudgetPreset(4000);
+    expect(component.form.get('daily_budget')?.value).toBe(4000);
+  });
+
+  it('C-BUG-02: maps all 16 canonical categories in catMap', () => {
+    const transitPlace: Place = {
+      ...mockPlace,
+      id: 'poi-transit-1',
+      name: 'Cabanatuan Central Terminal',
+      category: 'transport_terminal',
+    };
+    component.allCuratedPlaces = [mockPlace, transitPlace];
+
+    component.setBrowseCategory('Transit & Essentials');
+    expect(component.displayedPlaces.length).toBe(1);
+    expect(component.displayedPlaces[0].id).toBe('poi-transit-1');
+
+    component.setBrowseCategory('All');
+    expect(component.displayedPlaces.length).toBe(2);
+  });
+
+  it('C-BUG-05: reactively synchronizes days array and travel dates when date range changes', () => {
+    component.form.patchValue({
+      start_date: '2026-11-10',
+      end_date: '2026-11-13',
+    });
+
+    component.syncDaysWithDateRange();
+    expect(component.days.length).toBe(4);
+    expect(component.days[0].travel_date).toBe('2026-11-10');
+    expect(component.days[3].travel_date).toBe('2026-11-13');
+
+    // Shrinking dates preserves stops by moving them to the last day
+    component.days[3].items.push({
+      id: 'stop-last-day',
+      name: 'Stop on day 4',
+      sort_order: 1,
+      duration_minutes: 60,
+      isCustomVenue: false,
+      municipality: 'Bongabon',
+      image: '',
+      category: 'Food',
+    });
+
+    component.form.patchValue({
+      start_date: '2026-11-10',
+      end_date: '2026-11-11',
+    });
+    component.syncDaysWithDateRange();
+    expect(component.days.length).toBe(2);
+    expect(component.days[1].items.some((it) => it.id === 'stop-last-day')).toBe(true);
+  });
+
+  it('UC-C4: openPlacePicker directly supports custom venue tab', () => {
+    component.openPlacePicker('custom');
+    expect(component.isPlacePickerOpen).toBe(true);
+    expect(component.pickerTab).toBe('custom');
+
+    component.openPlacePicker('browse');
+    expect(component.pickerTab).toBe('browse');
+  });
 });

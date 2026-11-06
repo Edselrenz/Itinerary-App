@@ -60,6 +60,22 @@
       </div>
 
       <form [formGroup]="form" class="wizard-form">
+        <!-- Trip Title Field (C-BUG-01) -->
+        <div class="form-group">
+          <label for="custom-title-input" class="group-label">Trip Title</label>
+          <div class="figma-input-box">
+            <ion-icon name="create-outline" class="input-blue-icon"></ion-icon>
+            <input
+              id="custom-title-input"
+              type="text"
+              formControlName="title"
+              class="core-input"
+              placeholder="e.g. Weekend Family Roadtrip"
+              aria-label="Trip Title"
+            />
+          </div>
+        </div>
+
         <!-- Destination Field -->
         <div class="form-group">
           <label for="custom-destination-input" class="group-label">Destination</label>
@@ -73,6 +89,19 @@
               placeholder="Choose a destination"
               aria-label="Destination"
             />
+          </div>
+          <div class="quick-dest-row" role="group" aria-label="Quick destination suggestions">
+            @for (dest of quickDestinations; track dest) {
+              <button
+                type="button"
+                class="quick-dest-chip"
+                [class.active]="form.get('destination')?.value === dest"
+                (click)="setDestination(dest)"
+              >
+                <ion-icon name="location-outline" class="dest-chip-icon"></ion-icon>
+                <span>{{ dest }}</span>
+              </button>
+            }
           </div>
         </div>
 
@@ -112,6 +141,18 @@
               aria-label="Daily Budget"
             />
           </div>
+          <div class="quick-dest-row" role="group" aria-label="Budget presets">
+            @for (b of budgetPresets; track b) {
+              <button
+                type="button"
+                class="quick-dest-chip"
+                [class.active]="form.get('daily_budget')?.value === b"
+                (click)="setBudgetPreset(b)"
+              >
+                <span>₱{{ b.toLocaleString() }}</span>
+              </button>
+            }
+          </div>
         </div>
 
         <!-- Preferences (optional) -->
@@ -131,14 +172,14 @@
           </div>
         </div>
 
-        <!-- Action CTA (Figma: "Find Itinerary") -->
+        <!-- Action CTA (C-BUG-01) -->
         <button
           type="button"
           class="find-itinerary-cta-btn"
           [disabled]="form.invalid"
           (click)="proceedToBuilder()"
         >
-          <span>Find Itinerary</span>
+          <span>Start Building Itinerary →</span>
         </button>
       </form>
     } @else if (activeView === 'browse') {
@@ -527,7 +568,7 @@
                 <span>Browse & Add Places to Day {{ curDay.day_number }}</span>
               </button>
 
-              <button type="button" class="add-custom-venue-btn" (click)="openPlacePicker()">
+              <button type="button" class="add-custom-venue-btn" (click)="openPlacePicker('custom')">
                 <ion-icon name="business-outline"></ion-icon>
                 <span>Add Off-Grid Custom Venue</span>
               </button>
@@ -781,7 +822,6 @@
                       class="picker-add-action-btn"
                       [class.added]="isPlaceInActiveDay(place.id)"
                       (click)="selectPlaceFromPicker(place)"
-                      [disabled]="isPlaceInActiveDay(place.id)"
                       [attr.aria-label]="isPlaceInActiveDay(place.id) ? 'Place already added' : 'Add ' + place.name + ' to Day ' + currentDay?.day_number"
                     >
                       @if (isPlaceInActiveDay(place.id)) {

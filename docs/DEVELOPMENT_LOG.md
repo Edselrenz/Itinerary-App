@@ -2906,4 +2906,44 @@ This log records chronological development sessions, detailing objectives, execu
   - `docs/DEVELOPMENT_LOG.md`
 - **Status**: Completed Phase 29.1; Staged for Phase 29.2.
 
+---
+
+## Session 81: Phase 29.2 Implementation - Form, Browse & Date Sync
+- **Date & Time**: 2026-11-06 18:00:00 (Local)
+- **Objective**: Implement Phase 29.2 deliverables: fix `C-BUG-01` (Trip Title input, destination & budget preset quick chips, rename CTA button to "Start Building Itinerary →"), `C-BUG-02` (complete 16-category filter mapping in `catMap`), `C-BUG-05` (reactive `syncDaysWithDateRange()` on date range change), `C-BUG-03` (destination matching in browse grid), and `UC-C4` (direct tab routing for off-grid custom venue modal & duplicate alert).
+- **Tasks Performed**:
+  - **`C-BUG-01` (Custom Builder Step 1 Title & Quick Chips)**:
+    - Added Trip Title input field with `formControlName="title"` to `custom-builder.page.html` Step 1 questionnaire.
+    - Added quick suggestions row for destinations (`quickDestinations`) and daily budget presets (`budgetPresets`), backed by `setDestination()` and `setBudgetPreset()`.
+    - Renamed bottom action CTA button from "Find Itinerary" to "Start Building Itinerary →".
+    - Added SCSS styling for `.quick-dest-row` and `.quick-dest-chip` in `custom-builder.page.scss`.
+  - **`C-BUG-02` (Complete 16-Category Filter Mapping in `catMap`)**:
+    - Expanded `browseCategories` to 8 tabs: `'All'`, `'Tourist Spots'`, `'Food'`, `'Resorts & Stays'`, `'Culture & Heritage'`, `'Shopping'`, `'Transit & Essentials'`, and `'Other'`.
+    - Fully mapped all 16 canonical categories in `catMap` inside `applyBrowseFilter()`, restoring previously unclassified categories (`bus_station`, `transport_terminal`, `hospital_clinic`, `pharmacy`, `gas_station`, `bank_atm`, `supermarket`, `convenience_store`).
+  - **`C-BUG-03` (Destination Prioritization in Browse View)**:
+    - In `applyBrowseFilter()`, added dynamic sorting that prioritizes venues located in the destination municipality selected in Step 1.
+  - **`C-BUG-05` (Reactive Date Range to Days Synchronization)**:
+    - Implemented `syncDaysWithDateRange()` in `custom-builder.page.ts`.
+    - Reactively subscribed to `merge(start_date.valueChanges, end_date.valueChanges)` in `ngOnInit()`, as well as bound on `applyDatePicker()` and `proceedToBuilder()`.
+    - Synchronizes each day's `travel_date` using local ISO helpers, dynamically appending new days or gracefully moving stops when shrinking the date window.
+  - **`UC-C4` (Direct Modal Tab Routing for Off-Grid Venues)**:
+    - Updated `openPlacePicker(defaultTab: 'browse' | 'custom' = 'browse')` in `custom-builder.page.ts`.
+    - Bound "Add Off-Grid Custom Venue" button directly to `openPlacePicker('custom')`.
+    - Removed `[disabled]` attribute from place picker `.picker-add-action-btn` so clicking already-scheduled places triggers the duplicate confirmation alert dialog (`selectPlaceFromPicker()`).
+  - **Automated Verification**:
+    - Authored 4 new comprehensive unit tests in `custom-builder.page.spec.ts` covering `C-BUG-01`, `C-BUG-02`, `C-BUG-05`, and `UC-C4`.
+    - Vitest unit test suite: **260/260 passed [100%]** across 26 suites (0 failures).
+    - Backend Pytest: **21/21 passed [100%]** in 14.16s (`python -m pytest backend/tests/ -v`).
+    - Angular production build: `npm --prefix Project run build` completed with code 0 (Initial bundle 1.09 MB, 0 stylesheet budget warnings).
+- **Files Modified**:
+  - `Project/src/app/features/itinerary/custom-builder/custom-builder.page.html`
+  - `Project/src/app/features/itinerary/custom-builder/custom-builder.page.scss`
+  - `Project/src/app/features/itinerary/custom-builder/custom-builder.page.ts`
+  - `Project/src/app/features/itinerary/custom-builder/custom-builder.page.spec.ts`
+  - `docs/TODO.md`
+  - `docs/KNOWN_ISSUES.md`
+  - `docs/DEVELOPMENT_LOG.md`
+- **Status**: Completed Phase 29.2; Staged for Phase 29.3.
+
+
 

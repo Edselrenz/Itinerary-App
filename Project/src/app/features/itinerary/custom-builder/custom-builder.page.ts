@@ -35,9 +35,8 @@ import {
   searchOutline,
   sparkles,
   timeOutline,
-  trashOutline,
-} from 'ionicons/icons';
-import { Subject, Subscription, debounceTime, distinctUntilChanged } from 'rxjs';
+  trashOutline, checkmarkOutline } from 'ionicons/icons';
+import { Subject, Subscription, debounceTime, distinctUntilChanged, merge } from 'rxjs';
 import { Itinerary, ItineraryDay, ItineraryItem } from '../../../core/models/itinerary.models';
 import { addDaysLocal, diffDaysLocal, formatDateRange, parseLocalIsoDate, toLocalIsoDate } from '../../../core/utils/date.utils';
 import { Place } from '../../../core/models/place.models';
@@ -122,8 +121,28 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
   public popupEndDate = '';
   public minDate = toLocalIsoDate();
 
-  // Category Filter Pills (Figma: All, Tourist Spots, Food, Shopping, Other)
-  public browseCategories = ['All', 'Tourist Spots', 'Food', 'Shopping', 'Other'];
+  // Quick suggestions for Step 1
+  public quickDestinations = [
+    'Bongabon',
+    'Pantabangan',
+    'Cabanatuan City',
+    'Gapan City',
+    'General Tinio',
+    'Nueva Ecija',
+  ];
+  public budgetPresets = [1500, 2500, 4000, 6000];
+
+  // Category Filter Pills (16 Canonical POI categories mapped)
+  public browseCategories = [
+    'All',
+    'Tourist Spots',
+    'Food',
+    'Resorts & Stays',
+    'Culture & Heritage',
+    'Shopping',
+    'Transit & Essentials',
+    'Other',
+  ];
   public selectedCategory = 'All';
   public browseSearchTerm = '';
   public allCuratedPlaces: Place[] = [];
@@ -180,28 +199,7 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
     private alertController: AlertController,
     private toastController: ToastController
   ) {
-    addIcons({
-      arrowBack,
-      arrowForwardOutline,
-      addOutline,
-      trashOutline,
-      arrowUpOutline,
-      arrowDownOutline,
-      timeOutline,
-      cashOutline,
-      locationOutline,
-      locationSharp,
-      calendarOutline,
-      saveOutline,
-      checkmark,
-      checkmarkCircle,
-      alertCircleOutline,
-      closeOutline,
-      searchOutline,
-      sparkles,
-      createOutline,
-      businessOutline,
-    });
+    addIcons({arrowBack,checkmarkCircle,addOutline,calendarOutline,createOutline,locationSharp,locationOutline,cashOutline,searchOutline,closeOutline,checkmark,arrowForwardOutline,trashOutline,arrowUpOutline,arrowDownOutline,businessOutline,saveOutline,checkmarkOutline,timeOutline,alertCircleOutline,sparkles,});
 
     const today = new Date();
     const tomorrow = addDaysLocal(today, 1);
@@ -242,6 +240,17 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
         this.hasUnsavedChanges = true;
         this.updateBudgetSummary();
       })
+    );
+
+    this.subscriptions.add(
+      merge(
+        this.form.get('start_date')!.valueChanges,
+        this.form.get('end_date')!.valueChanges
+      )
+        .pipe(distinctUntilChanged())
+        .subscribe(() => {
+          this.syncDaysWithDateRange();
+        })
     );
 
     // Support destination & addPlaceId from Map and Home discovery (UI-17)
@@ -329,6 +338,61 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
     this.updateBudgetSummary();
   }
 
+  public setDestination(dest: string): void {
+    this.form.patchValue({ destination: dest });
+  }
+
+  public setBudgetPreset(budget: number): void {
+    this.form.patchValue({ daily_budget: budget });
+  }
+
+  public syncDaysWithDateRange(): void {
+    const startDateStr = this.form.get('start_date')?.value;
+    const endDateStr = this.form.get('end_date')?.value;
+    if (!startDateStr || !endDateStr) return;
+
+    const start = parseLocalIsoDate(startDateStr);
+    const end = parseLocalIsoDate(endDateStr);
+    if (end < start) return;
+
+    const targetDayCount = Math.max(1, diffDaysLocal(startDateStr, endDateStr));
+    const currentDays = [...this.days];
+
+    // Update travel dates for existing days
+    for (let i = 0; i < currentDays.length; i++) {
+      const dayDate = addDaysLocal(start, i);
+      currentDays[i].travel_date = toLocalIsoDate(dayDate);
+      currentDays[i].day_number = i + 1;
+      currentDays[i].title = currentDays[i].title || `Day ${i + 1}`;
+    }
+
+    // Append new days if targetDayCount > currentDays.length
+    if (targetDayCount > currentDays.length) {
+      for (let i = currentDays.length; i < targetDayCount; i++) {
+        const dayDate = addDaysLocal(start, i);
+        currentDays.push({
+          id: this.generateTempId(),
+          day_number: i + 1,
+          travel_date: toLocalIsoDate(dayDate),
+          title: `Day ${i + 1}`,
+          items: [],
+        });
+      }
+    } else if (targetDayCount < currentDays.length && currentDays.length > 0) {
+      // If shrinking: move stops from trimmed days to the last retained day so data is preserved
+      const trailingDays = currentDays.slice(targetDayCount);
+      for (const remDay of trailingDays) {
+        for (const item of remDay.items) {
+          currentDays[targetDayCount - 1].items.push(item);
+        }
+      }
+      currentDays.splice(targetDayCount);
+    }
+
+    this.days = currentDays;
+    this.activeDayIndex = Math.min(this.activeDayIndex, Math.max(0, this.days.length - 1));
+  }
+
   public togglePreference(key: string): void {
     if (this.selectedPreferences.has(key)) {
       this.selectedPreferences.delete(key);
@@ -383,6 +447,7 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
       start_date: this.popupStartDate,
       end_date: this.popupEndDate,
     });
+    this.syncDaysWithDateRange();
     this.isDatePickerOpen = false;
   }
 
@@ -449,6 +514,7 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
     const targetDays = this.computedTripDays;
     const startDateStr = this.form.get('start_date')?.value;
     const startDate = startDateStr ? new Date(startDateStr) : new Date();
+    this.syncDaysWithDateRange();
 
     if (this.days.length !== targetDays) {
       const newDays: BuilderDay[] = [];
@@ -483,6 +549,7 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
       }
       this.applyBrowseFilter();
     }
+    this.applyBrowseFilter();
 
     this.activeView = 'browse';
   }
@@ -821,13 +888,46 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
 
     if (this.selectedCategory !== 'All') {
       const catMap: Record<string, string[]> = {
-        'Tourist Spots': ['tourist_attraction', 'nature_park'],
-        Food: ['restaurant', 'cafe'],
-        Shopping: ['shopping_market'],
-        Other: ['hotel_accommodation', 'resort_swimming', 'church_religious', 'museum_cultural'],
+        'Tourist Spots': ['tourist_attraction', 'nature_park', 'attraction'],
+        Food: ['restaurant', 'cafe', 'fast_food', 'bar'],
+        'Resorts & Stays': ['hotel_accommodation', 'resort_swimming', 'motel', 'guest_house'],
+        'Culture & Heritage': ['church_religious', 'museum_cultural', 'place_of_worship'],
+        Shopping: ['shopping_market', 'supermarket', 'convenience_store'],
+        'Transit & Essentials': [
+          'bus_station',
+          'transport_terminal',
+          'hospital_clinic',
+          'pharmacy',
+          'gas_station',
+          'bank_atm',
+        ],
+        Other: [
+          'hotel_accommodation',
+          'resort_swimming',
+          'church_religious',
+          'museum_cultural',
+          'bus_station',
+          'transport_terminal',
+          'hospital_clinic',
+          'pharmacy',
+          'gas_station',
+          'bank_atm',
+          'convenience_store',
+          'supermarket',
+        ],
       };
       const allowed = catMap[this.selectedCategory] || [];
       list = list.filter((p) => allowed.includes(p.category));
+    }
+
+    // Prioritize places matching chosen destination from Step 1 (C-BUG-03)
+    const dest = (this.form.get('destination')?.value || '').toLowerCase().trim();
+    if (dest && !dest.includes('nueva ecija')) {
+      list.sort((a, b) => {
+        const aMatch = (a.municipality_name || '').toLowerCase().includes(dest) ? 1 : 0;
+        const bMatch = (b.municipality_name || '').toLowerCase().includes(dest) ? 1 : 0;
+        return bMatch - aMatch;
+      });
     }
 
     this.displayedPlaces = list;
@@ -900,11 +1000,13 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
 
   // --- Place Picker & Duplicate Guard ---
 
-  public openPlacePicker(): void {
+  public openPlacePicker(defaultTab: 'browse' | 'custom' = 'browse'): void {
     this.isPlacePickerOpen = true;
     this.pickerSearchTerm = '';
-    this.pickerTab = 'browse';
-    this.loadFeaturedPlacesForPicker();
+    this.pickerTab = defaultTab;
+    if (defaultTab === 'browse') {
+      this.loadFeaturedPlacesForPicker();
+    }
   }
 
   public closePlacePicker(): void {

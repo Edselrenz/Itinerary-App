@@ -684,15 +684,15 @@ This checklist tracks completed, active, and pending tasks across all developmen
 - [x] **29.1.5 (S-BUG-01: Anchor placeId in Suggested Deep-Link)**:
   - In `SuggestedWizardPage.ngOnInit()`, read `params['placeId']` and lock the selected POI as Stop 1 of Day 1 in the generated itinerary request.
 
-### Phase 29.2: P1 Form, Browse & Date Sync (STAGED)
-- [ ] **29.2.1 (C-BUG-01: Custom Builder Step 1 Title & Quick Chips)**:
+### Phase 29.2: P1 Form, Browse & Date Sync (COMPLETED)
+- [x] **29.2.1 (C-BUG-01: Custom Builder Step 1 Title & Quick Chips)**:
   - Add Trip Title input field (e.g., "Weekend Family Roadtrip") and reusable Quick Destination & Budget preset chips to `custom-builder.page.html`.
   - Rename bottom CTA button from "Find Itinerary" to "Start Building Itinerary →".
-- [ ] **29.2.2 (C-BUG-02: Complete 16-Category Filter Mapping in catMap)**:
+- [x] **29.2.2 (C-BUG-02: Complete 16-Category Filter Mapping in catMap)**:
   - Expand `catMap` in `custom-builder.page.ts` to map all 16 canonical categories: All, Attractions & Nature, Food & Cafes, Resorts & Stays, Culture & Heritage, Shopping & Markets, and Transit & Essentials (terminals, hospitals, pharmacies, ATMs, gas stations, convenience stores).
-- [ ] **29.2.3 (C-BUG-05: Reactive Date Range to Days Synchronization)**:
+- [x] **29.2.3 (C-BUG-05: Reactive Date Range to Days Synchronization)**:
   - Implement `syncDaysWithDateRange()` in `custom-builder.page.ts` triggered when `start_date` or `end_date` is edited in Step 3 settings, preserving existing stops while updating `day.travel_date`.
-- [ ] **29.2.4 (UC-C4: Direct Modal Tab Routing for Off-Grid Venues)**:
+- [x] **29.2.4 (UC-C4: Direct Modal Tab Routing for Off-Grid Venues)**:
   - Update `openPlacePicker(defaultTab: 'browse' | 'custom' = 'browse')` in `custom-builder.page.ts` and bind "Add Off-Grid Custom Venue" directly to `openPlacePicker('custom')`.
   - Enable `.picker-add-action-btn` for already-added places so clicking triggers the duplicate confirmation alert (`selectPlaceFromPicker`).
 
