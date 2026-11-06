@@ -47,6 +47,7 @@ export const routes: Routes = [
   },
   {
     path: 'itinerary/:id',
+    canDeactivate: [pendingChangesGuard],
     loadComponent: () =>
       import('./features/itinerary/itinerary-detail/itinerary-detail.page').then(
         (m) => m.ItineraryDetailPage

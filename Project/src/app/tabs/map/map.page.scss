@@ -271,6 +271,28 @@
       animation: spin-cw 1s linear infinite;
     }
   }
+
+  &.locate-me-btn {
+    color: #0284c7;
+    border-color: #bae6fd;
+
+    &:hover {
+      background-color: #f0f9ff;
+    }
+
+    .spin-icon {
+      animation: spin-cw 1s linear infinite;
+    }
+  }
+
+  &.recenter-btn {
+    color: #475569;
+    border-color: #cbd5e1;
+
+    &:hover {
+      background-color: #f1f5f9;
+    }
+  }
 }
 
 @keyframes spin-cw {

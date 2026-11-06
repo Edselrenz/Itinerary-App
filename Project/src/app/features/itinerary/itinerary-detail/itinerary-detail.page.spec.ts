@@ -473,5 +473,34 @@ describe('ItineraryDetailPage', () => {
         },
       });
     });
+
+    it('handles canDeactivate guard appropriately based on isEditMode (ROUTE-04)', async () => {
+      component.isEditMode = false;
+      const canLeaveWhenNotEditing = await component.canDeactivate();
+      expect(canLeaveWhenNotEditing).toBe(true);
+
+      component.isEditMode = true;
+      const deactPromise = component.canDeactivate() as Promise<boolean>;
+      expect(mockAlertController.create).toHaveBeenCalled();
+      const alertArgs = mockAlertController.create.mock.calls[0][0];
+      expect(alertArgs.header).toBe('Discard Unsaved Edits?');
+      const discardBtn = alertArgs.buttons.find((b: any) => b.role === 'destructive');
+      discardBtn.handler();
+      const deactResult = await deactPromise;
+      expect(deactResult).toBe(true);
+      expect(component.isEditMode).toBe(false);
+    });
+
+    it('opens single stop in Google Maps via openInGoogleMaps (UIUX-08)', () => {
+      const windowOpenSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+      const stop = mockItinerary.days[0].items[0];
+      component.openInGoogleMaps(stop);
+      expect(windowOpenSpy).toHaveBeenCalledWith(
+        expect.stringContaining('https://www.google.com/maps/dir/?api=1&destination='),
+        '_blank',
+        'noopener,noreferrer'
+      );
+      windowOpenSpy.mockRestore();
+    });
   });
 });

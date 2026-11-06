@@ -126,3 +126,116 @@ export function getCommuteInfoForMunicipality(
       'Provincial PUVs depart regularly from Cabanatuan Central Terminal. Check with local terminal marshals for schedule adjustments and night trips.',
   };
 }
+
+export interface LegCommuteInfo extends CommuteInfo {
+  isWalkingDistance: boolean;
+  hopDistanceMeters?: number | null;
+}
+
+/**
+ * Calculates Haversine distance in meters between two coordinates.
+ */
+export function calculateHaversineMeters(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number {
+  const R = 6371e3; // Earth radius in meters
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(R * c);
+}
+
+/**
+ * Leg-Aware Provincial Commute Guidance (Phase 27.3.5 / ROUTE-05).
+ * Computes specific transit and cost guidance between consecutive itinerary stops:
+ * - Intra-town hops (<= 1.2 km): walk or local tricycle (₱15–₱25)
+ * - Intra-municipality hops (> 1.2 km): local chartered tricycle (₱25–₱50)
+ * - Inter-town corridors: provincial PUV/jeepney/bus (₱35–₱85)
+ * - First stop: gateway commute from provincial transit hubs
+ */
+export function getLegCommuteInfo(
+  prevStop: any | null | undefined,
+  currStop: any
+): LegCommuteInfo {
+  const currTitle = currStop?.place?.name || currStop?.custom_title || 'Destination';
+  const currMuni = currStop?.place?.municipality_name || 'Nueva Ecija';
+
+  if (!prevStop) {
+    const base = getCommuteInfoForMunicipality(currMuni, currTitle);
+    return {
+      ...base,
+      isWalkingDistance: false,
+      hopDistanceMeters: null,
+    };
+  }
+
+  const prevTitle = prevStop?.place?.name || prevStop?.custom_title || 'Previous Stop';
+  const prevMuni = prevStop?.place?.municipality_name || currMuni;
+
+  // Determine distance
+  let distMeters: number | null = currStop?.travel_distance_meters ?? null;
+  if (distMeters == null) {
+    const pLat = prevStop?.place?.latitude ?? prevStop?.custom_lat;
+    const pLng = prevStop?.place?.longitude ?? prevStop?.custom_lng;
+    const cLat = currStop?.place?.latitude ?? currStop?.custom_lat;
+    const cLng = currStop?.place?.longitude ?? currStop?.custom_lng;
+    if (pLat != null && pLng != null && cLat != null && cLng != null) {
+      distMeters = calculateHaversineMeters(pLat, pLng, cLat, cLng);
+    }
+  }
+
+  const isIntraTown = prevMuni.toLowerCase() === currMuni.toLowerCase();
+
+  // Intra-town short hop (<= 1.2 km)
+  if (distMeters != null && distMeters <= 1200) {
+    const isVeryShort = distMeters <= 400;
+    return {
+      transitMode: isVeryShort ? 'Walking' : 'Walking or Short Tricycle Hop',
+      departureHub: prevTitle,
+      dropOffPoint: currTitle,
+      estimatedTravelTime: isVeryShort
+        ? '3 – 5 mins walk'
+        : `${Math.round(distMeters / 80)} mins walk or 3 mins tricycle`,
+      estimatedFare: isVeryShort ? 'Free (Walking)' : 'Free (Walk) or ₱15 – ₱25 tricycle',
+      travelReminder:
+        'Short distance within town proper. Walking is scenic and pleasant, or flag a passing tricycle.',
+      isWalkingDistance: true,
+      hopDistanceMeters: distMeters,
+    };
+  }
+
+  // Intra-town medium hop (> 1.2 km within same municipality or short distance)
+  if (isIntraTown || (distMeters != null && distMeters < 5000)) {
+    const dKm = distMeters != null ? (distMeters / 1000).toFixed(1) : '3';
+    return {
+      transitMode: 'Local Tricycle',
+      departureHub: `${prevTitle} (${prevMuni})`,
+      dropOffPoint: `${currTitle} (${currMuni})`,
+      estimatedTravelTime: `${Math.max(5, Math.round((distMeters ?? 3000) / 400))} – ${Math.max(10, Math.round((distMeters ?? 3000) / 250))} mins`,
+      estimatedFare: '₱25 – ₱50 per ride',
+      travelReminder: `Intra-town transfer (${dKm} km). Local tricycles are readily stationed nearby or hailable along the road.`,
+      isWalkingDistance: false,
+      hopDistanceMeters: distMeters,
+    };
+  }
+
+  // Inter-town corridor hop
+  const dKm = distMeters != null ? (distMeters / 1000).toFixed(1) : '15';
+  return {
+    transitMode: 'Jeepney / UV Express / Inter-Town Bus',
+    departureHub: `${prevMuni} Town Proper / Highway`,
+    dropOffPoint: `${currMuni} Crossing / ${currTitle}`,
+    estimatedTravelTime: `${Math.max(20, Math.round((distMeters ?? 15000) / 700))} – ${Math.max(30, Math.round((distMeters ?? 15000) / 450))} mins`,
+    estimatedFare: '₱35 – ₱85',
+    travelReminder: `Inter-municipal corridor (${dKm} km from ${prevMuni} to ${currMuni}). Ride passing public utility jeepneys, buses, or UV Express along Maharlika / provincial highways.`,
+    isWalkingDistance: false,
+    hopDistanceMeters: distMeters,
+  };
+}

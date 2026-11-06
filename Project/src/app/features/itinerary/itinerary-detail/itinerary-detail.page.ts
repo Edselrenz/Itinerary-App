@@ -8,7 +8,7 @@ import {
   PLATFORM_ID,
   ViewChild,
 } from '@angular/core';
-import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { CommonModule, isPlatformBrowser, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import * as L from 'leaflet';
@@ -80,7 +80,12 @@ import { NearbyPlaceItem, PlaceService } from '../../../core/services/place.serv
 import { RouteTrackingService } from '../../../core/services/route-tracking.service';
 import { decodePolyline } from '../../../core/utils/polyline.util';
 import { environment } from '../../../../environments/environment';
-import { CommuteInfo, getCommuteInfoForMunicipality } from '../../../core/data/commute-guide.data';
+import {
+  CommuteInfo,
+  LegCommuteInfo,
+  getCommuteInfoForMunicipality,
+  getLegCommuteInfo,
+} from '../../../core/data/commute-guide.data';
 import {
   buildGoogleMapsDayRouteUrl,
   copyTextSummary,
@@ -89,6 +94,7 @@ import {
   triggerPrintItinerary,
 } from '../../../core/utils/itinerary-export.util';
 import { PlaceDetailSheetComponent } from '../../../shared/components/place-detail-sheet/place-detail-sheet.component';
+import { ComponentCanDeactivate } from '../../../core/guards/pending-changes.guard';
 
 export interface EditableActivityItem {
   id: string;
@@ -135,7 +141,7 @@ export interface EditableItineraryForm {
     PlaceDetailSheetComponent,
   ],
 })
-export class ItineraryDetailPage implements OnInit, AfterViewInit, OnDestroy {
+export class ItineraryDetailPage implements OnInit, AfterViewInit, OnDestroy, ComponentCanDeactivate {
   public itineraryId: string | null = null;
   public itinerary: Itinerary | null = null;
   public isLoading = true;
@@ -182,6 +188,7 @@ export class ItineraryDetailPage implements OnInit, AfterViewInit, OnDestroy {
     public routeTrackingService: RouteTrackingService,
     private alertController: AlertController,
     private toastController: ToastController,
+    private location: Location,
     @Inject(PLATFORM_ID) private platformId: object
   ) {
     this.isBrowser = isPlatformBrowser(this.platformId);
@@ -264,6 +271,38 @@ export class ItineraryDetailPage implements OnInit, AfterViewInit, OnDestroy {
       this.previewMap.remove();
       this.previewMap = null;
     }
+  }
+
+  /**
+   * Prevents accidental navigation when travelers have unsaved itinerary edits in in-place edit mode (ROUTE-04).
+   */
+  public canDeactivate(): boolean | Promise<boolean> {
+    if (!this.isEditMode) {
+      return true;
+    }
+    return new Promise<boolean>((resolve) => {
+      this.alertController
+        .create({
+          header: 'Discard Unsaved Edits?',
+          message: 'You have unsaved edits in this itinerary. Leaving now will discard your current modifications.',
+          buttons: [
+            {
+              text: 'Keep Editing',
+              role: 'cancel',
+              handler: () => resolve(false),
+            },
+            {
+              text: 'Discard & Leave',
+              role: 'destructive',
+              handler: () => {
+                this.isEditMode = false;
+                resolve(true);
+              },
+            },
+          ],
+        })
+        .then((alert) => alert.present());
+    });
   }
 
   public loadItinerary(id: string): void {
@@ -599,6 +638,14 @@ export class ItineraryDetailPage implements OnInit, AfterViewInit, OnDestroy {
     this.activeDayIndex = index;
     this.refreshNearbyPlaces();
     this.updatePreviewMap();
+    if (this.isBrowser && typeof document !== 'undefined') {
+      setTimeout(() => {
+        const el = document.getElementById(`day-card-${index}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      }, 50);
+    }
   }
 
   public refreshNearbyPlaces(): void {
@@ -875,11 +922,16 @@ export class ItineraryDetailPage implements OnInit, AfterViewInit, OnDestroy {
     window.open(url, '_blank', 'noopener,noreferrer');
   }
 
-  public getCommuteInfo(stop: ItineraryItem): CommuteInfo {
-    return getCommuteInfoForMunicipality(
-      stop.place?.municipality_name || this.itinerary?.destination || 'Nueva Ecija',
-      this.getStopTitle(stop)
-    );
+  public getCommuteInfo(stop: ItineraryItem): LegCommuteInfo {
+    const curDay = this.itinerary?.days[this.activeDayIndex];
+    if (curDay && curDay.items) {
+      const idx = curDay.items.findIndex((s) => s.id === stop.id);
+      if (idx > 0) {
+        const prev = curDay.items[idx - 1];
+        return getLegCommuteInfo(prev, stop);
+      }
+    }
+    return getLegCommuteInfo(null, stop);
   }
 
   public openNearbyInMaps(place: NearbyPlaceItem): void {
@@ -1185,6 +1237,8 @@ export class ItineraryDetailPage implements OnInit, AfterViewInit, OnDestroy {
   public onBack(): void {
     if (this.viewMode === 'nearby') {
       this.closeNearbyPlaces();
+    } else if (typeof window !== 'undefined' && window.history.length > 1) {
+      this.location.back();
     } else {
       this.router.navigate(['/tabs/history']);
     }

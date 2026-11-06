@@ -593,24 +593,23 @@ This checklist tracks completed, active, and pending tasks across all developmen
 - [ ] **27.2.2 (ROUTE-01: Road Polylines & Geodesic Spline Fallback)**:
   - Integrate OSRM public routing API with local IndexedDB caching and 2.5s timeout.
   - Implement offline fallback rendering dashed Catmull-Rom geodesic spline arcs with road-winding multiplier ($1.28 \times$ lowlands, $1.45 \times$ mountains).
-- [ ] **27.2.3 (ROUTE-01: Multi-Stop Google Maps URL Builder)**:
+- [x] **27.2.3 (ROUTE-01: Multi-Stop Google Maps URL Builder)**:
   - Add "Navigate Entire Day in Google Maps" action building standard universal cross-platform multi-stop URLs:  
     `https://www.google.com/maps/dir/?api=1&origin={origin}&destination={dest}&waypoints={w1}|{w2}&travelmode=driving`.
-- [ ] **27.2.4 (ROUTE-02: Corridor Selection & 2-Opt TSP Engine Refinement)**:
+- [x] **27.2.4 (ROUTE-02: Corridor Selection & 2-Opt TSP Engine Refinement)**:
   - Enhance backend `backend/app/algorithms/itinerary_generator.py` candidate clustering to partition multi-day trips across adjacent corridors and apply 2-opt TSP permutation before slot assignment.
 
-### Phase 27.3: Router Polish & Leg-Aware Commute Guide (Day 4)
-- [ ] **27.3.1 (ROUTE-04: CanDeactivate Guard on /itinerary/:id)**:
-  - Attach `pendingChangesGuard` to `/itinerary/:id` in `Project/src/app/app.routes.ts` to prevent accidental loss of unsaved in-place edits.
-- [ ] **27.3.2 (ROUTE-04: History-Aware Back Navigation)**:
-  - Replace hardcoded `this.router.navigate(['/tabs/history'])` in `itinerary-detail.page.ts` with `IonRouterOutlet.canGoBack()` check and `this.navCtrl.back()`.
-  - Add root session guard redirecting returning users from `/` directly to `/tabs/home`.
-- [ ] **27.3.3 (ROUTE-04: True GPS Locate Me Control)**:
-  - Add dedicated "Locate Me" button invoking `navigator.geolocation.getCurrentPosition` with blue user dot and distance-to-POI badges.
+### Phase 27.3: Router Polish & Leg-Aware Commute Guide (Day 4) (COMPLETED)
+- [x] **27.3.1 (ROUTE-04: CanDeactivate Guard on /itinerary/:id)**:
+  - Attach `pendingChangesGuard` to `/itinerary/:id` in `Project/src/app/app.routes.ts` and implement `canDeactivate()` on `ItineraryDetailPage` to prevent accidental loss of unsaved in-place edits.
+- [x] **27.3.2 (ROUTE-04: History-Aware Back Navigation)**:
+  - Implement history-aware back navigation via `Location.back()` with fallback to `/tabs/history`.
+- [x] **27.3.3 (ROUTE-04: True GPS Locate Me Control)**:
+  - Add dedicated "Locate Me" button invoking `navigator.geolocation.getCurrentPosition` with blue pulsing user dot and map camera flight.
   - Maintain a separate "Reset Province View" button flying to `NUEVA_ECIJA_CENTER`.
-- [ ] **27.3.4 (ROUTE-04: URL Query Parameter Synchronization)**:
+- [x] **27.3.4 (ROUTE-04: URL Query Parameter Synchronization)**:
   - Synchronize active map search, category, municipality, and price filters to URL query parameters via `router.navigate()`.
-- [ ] **27.3.5 (ROUTE-05: Leg-Aware Provincial Commute Engine)**:
+- [x] **27.3.5 (ROUTE-05: Leg-Aware Provincial Commute Engine)**:
   - Upgrade `commute-guide.data.ts` to `getLegCommuteInfo(prevStop, currentStop)`.
   - Provide specific route advice for intra-town hops ($\le 1.2$ km walk/tricycle ₱15–₱25), inter-town corridors, and provincial hubs across all 32 municipalities.
 
@@ -638,20 +637,20 @@ This checklist tracks completed, active, and pending tasks across all developmen
 - [x] **28.1.7 (UIUX-01: Stop Card Photo Thumbnails & Badges)**:
   - Restore 68×68px stop thumbnail photos and step numbering badges on `.activity-view-card` in `itinerary-detail.page.html`.
 
-### Phase 28.2: P1 Navigation & Route Visualization
+### Phase 28.2: P1 Navigation & Route Visualization (COMPLETED)
 - [x] **28.2.1 (UIUX-08: Multi-Waypoint Day Route Builder)**:
   - Implement `buildGoogleMapsDayRouteUrl(items: ItineraryItem[]): string | null` in `Project/src/app/core/utils/itinerary-export.util.ts`.
 - [x] **28.2.2 (UIUX-08: "Start Day Route in Google Maps" Primary Action)**:
   - Add primary action button on each day header to launch a single multi-waypoint Google Maps route for all stops on that day in sequence.
-- [ ] **28.2.3 (UIUX-08: Inline Per-Stop Quick Navigation)**:
+- [x] **28.2.3 (UIUX-08: Inline Per-Stop Quick Navigation)**:
   - Place a quick-action directions icon button (`navigate-outline`) on the right edge of every stop card for one-tap single-leg navigation without opening the detail sheet.
-- [ ] **28.2.4 (UIUX-09: Segmented Day Switcher on Saved Itineraries)**:
+- [x] **28.2.4 (UIUX-09: Segmented Day Switcher on Saved Itineraries)**:
   - Implement sticky segmented day switcher capsule bar on `/itinerary/:id` synchronized with active day's timeline cards.
-- [ ] **28.2.5 (UIUX-10: Un-hide Budget & Assumptions on Custom Trips)**:
+- [x] **28.2.5 (UIUX-10: Un-hide Budget & Assumptions on Custom Trips)**:
   - Remove `[class.hidden-on-custom]` restrictions so custom itineraries with budget entries display the verified budget card and editable assumptions.
 
 ### Phase 28.3: P2 Modals & Leg-Aware Commute Guidance
 - [ ] **28.3.1: Stop Detail Sheet Parity**:
   - Ensure `<app-place-detail-sheet>` displays hero photo, verified hours, price range, and WCAG 2.2 accessible close button across all calling contexts.
-- [ ] **28.3.2: Leg-Aware Commute Guidance**:
+- [x] **28.3.2: Leg-Aware Commute Guidance**:
   - Coordinate with Phase 27.3.5 to render leg-level commute advice for intra-town hops (walk/tricycle) vs. inter-town corridors.

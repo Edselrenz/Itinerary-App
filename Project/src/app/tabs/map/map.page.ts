@@ -18,6 +18,7 @@ import {
   IonIcon,
   IonModal,
   IonSpinner,
+  ToastController,
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import {
@@ -35,6 +36,7 @@ import {
   closeCircleOutline,
   closeOutline,
   cloudOfflineOutline,
+  compassOutline,
   filterOutline,
   flagOutline,
   funnelOutline,
@@ -171,6 +173,10 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
   public activeTrackingState: RouteTrackingState | null = null;
   public activeRouteMode: 'browse' | 'follow' = 'browse';
 
+  // Dedicated GPS Locate Me State (ROUTE-04 / 27.3.3)
+  public isLocatingUser = false;
+  public userGpsPosition: [number, number] | null = null;
+
   private searchSubject = new Subject<string>();
   private viewportDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   private subscriptions = new Subscription();
@@ -188,6 +194,7 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
     private route: ActivatedRoute,
     private router: Router,
     private cdr: ChangeDetectorRef,
+    private toastController: ToastController,
     @Inject(PLATFORM_ID) private platformId: object
   ) {
     this.isBrowser = isPlatformBrowser(this.platformId);
@@ -209,6 +216,7 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
       closeCircleOutline,
       closeOutline,
       cloudOfflineOutline,
+      compassOutline,
       filterOutline,
       flagOutline,
       funnelOutline,
@@ -275,6 +283,7 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
         .pipe(debounceTime(300), distinctUntilChanged())
         .subscribe((q) => {
           this.searchQuery = q;
+          this.syncQueryParams();
           this.loadPlaces();
         })
     );
@@ -286,7 +295,25 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
         const placeId = params['placeId'] || undefined;
         const destination = params['destination'] || undefined;
         const municipality = params['municipality'] || undefined;
+        const category = params['category'] || undefined;
+        const priceTier = params['priceTier'] || undefined;
+        const search = params['search'] || undefined;
         const follow = params['followRoute'] === 'true';
+
+        if (category) {
+          this.selectedCategory = category;
+          this.selectedCategories = new Set([category]);
+        }
+        if (municipality) {
+          this.selectedMunicipality = municipality;
+        }
+        if (priceTier && ['all', 'free', 'budget', 'mid'].includes(priceTier)) {
+          this.selectedPriceTier = priceTier as any;
+        }
+        if (search) {
+          this.searchQuery = search;
+        }
+        this.updateActiveFilterCount();
 
         if (follow) {
           this.activeRouteMode = 'follow';
@@ -756,6 +783,7 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
   public clearSearch(): void {
     this.searchQuery = '';
     this.searchSubject.next('');
+    this.syncQueryParams();
   }
 
   // --- Quick Pill Filter Selection ---
@@ -774,6 +802,7 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
       }
     }
     this.updateActiveFilterCount();
+    this.syncQueryParams();
     this.selectedPlace = null;
     this.loadPlaces();
   }
@@ -817,6 +846,7 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
 
   public applyFilters(): void {
     this.updateActiveFilterCount();
+    this.syncQueryParams();
     this.closeFilterSheet();
     this.loadPlaces();
   }
@@ -827,7 +857,26 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
     this.selectedMunicipality = null;
     this.selectedPriceTier = 'all';
     this.updateActiveFilterCount();
+    this.syncQueryParams();
     this.loadPlaces();
+  }
+
+  /**
+   * Synchronizes active map search and filters to URL query parameters (ROUTE-04 / 27.3.4).
+   */
+  private syncQueryParams(): void {
+    const queryParams: Record<string, string | null> = {
+      category: this.selectedCategory || null,
+      municipality: this.selectedMunicipality || null,
+      priceTier: this.selectedPriceTier !== 'all' ? this.selectedPriceTier : null,
+      search: this.searchQuery.trim() ? this.searchQuery.trim() : null,
+    };
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams,
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
   }
 
   public updateActiveFilterCount(): void {
@@ -888,6 +937,64 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
         addPlaceId: place.id,
       },
     });
+  }
+
+  /**
+   * Dedicated True GPS "Locate Me" control (ROUTE-04 / 27.3.3).
+   * Queries navigator.geolocation.getCurrentPosition, renders the pulsing blue
+   * user location marker, and smoothly flies the map to the user's position.
+   */
+  public async locateUser(): Promise<void> {
+    if (!this.isBrowser || typeof navigator === 'undefined' || !navigator.geolocation) {
+      const toast = await this.toastController.create({
+        message: 'Geolocation is not supported by your browser.',
+        duration: 2500,
+        color: 'warning',
+        position: 'top',
+      });
+      await toast.present();
+      return;
+    }
+
+    this.isLocatingUser = true;
+    this.cdr.detectChanges();
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        this.isLocatingUser = false;
+        const coords: [number, number] = [pos.coords.latitude, pos.coords.longitude];
+        this.userGpsPosition = coords;
+        this.updateUserLocationMarker(coords, pos.coords.heading ?? null);
+        if (this.map) {
+          this.isProgrammaticFly = true;
+          this.map.flyTo(coords, 16, { duration: 1.0 });
+          setTimeout(() => {
+            this.isProgrammaticFly = false;
+          }, 1200);
+        }
+        this.cdr.detectChanges();
+      },
+      async (err) => {
+        this.isLocatingUser = false;
+        const msg =
+          err.code === 1
+            ? 'Location access was denied. Please allow location permissions.'
+            : 'Unable to determine your GPS location. Please try again.';
+        const toast = await this.toastController.create({
+          message: msg,
+          duration: 3000,
+          color: 'medium',
+          position: 'top',
+        });
+        await toast.present();
+        this.cdr.detectChanges();
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 30000,
+      }
+    );
   }
 
   /**

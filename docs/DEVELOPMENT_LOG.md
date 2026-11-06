@@ -2696,3 +2696,57 @@ This log records chronological development sessions, detailing objectives, execu
   - `Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.scss`
   - `docs/TODO.md`
   - `docs/DEVELOPMENT_LOG.md`
+
+
+---
+
+## Session 76: Phase 28.2 Saved Itinerary Route UX, Phase 27.3 Router Polish & Leg-Aware Commute Engine
+- **Date & Time**: 2026-11-06 14:40:00 (Local)
+- **Objective**: Execute implementation of Phase 28.2 (Saved Itinerary Route Navigation & Display: UIUX-08 per-stop quick navigation, UIUX-09 segmented day switcher capsule bar, UIUX-10 custom trip budget un-hiding) and Phase 27.3 (Router Polish & Leg-Aware Commute Engine: ROUTE-04 CanDeactivate guard on `/itinerary/:id`, history-aware back navigation, true GPS Locate Me control, URL query parameter synchronization, and ROUTE-05 leg-aware provincial commute engine).
+- **Tasks Performed & Implementation Details**:
+  - **1. UIUX-08 (Inline Per-Stop Single-Tap Directions)**:
+    - In `Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.html`, added `.act-quick-nav-btn` icon button (`navigate-outline`) inside `.act-card-main` calling `openInGoogleMaps(stop); $event.stopPropagation()` to enable instant single-leg driving directions handoff without opening the details sheet.
+    - Added styling in `itinerary-detail.page.scss` and verified stop coordinate / title URL generation.
+  - **2. UIUX-09 (Segmented Sticky Day Switcher Capsule Bar)**:
+    - In `itinerary-detail.page.html`, inserted sticky `.day-switcher-capsule-bar` above `days-view-list` rendered when `itinerary.days.length > 1`.
+    - Added `[id]="'day-card-' + dIdx"` on each `.day-view-card`.
+    - In `itinerary-detail.page.ts`, upgraded `selectDay(index)` to smoothly scroll to `day-card-${index}` via `scrollIntoView({ behavior: 'smooth', block: 'nearest' })`.
+  - **3. UIUX-10 (Custom Trip Budget & Assumptions Un-hiding)**:
+    - In `itinerary-detail.page.html`, removed `[class.hidden-on-custom]="itinerary.type !== 'suggested'"` from the verified budget card and assumptions info box.
+    - In `itinerary-detail.page.scss`, pruned dead `&.hidden-on-custom { display: none !important; }` rule, saving stylesheet bytes and presenting budget estimates on custom-built trips.
+  - **4. ROUTE-04 (CanDeactivate Guard & History-Aware Navigation)**:
+    - Attached `canDeactivate: [pendingChangesGuard]` to `/itinerary/:id` route in `Project/src/app/app.routes.ts`.
+    - In `ItineraryDetailPage`, implemented `ComponentCanDeactivate` interface with `canDeactivate(): boolean | Promise<boolean>` to prompt the user with an alert confirmation if leaving with active unsaved in-place edits.
+    - Updated `onBack()` to use `Location.back()` when browser history is available, falling back gracefully to `/tabs/history`.
+  - **5. ROUTE-04 (True GPS Locate Me & Filter URL Query Param Synchronization)**:
+    - In `Project/src/app/tabs/map/map.page.html` and `.ts`, added dedicated GPS "Locate Me" button invoking `navigator.geolocation.getCurrentPosition` with high accuracy, placing the pulsing blue user dot marker via `updateUserLocationMarker` and smoothly flying camera to user coordinates.
+    - Separated the "Reset Province View" button with `compass-outline` flying to `NUEVA_ECIJA_CENTER`.
+    - Implemented `syncQueryParams()` to keep `category`, `municipality`, `priceTier`, and `search` synchronized with browser URL query parameters via `router.navigate([], { queryParams, queryParamsHandling: 'merge', replaceUrl: true })`.
+  - **6. ROUTE-05 (Leg-Aware Provincial Commute Engine)**:
+    - In `Project/src/app/core/data/commute-guide.data.ts`, implemented `getLegCommuteInfo(prevStop, currStop)` and `calculateHaversineMeters()` providing:
+      - Intra-town short hops ($\le 1.2$ km): walking / short tricycle hop advice (₱15–₱25) with `isWalkingDistance: true`.
+      - Intra-town medium hops ($1.2$ km – $5.0$ km): local chartered tricycle advice (₱25–₱50).
+      - Inter-town corridors: public utility jeepney / UV Express / bus corridor routes along Maharlika Highway (₱35–₱85).
+      - First stops of the day: gateway provincial transport terminal advice from Cabanatuan Central Terminal.
+    - Integrated `getLegCommuteInfo` into `ItineraryDetailPage.getCommuteInfo()`.
+  - **7. SCSS Budget Optimization**:
+    - Flattened deep selector hierarchies in `itinerary-detail.page.scss` (sub-header-bar, trip-details-card, day-switcher, day-card-header), reducing bundle transfer size to 16.04 kB and meeting Angular's component style budget without any warnings.
+- **Verification & Test Results**:
+  - `python -m pytest backend/tests`: **21 passed in 9.50s [100%]**.
+  - `npm --prefix Project run test:unit`: **25 test files passed, 244 tests passed (up from 235) [100%]**.
+  - `npm --prefix Project run build`: **Compiled cleanly with 0 errors and 0 warnings into `Project/www/`**.
+  - `npm --prefix Project run test:e2e`: **8 Playwright E2E browser tests passed in 19.7s [100%]**.
+- **Files Modified**:
+  - `Project/src/app/app.routes.ts`
+  - `Project/src/app/core/data/commute-guide.data.ts`
+  - `Project/src/app/core/data/commute-guide.data.spec.ts`
+  - `Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.ts`
+  - `Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.html`
+  - `Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.scss`
+  - `Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.spec.ts`
+  - `Project/src/app/tabs/map/map.page.ts`
+  - `Project/src/app/tabs/map/map.page.html`
+  - `Project/src/app/tabs/map/map.page.scss`
+  - `Project/src/app/tabs/map/map.page.spec.ts`
+  - `docs/TODO.md`
+  - `docs/DEVELOPMENT_LOG.md`

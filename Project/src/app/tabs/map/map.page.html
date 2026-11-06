@@ -86,14 +86,27 @@
         <ion-icon [name]="isLiveOsmLoading ? 'reload-outline' : 'sparkles-outline'" [class.spin-icon]="isLiveOsmLoading"></ion-icon>
       </button>
 
+      <!-- Dedicated GPS Locate Me Button (ROUTE-04 / 27.3.3) -->
+      <button
+        type="button"
+        class="floating-btn locate-me-btn"
+        [class.locating]="isLocatingUser"
+        (click)="locateUser()"
+        title="Locate My Position (GPS)"
+        aria-label="Locate my position with GPS"
+      >
+        <ion-icon [name]="isLocatingUser ? 'reload-outline' : 'locate-outline'" [class.spin-icon]="isLocatingUser"></ion-icon>
+      </button>
+
+      <!-- Reset Province View to Nueva Ecija Center -->
       <button
         type="button"
         class="floating-btn recenter-btn"
         (click)="recenterMap()"
-        title="Recenter to Nueva Ecija"
-        aria-label="Recenter map"
+        title="Reset Province View (Nueva Ecija)"
+        aria-label="Reset map view to Nueva Ecija"
       >
-        <ion-icon name="locate-outline"></ion-icon>
+        <ion-icon name="compass-outline"></ion-icon>
       </button>
 
       <button

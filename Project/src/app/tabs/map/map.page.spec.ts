@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute, Router } from '@angular/router';
+import { ToastController } from '@ionic/angular';
 import { of, throwError } from 'rxjs';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
@@ -57,6 +58,9 @@ describe('MapPage', () => {
     navigate: vi.fn(),
   };
 
+  const mockToast = { present: vi.fn().mockResolvedValue(undefined) };
+  const mockToastController = { create: vi.fn().mockResolvedValue(mockToast) };
+
   beforeEach(async () => {
     vi.clearAllMocks();
     mockPlaceService.searchPlaces.mockReturnValue(
@@ -76,6 +80,7 @@ describe('MapPage', () => {
         { provide: PlaceService, useValue: mockPlaceService },
         { provide: OsmOverpassService, useValue: mockOsmOverpassService },
         { provide: Router, useValue: mockRouter },
+        { provide: ToastController, useValue: mockToastController },
         {
           provide: ActivatedRoute,
           useValue: {
@@ -174,6 +179,44 @@ describe('MapPage', () => {
     expect(flyToSpy).toHaveBeenCalledWith([15.58, 121.0], 10, { duration: 0.8 });
   });
 
+  it('should locate user via GPS and fly to user coordinates (ROUTE-04)', () => {
+    const flyToSpy = vi.fn();
+    component.map = {
+      flyTo: flyToSpy,
+      remove: vi.fn(),
+      addLayer: vi.fn(),
+      removeLayer: vi.fn(),
+    } as unknown as L.Map;
+
+    const mockPosition = {
+      coords: {
+        latitude: 15.4859,
+        longitude: 120.9673,
+        heading: 45,
+      },
+    };
+
+    const originalGeolocation = navigator.geolocation;
+    const getCurrentPositionMock = vi.fn((success) => success(mockPosition));
+    Object.defineProperty(navigator, 'geolocation', {
+      value: { getCurrentPosition: getCurrentPositionMock },
+      configurable: true,
+      writable: true,
+    });
+
+    component.locateUser();
+
+    expect(getCurrentPositionMock).toHaveBeenCalled();
+    expect(component.userGpsPosition).toEqual([15.4859, 120.9673]);
+    expect(flyToSpy).toHaveBeenCalledWith([15.4859, 120.9673], 16, { duration: 1.0 });
+
+    Object.defineProperty(navigator, 'geolocation', {
+      value: originalGeolocation,
+      configurable: true,
+      writable: true,
+    });
+  });
+
   it('should initialize hasTileError as false', () => {
     expect(component.hasTileError).toBe(false);
   });
@@ -197,6 +240,33 @@ describe('MapPage', () => {
   });
 
   // --- Phase 19: UI-16 Floating Search Bar & Multi-Select Filter Sheet ---
+
+  it('synchronizes active category, municipality, price tier, and search to URL query params (ROUTE-04 / 27.3.4)', () => {
+    component.selectCategory('nature_park');
+    expect(mockRouter.navigate).toHaveBeenCalledWith([], {
+      relativeTo: expect.anything(),
+      queryParams: expect.objectContaining({
+        category: 'nature_park',
+      }),
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+
+    component.selectMunicipality('General Tinio');
+    component.selectPriceTier('budget');
+    component.applyFilters();
+
+    expect(mockRouter.navigate).toHaveBeenCalledWith([], {
+      relativeTo: expect.anything(),
+      queryParams: expect.objectContaining({
+        category: 'nature_park',
+        municipality: 'General Tinio',
+        priceTier: 'budget',
+      }),
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  });
 
   it('should handle search input and clear search (UI-16)', () => {
     component.onSearchInput({ target: { value: 'Minalungao' } } as unknown as Event);

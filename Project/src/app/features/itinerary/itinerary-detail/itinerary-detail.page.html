@@ -166,9 +166,9 @@
             </div>
           </div>
 
-          <!-- Verified Budget Card (Preserved for UI-02 Test & Suggested Mode) -->
+          <!-- Verified Budget Card (UIUX-10: visible for both suggested and custom) -->
           @if (budgetSummary) {
-            <div class="verified-budget-card" [class.hidden-on-custom]="itinerary.type !== 'suggested'">
+            <div class="verified-budget-card">
               <div class="budget-card-header">
                 <span class="budget-card-label">Verified Estimated Costs</span>
                 <span class="budget-card-target">Budget: ₱{{ itinerary.daily_budget }}/day</span>
@@ -177,9 +177,9 @@
             </div>
           }
 
-          <!-- Assumptions Box (Preserved for UI-02 Test & Suggested Mode) -->
+          <!-- Assumptions Box (UIUX-10: visible for both suggested and custom) -->
           @if (itinerary.assumptions && itinerary.assumptions.length > 0) {
-            <div class="assumptions-info-box" [class.hidden-on-custom]="itinerary.type !== 'suggested'">
+            <div class="assumptions-info-box">
               <div class="assumptions-header" (click)="toggleAssumptions()">
                 <ion-icon name="information-circle-outline"></ion-icon>
                 <span>Trip Assumptions & Travel Notes</span>
@@ -192,10 +192,26 @@
             </div>
           }
 
+          <!-- Sticky Day Switcher Capsule Bar (UIUX-09) -->
+          <div *ngIf="itinerary.days && itinerary.days.length > 1" class="day-switcher-capsule-bar">
+            <div class="day-switcher-capsules">
+              @for (day of itinerary.days; track day.id || day.day_number; let dIdx = $index) {
+                <button
+                  type="button"
+                  class="day-tab-capsule"
+                  [class.active]="dIdx === activeDayIndex"
+                  (click)="selectDay(dIdx)"
+                >
+                  Day {{ day.day_number }}
+                </button>
+              }
+            </div>
+          </div>
+
           <!-- Days List (Image 2) -->
           <div class="days-view-list">
             @for (day of itinerary.days; track day.id || day.day_number; let dIdx = $index) {
-              <div class="day-view-card" [class.active-day-card]="dIdx === activeDayIndex">
+              <div class="day-view-card" [id]="'day-card-' + dIdx" [class.active-day-card]="dIdx === activeDayIndex">
                 <div class="day-card-header" (click)="selectDay(dIdx)">
                   <div class="day-card-left">
                     <h3 class="day-card-number">Day {{ day.day_number }}</h3>
@@ -322,6 +338,16 @@
                             </p>
                           }
                         </div>
+
+                        <button
+                          type="button"
+                          class="act-quick-nav-btn"
+                          (click)="openInGoogleMaps(stop); $event.stopPropagation()"
+                          title="Open directions in Google Maps"
+                          aria-label="Open directions to stop in Google Maps"
+                        >
+                          <ion-icon name="navigate-outline"></ion-icon>
+                        </button>
                       </div>
                     </div>
                   }

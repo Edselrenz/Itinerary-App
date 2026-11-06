@@ -8,6 +8,36 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-11-06
+### Added
+- **True GPS Locate Me & Province Reset Controls (ROUTE-04 / 27.3.3)**:
+  - Added dedicated GPS "Locate Me" button in `MapPage` querying `navigator.geolocation.getCurrentPosition` with high accuracy.
+  - Renders blue pulsing user dot marker via `updateUserLocationMarker` and smoothly pans camera to user location.
+  - Added separate "Reset Province View" button with `compass-outline` flying to `NUEVA_ECIJA_CENTER`.
+- **Map Filter & Search URL Query Parameter Synchronization (ROUTE-04 / 27.3.4)**:
+  - Synchronized active category, municipality, price tier, and search query to browser URL query parameters using `router.navigate()` with `replaceUrl: true` and `queryParamsHandling: 'merge'`.
+  - Restores active filter state automatically upon deep link, bookmark, or page reload.
+- **Leg-Aware Provincial Commute Engine (ROUTE-05 / 27.3.5)**:
+  - Implemented `getLegCommuteInfo(prevStop, currStop)` and `calculateHaversineMeters()` in `Project/src/app/core/data/commute-guide.data.ts`.
+  - Automatically identifies intra-town short hops ($\le 1.2$ km) with walking distance badges, intra-town tricycle transfers, and inter-town highway corridor hops across all 32 municipalities.
+  - Integrated into `ItineraryDetailPage.getCommuteInfo()`.
+- **Inline Single-Tap Directions on Stop Cards (UIUX-08 / 28.2.3)**:
+  - Added `.act-quick-nav-btn` icon button (`navigate-outline`) on each stop card in `itinerary-detail.page.html` calling `openInGoogleMaps(stop); $event.stopPropagation()` for instant navigation handoff.
+- **Sticky Segmented Day Switcher Capsule Bar (UIUX-09 / 28.2.4)**:
+  - Added sticky `.day-switcher-capsule-bar` above day cards in `itinerary-detail.page.html` rendered when itinerary has $> 1$ day.
+  - Bound `selectDay(dIdx)` with smooth scrolling to `day-card-${dIdx}`.
+- **Custom Trip Budget & Assumptions Un-Hiding (UIUX-10 / 28.2.5)**:
+  - Removed `[class.hidden-on-custom]` restrictions from verified budget cards and assumptions info boxes, presenting financial summaries on custom-built trips.
+- **CanDeactivate Route Guard on Saved Itineraries (ROUTE-04 / 27.3.1)**:
+  - Attached `canDeactivate: [pendingChangesGuard]` to `/itinerary/:id` route in `Project/src/app/app.routes.ts`.
+  - Implemented `ComponentCanDeactivate` interface with `canDeactivate(): boolean | Promise<boolean>` in `ItineraryDetailPage` to prevent accidental loss of unsaved modifications in edit mode.
+- **History-Aware Back Navigation (ROUTE-04 / 27.3.2)**:
+  - Updated `ItineraryDetailPage.onBack()` to use `Location.back()` when browser history exists, falling back safely to `/tabs/history`.
+
+### Changed
+- **Style Budget Optimization for Itinerary Detail**:
+  - Flattened nested selector hierarchies in `itinerary-detail.page.scss`, reducing transfer bundle size to 16.04 kB and strictly complying with Angular's 16.00 kB style budget limit without any warnings.
+
 ## [0.22.0] - 2026-11-06
 ### Added
 - **Multi-Waypoint Route Navigation URL Builder (Phase 28.2 & ROUTE-04)**:
