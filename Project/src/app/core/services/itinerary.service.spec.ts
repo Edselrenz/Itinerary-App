@@ -1010,4 +1010,35 @@ describe('ItineraryService', () => {
 
   });
 
+  describe('Active Draft Persistence (GAP-03)', () => {
+    it('sets and retrieves active draft itinerary in memory and sessionStorage', () => {
+      expect(service.getActiveDraftItinerary()).toBeNull();
+
+      service.setActiveDraftItinerary(mockItinerary);
+      expect(service.getActiveDraftItinerary()).toEqual(mockItinerary);
+
+      let emittedDraft: Itinerary | null = null;
+      service.activeDraftItinerary$.subscribe((d) => (emittedDraft = d));
+      expect(emittedDraft).toEqual(mockItinerary);
+
+      service.setActiveDraftItinerary(null);
+      expect(service.getActiveDraftItinerary()).toBeNull();
+      expect(emittedDraft).toBeNull();
+    });
+
+    it('resolves draft via getItineraryOrDraftById when id is draft or matches draft id', async () => {
+      service.setActiveDraftItinerary(mockItinerary);
+
+      const byDraftWord = await new Promise<Itinerary | null>((res) => {
+        service.getItineraryOrDraftById('draft').subscribe(res);
+      });
+      expect(byDraftWord).toEqual(mockItinerary);
+
+      const byId = await new Promise<Itinerary | null>((res) => {
+        service.getItineraryOrDraftById('itin-uuid-1').subscribe(res);
+      });
+      expect(byId).toEqual(mockItinerary);
+    });
+  });
+
 });

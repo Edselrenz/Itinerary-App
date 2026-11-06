@@ -151,6 +151,24 @@
       transform: scale(1.15);
       background: #1d4ed8;
     }
+
+    &.is-active-stop {
+      transform: scale(1.3);
+      background: #f59e0b;
+      border-color: #ffffff;
+      box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.45), 0 3px 8px rgba(0, 0, 0, 0.4);
+      z-index: 1000;
+      animation: pin-pulse 1.8s infinite ease-in-out;
+    }
+  }
+}
+
+@keyframes pin-pulse {
+  0%, 100% {
+    transform: scale(1.25);
+  }
+  50% {
+    transform: scale(1.4);
   }
 }
 

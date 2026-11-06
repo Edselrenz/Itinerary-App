@@ -32,18 +32,27 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(authReq).pipe(
     tap((event) => {
-      if (event instanceof HttpResponse) {
+      if (event instanceof HttpResponse && isApiRequest) {
         connectivityService.setHostOffline(false);
       }
     }),
     catchError((error: HttpErrorResponse) => {
+      // Ignore client-aborted requests (e.g. cancelled during debounced search/pan or navigation)
+      const isAborted =
+        (error as any)?.name === 'AbortError' ||
+        (error.error instanceof ProgressEvent && (error.error as any).type === 'abort') ||
+        (typeof error.message === 'string' && error.message.toLowerCase().includes('abort'));
+
       // Step 9 / Build Guide: Graceful Laptop-Offline State
+      // Only API requests that encounter genuine gateway failures or connection refusals trigger offline state
       const isGatewayOrOffline =
-        error.status === 0 ||
-        error.status === 502 ||
-        error.status === 503 ||
-        error.status === 504 ||
-        (error.status === 404 && (req.url.endsWith('/health') || req.url.includes('/api/v1/health')));
+        isApiRequest &&
+        !isAborted &&
+        (error.status === 0 ||
+          error.status === 502 ||
+          error.status === 503 ||
+          error.status === 504 ||
+          (error.status === 404 && (req.url.endsWith('/health') || req.url.includes('/api/v1/health'))));
 
       if (isGatewayOrOffline) {
         console.warn(

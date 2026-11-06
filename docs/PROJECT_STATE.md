@@ -7,10 +7,10 @@ This document serves as the primary handoff reference for developers and coding 
 ## 1. Project Status Overview
 
 - **Application Name**: Nueva Ecija Travel Itinerary (MVP & GIS Architecture Upgrade)
-- **Current Development Phase**: **Phase 29 Completed & Verified; Phase 30 (Live-Server Map & Suggested Itinerary Routing Upgrade) Staged**
-- **Last Verified Working State**: **Phase 29.1, 29.2 & 29.3 Completed & Verified** (26/26 test files and 264/264 frontend unit tests passing [100%], 21/21 backend Pytest cases [100%], clean Angular production build in `Project/www` with 0 warnings/budget overruns, hardened `window.L` property descriptor in `main.ts` fixing marker clustering on GitHub Pages with 73 clusters and 91 pins rendered across 2,673 places, zero-watermark OpenStreetMap raster tiles, client-side OSRM driving route engine with geodesic spline fallback adhering to ADR-001, reusable `ItineraryRouteMapComponent` embedded across Itinerary Detail, Suggested Wizard, and Custom Builder, full preservation of `place` and `custom_title` on Guest Custom Itineraries fixing C-BUG-06, dynamic `matchedPool` generation with budget filtering and zero venue repetition across days fixing S-BUG-03, 0ms immediate offline short-circuit fixing S-BUG-04, local ISO date math in Suggested date picker fixing S-BUG-02, `anchor_place_id` deep-linking fixing S-BUG-01, Trip Title input with destination and budget preset chips on Custom Builder Step 1 fixing C-BUG-01, complete 16-category filter mapping in `catMap` fixing C-BUG-02, destination prioritization in Browse grid fixing C-BUG-03, reactive `syncDaysWithDateRange()` date synchronization fixing C-BUG-05, direct modal tab routing for off-grid venues fixing UC-C4, in-memory router state on "Customize in Builder" eliminating premature storage persistence fixing S-BUG-06, primary Edit action routing to `/custom-builder/:id` with separate min/max cost range retention fixing UC-C5, destination card inspection in Browse view via `<app-place-detail-sheet>` fixing C-BUG-04, sequential stop time chaining with 30-min transit buffer and timeline Auto-Schedule action, and post-save redirection to `/itinerary/:id`).
-- **Recent Audit & Roadmap Expansion**: Ingestion and formal documentation of `live_server_map_and_suggested_itinerary_proposal.pdf` ([LIVE_SERVER_MAP_AND_SUGGESTED_ITINERARY_PROPOSAL.md](./LIVE_SERVER_MAP_AND_SUGGESTED_ITINERARY_PROPOSAL.md)), auditing live server map and routing behaviors (2,673 POIs, marker clusters, Cabanatuan City generation, and `followRoute=true` handoff) and establishing **Phase 30** in `TODO.md` (Phases 30.1 to 30.4).
-- **Current Active Tasks**: Staged for execution of Phase 30.1 (P0: Map Tab False-Offline Banner & Tile Latching Fix).
+- **Current Development Phase**: **Phase 30 Completed & Verified (Live-Server Map & Suggested Itinerary Routing Upgrade)**
+- **Last Verified Working State**: **Phase 30 Completed & Verified** (27/27 test files and 272/272 frontend unit tests passing [100%], 21/21 backend Pytest cases [100%], clean Angular production build in `Project/www` with code 0 and 0 stylesheet budget warnings/overruns; resolved GAP-01 per-leg commute metrics and connector badges, GAP-02 isolated route focus mode on `MapPage` with floating route controls and stop carousel, GAP-03 pre-save draft persistence in `ItineraryService` preventing data loss on Full Map inspection, GAP-04 auto-clearing map tile error banner and resilient connectivity reconciliation, and GAP-05 bi-directional stop card pan & pulsing pin highlighting).
+- **Recent Audit & Roadmap Execution**: Fulfilled all objectives of `live_server_map_and_suggested_itinerary_proposal.pdf` ([LIVE_SERVER_MAP_AND_SUGGESTED_ITINERARY_PROPOSAL.md](./LIVE_SERVER_MAP_AND_SUGGESTED_ITINERARY_PROPOSAL.md)), resolving all 5 live-server gaps across Phases 30.1, 30.2, 30.3, and 30.4.
+- **Current Active Tasks**: All Phase 30 tasks completed; staging for next operational deployments or native packaging.
 - **Current Blockers**: **None**.
 
 ---
@@ -246,7 +246,25 @@ All 16 audit findings from [CODE_REVIEW_AUDIT.md](file:///c:/Users/Edward/Deskto
 
 ---
 
-## 8. Next Recommended Opportunities (Post-Phase 25)
+## 8. Completed Phase 30: Live-Server Map & Routing Upgrade Summary (COMPLETED & VERIFIED)
+
+1. **Phase 30.1 (Auto-Clearing Tile Error Banner & Connectivity Reconciliation — GAP-04)**:
+   - Handled `tilelayer.on('tileload')` to automatically clear `hasTileError = false` when tiles load successfully. Added a 3-consecutive-failure threshold to prevent single canceled tiles from triggering the error banner.
+   - Refined `auth.interceptor.ts` so `connectivityService.setHostOffline(true)` only fires for genuine API requests and explicitly ignores aborted requests (`AbortError`). Successful API responses automatically reset offline state.
+2. **Phase 30.2 (Isolated Route Focus Mode & Pre-Save Draft Persistence — GAP-02 & GAP-03)**:
+   - Implemented `isFollowRouteMode` on `MapPage`: automatically hides the 2,673 POI cluster layer when following a route, displaying only the active day's stops and route path. Added floating Active Route Control Bar (`← Back to Plan`, Day switcher chips, nearby POI toggle) and bottom stop carousel.
+   - Implemented in-memory and `sessionStorage` draft caching via `activeDraftItinerary$` in `ItineraryService`. Users navigating to "Full Map" and back to `/suggested-wizard` maintain their generated itinerary without data loss.
+3. **Phase 30.3 (Per-Leg Commute Metrics & Bi-Directional Pin Sync — GAP-01 & GAP-05)**:
+   - Added compact connector pills between stop cards in Suggested Wizard and Itinerary Detail displaying estimated driving/tricycle durations, distance with $1.28 \times$ circuity factor, and local fare estimates.
+   - Added bi-directional stop-card-to-map-marker synchronization (`activeStopIndex` and `stopIndexSelected`): tapping stop cards centers and pulses the corresponding map marker, and tapping a map marker scrolls directly to the card.
+4. **Phase 30.4 (Canvas Rendering & Viewport Spatial Indexing)**:
+   - Configured Leaflet with `preferCanvas: true` on `MapPage` for smooth rendering across 2,673 markers.
+   - Added composite spatial index `Index("ix_places_lat_lng_active", "latitude", "longitude", "is_active")` on `Place` model in `entities.py`.
+   - Extracted Leaflet DOM element styles to `global.scss`, keeping `map.page.scss` well within Angular's 16.00 kB budget.
+
+---
+
+## 9. Next Recommended Opportunities
 
 1. **Native APK Production Signing**:
    - Run `npx cap open android` to inspect the synchronized Android Studio project.

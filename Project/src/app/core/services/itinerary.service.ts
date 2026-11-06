@@ -42,6 +42,60 @@ export class ItineraryService {
   private readonly itinerariesSubject = new BehaviorSubject<Itinerary[]>([]);
   public itineraries$: Observable<Itinerary[]> = this.itinerariesSubject.asObservable();
 
+  private readonly activeDraftSubject = new BehaviorSubject<Itinerary | null>(this.loadDraftFromSession());
+  public activeDraftItinerary$: Observable<Itinerary | null> = this.activeDraftSubject.asObservable();
+
+  private loadDraftFromSession(): Itinerary | null {
+    if (typeof window === 'undefined' || !window.sessionStorage) return null;
+    try {
+      const stored = window.sessionStorage.getItem('ne_active_draft_itinerary');
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Caches an in-memory or unsaved suggested wizard draft itinerary in service memory and sessionStorage (GAP-03).
+   */
+  public setActiveDraftItinerary(itin: Itinerary | null): void {
+    this.activeDraftSubject.next(itin);
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      try {
+        if (itin) {
+          window.sessionStorage.setItem('ne_active_draft_itinerary', JSON.stringify(itin));
+        } else {
+          window.sessionStorage.removeItem('ne_active_draft_itinerary');
+        }
+      } catch (e) {
+        console.warn('Failed to store draft in sessionStorage:', e);
+      }
+    }
+  }
+
+  /**
+   * Synchronously retrieves the active draft itinerary.
+   */
+  public getActiveDraftItinerary(): Itinerary | null {
+    return this.activeDraftSubject.value;
+  }
+
+  /**
+   * Retrieves an itinerary by ID or resolves the active unsaved draft if id is 'draft' or matches (GAP-03).
+   */
+  public getItineraryOrDraftById(id: string): Observable<Itinerary | null> {
+    if (!id || id === 'draft' || id === 'preview') {
+      return of(this.getActiveDraftItinerary());
+    }
+    const draft = this.getActiveDraftItinerary();
+    if (draft && draft.id === id) {
+      return of(draft);
+    }
+    return this.getItineraryById(id).pipe(
+      catchError(() => of(draft))
+    );
+  }
+
   private isNetworkError(err: any): boolean {
     const status = err?.status;
     return (

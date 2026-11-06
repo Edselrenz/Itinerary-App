@@ -41,7 +41,10 @@ export class ItineraryRouteMapComponent implements AfterViewInit, OnChanges, OnD
   @Input() public mapHeight = '180px';
   @Input() public showFullRouteAction = true;
 
+  @Input() public activeStopIndex: number | null = null;
+
   @Output() public stopSelected = new EventEmitter<ItineraryItem>();
+  @Output() public stopIndexSelected = new EventEmitter<number>();
 
   @ViewChild('mapElement', { static: false }) private mapElementRef?: ElementRef<HTMLDivElement>;
 
@@ -49,6 +52,7 @@ export class ItineraryRouteMapComponent implements AfterViewInit, OnChanges, OnD
   public map: L.Map | null = null;
   public polylineLayer: L.Polyline | null = null;
   public stopsLayer: L.LayerGroup | null = null;
+  private stopMarkers: L.Marker[] = [];
   private isBrowser = false;
 
   constructor(
@@ -77,6 +81,10 @@ export class ItineraryRouteMapComponent implements AfterViewInit, OnChanges, OnD
     if (changes['day'] && !changes['day'].firstChange) {
       if (this.isBrowser) {
         setTimeout(() => this.initOrUpdateMap(), 50);
+      }
+    } else if (changes['activeStopIndex'] && !changes['activeStopIndex'].firstChange) {
+      if (this.isBrowser) {
+        this.updateActiveStopMarker();
       }
     }
   }
@@ -173,6 +181,7 @@ export class ItineraryRouteMapComponent implements AfterViewInit, OnChanges, OnD
     } else {
       this.stopsLayer = L.layerGroup().addTo(this.map);
     }
+    this.stopMarkers = [];
 
     const items = this.day.items || [];
     const stopCoords: Array<[number, number]> = [];
@@ -185,19 +194,22 @@ export class ItineraryRouteMapComponent implements AfterViewInit, OnChanges, OnD
       if (lat != null && lng != null) {
         stopCoords.push([lat, lng]);
 
-        // Place numbered circular pin
+        // Place numbered circular pin with active pulse highlight support (GAP-05)
+        const isActive = this.activeStopIndex === idx;
         const pinIcon = L.divIcon({
           className: 'preview-stop-marker-container',
-          html: `<div class="preview-stop-pin" role="button" tabindex="0" aria-label="Stop ${idx + 1}: ${item.place?.name || item.custom_title || 'Stop'}">${idx + 1}</div>`,
-          iconSize: [26, 26],
-          iconAnchor: [13, 13],
+          html: `<div class="preview-stop-pin${isActive ? ' is-active-stop' : ''}" role="button" tabindex="0" aria-label="Stop ${idx + 1}: ${item.place?.name || item.custom_title || 'Stop'}">${idx + 1}</div>`,
+          iconSize: isActive ? [32, 32] : [26, 26],
+          iconAnchor: isActive ? [16, 16] : [13, 13],
         });
 
         const marker = L.marker([lat, lng], { icon: pinIcon });
         marker.on('click', () => {
+          this.stopIndexSelected.emit(idx);
           this.stopSelected.emit(item);
         });
         marker.addTo(this.stopsLayer!);
+        this.stopMarkers.push(marker);
 
         // Polyline segments
         if (item.route_polyline_from_prev) {
@@ -261,5 +273,29 @@ export class ItineraryRouteMapComponent implements AfterViewInit, OnChanges, OnD
     } else if (stopCoords.length === 1) {
       this.map.setView(stopCoords[0], 14);
     }
+  }
+
+  private updateActiveStopMarker(): void {
+    if (!this.map || !this.day?.items) return;
+    const items = this.day.items;
+    items.forEach((item, idx) => {
+      const marker = this.stopMarkers[idx];
+      if (!marker) return;
+      const isActive = this.activeStopIndex === idx;
+      const pinIcon = L.divIcon({
+        className: 'preview-stop-marker-container',
+        html: `<div class="preview-stop-pin${isActive ? ' is-active-stop' : ''}" role="button" tabindex="0" aria-label="Stop ${idx + 1}: ${item.place?.name || item.custom_title || 'Stop'}">${idx + 1}</div>`,
+        iconSize: isActive ? [32, 32] : [26, 26],
+        iconAnchor: isActive ? [16, 16] : [13, 13],
+      });
+      marker.setIcon(pinIcon);
+      if (isActive) {
+        const lat = item.place?.latitude ?? item.custom_lat;
+        const lng = item.place?.longitude ?? item.custom_lng;
+        if (lat != null && lng != null) {
+          this.map?.panTo([lat, lng], { animate: true, duration: 0.5 });
+        }
+      }
+    });
   }
 }

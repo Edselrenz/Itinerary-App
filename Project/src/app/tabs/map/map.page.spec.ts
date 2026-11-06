@@ -9,6 +9,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { MapPage, CATEGORY_FILTERS } from './map.page';
 import { PlaceService } from '../../core/services/place.service';
 import { OsmOverpassService } from '../../core/services/osm-overpass.service';
+import { ItineraryService } from '../../core/services/itinerary.service';
 import { Place } from '../../core/models/place.models';
 
 describe('MapPage', () => {
@@ -58,11 +59,19 @@ describe('MapPage', () => {
     navigate: vi.fn(),
   };
 
+  const mockItineraryService = {
+    getItineraryOrDraftById: vi.fn().mockReturnValue(of(null)),
+    getActiveDraftItinerary: vi.fn().mockReturnValue(null),
+    setActiveDraftItinerary: vi.fn(),
+  };
+
   const mockToast = { present: vi.fn().mockResolvedValue(undefined) };
   const mockToastController = { create: vi.fn().mockResolvedValue(mockToast) };
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    mockItineraryService.getItineraryOrDraftById.mockReturnValue(of(null));
+    mockItineraryService.getActiveDraftItinerary.mockReturnValue(null);
     mockPlaceService.searchPlaces.mockReturnValue(
       of({ total: 1, limit: 100, offset: 0, items: [mockPlace] })
     );
@@ -79,6 +88,7 @@ describe('MapPage', () => {
         provideHttpClientTesting(),
         { provide: PlaceService, useValue: mockPlaceService },
         { provide: OsmOverpassService, useValue: mockOsmOverpassService },
+        { provide: ItineraryService, useValue: mockItineraryService },
         { provide: Router, useValue: mockRouter },
         { provide: ToastController, useValue: mockToastController },
         {

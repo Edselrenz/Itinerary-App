@@ -259,37 +259,38 @@
                   <span class="metric-stops">{{ day.items.length }} stops</span>
                 </div>
 
-                <!-- Embedded Interactive Route Preview Map (Phase 27.2) -->
+                <!-- Embedded Interactive Route Preview Map (Phase 27.2 & 30.3) -->
                 <app-itinerary-route-map
                   *ngIf="dIdx === activeDayIndex && day.items.length > 0"
                   [day]="day"
                   [itineraryId]="itinerary.id"
+                  [activeStopIndex]="activeStopIndex"
                   (stopSelected)="openStopDetail($event)"
+                  (stopIndexSelected)="onStopMarkerSelected($event)"
                 ></app-itinerary-route-map>
 
                 <div class="activities-view-stack">
                   @for (stop of day.items; track stop.id; let sIdx = $index) {
-                    <!-- Leg Travel Badge Between Consecutive Stops (Phase 25.3) -->
-                    <div
-                      *ngIf="sIdx > 0 && (stop.travel_distance_meters || stop.travel_duration_seconds)"
-                      class="route-leg-badge"
-                    >
-                      <div class="leg-pill">
-                        <ion-icon name="car-outline"></ion-icon>
-                        <span *ngIf="stop.travel_distance_meters">
-                          {{ formatMetersToKm(stop.travel_distance_meters) }}
-                        </span>
-                        <span
-                          *ngIf="stop.travel_distance_meters && stop.travel_duration_seconds"
-                          class="leg-dot"
-                        >&bull;</span>
-                        <span *ngIf="stop.travel_duration_seconds">
-                          {{ formatTravelDurationSeconds(stop.travel_duration_seconds) }}
-                        </span>
+                    <!-- Leg Travel Badge Between Consecutive Stops (Phase 30.3.1 GAP-01) -->
+                    @if (getLegCommute(day, sIdx); as leg) {
+                      <div class="route-leg-badge">
+                        <div class="leg-pill">
+                          <ion-icon name="car-outline"></ion-icon>
+                          <span class="leg-dist">{{ leg.distanceText }}</span>
+                          <span class="leg-dot">&bull;</span>
+                          <span class="leg-time">{{ leg.driveText }} / {{ leg.tricycleText }}</span>
+                          <span class="leg-dot">&bull;</span>
+                          <span class="leg-fare">{{ leg.fareText }}</span>
+                        </div>
                       </div>
-                    </div>
+                    }
 
-                    <div class="activity-view-card" (click)="openStopDetail(stop)">
+                    <div
+                      [id]="'detail-stop-card-' + sIdx"
+                      class="activity-view-card"
+                      [class.is-selected-stop]="activeStopIndex === sIdx"
+                      (click)="onStopCardClicked(stop, sIdx)"
+                    >
                       <div class="act-card-main">
                         <div class="act-thumb-container">
                           <img

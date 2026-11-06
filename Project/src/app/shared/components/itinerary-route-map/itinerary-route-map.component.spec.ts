@@ -154,4 +154,13 @@ describe('ItineraryRouteMapComponent', () => {
     component.stopSelected.emit(sampleDay.items[0]);
     expect(spy).toHaveBeenCalledWith(sampleDay.items[0]);
   });
+
+  it('should emit stopIndexSelected and support activeStopIndex highlighting', () => {
+    const spy = vi.spyOn(component.stopIndexSelected, 'emit');
+    component.stopIndexSelected.emit(1);
+    expect(spy).toHaveBeenCalledWith(1);
+
+    component.activeStopIndex = 1;
+    expect(component.activeStopIndex).toBe(1);
+  });
 });

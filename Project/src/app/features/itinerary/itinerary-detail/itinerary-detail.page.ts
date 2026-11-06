@@ -78,7 +78,7 @@ import { formatDateRange } from '../../../core/utils/date.utils';
 import { ItineraryService } from '../../../core/services/itinerary.service';
 import { NearbyPlaceItem, PlaceService } from '../../../core/services/place.service';
 import { RouteTrackingService } from '../../../core/services/route-tracking.service';
-import { decodePolyline } from '../../../core/utils/polyline.util';
+import { decodePolyline, haversineDistanceMeters } from '../../../core/utils/polyline.util';
 import { environment } from '../../../../environments/environment';
 import {
   CommuteInfo,
@@ -150,6 +150,7 @@ export class ItineraryDetailPage implements OnInit, AfterViewInit, OnDestroy, Co
   public itinerary: Itinerary | null = null;
   public isLoading = true;
   public activeDayIndex = 0;
+  public activeStopIndex: number | null = null;
   public budgetSummary: ItineraryBudgetSummary | null = null;
 
   // Embedded Day Route Preview Map (Phase 25.3)
@@ -886,6 +887,59 @@ export class ItineraryDetailPage implements OnInit, AfterViewInit, OnDestroy, Co
   public closeStopDetail(): void {
     this.isStopModalOpen = false;
     this.selectedStop = null;
+  }
+
+  public onStopMarkerSelected(idx: number): void {
+    this.activeStopIndex = idx;
+    if (typeof document !== 'undefined') {
+      const cardEl = document.getElementById(`detail-stop-card-${idx}`);
+      if (cardEl) {
+        cardEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+  }
+
+  public onStopCardClicked(stop: ItineraryItem, idx: number): void {
+    this.activeStopIndex = idx;
+    this.openStopDetail(stop);
+  }
+
+  public getLegCommute(
+    curDay: ItineraryDay,
+    sIdx: number
+  ): { distanceText: string; driveText: string; tricycleText: string; fareText: string } | null {
+    if (sIdx <= 0 || !curDay?.items || !curDay.items[sIdx]) return null;
+    const current = curDay.items[sIdx];
+    const prev = curDay.items[sIdx - 1];
+
+    let meters = current.travel_distance_meters;
+    let seconds = current.travel_duration_seconds;
+
+    if (!meters || meters <= 0) {
+      const prevLat = prev.place?.latitude ?? prev.custom_lat;
+      const prevLng = prev.place?.longitude ?? prev.custom_lng;
+      const curLat = current.place?.latitude ?? current.custom_lat;
+      const curLng = current.place?.longitude ?? current.custom_lng;
+      if (prevLat != null && prevLng != null && curLat != null && curLng != null) {
+        const straightMeters = haversineDistanceMeters(prevLat, prevLng, curLat, curLng);
+        meters = Math.round(straightMeters * 1.28);
+        seconds = Math.round((meters / 1000 / 32) * 3600);
+      }
+    }
+
+    if (!meters || meters <= 0) return null;
+    const km = meters / 1000;
+    const driveMins = seconds ? Math.max(1, Math.round(seconds / 60)) : Math.max(3, Math.round((km / 32) * 60));
+    const trikeMins = Math.max(5, Math.round((km / 22) * 60));
+    const minFare = Math.max(30, Math.round(30 + km * 10));
+    const maxFare = Math.max(50, Math.round(50 + km * 15));
+
+    return {
+      distanceText: `${km.toFixed(1)} km`,
+      driveText: `~${driveMins} mins drive`,
+      tricycleText: `${trikeMins} mins tricycle`,
+      fareText: `Est. Fare ₱${minFare}–₱${maxFare}`,
+    };
   }
 
   public get selectedStopPlace(): Place | null {

@@ -103,6 +103,7 @@ class Place(Base):
     __table_args__ = (
         UniqueConstraint("source_name", "source_record_id", name="uq_place_source_record"),
         Index("ix_places_lat_lng", "latitude", "longitude"),
+        Index("ix_places_lat_lng_active", "latitude", "longitude", "is_active"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)

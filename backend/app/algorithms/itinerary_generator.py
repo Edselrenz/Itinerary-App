@@ -515,6 +515,12 @@ def generate_suggested_itinerary_data(
                 leg_dur = leg_route.get("total_duration_seconds", 0)
                 leg_poly = leg_route.get("overview_polyline")
 
+                if (not leg_dist or leg_dist <= 0) and (prev_place.latitude != curr_place.latitude or prev_place.longitude != curr_place.longitude):
+                    straight_km = haversine_distance_km(prev_place.latitude, prev_place.longitude, curr_place.latitude, curr_place.longitude)
+                    road_km = max(0.5, straight_km * 1.28)
+                    leg_dist = int(round(road_km * 1000))
+                    leg_dur = max(180, int(round((road_km / 32.0) * 3600)))
+
                 curr_dt += timedelta(seconds=leg_dur)
                 rounded_m = int(round(curr_dt.minute / 5.0) * 5)
                 if rounded_m >= 60:
@@ -559,6 +565,10 @@ def generate_suggested_itinerary_data(
             day_total_dist = day_route_data.get("total_distance_meters", 0)
             day_total_dur = day_route_data.get("total_duration_seconds", 0)
             day_legs = day_route_data.get("legs", [])
+
+            if (not day_total_dist or day_total_dist <= 0) and len(day_items) >= 2:
+                day_total_dist = sum(it.get("travel_distance_meters", 0) for it in day_items if it.get("travel_distance_meters"))
+                day_total_dur = sum(it.get("travel_duration_seconds", 0) for it in day_items if it.get("travel_duration_seconds"))
         else:
             day_overview_poly = None
             day_total_dist = 0

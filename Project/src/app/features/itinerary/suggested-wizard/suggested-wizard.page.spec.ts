@@ -88,6 +88,9 @@ describe('SuggestedWizardPage', () => {
       unverifiedCount: 0,
       displayText: '₱100 - ₱200',
     }),
+    getActiveDraftItinerary: vi.fn().mockReturnValue(null),
+    setActiveDraftItinerary: vi.fn(),
+    getItineraryOrDraftById: vi.fn().mockReturnValue(of(null)),
   };
 
   beforeEach(async () => {
@@ -100,6 +103,7 @@ describe('SuggestedWizardPage', () => {
       unverifiedCount: 0,
       displayText: '₱100 - ₱200',
     });
+    mockItineraryService.getActiveDraftItinerary.mockReturnValue(null);
     mockPlaceService.getNearbyPlaces.mockReturnValue(mockNearbyPlaces);
 
     const mockToast = { present: vi.fn().mockResolvedValue(undefined) };

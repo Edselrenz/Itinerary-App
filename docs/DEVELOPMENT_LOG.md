@@ -3013,6 +3013,61 @@ This log records chronological development sessions, detailing objectives, execu
   - `docs/PROJECT_STATE.md`
 - **Status**: Documented & Staged for Execution (Phase 30).
 
+---
+
+## Session 84: Implementation & Verification of Phase 30 Live-Server Map & Suggested Itinerary Routing Upgrade
+- **Date & Time**: 2026-11-07 07:25:00 (Local)
+- **Objective**: Implement and thoroughly verify all Phase 30 deliverables (GAP-01 through GAP-05) resolving live-server map tile banner false positives, isolated route focus mode, pre-save draft persistence, per-leg commute metrics, bi-directional pin synchronization, and high-performance spatial/canvas rendering.
+- **Tasks Performed**:
+  - **Phase 30.1 (GAP-04: Resilient Connectivity & Auto-Clearing Tile Error Banner)**:
+    - In `Project/src/app/core/interceptors/auth.interceptor.ts`, guarded `connectivityService.setHostOffline(true)` to only fire on non-aborted API requests (`isApiRequest` and not `isAborted`), preventing cancelled background tile or debounce queries from flipping connectivity state. Wired successful responses to clear offline state (`setHostOffline(false)`).
+    - In `Project/src/app/tabs/map/map.page.ts`, attached `tilelayer.on('tileload')` to automatically clear `hasTileError = false`, and added a failure threshold counter requiring $\ge 3$ consecutive failures before latching tile error state.
+  - **Phase 30.2 (GAP-02 & GAP-03: Isolated Route Focus Mode & Pre-Save Draft Persistence)**:
+    - In `Project/src/app/core/services/itinerary.service.ts`, added `activeDraftItinerary$` BehaviorSubject with `sessionStorage` fallback, implementing `setActiveDraftItinerary`, `getActiveDraftItinerary`, and `getItineraryOrDraftById`.
+    - In `Project/src/app/features/itinerary/suggested-wizard/suggested-wizard.page.ts`, hydrated draft state on return from Full Map inspection, cached drafts on generation and builder transfer, and cleared drafts on explicit discard or persistence.
+    - In `Project/src/app/tabs/map/map.page.ts` & `html`, implemented `isFollowRouteMode` (`followRoute=true`): decoupled and hid the 2,673 POI `markerCluster` layer by default, rendering only active itinerary stops and connecting polyline.
+    - Added floating Active Route Control Bar with `← Back to Plan` button, `Day 1 | Day 2 | All Days` switcher chips, and `"Show Nearby POIs (+2,673)"` toggle switch.
+    - Added bottom Route Stop Carousel with navigation cards and direct multi-stop Google Maps directions CTA.
+  - **Phase 30.3 (GAP-01 & GAP-05: Per-Leg Commute Metrics & Bi-Directional Pin Sync)**:
+    - In `Project/src/app/features/itinerary/suggested-wizard/suggested-wizard.page.html` & `itinerary-detail.page.html`, added compact connector commute pills displaying distance ($1.28 \times$ circuity factor), drive time, tricycle duration, and fare estimates.
+    - In `Project/src/app/shared/components/itinerary-route-map/itinerary-route-map.component.ts` & `scss`, added `@Input() activeStopIndex` and `@Output() stopIndexSelected`, smooth map centering, and active pulsating pin state (`.is-active-stop`).
+    - In `Project/src/app/features/itinerary/suggested-wizard/suggested-wizard.page.ts` & `itinerary-detail.page.ts`, added bi-directional event handlers and active stop card styling (`.is-selected-stop`).
+    - In `backend/app/algorithms/itinerary_generator.py`, reinforced arterial circuity calculations ensuring zero-cost fallback metrics even with no paid routing APIs.
+  - **Phase 30.4 (Spatial Indexing & Performance Optimization)**:
+    - Set `preferCanvas: true` on `MapPage` Leaflet options to eliminate DOM element overhead across 2,673+ markers.
+    - Added composite spatial index `Index("ix_places_lat_lng_active", "latitude", "longitude", "is_active")` on `Place` model in `backend/app/models/entities.py`.
+    - Extracted heavy Leaflet DOM styling from `map.page.scss` to `Project/src/global.scss`, staying strictly within Angular's $16.00$ kB component stylesheet budget ($0$ warnings).
+  - **Testing & Verification**:
+    - Ran full Angular Vitest suite: 27/27 test files passed, 272/272 tests passed (100%).
+    - Ran full FastAPI Pytest suite: 21/21 tests passed (100%).
+    - Ran production build `npm --prefix Project run build`: completed cleanly with code 0 and 0 stylesheet budget warnings.
+- **Files Created / Modified**:
+  - `Project/src/app/core/interceptors/auth.interceptor.ts`
+  - `Project/src/app/core/interceptors/auth.interceptor.spec.ts` (Created)
+  - `Project/src/app/core/services/itinerary.service.ts`
+  - `Project/src/app/core/services/itinerary.service.spec.ts`
+  - `Project/src/app/features/itinerary/suggested-wizard/suggested-wizard.page.ts`
+  - `Project/src/app/features/itinerary/suggested-wizard/suggested-wizard.page.html`
+  - `Project/src/app/features/itinerary/suggested-wizard/suggested-wizard.page.scss`
+  - `Project/src/app/features/itinerary/suggested-wizard/suggested-wizard.page.spec.ts`
+  - `Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.ts`
+  - `Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.html`
+  - `Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.scss`
+  - `Project/src/app/shared/components/itinerary-route-map/itinerary-route-map.component.ts`
+  - `Project/src/app/shared/components/itinerary-route-map/itinerary-route-map.component.scss`
+  - `Project/src/app/shared/components/itinerary-route-map/itinerary-route-map.component.spec.ts`
+  - `Project/src/app/tabs/map/map.page.ts`
+  - `Project/src/app/tabs/map/map.page.html`
+  - `Project/src/app/tabs/map/map.page.scss`
+  - `Project/src/app/tabs/map/map.page.spec.ts`
+  - `Project/src/global.scss`
+  - `backend/app/algorithms/itinerary_generator.py`
+  - `backend/app/models/entities.py`
+  - `docs/TODO.md`
+  - `docs/KNOWN_ISSUES.md`
+  - `docs/DEVELOPMENT_LOG.md`
+- **Status**: Completed Phase 30; All 5 Gaps (GAP-01 through GAP-05) resolved and 100% verified.
+
 
 
 

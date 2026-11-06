@@ -404,266 +404,12 @@
   }
 }
 
-/* Custom Vector Pins */
-:host ::ng-deep {
-  .custom-map-pin-container {
-    background: transparent;
-    border: none;
-  }
-
-  .custom-map-pin {
-    width: 30px;
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    .pin-marker {
-      width: 26px;
-      height: 26px;
-      border-radius: 50% 50% 50% 0;
-      background: #0084ff;
-      transform: rotate(-45deg);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 4px 10px rgba(0, 132, 255, 0.4);
-      border: 2px solid #ffffff;
-      transition: transform 0.15s ease;
-
-      .pin-inner {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: #ffffff;
-        transform: rotate(45deg);
-      }
-    }
-
-    &:hover .pin-marker,
-    &:active .pin-marker {
-      transform: rotate(-45deg) scale(1.18);
-      background: #0066cc;
-    }
-
-    &.pin-featured .pin-marker {
-      background: linear-gradient(135deg, #0084ff 0%, #1e40af 100%);
-      box-shadow: 0 4px 14px rgba(30, 64, 175, 0.5);
-    }
-
-    &.pin-cat-cafe .pin-marker {
-      background: #d97706;
-      box-shadow: 0 4px 10px rgba(217, 119, 6, 0.4);
-    }
-    &.pin-cat-restaurant .pin-marker {
-      background: #ea580c;
-      box-shadow: 0 4px 10px rgba(234, 88, 12, 0.4);
-    }
-    &.pin-cat-hotel_accommodation .pin-marker {
-      background: #0284c7;
-      box-shadow: 0 4px 10px rgba(2, 132, 199, 0.4);
-    }
-    &.pin-cat-nature_park .pin-marker {
-      background: #16a34a;
-      box-shadow: 0 4px 10px rgba(22, 163, 74, 0.4);
-    }
-    &.pin-cat-resort_swimming .pin-marker {
-      background: #0891b2;
-      box-shadow: 0 4px 10px rgba(8, 145, 178, 0.4);
-    }
-    &.pin-cat-church_religious .pin-marker {
-      background: #7c3aed;
-      box-shadow: 0 4px 10px rgba(124, 58, 237, 0.4);
-    }
-    &.pin-cat-museum_cultural .pin-marker {
-      background: #b45309;
-      box-shadow: 0 4px 10px rgba(180, 83, 9, 0.4);
-    }
-    &.pin-cat-shopping_market .pin-marker {
-      background: #e11d48;
-      box-shadow: 0 4px 10px rgba(225, 29, 72, 0.4);
-    }
-    &.pin-cat-hospital_clinic .pin-marker,
-    &.pin-cat-pharmacy .pin-marker {
-      background: #dc2626;
-      box-shadow: 0 4px 10px rgba(220, 38, 38, 0.4);
-    }
-    &.pin-cat-bank_atm .pin-marker {
-      background: #059669;
-      box-shadow: 0 4px 10px rgba(5, 150, 105, 0.4);
-    }
-    &.pin-cat-fuel_station .pin-marker {
-      background: #475569;
-      box-shadow: 0 4px 10px rgba(71, 85, 105, 0.4);
-    }
-  }
-
-  /* MarkerCluster Modern Styling */
-  .marker-cluster-small,
-  .marker-cluster-medium,
-  .marker-cluster-large {
-    background-color: rgba(0, 132, 255, 0.22) !important;
-    border-radius: 50% !important;
-
-    div {
-      background-color: #0084ff !important;
-      color: #ffffff !important;
-      font-weight: 700 !important;
-      font-size: 12px !important;
-      font-family: inherit !important;
-      box-shadow: 0 3px 8px rgba(0, 132, 255, 0.4) !important;
-    }
-  }
-
-  /* Custom Zoom Control Styling */
-  .leaflet-control-zoom {
-    border: none !important;
-    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12) !important;
-    border-radius: 10px !important;
-    overflow: hidden;
-    margin-right: 1rem !important;
-    margin-bottom: 5.5rem !important;
-
-    a {
-      background-color: #ffffff !important;
-      color: #334155 !important;
-      font-weight: 700 !important;
-      width: 38px !important;
-      height: 38px !important;
-      line-height: 38px !important;
-      border-bottom: 1px solid #f1f5f9 !important;
-
-      &:hover {
-        background-color: #f8fafc !important;
-        color: #0084ff !important;
-      }
-    }
-  }
-
-  .leaflet-control-attribution {
-    background: rgba(255, 255, 255, 0.75) !important;
-    backdrop-filter: blur(4px);
-    font-size: 9px !important;
-    padding: 2px 6px !important;
-    border-top-left-radius: 6px;
-  }
-}
-
 /* Floating Follow Mode Toggle Button (Phase 25.3) */
 .follow-mode-btn {
   &.active-follow {
     background: #2563eb !important;
     color: #ffffff !important;
     box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4) !important;
-  }
-}
-
-/* Route Stop Marker Pin */
-:host ::ng-deep .route-stop-marker-container {
-  background: transparent;
-  border: none;
-
-  .route-stop-pin {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    cursor: pointer;
-
-    .route-stop-badge {
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      background: #2563eb;
-      color: #ffffff;
-      font-size: 13px;
-      font-weight: 700;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border: 2.5px solid #ffffff;
-      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
-      transition: transform 0.2s ease;
-    }
-
-    .route-stop-tooltip {
-      position: absolute;
-      top: -24px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(15, 23, 42, 0.88);
-      color: #ffffff;
-      font-size: 11px;
-      font-weight: 600;
-      padding: 2px 6px;
-      border-radius: 4px;
-      white-space: nowrap;
-      pointer-events: none;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-    }
-
-    &:hover .route-stop-badge {
-      transform: scale(1.15);
-      background: #1d4ed8;
-    }
-  }
-}
-
-/* User Location Pulsing Dot with Direction Indicator */
-:host ::ng-deep .user-location-marker-container {
-  background: transparent;
-  border: none;
-
-  .user-pulse-marker {
-    position: relative;
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    .pulse-beacon {
-      position: absolute;
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      background: rgba(59, 130, 246, 0.35);
-      animation: pulse-ring 2s infinite cubic-bezier(0.215, 0.61, 0.355, 1);
-    }
-
-    .pulse-core {
-      position: relative;
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      background: #2563eb;
-      border: 2.5px solid #ffffff;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-      z-index: 2;
-    }
-
-    .user-heading-pointer {
-      position: absolute;
-      top: 0px;
-      width: 0;
-      height: 0;
-      border-left: 5px solid transparent;
-      border-right: 5px solid transparent;
-      border-bottom: 9px solid #2563eb;
-      transform-origin: center 14px;
-      z-index: 1;
-    }
-  }
-}
-
-@keyframes pulse-ring {
-  0% {
-    transform: scale(0.6);
-    opacity: 0.9;
-  }
-  100% {
-    transform: scale(1.8);
-    opacity: 0;
   }
 }
 
@@ -839,6 +585,246 @@
   to {
     transform: translateY(0);
     opacity: 1;
+  }
+}
+
+/* Floating Active Route Control Bar (Phase 30.2 GAP-02) */
+.active-route-top-bar {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  right: 0.75rem;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 14px;
+  padding: 0.55rem 0.8rem;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.1);
+
+  .route-bar-lead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+
+    .route-back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #1d4ed8;
+      font-size: 0.82rem;
+      font-weight: 700;
+      padding: 0.3rem 0.65rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s ease;
+
+      &:hover {
+        background: #dbeafe;
+      }
+      ion-icon {
+        font-size: 0.95rem;
+      }
+    }
+
+    .route-title-cluster {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+
+      .route-title-text {
+        font-size: 0.88rem;
+        font-weight: 700;
+        color: #0f172a;
+      }
+
+      .route-stops-count {
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: #475569;
+        background: #f1f5f9;
+        padding: 0.15rem 0.45rem;
+        border-radius: 9999px;
+      }
+    }
+  }
+
+  .route-bar-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    overflow-x: auto;
+
+    .route-days-pills {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+
+      .route-day-pill {
+        border: 1px solid #cbd5e1;
+        background: #f8fafc;
+        color: #475569;
+        font-size: 0.74rem;
+        font-weight: 600;
+        padding: 0.25rem 0.55rem;
+        border-radius: 9999px;
+        cursor: pointer;
+        white-space: nowrap;
+
+        &.active {
+          background: #0284c7;
+          border-color: #0284c7;
+          color: #ffffff;
+        }
+      }
+    }
+
+    .route-toggle-pois-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      border: 1px solid #e2e8f0;
+      background: #ffffff;
+      color: #64748b;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 0.25rem 0.55rem;
+      border-radius: 8px;
+      cursor: pointer;
+      white-space: nowrap;
+      margin-left: auto;
+
+      &.active {
+        background: #ecfdf5;
+        border-color: #a7f3d0;
+        color: #059669;
+      }
+    }
+  }
+}
+
+/* Active Route Bottom Carousel */
+.active-route-bottom-carousel {
+  position: absolute;
+  bottom: 1rem;
+  left: 0.75rem;
+  right: 0.75rem;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 14px;
+  padding: 0.65rem 0.85rem;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.12);
+
+  .carousel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    .step-num {
+      font-size: 0.76rem;
+      font-weight: 700;
+      color: #0369a1;
+      background: #e0f2fe;
+      padding: 0.2rem 0.55rem;
+      border-radius: 9999px;
+    }
+
+    .btn-open-gmaps {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      border: 1px solid #16a34a;
+      background: #16a34a;
+      color: #ffffff;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.3rem 0.65rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s ease;
+
+      &:hover {
+        background: #15803d;
+      }
+    }
+  }
+
+  .carousel-cards-track {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding-bottom: 0.2rem;
+    scrollbar-width: thin;
+
+    .route-stop-summary-card {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      min-width: 170px;
+      max-width: 220px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 0.45rem 0.6rem;
+      background: #f8fafc;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: all 0.15s ease;
+
+      &.active {
+        border-color: #0284c7;
+        background: #f0f9ff;
+        box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2);
+      }
+
+      .card-badge {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: #0284c7;
+        color: #ffffff;
+        font-size: 0.72rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+
+      .card-info {
+        min-width: 0;
+
+        .stop-name {
+          font-size: 0.78rem;
+          font-weight: 700;
+          color: #0f172a;
+          margin: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .stop-muni {
+          font-size: 0.68rem;
+          color: #64748b;
+          margin: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+      }
+    }
   }
 }
 

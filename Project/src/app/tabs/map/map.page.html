@@ -1,7 +1,55 @@
 <ion-content [fullscreen]="true" class="map-page-content" [scrollY]="false">
   <div class="map-wrapper">
+    <!-- Floating Active Route Control Bar (Phase 30.2 GAP-02) -->
+    <div class="active-route-top-bar" *ngIf="isFollowRouteMode">
+      <div class="route-bar-lead">
+        <button
+          type="button"
+          class="route-back-btn"
+          (click)="exitFollowRouteMode()"
+          aria-label="Back to Itinerary Plan"
+        >
+          <ion-icon name="arrow-back-outline"></ion-icon>
+          <span>Back to Plan</span>
+        </button>
+
+        <div class="route-title-cluster" *ngIf="activeItineraryPlan">
+          <span class="route-title-text">{{ activeItineraryPlan.destination || 'Nueva Ecija' }}</span>
+          <span class="route-stops-count">{{ activeRouteDayStops.length }} stops</span>
+        </div>
+      </div>
+
+      <div class="route-bar-controls">
+        <!-- Day Switcher Pills (for multi-day trips) -->
+        <div class="route-days-pills" *ngIf="activeItineraryPlan && activeItineraryPlan.days.length > 1">
+          @for (d of activeItineraryPlan.days; track d.id || d.day_number) {
+            <button
+              type="button"
+              class="route-day-pill"
+              [class.active]="activeRouteDayNumber === d.day_number"
+              (click)="switchRouteDay(d.day_number)"
+            >
+              Day {{ d.day_number }}
+            </button>
+          }
+        </div>
+
+        <!-- Show/Hide Nearby POIs Toggle Switch -->
+        <button
+          type="button"
+          class="route-toggle-pois-btn"
+          [class.active]="showBackgroundPoisInRouteMode"
+          (click)="toggleNearbyPoisInRouteMode()"
+          [title]="showBackgroundPoisInRouteMode ? 'Hide nearby discovery POIs' : 'Show nearby discovery POIs'"
+        >
+          <ion-icon [name]="showBackgroundPoisInRouteMode ? 'eye-outline' : 'eye-off-outline'"></ion-icon>
+          <span>{{ showBackgroundPoisInRouteMode ? 'Nearby POIs ON' : 'Show Nearby POIs' }}</span>
+        </button>
+      </div>
+    </div>
+
     <!-- Top Floating Search & Filter Bar (UI-16) -->
-    <div class="map-top-bar">
+    <div class="map-top-bar" *ngIf="!isFollowRouteMode">
       <div class="map-search-row">
         <div class="map-search-box">
           <ion-icon name="search-outline" class="search-lead-icon"></ion-icon>
@@ -124,6 +172,7 @@
 
     <!-- Floating List View Toggle Pill (UI-16) -->
     <button
+      *ngIf="!isFollowRouteMode"
       type="button"
       class="poi-list-toggle-pill"
       (click)="togglePoiDrawer()"
@@ -133,6 +182,40 @@
       <ion-icon name="list-outline"></ion-icon>
       <span>List View ({{ places.length }})</span>
     </button>
+
+    <!-- Active Route Stops Carousel Drawer (Phase 30.2 GAP-02) -->
+    <div class="active-route-bottom-carousel" *ngIf="isFollowRouteMode && activeRouteDayStops.length > 0">
+      <div class="carousel-header">
+        <div class="carousel-step-indicator">
+          <span class="step-num">Stop {{ activeRouteStopIndex + 1 }} of {{ activeRouteDayStops.length }}</span>
+        </div>
+        <button
+          type="button"
+          class="btn-open-gmaps"
+          (click)="openMultiStopGoogleMaps()"
+          title="Open full day navigation in Google Maps"
+        >
+          <ion-icon name="open-outline"></ion-icon>
+          <span>Google Maps Navigation</span>
+        </button>
+      </div>
+
+      <div class="carousel-cards-track">
+        @for (stop of activeRouteDayStops; track stop.id || $index; let idx = $index) {
+          <div
+            class="route-stop-summary-card"
+            [class.active]="activeRouteStopIndex === idx"
+            (click)="selectRouteStop(idx)"
+          >
+            <div class="card-badge">{{ idx + 1 }}</div>
+            <div class="card-info">
+              <h4 class="stop-name">{{ stop.place?.name || stop.custom_title || ('Stop ' + (idx + 1)) }}</h4>
+              <p class="stop-muni">{{ stop.place?.municipality_name || activeItineraryPlan?.destination || 'Nueva Ecija' }}</p>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
 
     <!-- Accessible Collapsible POI List Drawer (UI-16) -->
     <div

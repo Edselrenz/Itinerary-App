@@ -266,6 +266,12 @@
   &:hover {
     border-color: #0084ff;
   }
+
+  &.is-selected-stop {
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.35);
+    background: #fffdf5;
+  }
 }
 
 .stop-thumb-container {

@@ -23,6 +23,7 @@ import {
 import { addIcons } from 'ionicons';
 import {
   addOutline,
+  arrowBackOutline,
   bandageOutline,
   basketOutline,
   bedOutline,
@@ -33,10 +34,14 @@ import {
   carOutline,
   cashOutline,
   checkmarkOutline,
+  chevronBackOutline,
+  chevronForwardOutline,
   closeCircleOutline,
   closeOutline,
   cloudOfflineOutline,
   compassOutline,
+  eyeOffOutline,
+  eyeOutline,
   filterOutline,
   flagOutline,
   funnelOutline,
@@ -49,6 +54,7 @@ import {
   mapOutline,
   medkitOutline,
   navigateOutline,
+  openOutline,
   optionsOutline,
   reloadOutline,
   restaurantOutline,
@@ -82,7 +88,8 @@ import {
   RouteTrackingState,
 } from '../../core/services/route-tracking.service';
 import { PlaceDetailSheetComponent } from '../../shared/components/place-detail-sheet/place-detail-sheet.component';
-import { ItineraryDay, ItineraryItem } from '../../core/models/itinerary.models';
+import { Itinerary, ItineraryDay, ItineraryItem } from '../../core/models/itinerary.models';
+import { ItineraryService } from '../../core/services/itinerary.service';
 import { decodePolyline } from '../../core/utils/polyline.util';
 import { environment } from '../../../environments/environment';
 
@@ -176,6 +183,15 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
   public activeTrackingState: RouteTrackingState | null = null;
   public activeRouteMode: 'browse' | 'follow' = 'browse';
 
+  // Isolated Route Focus Mode State (Phase 30.2 / GAP-02)
+  public isFollowRouteMode = false;
+  public showBackgroundPoisInRouteMode = false;
+  public activeRouteDayNumber = 1;
+  public activeItineraryPlan: Itinerary | null = null;
+  public activeRouteDayStops: ItineraryItem[] = [];
+  public activeRouteStopIndex = 0;
+  private consecutiveTileErrors = 0;
+
   // Dedicated GPS Locate Me State (ROUTE-04 / 27.3.3)
   public isLocatingUser = false;
   public userGpsPosition: [number, number] | null = null;
@@ -194,6 +210,7 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
     private placeService: PlaceService,
     private osmOverpassService: OsmOverpassService,
     public routeTrackingService: RouteTrackingService,
+    private itineraryService: ItineraryService,
     private route: ActivatedRoute,
     private router: Router,
     private cdr: ChangeDetectorRef,
@@ -206,6 +223,7 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
     }
     addIcons({
       addOutline,
+      arrowBackOutline,
       bandageOutline,
       basketOutline,
       bedOutline,
@@ -216,10 +234,14 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
       carOutline,
       cashOutline,
       checkmarkOutline,
+      chevronBackOutline,
+      chevronForwardOutline,
       closeCircleOutline,
       closeOutline,
       cloudOfflineOutline,
       compassOutline,
+      eyeOffOutline,
+      eyeOutline,
       filterOutline,
       flagOutline,
       funnelOutline,
@@ -233,6 +255,7 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
       mapOutline,
       medkitOutline,
       navigateOutline,
+      openOutline,
       optionsOutline,
       reloadOutline,
       restaurantOutline,
@@ -320,9 +343,16 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
 
         if (follow) {
           this.activeRouteMode = 'follow';
-          const day = this.routeTrackingService.currentState.activeDay;
-          if (day && this.map) {
-            this.renderRouteOnMap(day);
+          const dayNumber = Number(params['dayNumber'] || 1);
+          const itineraryId = params['itineraryId'] || undefined;
+          this.loadFollowRoute(itineraryId, dayNumber);
+        } else {
+          if (this.isFollowRouteMode) {
+            this.isFollowRouteMode = false;
+            this.clearRouteFromMap();
+            if (this.markerCluster && this.map && !this.map.hasLayer(this.markerCluster as any)) {
+              this.map.addLayer(this.markerCluster as any);
+            }
           }
         }
 
@@ -400,6 +430,7 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
     );
 
     this.map = L.map(mapElement, {
+      preferCanvas: true,
       center: NUEVA_ECIJA_CENTER,
       zoom: NUEVA_ECIJA_DEFAULT_ZOOM,
       minZoom: 9,
@@ -428,8 +459,16 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
       attribution: attribution,
       maxZoom: 19,
     });
+    tileLayer.on('tileload', () => {
+      this.consecutiveTileErrors = 0;
+      if (this.hasTileError) {
+        this.hasTileError = false;
+        this.cdr.detectChanges();
+      }
+    });
     tileLayer.on('tileerror', () => {
-      if (!this.hasTileError) {
+      this.consecutiveTileErrors++;
+      if (this.consecutiveTileErrors >= 3 && !this.hasTileError) {
         this.hasTileError = true;
         this.cdr.detectChanges();
       }
@@ -478,7 +517,9 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
       this.updateMarkers();
     }
 
-    if (this.activeTrackingState?.isTracking && this.activeTrackingState.activeDay) {
+    if (this.isFollowRouteMode && this.activeItineraryPlan) {
+      this.applyFollowRoutePlan(this.activeItineraryPlan, this.activeRouteDayNumber);
+    } else if (this.activeTrackingState?.isTracking && this.activeTrackingState.activeDay) {
       this.renderRouteOnMap(this.activeTrackingState.activeDay);
     }
   }
@@ -1167,45 +1208,47 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
   public renderRouteOnMap(day: ItineraryDay): void {
     if (!this.map) return;
 
+    // In isolated follow route mode, hide background cluster pins by default (GAP-02)
+    if (this.isFollowRouteMode && !this.showBackgroundPoisInRouteMode && this.markerCluster) {
+      if (this.map.hasLayer(this.markerCluster as any)) {
+        this.map.removeLayer(this.markerCluster as any);
+      }
+    }
+
     this.clearRouteFromMap();
     this.itineraryStopsLayer = L.layerGroup().addTo(this.map);
 
-    if (day.day_overview_polyline) {
-      const latlngs = decodePolyline(day.day_overview_polyline);
-      this.routePolylineLayer = L.polyline(latlngs, {
-        color: '#2563eb',
-        weight: 5,
-        opacity: 0.88,
-        lineJoin: 'round',
-      }).addTo(this.map);
-
-      this.map.fitBounds(this.routePolylineLayer.getBounds(), {
-        padding: [50, 50],
-      });
-    }
-
     const items = day.items || [];
+    const stopCoords: Array<[number, number]> = [];
+    const fullRoutePoints: Array<[number, number]> = [];
+
     items.forEach((item, idx) => {
       const lat = item.place?.latitude ?? item.custom_lat;
       const lng = item.place?.longitude ?? item.custom_lng;
       if (lat == null || lng == null) return;
+      stopCoords.push([lat, lng]);
 
       const stopTitle = this.escapeHtml(item.place?.name || item.custom_title || `Stop ${idx + 1}`);
+      const isSelected = this.isFollowRouteMode && this.activeRouteStopIndex === idx;
+
       const stopIcon = L.divIcon({
         className: 'route-stop-marker-container',
         html: `
-          <div class="route-stop-pin" role="button" aria-label="Stop ${idx + 1}: ${stopTitle}">
+          <div class="route-stop-pin${isSelected ? ' is-selected' : ''}" role="button" aria-label="Stop ${idx + 1}: ${stopTitle}">
             <div class="route-stop-badge">${idx + 1}</div>
             <div class="route-stop-tooltip">${stopTitle}</div>
           </div>
         `,
-        iconSize: [32, 32],
-        iconAnchor: [16, 16],
+        iconSize: isSelected ? [38, 38] : [32, 32],
+        iconAnchor: isSelected ? [19, 19] : [16, 16],
       });
 
       const marker = L.marker([lat, lng], { icon: stopIcon });
       marker.on('click', (e: L.LeafletMouseEvent) => {
         L.DomEvent.stopPropagation(e);
+        if (this.isFollowRouteMode) {
+          this.activeRouteStopIndex = idx;
+        }
         if (item.place) {
           this.selectedPlace = item.place;
           this.cdr.detectChanges();
@@ -1213,13 +1256,192 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
       });
 
       this.itineraryStopsLayer?.addLayer(marker);
+
+      if (item.route_polyline_from_prev) {
+        try {
+          const decoded = decodePolyline(item.route_polyline_from_prev);
+          if (decoded.length > 0) {
+            fullRoutePoints.push(...decoded);
+          }
+        } catch {
+          fullRoutePoints.push([lat, lng]);
+        }
+      } else {
+        fullRoutePoints.push([lat, lng]);
+      }
     });
+
+    if (day.day_overview_polyline) {
+      try {
+        const latlngs = decodePolyline(day.day_overview_polyline);
+        this.routePolylineLayer = L.polyline(latlngs, {
+          color: '#0284c7',
+          weight: 5,
+          opacity: 0.9,
+          lineJoin: 'round',
+        }).addTo(this.map);
+      } catch {
+        // Fallback to coordinates
+      }
+    }
+
+    if (!this.routePolylineLayer && (fullRoutePoints.length > 1 || stopCoords.length > 1)) {
+      const pts = fullRoutePoints.length > 1 ? fullRoutePoints : stopCoords;
+      this.routePolylineLayer = L.polyline(pts, {
+        color: '#0284c7',
+        weight: 5,
+        opacity: 0.9,
+        lineJoin: 'round',
+      }).addTo(this.map);
+    }
+
+    if (this.routePolylineLayer) {
+      this.map.fitBounds(this.routePolylineLayer.getBounds(), {
+        padding: [48, 48],
+        maxZoom: 15,
+      });
+    } else if (stopCoords.length > 0) {
+      const bounds = L.latLngBounds(stopCoords);
+      this.map.fitBounds(bounds, { padding: [48, 48], maxZoom: 15 });
+    }
 
     if (this.activeTrackingState?.currentPosition) {
       this.updateUserLocationMarker(
         this.activeTrackingState.currentPosition,
         this.activeTrackingState.heading
       );
+    }
+  }
+
+  public loadFollowRoute(itineraryId?: string, dayNumber = 1): void {
+    this.isFollowRouteMode = true;
+    this.activeRouteDayNumber = dayNumber;
+
+    if (itineraryId) {
+      this.itineraryService.getItineraryOrDraftById(itineraryId).subscribe((plan) => {
+        if (plan) {
+          this.activeItineraryPlan = plan;
+          this.applyFollowRoutePlan(plan, dayNumber);
+        } else {
+          this.fallbackToActiveTrackingDay();
+        }
+      });
+    } else {
+      const draft = this.itineraryService.getActiveDraftItinerary();
+      if (draft) {
+        this.activeItineraryPlan = draft;
+        this.applyFollowRoutePlan(draft, dayNumber);
+      } else {
+        this.fallbackToActiveTrackingDay();
+      }
+    }
+  }
+
+  private applyFollowRoutePlan(plan: Itinerary, dayNumber: number): void {
+    const days = plan.days || [];
+    const day = days.find((d) => Number(d.day_number) === dayNumber) || days[0];
+    if (day) {
+      this.activeRouteDayStops = day.items || [];
+      this.activeRouteStopIndex = 0;
+      if (this.map) {
+        this.renderRouteOnMap(day);
+      }
+    }
+    this.cdr.detectChanges();
+  }
+
+  private fallbackToActiveTrackingDay(): void {
+    const trackingDay = this.routeTrackingService.currentState.activeDay;
+    if (trackingDay) {
+      this.activeRouteDayStops = trackingDay.items || [];
+      this.activeRouteStopIndex = 0;
+      if (this.map) {
+        this.renderRouteOnMap(trackingDay);
+      }
+    }
+    this.cdr.detectChanges();
+  }
+
+  public exitFollowRouteMode(): void {
+    this.isFollowRouteMode = false;
+    this.clearRouteFromMap();
+    if (this.markerCluster && this.map && !this.map.hasLayer(this.markerCluster as any)) {
+      this.map.addLayer(this.markerCluster as any);
+    }
+    if (this.activeItineraryPlan?.id && this.activeItineraryPlan.id !== 'draft') {
+      this.router.navigate(['/itinerary', this.activeItineraryPlan.id]);
+    } else {
+      this.router.navigate(['/suggested-wizard']);
+    }
+  }
+
+  public switchRouteDay(dayNum: number): void {
+    if (!this.activeItineraryPlan) return;
+    this.activeRouteDayNumber = dayNum;
+    const day = this.activeItineraryPlan.days.find((d) => Number(d.day_number) === dayNum);
+    if (day) {
+      this.activeRouteDayStops = day.items || [];
+      this.activeRouteStopIndex = 0;
+      if (this.map) {
+        this.renderRouteOnMap(day);
+      }
+    }
+    this.cdr.detectChanges();
+  }
+
+  public toggleNearbyPoisInRouteMode(): void {
+    this.showBackgroundPoisInRouteMode = !this.showBackgroundPoisInRouteMode;
+    if (!this.map || !this.markerCluster) return;
+
+    if (this.showBackgroundPoisInRouteMode) {
+      if (!this.map.hasLayer(this.markerCluster as any)) {
+        this.map.addLayer(this.markerCluster as any);
+      }
+    } else {
+      if (this.map.hasLayer(this.markerCluster as any)) {
+        this.map.removeLayer(this.markerCluster as any);
+      }
+    }
+    this.cdr.detectChanges();
+  }
+
+  public selectRouteStop(idx: number): void {
+    this.activeRouteStopIndex = idx;
+    const stop = this.activeRouteDayStops[idx];
+    if (!stop) return;
+    const lat = stop.place?.latitude ?? stop.custom_lat;
+    const lng = stop.place?.longitude ?? stop.custom_lng;
+    if (lat != null && lng != null && this.map) {
+      this.map.panTo([lat, lng], { animate: true, duration: 0.5 });
+    }
+    if (stop.place) {
+      this.selectedPlace = stop.place;
+    }
+    this.cdr.detectChanges();
+  }
+
+  public openMultiStopGoogleMaps(): void {
+    if (!this.activeRouteDayStops || this.activeRouteDayStops.length === 0) return;
+    const valid = this.activeRouteDayStops.filter((s) => {
+      const lat = s.place?.latitude ?? s.custom_lat;
+      const lng = s.place?.longitude ?? s.custom_lng;
+      return lat != null && lng != null;
+    });
+    if (valid.length === 0) return;
+
+    const origin = `${valid[0].place?.latitude ?? valid[0].custom_lat},${valid[0].place?.longitude ?? valid[0].custom_lng}`;
+    const destination = `${valid[valid.length - 1].place?.latitude ?? valid[valid.length - 1].custom_lat},${valid[valid.length - 1].place?.longitude ?? valid[valid.length - 1].custom_lng}`;
+    const waypoints = valid
+      .slice(1, -1)
+      .map((s) => `${s.place?.latitude ?? s.custom_lat},${s.place?.longitude ?? s.custom_lng}`)
+      .join('|');
+
+    let gmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`;
+    if (waypoints) {
+      gmapsUrl += `&waypoints=${waypoints}`;
+    }
+    if (typeof window !== 'undefined') {
+      window.open(gmapsUrl, '_blank');
     }
   }
 

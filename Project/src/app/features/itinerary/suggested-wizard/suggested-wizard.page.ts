@@ -48,6 +48,7 @@ import {
 import { Itinerary, ItineraryBudgetSummary, ItineraryDay, ItineraryItem, SuggestedItineraryRequest } from '../../../core/models/itinerary.models';
 import { Place } from '../../../core/models/place.models';
 import { addDaysLocal, diffDaysLocal, formatDateRange, parseLocalIsoDate, toLocalIsoDate } from '../../../core/utils/date.utils';
+import { haversineDistanceMeters } from '../../../core/utils/polyline.util';
 import { ItineraryService } from '../../../core/services/itinerary.service';
 import { NearbyPlaceItem, PlaceService } from '../../../core/services/place.service';
 import { CommuteInfo, getCommuteInfoForMunicipality } from '../../../core/data/commute-guide.data';
@@ -136,6 +137,7 @@ export class SuggestedWizardPage implements OnInit {
 
   public isStopModalOpen = false;
   public selectedStop: ItineraryItem | null = null;
+  public activeStopIndex: number | null = null;
   public isAssumptionsExpanded = false;
   public anchorPlaceId?: string;
 
@@ -195,6 +197,19 @@ export class SuggestedWizardPage implements OnInit {
 
   public ngOnInit(): void {
     this.nearbyPlacesList = this.placeService.getNearbyPlaces('Bongabon');
+
+    // Pre-save draft hydration: restore unsaved wizard plan if returning from Full Map (GAP-03)
+    if (!this.generatedPlan) {
+      const existingDraft = this.itineraryService.getActiveDraftItinerary();
+      if (existingDraft && existingDraft.days && existingDraft.days.length > 0) {
+        this.generatedPlan = existingDraft;
+        this.activeDayIndex = 0;
+        this.viewMode = 'itinerary';
+        this.budgetSummary = this.itineraryService.calculateBudgetSummary(existingDraft);
+        this.refreshNearbyPlaces();
+      }
+    }
+
     this.route.queryParams.subscribe((params) => {
       if (params['destination']) {
         this.setDestination(params['destination']);
@@ -375,6 +390,7 @@ export class SuggestedWizardPage implements OnInit {
         this.generatedPlan = plan;
         this.activeDayIndex = 0;
         this.viewMode = 'itinerary';
+        this.itineraryService.setActiveDraftItinerary(plan);
         this.budgetSummary = this.itineraryService.calculateBudgetSummary(plan);
         this.refreshNearbyPlaces();
       },
@@ -615,6 +631,7 @@ export class SuggestedWizardPage implements OnInit {
       this.itineraryService.createItinerary(payload).subscribe({
         next: async (saved) => {
           this.isSaving = false;
+          this.itineraryService.setActiveDraftItinerary(null);
           const toast = await this.toastController.create({
             message: `Suggested itinerary "${saved.title}" saved successfully!`,
             duration: 2500,
@@ -631,6 +648,7 @@ export class SuggestedWizardPage implements OnInit {
         },
         error: async (err) => {
           this.isSaving = false;
+          this.itineraryService.setActiveDraftItinerary(null);
           const toast = await this.toastController.create({
             message: err?.error?.detail || 'Failed to save itinerary.',
             duration: 3000,
@@ -646,6 +664,7 @@ export class SuggestedWizardPage implements OnInit {
 
   public customizeInBuilder(): void {
     if (!this.generatedPlan) return;
+    this.itineraryService.setActiveDraftItinerary(this.generatedPlan);
     this.router.navigate(['/custom-builder'], {
       state: { draftItinerary: this.generatedPlan },
     });
@@ -654,6 +673,60 @@ export class SuggestedWizardPage implements OnInit {
   public backToForm(): void {
     this.generatedPlan = null;
     this.viewMode = 'form';
+    this.itineraryService.setActiveDraftItinerary(null);
+  }
+
+  public onStopMarkerSelected(idx: number): void {
+    this.activeStopIndex = idx;
+    if (typeof document !== 'undefined') {
+      const cardEl = document.getElementById(`wizard-stop-card-${idx}`);
+      if (cardEl) {
+        cardEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+  }
+
+  public onStopCardClicked(stop: ItineraryItem, idx: number): void {
+    this.activeStopIndex = idx;
+    this.openStopDetail(stop);
+  }
+
+  public getLegCommute(
+    curDay: ItineraryDay,
+    sIdx: number
+  ): { distanceText: string; driveText: string; tricycleText: string; fareText: string } | null {
+    if (sIdx <= 0 || !curDay?.items || !curDay.items[sIdx]) return null;
+    const current = curDay.items[sIdx];
+    const prev = curDay.items[sIdx - 1];
+
+    let meters = current.travel_distance_meters;
+    let seconds = current.travel_duration_seconds;
+
+    if (!meters || meters <= 0) {
+      const prevLat = prev.place?.latitude ?? prev.custom_lat;
+      const prevLng = prev.place?.longitude ?? prev.custom_lng;
+      const curLat = current.place?.latitude ?? current.custom_lat;
+      const curLng = current.place?.longitude ?? current.custom_lng;
+      if (prevLat != null && prevLng != null && curLat != null && curLng != null) {
+        const straightMeters = haversineDistanceMeters(prevLat, prevLng, curLat, curLng);
+        meters = Math.round(straightMeters * 1.28);
+        seconds = Math.round((meters / 1000 / 32) * 3600);
+      }
+    }
+
+    if (!meters || meters <= 0) return null;
+    const km = meters / 1000;
+    const driveMins = seconds ? Math.max(1, Math.round(seconds / 60)) : Math.max(3, Math.round((km / 32) * 60));
+    const trikeMins = Math.max(5, Math.round((km / 22) * 60));
+    const minFare = Math.max(30, Math.round(30 + km * 10));
+    const maxFare = Math.max(50, Math.round(50 + km * 15));
+
+    return {
+      distanceText: `${km.toFixed(1)} km`,
+      driveText: `~${driveMins} mins drive`,
+      tricycleText: `${trikeMins} mins tricycle`,
+      fareText: `Est. Fare ₱${minFare}–₱${maxFare}`,
+    };
   }
 
   public onBack(): void {
