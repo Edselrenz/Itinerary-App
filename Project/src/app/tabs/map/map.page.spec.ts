@@ -314,4 +314,64 @@ describe('MapPage', () => {
       limit: 150,
     });
   });
+
+  // --- Phase 25.3: Active Route & Turn-by-Turn Tracking ---
+
+  it('should toggle active route mode between follow and browse', () => {
+    expect(component.activeRouteMode).toBe('browse');
+    component.toggleRouteMode();
+    expect(component.activeRouteMode).toBe('follow');
+    component.toggleRouteMode();
+    expect(component.activeRouteMode).toBe('browse');
+  });
+
+  it('should format distance in meters and kilometers correctly', () => {
+    expect(component.formatMetersToKm(undefined)).toBe('0 m');
+    expect(component.formatMetersToKm(450)).toBe('450 m');
+    expect(component.formatMetersToKm(1250)).toBe('1.3 km');
+  });
+
+  it('should format ETA in seconds, minutes, and hours', () => {
+    expect(component.formatEtaSeconds(undefined)).toBe('--');
+    expect(component.formatEtaSeconds(45)).toBe('45s');
+    expect(component.formatEtaSeconds(300)).toBe('5 min');
+    expect(component.formatEtaSeconds(3720)).toBe('1h 2m');
+  });
+
+  it('should render route and clear route from map', () => {
+    const mockDay = {
+      id: 'day-1',
+      itinerary_id: 'itin-1',
+      day_number: 1,
+      travel_date: '2026-11-06',
+      day_overview_polyline: '_p~iF~ps|U_ulLnnqC_mqNvxq`@',
+      items: [
+        {
+          id: 'item-1',
+          day_id: 'day-1',
+          sort_order: 0,
+          duration_minutes: 60,
+          place: mockPlace,
+        },
+      ],
+    };
+
+    // Component map isn't initialized in headless test unless mock map assigned
+    const mockLMap = {
+      addLayer: vi.fn(),
+      removeLayer: vi.fn(),
+      fitBounds: vi.fn(),
+      flyTo: vi.fn(),
+      panTo: vi.fn(),
+    } as unknown as L.Map;
+    component.map = mockLMap;
+
+    component.renderRouteOnMap(mockDay);
+    expect(component.itineraryStopsLayer).toBeTruthy();
+    expect(component.routePolylineLayer).toBeTruthy();
+
+    component.clearRouteFromMap();
+    expect(component.routePolylineLayer).toBeNull();
+    expect(component.itineraryStopsLayer).toBeNull();
+  });
 });

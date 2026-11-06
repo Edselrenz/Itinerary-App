@@ -192,17 +192,96 @@
           <!-- Days List (Image 2) -->
           <div class="days-view-list">
             @for (day of itinerary.days; track day.id || day.day_number; let dIdx = $index) {
-              <div class="day-view-card">
-                <div class="day-card-header">
-                  <h3 class="day-card-number">Day {{ day.day_number }}</h3>
-                  <span class="day-card-date">{{ formatDayTravelDate(day.travel_date) }}</span>
+              <div class="day-view-card" [class.active-day-card]="dIdx === activeDayIndex">
+                <div class="day-card-header" (click)="selectDay(dIdx)">
+                  <div class="day-card-left">
+                    <h3 class="day-card-number">Day {{ day.day_number }}</h3>
+                    <span class="day-card-date">{{ formatDayTravelDate(day.travel_date) }}</span>
+                  </div>
+                  <div class="day-card-right">
+                    <button
+                      *ngIf="dIdx === activeDayIndex"
+                      type="button"
+                      class="day-nav-cta-btn"
+                      (click)="startNavigationForActiveDay(); $event.stopPropagation()"
+                      title="Navigate Day Route"
+                    >
+                      <ion-icon name="navigate-outline"></ion-icon>
+                      <span>Navigate</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Day Route Metrics Banner (Phase 25.3) -->
+                <div
+                  *ngIf="day.total_distance_meters || day.total_travel_duration_seconds"
+                  class="day-route-metrics-bar"
+                >
+                  <div class="metric-item">
+                    <ion-icon name="car-outline"></ion-icon>
+                    <span>{{ formatMetersToKm(day.total_distance_meters) }}</span>
+                  </div>
+                  <span class="metric-divider">&bull;</span>
+                  <div class="metric-item">
+                    <ion-icon name="time-outline"></ion-icon>
+                    <span>{{ formatTravelDurationSeconds(day.total_travel_duration_seconds) }} travel</span>
+                  </div>
+                  <span class="metric-divider">&bull;</span>
+                  <span class="metric-stops">{{ day.items.length }} stops</span>
+                </div>
+
+                <!-- Embedded Interactive Route Preview Map (Phase 25.3) -->
+                <div *ngIf="dIdx === activeDayIndex" class="day-route-preview-wrap">
+                  <div class="preview-map-header">
+                    <span class="preview-map-title">
+                      <ion-icon name="map-outline"></ion-icon>
+                      Route Map
+                    </span>
+                    <button
+                      type="button"
+                      class="preview-toggle-btn"
+                      (click)="togglePreviewMap()"
+                      aria-label="Toggle map preview"
+                    >
+                      <ion-icon [name]="isPreviewMapExpanded ? 'chevron-up-outline' : 'chevron-down-outline'"></ion-icon>
+                    </button>
+                  </div>
+                  <div
+                    [style.display]="isPreviewMapExpanded ? 'block' : 'none'"
+                    #previewMapElement
+                    id="route-preview-map"
+                    class="route-preview-map"
+                  ></div>
                 </div>
 
                 <div class="activities-view-stack">
                   @for (stop of day.items; track stop.id; let sIdx = $index) {
+                    <!-- Leg Travel Badge Between Consecutive Stops (Phase 25.3) -->
+                    <div
+                      *ngIf="sIdx > 0 && (stop.travel_distance_meters || stop.travel_duration_seconds)"
+                      class="route-leg-badge"
+                    >
+                      <div class="leg-pill">
+                        <ion-icon name="car-outline"></ion-icon>
+                        <span *ngIf="stop.travel_distance_meters">
+                          {{ formatMetersToKm(stop.travel_distance_meters) }}
+                        </span>
+                        <span
+                          *ngIf="stop.travel_distance_meters && stop.travel_duration_seconds"
+                          class="leg-dot"
+                        >&bull;</span>
+                        <span *ngIf="stop.travel_duration_seconds">
+                          {{ formatTravelDurationSeconds(stop.travel_duration_seconds) }}
+                        </span>
+                      </div>
+                    </div>
+
                     <div class="activity-view-card" (click)="openStopDetail(stop)">
                       <div class="act-title-row">
-                        <h4 class="act-name">{{ getStopTitle(stop) }}</h4>
+                        <div class="act-title-left">
+                          <span class="act-stop-badge">{{ sIdx + 1 }}</span>
+                          <h4 class="act-name">{{ getStopTitle(stop) }}</h4>
+                        </div>
                         <span class="act-time">{{ formatTimingHour(stop) }}</span>
                       </div>
 
@@ -469,63 +548,20 @@
   </div>
 
   <!-- ========================================================
-       MODAL 1: STOP DETAILS MODAL SHEET
+       MODAL 1: STOP DETAILS SHEET (Powered by PlaceDetailSheetComponent)
        ======================================================== -->
-  <ion-modal
-    class="profile-subwindow-modal stop-detail-modal"
-    [isOpen]="isStopModalOpen"
-    (didDismiss)="closeStopDetail()"
-    [initialBreakpoint]="0.75"
-    [breakpoints]="[0, 0.75, 1.0]"
-  >
-    <ng-template>
-      @if (selectedStop) {
-        <div class="modal-detail-content">
-          <div class="modal-handle-bar"></div>
-          <div class="modal-body-content">
-            <h3 class="modal-title">{{ getStopTitle(selectedStop) }}</h3>
-            <p class="modal-full-desc">{{ getStopDescription(selectedStop) }}</p>
-            @if (selectedStop.notes) {
-              <div class="stop-notes-box">
-                <span class="notes-label">Traveler Note:</span>
-                <p>{{ selectedStop.notes }}</p>
-              </div>
-            }
-
-            @if (getCommuteInfo(selectedStop); as commute) {
-              <div class="commute-guide-box">
-                <div class="commute-header-row">
-                  <ion-icon name="bus-outline" class="commute-title-icon"></ion-icon>
-                  <h4 class="commute-title">How to get there?</h4>
-                </div>
-                <div class="commute-detail-list">
-                  <div class="commute-detail-item">
-                    <span class="commute-label">Transit & Hub:</span>
-                    <span class="commute-value">{{ commute.transitMode }} &bull; {{ commute.departureHub }}</span>
-                  </div>
-                  <div class="commute-detail-item">
-                    <span class="commute-label">Estimated Travel Time:</span>
-                    <span class="commute-value">{{ commute.estimatedTravelTime }}</span>
-                  </div>
-                </div>
-              </div>
-            }
-
-            <div class="modal-actions-grid" style="margin-top: 14px;">
-              <button
-                type="button"
-                class="external-map-btn"
-                (click)="openInGoogleMaps(selectedStop)"
-              >
-                <ion-icon name="open-outline"></ion-icon>
-                <span>Open in Google Maps</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      }
-    </ng-template>
-  </ion-modal>
+  @if (isStopModalOpen && selectedStopPlace) {
+    <div class="bottom-sheet-backdrop" (click)="closeStopDetail()"></div>
+    <app-place-detail-sheet
+      class="poi-bottom-sheet"
+      [place]="selectedStopPlace"
+      [stopNotes]="selectedStop?.notes"
+      [commuteInfo]="selectedStopCommuteInfo"
+      [showAddToTripActions]="false"
+      [showNavigationAction]="true"
+      (closeSheet)="closeStopDetail()"
+    ></app-place-detail-sheet>
+  }
 
   <!-- ========================================================
        MODAL 2: SHARE & EXPORT SHEET

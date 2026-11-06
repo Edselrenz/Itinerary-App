@@ -10,6 +10,7 @@ This documentation suite is maintained continuously throughout development to pr
 
 | Document | Purpose | Audience |
 | :--- | :--- | :--- |
+| [**MASTER_CONTINUOUS_DOCUMENTATION_INSTRUCTIONS.md**](./MASTER_CONTINUOUS_DOCUMENTATION_INSTRUCTIONS.md) | **Continuous Development Protocol & Agent Mandate**: Rules, workflow phases, documentation accuracy standards, and handoff rules for every context reset. | All Developers & Coding Agents |
 | [**PROJECT_STATE.md**](./PROJECT_STATE.md) | **Primary handoff document**: current status, completed vs pending features, last verified working state, blockers, and immediate next task. | All Developers & Agents |
 | [**PROJECT_OVERVIEW.md**](./PROJECT_OVERVIEW.md) | High-level application purpose, target users, core feature scope, and zero-cost open-data constraints. | Developers, Stakeholders |
 | [**SYSTEM_ARCHITECTURE.md**](./SYSTEM_ARCHITECTURE.md) | End-to-end component topology, data flows, client-server separation, security boundaries, and open-data guardrails. | Architects, Fullstack Engineers |
@@ -28,8 +29,8 @@ This documentation suite is maintained continuously throughout development to pr
 
 ## Where to Start
 
+- **Resuming Development or Context Reset**: Start with [MASTER_CONTINUOUS_DOCUMENTATION_INSTRUCTIONS.md](./MASTER_CONTINUOUS_DOCUMENTATION_INSTRUCTIONS.md) followed by [PROJECT_STATE.md](./PROJECT_STATE.md) and [TODO.md](./TODO.md).
 - **New Developers**: Start with [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md) followed by [CONFIGURATION_GUIDE.md](./CONFIGURATION_GUIDE.md).
-- **Resuming Development**: Check [PROJECT_STATE.md](./PROJECT_STATE.md) and [TODO.md](./TODO.md) for immediate next steps.
 - **Frontend Development**: Reference [API_DOCUMENTATION.md](./API_DOCUMENTATION.md) and [SYSTEM_ARCHITECTURE.md](./SYSTEM_ARCHITECTURE.md).
 - **Backend / Database Development**: Reference [DATABASE_DOCUMENTATION.md](./DATABASE_DOCUMENTATION.md) and [TECHNICAL_DECISIONS.md](./TECHNICAL_DECISIONS.md).
 

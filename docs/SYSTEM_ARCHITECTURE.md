@@ -164,3 +164,86 @@ sequenceDiagram
 2. **Zero Manual Copy-Paste**: `scripts/start_server.ps1` publishes the newly generated ephemeral Cloudflare Tunnel URL automatically within 2 seconds of startup.
 3. **Multi-Tunnel Failover**: The Worker attempts the active Cloudflare Tunnel first; if the connection fails or returns >= 502, it instantly fails over to the permanent ngrok tunnel.
 4. **SEC-01 Compliance**: Frontend hostname allowlist explicitly validates `*.workers.dev` alongside `*.trycloudflare.com` and `*.ngrok-free.dev`.
+
+---
+
+## 6. GIS Upgrade, Live Google Places Discovery & Turn-by-Turn Route Tracking (Phase 25)
+
+Phase 25 introduces enterprise GIS and real-time turn-by-turn route tracking while preserving strict multi-engine database portability (PostgreSQL in production, SQLite in test harnesses) and offline resilience.
+
+### 6.1 Topology & Secret Protection Architecture
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Mobile as Ionic Angular Client
+    participant API as FastAPI Backend (Proxy)
+    participant Cache as DB GeospatialCache (PostgreSQL/SQLite)
+    participant Google as Google Places & Routes APIs
+    participant OSRM as OSRM Public Routing (Fallback)
+
+    Note over Mobile,API: Live POI Discovery & Photo Proxying
+    Mobile->>API: POST /api/v1/places/discover (query, lat, lng, radius_meters)
+    API->>Cache: Check cached search (hash key, 7-day TTL)
+    alt Cache Hit
+        Cache-->>API: Return cached JSON payload
+    else Cache Miss
+        API->>Google: Places API (New) TextSearch with FieldMask
+        Google-->>API: Google Places entities (normalized)
+        API->>Cache: Store result in geospatial_cache
+    end
+    API-->>Mobile: 200 OK (PlaceOut[]) with photo references
+
+    Note over Mobile,API: Photo Proxying (Zero API Key Leakage)
+    Mobile->>API: GET /api/v1/places/photos/{photo_name}
+    API->>Google: Fetch photo media using server-side GOOGLE_MAPS_API_KEY
+    Google-->>API: Image binary (JPEG/WebP)
+    API-->>Mobile: Binary Image Stream (Cache-Control: 30 days)
+
+    Note over Mobile,API: Road-Network Route Computation
+    Mobile->>API: POST /api/v1/itineraries/{id}/days/{day_id}/compute-route
+    API->>Cache: Check cached route polyline & legs (7-day TTL)
+    alt Cache Miss & Google Key Present
+        API->>Google: Routes API v2 (computeRoutes with encoded polyline)
+        Google-->>API: Encoded polyline & turn leg durations
+    else Fallback Mode (Key absent or quota exhausted)
+        API->>OSRM: OSRM driving route API (/route/v1/driving/)
+        alt OSRM Success
+            OSRM-->>API: OSRM geometry polyline & durations
+        else Offline Fallback
+            API->>API: Geodesic Haversine calculation + 35 km/h provincial speed estimate
+        end
+    end
+    API->>API: Persist day_overview_polyline & leg durations on ItineraryDay/Item
+    API-->>Mobile: 200 OK (ItineraryDayOut with routing metadata)
+```
+
+### 6.2 Key Architectural Subsystems
+
+1. **Strict Secret Protection**:
+   - `GOOGLE_MAPS_API_KEY` is strictly confined to the backend environment and never exposed in client bundles, network requests, or query strings.
+   - All Google Places searches, place details lookups, photo media downloads, and road routing calculations are proxied through FastAPI.
+2. **Multi-Engine Database Portability**:
+   - The `geospatial_cache` table uses portable `JsonType` (`JSON().with_variant(JSONB(), "postgresql")`) and `sa.Uuid()`, executing flawlessly on both PostgreSQL 15+ in production and SQLite in memory for lightning-fast CI test runs.
+3. **Google Terms of Service Compliance Caching**:
+   - Search query results are cached up to 7 days.
+   - Rich place details and photo assets are refreshed within 30 days.
+   - Cached records store hashes of query parameters and place identifiers.
+4. **Resilient Multi-Tier Routing Fallback**:
+   - Primary: Google Routes API v2 with traffic-aware road distance and turn-by-turn polyline.
+   - Secondary: Public OpenStreetMap OSRM routing (`http://router.project-osrm.org/`).
+   - Tertiary: Offline Haversine calculations with provincial road factor (1.3×) and realistic travel speeds (35 km/h drive, 4.5 km/h walk).
+5. **Algorithmic Itinerary Recommendation Engine**:
+   - **Bayesian Quality Scoring**: Prevents low-review anomalies from outranking established landmarks.
+   - **Operating Hours Gate**: Parses structured `regularOpeningHours` and OSM `opening_hours`, applying a -50 point penalty for closed venues.
+   - **2-Opt TSP Permutations**: Computes factorial ordering of daily travel stops to eliminate backtracking.
+   - **Dynamic Road-Paced Scheduling**: Arrival and departure times are calculated dynamically from road distance legs rather than arbitrary time blocks.
+6. **Mobile Geolocation Tracking (`RouteTrackingService`)**:
+   - Uses `@capacitor/geolocation` with `enableHighAccuracy: true`.
+   - **10m Movement Throttle**: Filters stationary GPS jitter.
+   - **Polyline Segment Snapping**: Calculates orthogonal distance to active polyline.
+   - **100m Off-Route Detection**: Dispatches `rerouteNeeded$` event for route recalculation.
+   - **50m Stop Arrival Detection**: Automatically marks stops visited and advances to next waypoint.
+7. **Unified Presentation (`PlaceDetailSheetComponent`)**:
+   - Standalone Angular component consolidating POI details across Map, Itinerary Detail, and Wizard previews.
+   - Displays photo carousel/thumbnails, ratings, open/closed status badges, weekly operating schedule accordion, review snippets, and direct itinerary actions.

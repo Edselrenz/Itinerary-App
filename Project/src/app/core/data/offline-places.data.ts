@@ -487,6 +487,9 @@ export interface NearbyPlaceItem {
   category: 'restaurant' | 'hospital' | 'store';
   openingHours: string;
   municipality: string;
+  latitude?: number;
+  longitude?: number;
+  google_place_id?: string;
 }
 
 /**
@@ -527,6 +530,8 @@ export function getOfflineNearbyPlaces(municipality: string = 'Bongabon'): Nearb
           category: cat,
           openingHours: p.opening_hours || 'Hours not verified',
           municipality: p.municipality_name || targetMuni,
+          latitude: p.latitude,
+          longitude: p.longitude,
         };
       });
 
@@ -536,27 +541,28 @@ export function getOfflineNearbyPlaces(municipality: string = 'Bongabon'): Nearb
   }
 
   // Default curated Bongabon essentials directly from Figma
+  const bongabonCoords: [number, number] = [15.6315, 121.1466];
   return [
     // 1. Restaurants
-    { id: 'nb-r-1', name: 'Boss Samgyupsal', category: 'restaurant', openingHours: 'Daily, 10:00 AM to 10:00 PM', municipality: targetMuni },
-    { id: 'nb-r-2', name: 'Lomi-Raiyah Foodhouse', category: 'restaurant', openingHours: 'Mon-Sat, 5:00 AM to 8:00 PM', municipality: targetMuni },
-    { id: 'nb-r-3', name: 'The Hangover by Y3-J', category: 'restaurant', openingHours: 'Daily, 6:00 AM to 11:30 PM', municipality: targetMuni },
-    { id: 'nb-r-4', name: 'Banchan Gogi Unlimited Korean Grill', category: 'restaurant', openingHours: 'Daily, 12:30 PM to 11:00 PM', municipality: targetMuni },
-    { id: 'nb-r-5', name: 'Tara G!', category: 'restaurant', openingHours: 'Daily, 24 hrs', municipality: targetMuni },
-    { id: 'nb-r-6', name: "Hera's Diner By Rac's Catering", category: 'restaurant', openingHours: 'Tue-Sun, 6:00 AM to 8:00 PM', municipality: targetMuni },
+    { id: 'nb-r-1', name: 'Boss Samgyupsal', category: 'restaurant', openingHours: 'Daily, 10:00 AM to 10:00 PM', municipality: targetMuni, latitude: bongabonCoords[0], longitude: bongabonCoords[1] },
+    { id: 'nb-r-2', name: 'Lomi-Raiyah Foodhouse', category: 'restaurant', openingHours: 'Mon-Sat, 5:00 AM to 8:00 PM', municipality: targetMuni, latitude: bongabonCoords[0], longitude: bongabonCoords[1] },
+    { id: 'nb-r-3', name: 'The Hangover by Y3-J', category: 'restaurant', openingHours: 'Daily, 6:00 AM to 11:30 PM', municipality: targetMuni, latitude: bongabonCoords[0], longitude: bongabonCoords[1] },
+    { id: 'nb-r-4', name: 'Banchan Gogi Unlimited Korean Grill', category: 'restaurant', openingHours: 'Daily, 12:30 PM to 11:00 PM', municipality: targetMuni, latitude: bongabonCoords[0], longitude: bongabonCoords[1] },
+    { id: 'nb-r-5', name: 'Tara G!', category: 'restaurant', openingHours: 'Daily, 24 hrs', municipality: targetMuni, latitude: bongabonCoords[0], longitude: bongabonCoords[1] },
+    { id: 'nb-r-6', name: "Hera's Diner By Rac's Catering", category: 'restaurant', openingHours: 'Tue-Sun, 6:00 AM to 8:00 PM', municipality: targetMuni, latitude: bongabonCoords[0], longitude: bongabonCoords[1] },
 
     // 2. Hospital & Pharmacies
-    { id: 'nb-h-1', name: `${targetMuni} District Hospital`, category: 'hospital', openingHours: 'Mon-Sat, 7:00 AM to 5:00 PM', municipality: targetMuni },
-    { id: 'nb-h-2', name: 'PharmVille Pharmacy and Medical Supplies', category: 'hospital', openingHours: 'Daily, 7:00 AM to 10:00 PM', municipality: targetMuni },
-    { id: 'nb-h-3', name: 'Deb Pharmacy', category: 'hospital', openingHours: 'Mon-Sat, 7:30 AM to 7:00 PM. Sun and Holidays, 9:00 AM to 5:00 PM', municipality: targetMuni },
-    { id: 'nb-h-4', name: 'Resma Medical Clinic', category: 'hospital', openingHours: 'Daily, 6:30 AM to 3:30 PM', municipality: targetMuni },
+    { id: 'nb-h-1', name: `${targetMuni} District Hospital`, category: 'hospital', openingHours: 'Mon-Sat, 7:00 AM to 5:00 PM', municipality: targetMuni, latitude: bongabonCoords[0], longitude: bongabonCoords[1] },
+    { id: 'nb-h-2', name: 'PharmVille Pharmacy and Medical Supplies', category: 'hospital', openingHours: 'Daily, 7:00 AM to 10:00 PM', municipality: targetMuni, latitude: bongabonCoords[0], longitude: bongabonCoords[1] },
+    { id: 'nb-h-3', name: 'Deb Pharmacy', category: 'hospital', openingHours: 'Mon-Sat, 7:30 AM to 7:00 PM. Sun and Holidays, 9:00 AM to 5:00 PM', municipality: targetMuni, latitude: bongabonCoords[0], longitude: bongabonCoords[1] },
+    { id: 'nb-h-4', name: 'Resma Medical Clinic', category: 'hospital', openingHours: 'Daily, 6:30 AM to 3:30 PM', municipality: targetMuni, latitude: bongabonCoords[0], longitude: bongabonCoords[1] },
 
     // 3. Stores
-    { id: 'nb-s-1', name: 'J&B- Convenience Store', category: 'store', openingHours: 'Daily, 24 hrs', municipality: targetMuni },
-    { id: 'nb-s-2', name: 'Rc Sylvia Store', category: 'store', openingHours: 'Daily, 6:00 AM to 8:00 PM', municipality: targetMuni },
-    { id: 'nb-s-3', name: 'Maila Store', category: 'store', openingHours: 'Daily, 6:00 AM to 8:00 PM', municipality: targetMuni },
-    { id: 'nb-s-4', name: `Alfamart ${targetMuni}`, category: 'store', openingHours: 'Mon-Fri, 6:00 AM to 11:00 PM. Sat-Sun, 24 hrs', municipality: targetMuni },
-    { id: 'nb-s-5', name: 'M2 Mc. Oil', category: 'store', openingHours: 'Daily, 5:30 AM to 8:00 PM', municipality: targetMuni },
-    { id: 'nb-s-6', name: "Franks N' Burgers", category: 'store', openingHours: 'Daily, 24 hrs', municipality: targetMuni },
+    { id: 'nb-s-1', name: 'J&B- Convenience Store', category: 'store', openingHours: 'Daily, 24 hrs', municipality: targetMuni, latitude: bongabonCoords[0], longitude: bongabonCoords[1] },
+    { id: 'nb-s-2', name: 'Rc Sylvia Store', category: 'store', openingHours: 'Daily, 6:00 AM to 8:00 PM', municipality: targetMuni, latitude: bongabonCoords[0], longitude: bongabonCoords[1] },
+    { id: 'nb-s-3', name: 'Maila Store', category: 'store', openingHours: 'Daily, 6:00 AM to 8:00 PM', municipality: targetMuni, latitude: bongabonCoords[0], longitude: bongabonCoords[1] },
+    { id: 'nb-s-4', name: `Alfamart ${targetMuni}`, category: 'store', openingHours: 'Mon-Fri, 6:00 AM to 11:00 PM. Sat-Sun, 24 hrs', municipality: targetMuni, latitude: bongabonCoords[0], longitude: bongabonCoords[1] },
+    { id: 'nb-s-5', name: 'M2 Mc. Oil', category: 'store', openingHours: 'Daily, 5:30 AM to 8:00 PM', municipality: targetMuni, latitude: bongabonCoords[0], longitude: bongabonCoords[1] },
+    { id: 'nb-s-6', name: "Franks N' Burgers", category: 'store', openingHours: 'Daily, 24 hrs', municipality: targetMuni, latitude: bongabonCoords[0], longitude: bongabonCoords[1] },
   ];
 }

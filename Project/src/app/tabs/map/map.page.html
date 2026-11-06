@@ -70,6 +70,18 @@
         <ion-icon name="locate-outline"></ion-icon>
       </button>
 
+      <button
+        *ngIf="activeTrackingState?.isTracking"
+        type="button"
+        class="floating-btn follow-mode-btn"
+        [class.active-follow]="activeRouteMode === 'follow'"
+        (click)="toggleRouteMode()"
+        [title]="activeRouteMode === 'follow' ? 'Switch to Browse' : 'Follow Route'"
+        aria-label="Toggle Route Follow Mode"
+      >
+        <ion-icon [name]="activeRouteMode === 'follow' ? 'navigate-outline' : 'map-outline'"></ion-icon>
+      </button>
+
       <div class="poi-counter-pill" *ngIf="!isLoading && places.length > 0">
         <span>{{ places.length }} destinations</span>
       </div>
@@ -320,116 +332,83 @@
       </ng-template>
     </ion-modal>
 
+    <!-- Active Route Tracking Navigation HUD (Phase 25.3) -->
+    <div
+      *ngIf="activeTrackingState && activeTrackingState.isTracking && !selectedPlace"
+      class="route-tracking-hud"
+      role="region"
+      aria-label="Route Navigation Status"
+    >
+      <!-- Off-route alert banner -->
+      <div *ngIf="activeTrackingState.isOffRoute" class="hud-offroute-alert">
+        <ion-icon name="warning-outline"></ion-icon>
+        <span>Off Route (&gt;100m) · Tracking Route</span>
+      </div>
+
+      <div class="hud-content-card">
+        <div class="hud-icon-wrap">
+          <ion-icon name="navigate-outline" class="hud-direction-icon"></ion-icon>
+        </div>
+        <div class="hud-text-details">
+          <div class="hud-next-label">
+            <span>NEXT STOP</span>
+            <span *ngIf="activeTrackingState.nextStopIndex != null" class="hud-stop-index">
+              #{{ activeTrackingState.nextStopIndex + 1 }}
+            </span>
+          </div>
+          <h4 class="hud-stop-name">
+            {{ getStopDisplayName(activeTrackingState.nextStop) }}
+          </h4>
+          <div class="hud-metrics-row">
+            <span class="hud-metric-badge">
+              <ion-icon name="location-outline"></ion-icon>
+              {{ formatMetersToKm(activeTrackingState.distanceToNextStopMeters) }}
+            </span>
+            <span class="hud-metric-badge">
+              <ion-icon name="time-outline"></ion-icon>
+              {{ formatEtaSeconds(activeTrackingState.etaSecondsToNextStop) }}
+            </span>
+            <span *ngIf="activeTrackingState.totalRemainingDistanceMeters" class="hud-total-remaining">
+              Total: {{ formatMetersToKm(activeTrackingState.totalRemainingDistanceMeters) }}
+            </span>
+          </div>
+        </div>
+
+        <div class="hud-actions-wrap">
+          <button
+            type="button"
+            class="hud-recenter-btn"
+            (click)="recenterUserLocation()"
+            title="Center on My Location"
+            aria-label="Recenter on My Location"
+          >
+            <ion-icon name="locate-outline"></ion-icon>
+          </button>
+          <button
+            type="button"
+            class="hud-stop-btn"
+            (click)="stopRouteTracking()"
+            title="Stop Navigation"
+            aria-label="Stop Navigation"
+          >
+            <ion-icon name="stop-circle-outline"></ion-icon>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Interactive POI Bottom Sheet -->
     @if (selectedPlace) {
       <div class="bottom-sheet-backdrop" (click)="closeBottomSheet()"></div>
-      <div class="poi-bottom-sheet" (click)="$event.stopPropagation()">
-        <button
-          type="button"
-          class="sheet-close-btn"
-          (click)="closeBottomSheet()"
-          aria-label="Close details"
-        >
-          <ion-icon name="close-outline"></ion-icon>
-        </button>
-
-        <!-- Sheet Hero Image -->
-        <div class="sheet-photo-wrap">
-          <img
-            [src]="getPlaceImageUrl(selectedPlace)"
-            [alt]="selectedPlace.name"
-            class="sheet-hero-img"
-            loading="lazy"
-          />
-          <span class="sheet-category-badge">
-            {{ formatCategory(selectedPlace.category) }}
-          </span>
-        </div>
-
-        <!-- Sheet Body -->
-        <div class="sheet-content-scroll">
-          <div class="sheet-header">
-            <h2 class="sheet-title">{{ selectedPlace.name }}</h2>
-            <div class="sheet-meta-row">
-              <span class="meta-item">
-                <ion-icon name="location-outline"></ion-icon>
-                {{ selectedPlace.municipality_name ?? 'Nueva Ecija' }}
-              </span>
-              <span class="meta-item meta-price">
-                <ion-icon name="cash-outline"></ion-icon>
-                {{ formatCost(selectedPlace) }}
-              </span>
-            </div>
-          </div>
-
-          <!-- Provenance / Verification Badge -->
-          <div class="sheet-provenance-row" *ngIf="selectedPlace.source_name">
-            <span class="sheet-provenance-badge">
-              <ion-icon name="shield-checkmark-outline"></ion-icon>
-              Source: {{ selectedPlace.source_name }}
-            </span>
-            <span class="sheet-verified-badge" *ngIf="selectedPlace.verified_at">
-              Verified
-            </span>
-          </div>
-
-          <!-- Opening Hours (Explicit fallback when unverified) -->
-          <div class="sheet-info-pill">
-            <ion-icon name="time-outline"></ion-icon>
-            <span>{{ selectedPlace.opening_hours || 'Hours: Not verified / Not provided' }}</span>
-          </div>
-
-          <!-- Description -->
-          <p class="sheet-description" *ngIf="selectedPlace.description">
-            {{ selectedPlace.description }}
-          </p>
-
-          <!-- Address -->
-          <p class="sheet-address" *ngIf="selectedPlace.address_text">
-            {{ selectedPlace.address_text }}
-          </p>
-
-          <!-- Tags -->
-          <div class="sheet-tags-wrap" *ngIf="selectedPlace.tags && selectedPlace.tags.length > 0">
-            @for (tag of selectedPlace.tags; track tag) {
-              <span class="sheet-tag">{{ tag }}</span>
-            }
-          </div>
-
-          <!-- Actions: Start Trip, Add to Custom, Directions (UI-17) -->
-          <div class="sheet-actions-stack">
-            <div class="sheet-primary-actions-row">
-              <button
-                type="button"
-                class="sheet-action-btn btn-suggested"
-                (click)="startTripHere(selectedPlace)"
-              >
-                <ion-icon name="sparkles-outline"></ion-icon>
-                <span>Start Trip Here</span>
-              </button>
-
-              <button
-                type="button"
-                class="sheet-action-btn btn-custom"
-                (click)="addToCustomTrip(selectedPlace)"
-              >
-                <ion-icon name="add-outline"></ion-icon>
-                <span>Add to Custom Trip</span>
-              </button>
-            </div>
-
-            <a
-              [href]="getDirectionsUrl(selectedPlace)"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="sheet-action-btn btn-directions"
-            >
-              <ion-icon name="navigate-outline"></ion-icon>
-              <span>Get Directions (Google Maps)</span>
-            </a>
-          </div>
-        </div>
-      </div>
+      <app-place-detail-sheet
+        class="poi-bottom-sheet"
+        [place]="selectedPlace"
+        [showAddToTripActions]="true"
+        [showNavigationAction]="true"
+        (closeSheet)="closeBottomSheet()"
+        (startTripHere)="startTripHere($event)"
+        (addToCustomTrip)="addToCustomTrip($event)"
+      ></app-place-detail-sheet>
     }
   </div>
 </ion-content>

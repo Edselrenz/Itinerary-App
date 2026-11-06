@@ -439,5 +439,39 @@ describe('ItineraryDetailPage', () => {
       const label = component.getDaysNightsLabel(component.itinerary);
       expect(label).toBe('2 Days - 1 Night');
     });
+
+    // --- Phase 25.3: Embedded Route Preview & Day Navigation ---
+
+    it('formats meters to km and travel duration seconds', () => {
+      expect(component.formatMetersToKm(undefined)).toBe('');
+      expect(component.formatMetersToKm(850)).toBe('850 m');
+      expect(component.formatMetersToKm(14500)).toBe('14.5 km');
+
+      expect(component.formatTravelDurationSeconds(undefined)).toBe('');
+      expect(component.formatTravelDurationSeconds(45)).toBe('1 min');
+      expect(component.formatTravelDurationSeconds(1200)).toBe('20 min');
+      expect(component.formatTravelDurationSeconds(4200)).toBe('1h 10m');
+    });
+
+    it('toggles route preview map expansion', () => {
+      expect(component.isPreviewMapExpanded).toBe(true);
+      component.togglePreviewMap();
+      expect(component.isPreviewMapExpanded).toBe(false);
+      component.togglePreviewMap();
+      expect(component.isPreviewMapExpanded).toBe(true);
+    });
+
+    it('starts route tracking and navigates to map on startNavigationForActiveDay', () => {
+      const trackingSpy = vi.spyOn(component.routeTrackingService, 'startTracking');
+      component.startNavigationForActiveDay();
+
+      expect(trackingSpy).toHaveBeenCalledWith(component.currentDay);
+      expect(router.navigate).toHaveBeenCalledWith(['/tabs/map'], {
+        queryParams: {
+          followRoute: 'true',
+          dayNumber: 1,
+        },
+      });
+    });
   });
 });

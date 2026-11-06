@@ -132,6 +132,22 @@ class Place(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True, nullable=False)
     tags: Mapped[list[str]] = mapped_column(JsonType, default=list, nullable=False)
 
+    # Google Places API (New) metadata & discovery attributes
+    google_place_id: Mapped[str | None] = mapped_column(
+        String(128), unique=True, index=True, nullable=True
+    )
+    google_types: Mapped[list[str]] = mapped_column(JsonType, default=list, nullable=False)
+    editorial_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    regular_opening_hours: Mapped[dict | None] = mapped_column(JsonType, nullable=True)
+    rating: Mapped[float | None] = mapped_column(Float, nullable=True, index=True)
+    user_rating_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    price_level: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    photos: Mapped[list[dict]] = mapped_column(JsonType, default=list, nullable=False)
+    reviews: Mapped[list[dict]] = mapped_column(JsonType, default=list, nullable=False)
+    business_status: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    google_maps_uri: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    details_cached_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
     municipality: Mapped["Municipality | None"] = relationship(back_populates="places")
 
 
@@ -183,6 +199,10 @@ class ItineraryDay(Base):
     day_number: Mapped[int] = mapped_column(Integer, nullable=False)
     travel_date: Mapped[date] = mapped_column(Date, nullable=False)
     title: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    day_overview_polyline: Mapped[str | None] = mapped_column(Text, nullable=True)
+    total_distance_meters: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    total_travel_duration_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    route_legs: Mapped[list[dict]] = mapped_column(JsonType, default=list, nullable=False)
 
     itinerary: Mapped["Itinerary"] = relationship(back_populates="days")
     items: Mapped[list["ItineraryItem"]] = relationship(
@@ -218,6 +238,11 @@ class ItineraryItem(Base):
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     estimated_cost_min: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
     estimated_cost_max: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
+    google_place_id: Mapped[str | None] = mapped_column(String(128), index=True, nullable=True)
+    travel_mode_from_prev: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    travel_distance_meters: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    travel_duration_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    route_polyline_from_prev: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, onupdate=utcnow
@@ -225,3 +250,16 @@ class ItineraryItem(Base):
 
     day: Mapped["ItineraryDay"] = relationship(back_populates="items")
     place: Mapped["Place | None"] = relationship()
+
+
+class GeospatialCache(Base):
+    """TTL cache for Google Places Search queries, rich details, and Routes API polylines."""
+
+    __tablename__ = "geospatial_cache"
+
+    cache_key: Mapped[str] = mapped_column(String(255), primary_key=True)
+    cache_type: Mapped[str] = mapped_column(String(32), index=True, nullable=False)  # 'places_search' | 'details' | 'route'
+    payload: Mapped[dict] = mapped_column(JsonType, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True, nullable=False)
+

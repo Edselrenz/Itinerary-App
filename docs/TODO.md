@@ -487,14 +487,50 @@ This checklist tracks completed, active, and pending tasks across all developmen
 
 ---
 
-## Phase 24: Pilot Field Testing, UAT & Native Distribution (ACTIVE / NEXT)
-- [ ] **24.1: Live Production Smoke Testing & UAT**:
-  - [ ] Verify live GitHub Pages deployment at `https://edselrenz.github.io/Itinerary-App/` on both mobile browsers and desktop.
-  - [ ] Verify Cloudflare Worker reverse proxy (`https://ne-itinerary-api.edselrenz0.workers.dev/api/v1`) edge routing and data persistence.
-- [ ] **24.2: Android Device Installation & Native Packaging**:
-  - [ ] Verify Progressive Web App (PWA) Add-to-Home-Screen (A2HS) installation on Android device.
-  - [ ] Build and sign Android Debug/Release APK via Android Studio (`npx cap open android`) using Java 17/21.
-- [ ] **24.3: End-to-End Automated Browser Journey Execution**:
-  - [ ] Provision Playwright browser binaries (`npx playwright install chromium`) and execute full browser journey tests (`npm run test:e2e`).
+## Phase 24: Pilot Field Testing, UAT & Native Distribution (COMPLETED)
+- [x] **24.1: Live Production Smoke Testing & UAT**:
+  - [x] Verified live GitHub Pages deployment at `https://edselrenz.github.io/Itinerary-App/` (HTTP 200, valid HTML title/assets).
+  - [x] Verified Cloudflare Worker status endpoint (`https://ne-itinerary-api.edselrenz0.workers.dev/__status`) (HTTP 200, healthy JSON payload with active tunnel metadata).
+  - [x] Added edge KV caching for `/api/v1/places/` and `/compute-day-route` in `cloudflare-worker/worker.js`.
+- [x] **24.2: Android Device Installation & Native Packaging**:
+  - [x] Verified Progressive Web App (PWA) manifest and Service Worker pre-caching.
+  - [x] Synchronized Capacitor Android assets and native plugins (`npx cap sync android`): 6 plugins synced (@capacitor/geolocation v8.2.4, @capacitor/app, @capacitor/haptics, @capacitor/keyboard, @capacitor/status-bar, capacitor-secure-storage-plugin).
+- [x] **24.3: End-to-End Automated Browser Journey Execution**:
+  - [x] Provisioned Playwright Chromium browser binaries (`npx playwright install chromium`, Chrome Headless Shell, FFmpeg, Winldd).
+  - [x] Executed full browser journey test suite (`npm run test:e2e`): 5/5 browser journey tests passed (100%) in 11.9s.
+
+---
+
+## Phase 25: GIS Upgrade, Live Google Places & Turn-by-Turn Routing (COMPLETED)
+> Ref: [itinerary_app_gis_upgrade_technical_spec.md](file:///c:/Users/Edward/Desktop/CaseStudy/itinerary_app_gis_upgrade_technical_spec.md)
+
+### Phase 25.1: Foundation, Schemas & Proxy Services (COMPLETED)
+- [x] **25.1.1 (Config & Security)**: Add `google_maps_api_key`, `google_places_cache_ttl_hours`, and `google_routes_cache_ttl_hours` to `backend/app/core/config.py`.
+- [x] **25.1.2 (ORM Models & Caching Table)**: Expand `Place`, `ItineraryDay`, and `ItineraryItem` models in `backend/app/models/entities.py` and define `GeospatialCache` table with portable `JsonType`.
+- [x] **25.1.3 (Alembic Migration 0002)**: Create reversible Alembic migration `backend/alembic/versions/0002_google_places_and_routing.py`.
+- [x] **25.1.4 (Pydantic Schemas & Frontend Models)**: Expand `PlaceOut`, `ItineraryItemOut`, and `SuggestedItineraryRequest` in `backend/app/schemas/` and TypeScript interfaces in `Project/src/app/core/models/`.
+- [x] **25.1.5 (GoogleMapsService)**: Implement `GoogleMapsService` with Discovery/Details FieldMasks, `compute_route()`, in-db `GeospatialCache`, and automatic OSRM/Haversine fallback.
+- [x] **25.1.6 (FK Upsert-on-Save Safety & Routing Endpoints)**: Update `create_itinerary()` and `update_itinerary()` in `itineraries.py` with `resolve_or_upsert_item_place()` and add route calculation endpoints (`POST /compute-day-route`, `POST /compute-route`).
+- [x] **25.1.7 (Automated Test Suite)**: Implement `backend/tests/test_google_maps_service.py` verifying polyline utils, haversine, fallback routing, and discover endpoints. (20/20 backend tests passing, 205/205 frontend tests passing).
+
+### Phase 25.2: Live Discovery & Recommendation Engine Upgrade (COMPLETED)
+- [x] **25.2.1 (Bayesian Scoring & Hours Gate)**: Implement Bayesian quality scoring and `is_open_during_slot()` in `backend/app/algorithms/itinerary_generator.py`.
+- [x] **25.2.2 (2-Opt & Dynamic Pacing)**: Implement 2-Opt permutation check and dynamic travel-time arrival scheduling from Routes API.
+- [x] **25.2.3 (Polyline & Distance Utilities)**: Implement `Project/src/app/core/utils/polyline.util.ts` (`encodePolyline`, `decodePolyline`, `haversineDistanceMeters`) with unit tests.
+- [x] **25.2.4 (Offline Generator Bug Fix)**: Fix `generateOfflineSuggestedItinerary()` in `itinerary.service.ts` to respect non-Bongabon destinations, utilize `matchedPool`, and compute offline overview polylines and turn legs.
+
+### Phase 25.3: Active Routing & Geolocation Tracking (COMPLETED)
+- [x] **25.3.1 (Capacitor Geolocation)**: Install `@capacitor/geolocation` and configure Android permissions in `AndroidManifest.xml` (`ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`, GPS feature).
+- [x] **25.3.2 (Polyline Utilities & RouteTrackingService)**: Create `polyline.util.ts` geometric helpers (`distanceToSegmentMeters`, `distanceToPolylineMeters`, `remainingDistanceAlongPolylineMeters`) and `RouteTrackingService` with point-on-segment snapping, 10m movement throttle, 50m stop arrival detection, and 100m off-route event dispatch.
+- [x] **25.3.3 (Unclustered Leaflet Layers on Map)**: Add `routePolylineLayer`, `itineraryStopsLayer` (numbered `1..N` outside cluster group), `userLocationMarker` (pulsing blue dot with heading pointer), and active route navigation HUD banner in `map.page.ts`.
+- [x] **25.3.4 (Embedded Route Map on Detail)**: Add interactive Leaflet route preview map, day navigation CTA ("Navigate Day"), and route leg travel badges (`🚗 12 km • 18 min`) to `itinerary-detail.page.ts`.
+
+### Phase 25.4: Unified PlaceDetailSheetComponent & UI Polish (COMPLETED)
+- [x] **25.4.1 (Standalone Bottom Sheet)**: Implement `PlaceDetailSheetComponent` (`Project/src/app/shared/components/place-detail-sheet/`) with photo carousel/thumbnails, ratings, open/closed badges, weekly schedule accordion, reviews snippet, and itinerary CTAs.
+- [x] **25.4.2 (Modal Consolidation Across All Pages)**: Replaced duplicate bottom sheet markup across `map.page.html`, `suggested-wizard.page.html`, and `itinerary-detail.page.html` with `<app-place-detail-sheet>`.
+- [x] **25.4.3 (Nearby Coordinates Bug Fix)**: Added coordinates (`latitude`, `longitude`, `google_place_id`) to `NearbyPlaceItem` in `offline-places.data.ts` and updated `addNearbyPlaceToActiveDay()` in both `itinerary-detail.page.ts` and `suggested-wizard.page.ts` to bind real coordinates instead of hardcoded coordinates.
+- [x] **25.4.4 (Wizard Quality Controls & Inter-Stop Leg Badges)**: Added Travel Mode and Minimum Rating controls to `SuggestedWizardPage`, rating pills, and road travel connectors between consecutive stops.
+- [x] **25.4.5 (Regression, E2E & Production Build Verification)**: 21/21 backend pytest tests passing (100%), 24/24 frontend test files (230/230 unit tests) passing (100%), 5/5 Playwright E2E tests passing (100%), and `ng build` production bundle generated with 0 errors and 0 warnings.
+
 
 

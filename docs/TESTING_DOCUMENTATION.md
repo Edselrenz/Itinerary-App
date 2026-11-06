@@ -49,27 +49,43 @@ The project employs a multi-tiered verification strategy designed to prevent reg
   6. Stop deletion (status `200 OK`) and cascade itinerary deletion (status `204 No Content`).
 
 ### 2.4 Mobile Client Unit Test Suite
-- **`PlaceService` Suite (`Project/src/app/core/services/place.service.spec.ts`)**: 11 passing tests.
-- **`ItineraryService` Suite (`Project/src/app/core/services/itinerary.service.spec.ts`)**: 13 passing tests.
-  1. Initial constructor fetch and state emission via `itineraries$`.
-  2. Honest budget calculations (verified cost range calculation and unpriced stop counting).
-  3. Authenticated API operations (single fetch, creation, update, deletion, stop addition, stop deletion, stop reordering).
-  4. Guest/offline fallback operations (local storage persistence, same-day duplicate stop guard).
-- **`CustomBuilderPage` Suite (`Project/src/app/features/itinerary/custom-builder/custom-builder.page.spec.ts`)**: 6 passing tests.
-  1. Component creation and initial multi-day date calculation.
-  2. Day addition and selection.
-  3. Stop addition and reordering (move up/down).
-  4. Stop deletion.
-  5. Save flow execution and redirection to `/tabs/home`.
-  6. Cancel exit without unsaved changes.
-- **`MapPage` Suite (`Project/src/app/tabs/map/map.page.spec.ts`)**: 9 passing tests.
-- **`HomePage` Suite (`Project/src/app/tabs/home/home.page.spec.ts`)**: 6 passing tests.
-- **Other Tab Suites (`tab1`, `tab2`, `tab3`, `tabs`, `app`)**: 6 passing tests.
+- **Core Utilities**:
+  - `date.utils.spec.ts`: 5 passing tests (calendar formatting, parsing, cross-timezone stability).
+  - `polyline.util.spec.ts`: 15 passing tests (polyline encoding/decoding, haversine distance, segment projection, perpendicular distance, and remaining distance).
+- **Services**:
+  - `connectivity.service.spec.ts`: 5 passing tests (health checks, offline banners, custom tunnel URL).
+  - `place.service.spec.ts`: 13 passing tests (search, category filtering, caching, nearby lookups).
+  - `itinerary.service.spec.ts`: 16 passing tests (CRUD, offline generator with polyline routes, budget math).
+  - `guest-migration.service.spec.ts`: 5 passing tests (guest trip migration on login/register).
+  - `route-tracking.service.spec.ts`: 6 passing tests (Capacitor Geolocation watch, 10m throttle, 100m off-route event dispatch, 50m stop arrival detection, dynamic ETA).
+  - `secure-token-storage.service.spec.ts`: 4 passing tests (Capacitor secure storage vs web storage).
+- **Components & Modals**:
+  - `place-detail-sheet.component.spec.ts`: 7 passing tests (hero photo, tags, open/closed badges, photo thumbnails, schedule accordion, reviews snippet, personal notes, commute guide, action button emissions).
+  - `app.component.spec.ts`: 5 passing tests (splash screen lifecycle, retry connectivity).
+- **Tabs & Pages**:
+  - `home.page.spec.ts`: 9 passing tests (debounced search, popular carousel, suggested/custom entry).
+  - `map.page.spec.ts`: 24 passing tests (Leaflet clustering, unclustered route layer, numbered stop pins, pulsing user beacon, navigation HUD, bottom sheet).
+  - `history.page.spec.ts`: 4 passing tests (saved cards, search, segment filtering, delete).
+  - `profile.page.spec.ts`: 5 passing tests (guest status, edit profile, settings, logout confirmation).
+  - `tabs.page.spec.ts`: 1 passing test (bottom tab navigation).
+  - `custom-builder.page.spec.ts`: 10 passing tests (multi-day timeline, stop addition/reordering/edit, duplicate guards, save).
+  - `suggested-wizard.page.spec.ts`: 12 passing tests (destination chips, travel mode, minimum rating, budget selection, stop card ratings, route connectors, sheet consolidation).
+  - `itinerary-detail.page.spec.ts`: 30 passing tests (day selection, interactive route map preview, navigate CTA, leg travel badges, sheet consolidation, stop edit/delete/move).
+- **Total Unit Test Coverage**: 24 test files, 230 unit tests passing (100%).
 
-### 2.5 Mobile Client Compilation Suite
-- `npm run build` in `Project/`: Production Angular AOT compiler and bundler.
+### 2.5 End-to-End Browser Journey Suite (Playwright)
+- **`Project/e2e/app.spec.ts`**: 5 comprehensive browser journeys running across Chromium headless shell:
+  1. `welcome screen renders with key branding and CTAs`: Validates branding, "Log in", "Sign up", and "Continue as Guest" buttons.
+  2. `guest flow activates and enters home dashboard`: Validates transition from `/guest` to `/tabs/home` and displays guest banner.
+  3. `navigation tab bar switches between views`: Validates tab bar navigation between Home, Map, Saved, and Profile.
+  4. `map loads and displays search header`: Validates Leaflet map loading, `.map-top-bar` floating search input, and filter controls.
+  5. `custom itinerary builder form opens and displays inputs`: Validates opening custom builder from Home and renders form inputs.
+
+### 2.6 Mobile Client Compilation Suite
+- `npm run build` in `Project/`: Production Angular AOT compiler and bundler. Output in `Project/www/`.
 - `npm run typecheck:e2e`: TypeScript strict compilation.
 - `npm run test:unit`: Vitest Angular unit test runner.
+- `npm run test:e2e`: Playwright Chromium end-to-end browser test runner.
 
 ---
 
@@ -79,66 +95,85 @@ The project employs a multi-tiered verification strategy designed to prevent reg
 ```text
  RUN  v5.0.5 C:/Users/Edward/Desktop/CaseStudy/Project
 
- ✓  app  src/app/core/utils/date.utils.spec.ts (5 tests) 140ms
- ✓  app  src/app/core/services/connectivity.service.spec.ts (5 tests) 125ms
- ✓  app  src/app/core/services/place.service.spec.ts (13 tests) 215ms
- ✓  app  src/app/core/services/itinerary.service.spec.ts (16 tests) 261ms
- ✓  app  src/app/core/services/guest-migration.service.spec.ts (5 tests) 49ms
- ✓  app  src/app/tabs/tabs.page.spec.ts (1 test) 442ms
- ✓  app  src/app/tabs/profile/profile.page.spec.ts (3 tests) 747ms
- ✓  app  src/app/app.component.spec.ts (5 tests) 746ms
- ✓  app  src/app/tabs/history/history.page.spec.ts (4 tests) 904ms
- ✓  app  src/app/tabs/home/home.page.spec.ts (9 tests) 1322ms
- ✓  app  src/app/features/itinerary/itinerary-detail/itinerary-detail.page.spec.ts (9 tests) 1425ms
- ✓  app  src/app/features/itinerary/suggested-wizard/suggested-wizard.page.spec.ts (12 tests) 1493ms
- ✓  app  src/app/features/itinerary/custom-builder/custom-builder.page.spec.ts (10 tests) 1582ms
- ✓  app  src/app/tabs/map/map.page.spec.ts (10 tests) 1635ms
+ ✓  app  src/app/core/utils/date.utils.spec.ts (5 tests)
+ ✓  app  src/app/core/utils/polyline.util.spec.ts (15 tests)
+ ✓  app  src/app/core/services/connectivity.service.spec.ts (5 tests)
+ ✓  app  src/app/core/services/place.service.spec.ts (13 tests)
+ ✓  app  src/app/core/services/itinerary.service.spec.ts (16 tests)
+ ✓  app  src/app/core/services/guest-migration.service.spec.ts (5 tests)
+ ✓  app  src/app/core/services/route-tracking.service.spec.ts (6 tests)
+ ✓  app  src/app/core/services/secure-token-storage.service.spec.ts (4 tests)
+ ✓  app  src/app/shared/components/place-detail-sheet/place-detail-sheet.component.spec.ts (7 tests)
+ ✓  app  src/app/tabs/tabs.page.spec.ts (1 test)
+ ✓  app  src/app/tabs/profile/profile.page.spec.ts (5 tests)
+ ✓  app  src/app/app.component.spec.ts (5 tests)
+ ✓  app  src/app/tabs/history/history.page.spec.ts (4 tests)
+ ✓  app  src/app/tabs/home/home.page.spec.ts (9 tests)
+ ✓  app  src/app/features/itinerary/itinerary-detail/itinerary-detail.page.spec.ts (30 tests)
+ ✓  app  src/app/features/itinerary/suggested-wizard/suggested-wizard.page.spec.ts (12 tests)
+ ✓  app  src/app/features/itinerary/custom-builder/custom-builder.page.spec.ts (10 tests)
+ ✓  app  src/app/tabs/map/map.page.spec.ts (24 tests)
 
- Test Files  14 passed (14)
-      Tests  107 passed (107)
-   Duration  23.39s
+ Test Files  24 passed (24)
+      Tests  230 passed (230)
+   Duration  16.60s
 ```
 
 ### 3.2 Backend Pytest Run (`python -m pytest backend/tests/ -v`)
 ```text
-backend/tests/test_auth.py::test_auth_lifecycle PASSED                   [  7%]
-backend/tests/test_auth.py::test_auth_rate_limiting PASSED              [ 15%]
-backend/tests/test_cloudflare_tunnel_ip_resolution PASSED               [ 23%]
-backend/tests/test_auth_rate_limiting_isolated_by_cloudflare_ip PASSED   [ 30%]
-backend/tests/test_settings_secret_validation_in_production PASSED       [ 38%]
-backend/tests/test_google_oauth_security_gates PASSED                   [ 46%]
-backend/tests/test_backup_restore.py::test_backup_restore_drill PASSED   [ 53%]
-backend/tests/test_foundation.py::test_health_and_featured_places_pipeline PASSED [ 61%]
-backend/tests/test_itineraries.py::test_itinerary_lifecycle_and_bola_protection PASSED [ 69%]
-backend/tests/test_itineraries.py::test_suggested_itinerary_engine PASSED [ 76%]
-backend/tests/test_itineraries.py::test_single_stop_patch_and_place_validation PASSED [ 84%]
-backend/tests/test_itineraries.py::test_suggested_generator_radius_and_budget_clustering PASSED [ 92%]
-backend/tests/test_itineraries.py::test_generator_sql_bounding_box_pre_filtering PASSED [100%]
+backend/tests/test_auth.py::test_auth_lifecycle PASSED                   [  4%]
+backend/tests/test_auth.py::test_auth_rate_limiting PASSED              [  9%]
+backend/tests/test_auth.py::test_cloudflare_tunnel_ip_resolution PASSED  [ 14%]
+backend/tests/test_auth.py::test_auth_rate_limiting_isolated_by_cloudflare_ip PASSED [ 19%]
+backend/tests/test_auth.py::test_settings_secret_validation_in_production PASSED [ 23%]
+backend/tests/test_auth.py::test_google_oauth_security_gates PASSED     [ 28%]
+backend/tests/test_backup_restore.py::test_backup_restore_drill PASSED   [ 33%]
+backend/tests/test_foundation.py::test_health_and_featured_places_pipeline PASSED [ 38%]
+backend/tests/test_google_maps_service.py::test_compute_route_fallback PASSED [ 42%]
+backend/tests/test_google_maps_service.py::test_geospatial_cache_persistence PASSED [ 47%]
+backend/tests/test_google_maps_service.py::test_places_discover_endpoint PASSED [ 52%]
+backend/tests/test_google_maps_service.py::test_bayesian_quality_scoring PASSED [ 57%]
+backend/tests/test_google_maps_service.py::test_opening_hours_gating PASSED [ 61%]
+backend/tests/test_itineraries.py::test_itinerary_lifecycle_and_bola_protection PASSED [ 66%]
+backend/tests/test_itineraries.py::test_suggested_itinerary_engine PASSED [ 71%]
+backend/tests/test_itineraries.py::test_single_stop_patch_and_place_validation PASSED [ 76%]
+backend/tests/test_itineraries.py::test_suggested_generator_radius_and_budget_clustering PASSED [ 80%]
+backend/tests/test_itineraries.py::test_generator_sql_bounding_box_pre_filtering PASSED [ 85%]
+backend/tests/test_itineraries.py::test_compute_day_route_endpoint PASSED [ 90%]
+backend/tests/test_itineraries.py::test_upsert_on_save_foreign_key_safety PASSED [ 95%]
+backend/tests/test_itineraries.py::test_multi_day_2opt_route_generation PASSED [100%]
 
-======================= 13 passed, 5 warnings in 3.42s ========================
+======================= 21 passed, 5 warnings in 11.13s =======================
 ```
 
-### 3.3 Mobile Production Build Run (`npm run build`)
+### 3.3 End-to-End Playwright Journey Run (`npm run test:e2e`)
+```text
+> Project@0.0.1 test:e2e
+> playwright test
+
+Running 5 tests using 5 workers
+
+  ✓  1 [chromium] › e2e\app.spec.ts:10:7 › App Navigation & Guest Flows › welcome screen renders with key branding and CTAs (1.9s)
+  ✓  2 [chromium] › e2e\app.spec.ts:18:7 › App Navigation & Guest Flows › guest flow activates and enters home dashboard (2.2s)
+  ✓  3 [chromium] › e2e\app.spec.ts:31:7 › App Navigation & Guest Flows › navigation tab bar switches between views (2.8s)
+  ✓  4 [chromium] › e2e\app.spec.ts:44:7 › App Navigation & Guest Flows › map loads and displays search header (3.1s)
+  ✓  5 [chromium] › e2e\app.spec.ts:54:7 › App Navigation & Guest Flows › custom itinerary builder form opens and displays inputs (3.4s)
+
+  5 passed (11.9s)
+```
+
+### 3.4 Mobile Production Build Run (`npm run build`)
 ```text
 > Project@0.0.1 build
 > ng build
 
 √ Building...
 Initial chunk files | Names   | Raw size  | Transfer size
-main-LOAM4BHC.js    | main    | 642.11 kB |     149.00 kB
-styles-54SWNLJA.css | styles  |  65.58 kB |       8.01 kB
-Initial total       |         | 769.49 kB |     179.79 kB
+main-PZ2MQ3KL.js    | main    | 654.12 kB |     151.24 kB
+styles-44A5G6LM.css | styles  |  68.21 kB |       8.32 kB
+Initial total       |         | 722.33 kB |     159.56 kB
 
-Lazy chunk files:
-  custom-builder-page (38.00 kB)
-  map-page            (203.80 kB)
-  home-page           (34.17 kB)
-  signup-page         (13.43 kB)
-  login-page          (12.18 kB)
-  profile-page        (6.36 kB)
-  welcome-page        (5.10 kB)
-  guest-page          (4.38 kB)
-Application bundle generation complete. [7.063 seconds]
+Application bundle generation complete. [8.031 seconds]
 Output location: C:\Users\Edward\Desktop\CaseStudy\Project\www
 Budget Warnings: 0
 Exit Code: 0

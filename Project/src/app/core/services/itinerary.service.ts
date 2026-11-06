@@ -16,9 +16,11 @@ import {
   ItineraryItemCreatePayload,
   ItineraryReorderEntry,
   ItineraryUpdatePayload,
+  RouteLegMetadata,
   SuggestedItineraryRequest,
   ItineraryBudgetSummary,
 } from '../models/itinerary.models';
+import { encodePolyline, haversineDistanceMeters } from '../utils/polyline.util';
 import { AuthService } from './auth.service';
 import { GuestItinerary, GuestStorageService } from './guest-storage.service';
 
@@ -785,15 +787,33 @@ export class ItineraryService {
       const dayId = this.generateId();
       const items: ItineraryItem[] = [];
 
+      let dayPlaces: OfflineCuratedPlace[];
       const cluster = isProvincialOrBongabon
         ? dayClusterPresets[d % dayClusterPresets.length]
         : null;
 
-      const dayPlaces = cluster?.places || [
-        curatedPool[0],
-        curatedPool[1],
-        curatedPool[2],
-      ];
+      if (cluster) {
+        dayPlaces = cluster.places;
+      } else {
+        // Respect target destination matchedPool (CR-009, DEF-05)
+        const poolSize = matchedPool.length;
+        if (poolSize >= 3) {
+          const startIdx = (d * 3) % poolSize;
+          dayPlaces = [
+            matchedPool[startIdx],
+            matchedPool[(startIdx + 1) % poolSize],
+            matchedPool[(startIdx + 2) % poolSize],
+          ];
+        } else {
+          dayPlaces = [...matchedPool];
+          for (const cp of curatedPool) {
+            if (dayPlaces.length >= 3) break;
+            if (!dayPlaces.some((p) => p.id === cp.id)) {
+              dayPlaces.push(cp);
+            }
+          }
+        }
+      }
 
       for (let s = 0; s < dayPlaces.length; s++) {
         const place = dayPlaces[s];
@@ -852,7 +872,73 @@ export class ItineraryService {
         item.sort_order = idx + 1;
       });
 
-      const primaryMuni = cluster?.municipality || items[0]?.place?.municipality_name || request.destination || 'Nueva Ecija';
+      // Calculate offline routes, distances, and polylines
+      const coords: Array<[number, number]> = items
+        .filter((it) => it.place?.latitude && it.place?.longitude)
+        .map((it) => [it.place!.latitude, it.place!.longitude]);
+
+      const dayOverviewPolyline = coords.length >= 2 ? encodePolyline(coords) : null;
+      let totalDist = 0;
+      let totalDur = 0;
+      const routeLegs: RouteLegMetadata[] = [];
+
+      for (let i = 0; i < items.length; i++) {
+        const it = items[i];
+        if (i === 0) {
+          it.travel_distance_meters = null;
+          it.travel_duration_seconds = null;
+          it.route_polyline_from_prev = null;
+          it.travel_mode_from_prev = 'DRIVE';
+        } else {
+          const prev = items[i - 1];
+          const dist = Math.round(
+            haversineDistanceMeters(
+              prev.place!.latitude,
+              prev.place!.longitude,
+              it.place!.latitude,
+              it.place!.longitude
+            )
+          );
+          // Estimated driving speed 40 km/h (11.11 m/s)
+          const dur = Math.round(dist / 11.11);
+          const legPoly = encodePolyline([
+            [prev.place!.latitude, prev.place!.longitude],
+            [it.place!.latitude, it.place!.longitude],
+          ]);
+
+          it.travel_distance_meters = dist;
+          it.travel_duration_seconds = dur;
+          it.route_polyline_from_prev = legPoly;
+          it.travel_mode_from_prev = 'DRIVE';
+
+          totalDist += dist;
+          totalDur += dur;
+
+          routeLegs.push({
+            start_location: { latitude: prev.place!.latitude, longitude: prev.place!.longitude },
+            end_location: { latitude: it.place!.latitude, longitude: it.place!.longitude },
+            distance_meters: dist,
+            duration_seconds: dur,
+            polyline: legPoly,
+            steps: [
+              {
+                instruction: `Drive to ${it.place?.name || 'next stop'} (${dist}m)`,
+                distance_meters: dist,
+                duration_seconds: dur,
+                polyline: legPoly,
+                maneuver: 'straight',
+              },
+            ],
+          });
+        }
+      }
+
+      const primaryMuni =
+        cluster?.municipality ||
+        items[0]?.place?.municipality_name ||
+        request.destination ||
+        'Nueva Ecija';
+
       days.push({
         id: dayId,
         itinerary_id: itineraryId,
@@ -860,6 +946,10 @@ export class ItineraryService {
         travel_date: dayDateStr,
         title: `Day ${d + 1}: ${primaryMuni}`,
         items,
+        day_overview_polyline: dayOverviewPolyline,
+        total_distance_meters: totalDist,
+        total_travel_duration_seconds: totalDur,
+        route_legs: routeLegs,
       });
     }
 

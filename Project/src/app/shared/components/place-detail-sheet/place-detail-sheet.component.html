@@ -1,0 +1,264 @@
+<div *ngIf="place" class="place-detail-sheet" role="dialog" aria-modal="true" [attr.aria-label]="place.name">
+  <button
+    type="button"
+    class="sheet-close-btn"
+    (click)="onClose()"
+    aria-label="Close details"
+  >
+    <ion-icon name="close-outline"></ion-icon>
+  </button>
+
+  <!-- Photo Hero & Gallery -->
+  <div class="sheet-photo-wrap">
+    <img
+      [src]="getHeroPhotoUrl()"
+      [alt]="place.name"
+      class="sheet-hero-img"
+      loading="lazy"
+    />
+    <span class="sheet-category-badge">
+      {{ formatCategory(place.category) }}
+    </span>
+
+    <div *ngIf="isOpenNow !== null" class="sheet-open-badge" [class.is-open]="isOpenNow" [class.is-closed]="!isOpenNow">
+      <span class="status-indicator-dot"></span>
+      <span>{{ isOpenNow ? 'Open Now' : 'Closed' }}</span>
+    </div>
+  </div>
+
+  <!-- Photo Thumbnails (if multiple photos) -->
+  <div *ngIf="place.photos && place.photos.length > 1" class="sheet-photo-thumbnails-track">
+    @for (photo of place.photos; track photo.name; let pIdx = $index) {
+      <button
+        type="button"
+        class="photo-thumb-btn"
+        [class.active-thumb]="pIdx === activePhotoIndex"
+        (click)="setActivePhoto(pIdx)"
+        [attr.aria-label]="'View photo ' + (pIdx + 1)"
+      >
+        <img [src]="getPhotoThumbnailUrl(photo)" [alt]="'Photo ' + (pIdx + 1)" class="thumb-img" />
+      </button>
+    }
+  </div>
+
+  <!-- Content Body -->
+  <div class="sheet-content-scroll">
+    <div class="sheet-header">
+      <h2 class="sheet-title">{{ place.name }}</h2>
+
+      <!-- Ratings & Reviews Row -->
+      <div *ngIf="place.rating" class="sheet-rating-row">
+        <div class="star-pill">
+          <ion-icon name="star" class="star-icon"></ion-icon>
+          <span class="rating-value">{{ place.rating.toFixed(1) }}</span>
+        </div>
+        <span *ngIf="place.user_rating_count" class="review-count">
+          ({{ place.user_rating_count | number }} reviews)
+        </span>
+        <span *ngIf="place.rating >= 4.5" class="top-rated-tag">
+          Top Rated
+        </span>
+      </div>
+
+      <div class="sheet-meta-row">
+        <span class="meta-item">
+          <ion-icon name="location-outline"></ion-icon>
+          {{ place.municipality_name ?? 'Nueva Ecija' }}
+        </span>
+        <span class="meta-item meta-price">
+          <ion-icon name="cash-outline"></ion-icon>
+          {{ formatCost(place) }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Provenance / Verification Badge -->
+    <div class="sheet-provenance-row">
+      <span class="sheet-provenance-badge">
+        <ion-icon name="shield-checkmark-outline"></ion-icon>
+        {{ place.google_place_id ? 'Google Verified POI' : (place.source_name || 'Verified Destination') }}
+      </span>
+      <span *ngIf="place.verified_at" class="sheet-verified-badge">
+        Verified
+      </span>
+    </div>
+
+    <!-- Operating Hours Accordion -->
+    <div class="sheet-hours-section">
+      <button
+        type="button"
+        class="sheet-hours-header-btn"
+        (click)="toggleHours()"
+        [attr.aria-expanded]="isHoursExpanded"
+      >
+        <div class="hours-summary">
+          <ion-icon name="time-outline"></ion-icon>
+          <span>{{ place.opening_hours || 'Operating Hours' }}</span>
+        </div>
+        <ion-icon
+          *ngIf="weekdayDescriptions.length > 0"
+          [name]="isHoursExpanded ? 'chevron-up-outline' : 'chevron-down-outline'"
+          class="hours-expand-icon"
+        ></ion-icon>
+      </button>
+
+      <div *ngIf="isHoursExpanded && weekdayDescriptions.length > 0" class="weekday-hours-list">
+        @for (line of weekdayDescriptions; track line) {
+          <div class="weekday-line">{{ line }}</div>
+        }
+      </div>
+    </div>
+
+    <!-- Editorial Summary or Description -->
+    <p *ngIf="place.editorial_summary" class="sheet-editorial-summary">
+      {{ place.editorial_summary }}
+    </p>
+    <p *ngIf="!place.editorial_summary && place.description" class="sheet-description">
+      {{ place.description }}
+    </p>
+
+    <!-- Address -->
+    <p *ngIf="place.address_text" class="sheet-address">
+      <ion-icon name="location-outline"></ion-icon>
+      <span>{{ place.address_text }}</span>
+    </p>
+
+    <!-- Traveler Notes (if viewing an itinerary stop) -->
+    <div *ngIf="stopNotes" class="sheet-notes-box">
+      <span class="notes-label">Traveler Note:</span>
+      <p class="notes-text">{{ stopNotes }}</p>
+    </div>
+
+    <!-- Reviews Snippet Section -->
+    <div *ngIf="place.reviews && place.reviews.length > 0" class="sheet-reviews-section">
+      <h3 class="reviews-section-title">Visitor Reviews</h3>
+      <div class="reviews-list">
+        @for (rev of place.reviews.slice(0, 3); track rev.author_name || $index) {
+          <div class="review-card">
+            <div class="review-author-row">
+              <span class="author-name">{{ rev.author_name || 'Traveler' }}</span>
+              <div *ngIf="rev.rating" class="review-stars">
+                <ion-icon name="star"></ion-icon>
+                <span>{{ rev.rating }}</span>
+              </div>
+            </div>
+            <p *ngIf="rev.text" class="review-text">{{ rev.text }}</p>
+            <span *ngIf="rev.relative_publish_time_description" class="review-date">
+              {{ rev.relative_publish_time_description }}
+            </span>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Local Commute Guide (UI-13) -->
+    <div *ngIf="commuteInfo" class="sheet-commute-box">
+      <div class="commute-header-row">
+        <ion-icon name="bus-outline" class="commute-title-icon"></ion-icon>
+        <h4 class="commute-title">How to get there?</h4>
+      </div>
+      <div class="commute-detail-list">
+        <div class="commute-detail-item">
+          <span class="commute-label">Transit & Hub:</span>
+          <span class="commute-value">{{ commuteInfo.transitMode }} &bull; {{ commuteInfo.departureHub }}</span>
+        </div>
+        <div class="commute-detail-item">
+          <span class="commute-label">Drop-off Point:</span>
+          <span class="commute-value">{{ commuteInfo.dropOffPoint }}</span>
+        </div>
+        <div class="commute-detail-item">
+          <span class="commute-label">Estimated Travel Time:</span>
+          <span class="commute-value">{{ commuteInfo.estimatedTravelTime }}</span>
+        </div>
+        <div class="commute-detail-item">
+          <span class="commute-label">Estimated Fare:</span>
+          <span class="commute-value">{{ commuteInfo.estimatedFare }}</span>
+        </div>
+      </div>
+      <div *ngIf="commuteInfo.travelReminder" class="travel-reminder-card">
+        <ion-icon name="information-circle-outline" class="reminder-icon"></ion-icon>
+        <div class="reminder-text">
+          <span class="reminder-heading">Travel Reminder</span>
+          <p class="reminder-body">{{ commuteInfo.travelReminder }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tags -->
+    <div *ngIf="place.tags && place.tags.length > 0" class="sheet-tags-wrap">
+      @for (tag of place.tags; track tag) {
+        <span class="sheet-tag">{{ tag }}</span>
+      }
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="sheet-actions-stack">
+      <!-- Direct Itinerary Planning CTAs -->
+      <div *ngIf="showAddToTripActions" class="sheet-primary-actions-row">
+        <button
+          type="button"
+          class="sheet-action-btn btn-suggested"
+          (click)="onStartTripHere()"
+        >
+          <ion-icon name="sparkles-outline"></ion-icon>
+          <span>Start Trip Here</span>
+        </button>
+
+        <button
+          type="button"
+          class="sheet-action-btn btn-custom"
+          (click)="onAddToCustomTrip()"
+        >
+          <ion-icon name="add-outline"></ion-icon>
+          <span>Add to Trip</span>
+        </button>
+      </div>
+
+      <button
+        *ngIf="dayNumber !== undefined"
+        type="button"
+        class="sheet-action-btn btn-add-day"
+        (click)="onAddToDay()"
+      >
+        <ion-icon name="add-outline"></ion-icon>
+        <span>Add to Day {{ dayNumber }}</span>
+      </button>
+
+      <!-- External Links & Directions -->
+      <div class="sheet-secondary-actions-row">
+        <a
+          *ngIf="showNavigationAction"
+          [href]="getDirectionsUrl(place)"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="sheet-action-btn btn-directions"
+        >
+          <ion-icon name="navigate-outline"></ion-icon>
+          <span>Get Directions</span>
+        </a>
+
+        <a
+          *ngIf="place.phone"
+          [href]="'tel:' + place.phone"
+          class="sheet-action-btn btn-icon-only"
+          title="Call Destination"
+          aria-label="Call Destination"
+        >
+          <ion-icon name="call-outline"></ion-icon>
+        </a>
+
+        <a
+          *ngIf="place.website"
+          [href]="place.website"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="sheet-action-btn btn-icon-only"
+          title="Visit Website"
+          aria-label="Visit Website"
+        >
+          <ion-icon name="globe-outline"></ion-icon>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>

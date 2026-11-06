@@ -464,3 +464,113 @@
     margin: 0;
   }
 }
+
+/* Travel Mode & Rating Filters (Phase 25) */
+.travel-mode-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  ion-icon {
+    font-size: 1.05rem;
+  }
+}
+
+.rating-filter-row {
+  margin-top: 6px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+
+  .rating-filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 9999px;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #334155;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &.active {
+      background: #0084ff;
+      border-color: #0084ff;
+      color: #ffffff;
+
+      .rating-star-icon {
+        color: #ffffff;
+      }
+    }
+  }
+
+  .rating-star-icon {
+    color: #f59e0b;
+    font-size: 0.9rem;
+  }
+}
+
+/* Route Leg Travel Connector (Phase 25) */
+.route-leg-badge {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 4px 0;
+
+  .leg-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    color: #475569;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 9999px;
+
+    ion-icon {
+      font-size: 0.85rem;
+      color: #0084ff;
+    }
+
+    .leg-dot {
+      color: #94a3b8;
+    }
+  }
+}
+
+.stop-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+
+  .stop-rating-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: #fffbeb;
+    border: 1px solid #fef3c7;
+    color: #b45309;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 6px;
+    flex-shrink: 0;
+
+    ion-icon {
+      color: #f59e0b;
+      font-size: 0.8rem;
+    }
+
+    .rating-count {
+      color: #92400e;
+      font-weight: 500;
+      font-size: 0.68rem;
+    }
+  }
+}

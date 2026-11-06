@@ -1,7 +1,17 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import {
+  AfterViewInit,
+  Component,
+  ElementRef,
+  Inject,
+  OnDestroy,
+  OnInit,
+  PLATFORM_ID,
+  ViewChild,
+} from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import * as L from 'leaflet';
 import {
   AlertController,
   IonContent,
@@ -25,6 +35,7 @@ import {
   busOutline,
   calendar,
   calendarOutline,
+  carOutline,
   cashOutline,
   checkmarkCircle,
   chevronDownOutline,
@@ -40,12 +51,14 @@ import {
   locationOutline,
   locationSharp,
   mapOutline,
+  navigateCircleOutline,
   navigateOutline,
   openOutline,
   printOutline,
   shareSocialOutline,
   shieldCheckmarkOutline,
   sparkles,
+  speedometerOutline,
   storefrontOutline,
   timeOutline,
   trash,
@@ -60,9 +73,13 @@ import {
   ItineraryDay,
   ItineraryItem,
 } from '../../../core/models/itinerary.models';
+import { Place } from '../../../core/models/place.models';
 import { formatDateRange } from '../../../core/utils/date.utils';
 import { ItineraryService } from '../../../core/services/itinerary.service';
 import { NearbyPlaceItem, PlaceService } from '../../../core/services/place.service';
+import { RouteTrackingService } from '../../../core/services/route-tracking.service';
+import { decodePolyline } from '../../../core/utils/polyline.util';
+import { environment } from '../../../../environments/environment';
 import { CommuteInfo, getCommuteInfoForMunicipality } from '../../../core/data/commute-guide.data';
 import {
   copyTextSummary,
@@ -70,6 +87,7 @@ import {
   shareNativeItinerary,
   triggerPrintItinerary,
 } from '../../../core/utils/itinerary-export.util';
+import { PlaceDetailSheetComponent } from '../../../shared/components/place-detail-sheet/place-detail-sheet.component';
 
 export interface EditableActivityItem {
   id: string;
@@ -114,14 +132,23 @@ export interface EditableItineraryForm {
     IonIcon,
     IonSpinner,
     IonModal,
+    PlaceDetailSheetComponent,
   ],
 })
-export class ItineraryDetailPage implements OnInit, OnDestroy {
+export class ItineraryDetailPage implements OnInit, AfterViewInit, OnDestroy {
   public itineraryId: string | null = null;
   public itinerary: Itinerary | null = null;
   public isLoading = true;
   public activeDayIndex = 0;
   public budgetSummary: ItineraryBudgetSummary | null = null;
+
+  // Embedded Day Route Preview Map (Phase 25.3)
+  @ViewChild('previewMapElement', { static: false }) private previewMapElementRef?: ElementRef<HTMLDivElement>;
+  public previewMap: L.Map | null = null;
+  public previewPolylineLayer: L.Polyline | null = null;
+  public previewStopsLayer: L.LayerGroup | null = null;
+  public isPreviewMapExpanded = true;
+  private isBrowser = false;
 
   // In-Place Edit Mode state (Image 2 View vs Image 3 Edit)
   public isEditMode = false;
@@ -152,9 +179,15 @@ export class ItineraryDetailPage implements OnInit, OnDestroy {
     private router: Router,
     private itineraryService: ItineraryService,
     public placeService: PlaceService,
+    public routeTrackingService: RouteTrackingService,
     private alertController: AlertController,
-    private toastController: ToastController
+    private toastController: ToastController,
+    @Inject(PLATFORM_ID) private platformId: object
   ) {
+    this.isBrowser = isPlatformBrowser(this.platformId);
+    if (this.isBrowser && typeof window !== 'undefined') {
+      (window as unknown as { L: unknown }).L = L;
+    }
     addIcons({
       arrowBack,
       arrowForward,
@@ -172,6 +205,7 @@ export class ItineraryDetailPage implements OnInit, OnDestroy {
       compassOutline,
       calendar,
       calendarOutline,
+      carOutline,
       storefrontOutline,
       cashOutline,
       locationOutline,
@@ -186,8 +220,10 @@ export class ItineraryDetailPage implements OnInit, OnDestroy {
       chevronUpOutline,
       locationSharp,
       mapOutline,
+      navigateCircleOutline,
       navigateOutline,
       sparkles,
+      speedometerOutline,
       walkOutline,
       shareSocialOutline,
       copyOutline,
@@ -205,8 +241,29 @@ export class ItineraryDetailPage implements OnInit, OnDestroy {
     }
   }
 
+  public ngAfterViewInit(): void {
+    if (this.isBrowser) {
+      setTimeout(() => {
+        this.initPreviewMap();
+      }, 300);
+    }
+  }
+
+  public ionViewDidEnter(): void {
+    if (this.isBrowser && this.previewMap) {
+      setTimeout(() => {
+        this.previewMap?.invalidateSize();
+        this.updatePreviewMap();
+      }, 150);
+    }
+  }
+
   public ngOnDestroy(): void {
     this.subscriptions.unsubscribe();
+    if (this.previewMap) {
+      this.previewMap.remove();
+      this.previewMap = null;
+    }
   }
 
   public loadItinerary(id: string): void {
@@ -218,6 +275,7 @@ export class ItineraryDetailPage implements OnInit, OnDestroy {
       this.budgetSummary = this.itineraryService.calculateBudgetSummary(cached);
       this.refreshNearbyPlaces();
       this.isLoading = false;
+      setTimeout(() => this.updatePreviewMap(), 100);
     } else {
       this.isLoading = true;
     }
@@ -241,6 +299,7 @@ export class ItineraryDetailPage implements OnInit, OnDestroy {
             this.budgetSummary = this.itineraryService.calculateBudgetSummary(itin);
             this.refreshNearbyPlaces();
             this.isLoading = false;
+            setTimeout(() => this.updatePreviewMap(), 100);
           },
           error: () => {
             this.isLoading = false;
@@ -538,6 +597,7 @@ export class ItineraryDetailPage implements OnInit, OnDestroy {
   public selectDay(index: number): void {
     this.activeDayIndex = index;
     this.refreshNearbyPlaces();
+    this.updatePreviewMap();
   }
 
   public refreshNearbyPlaces(): void {
@@ -774,6 +834,30 @@ export class ItineraryDetailPage implements OnInit, OnDestroy {
     this.selectedStop = null;
   }
 
+  public get selectedStopPlace(): Place | null {
+    if (!this.selectedStop) return null;
+    if (this.selectedStop.place) {
+      return this.selectedStop.place;
+    }
+    return {
+      id: this.selectedStop.place_id || `stop-${this.selectedStop.id}`,
+      name: this.getStopTitle(this.selectedStop),
+      latitude: this.selectedStop.custom_lat ?? 15.58,
+      longitude: this.selectedStop.custom_lng ?? 121.0,
+      category: 'attraction',
+      municipality_name: this.itinerary?.destination || 'Nueva Ecija',
+      description: this.getStopDescription(this.selectedStop),
+      is_featured: false,
+      source_name: 'CustomStop',
+      imported_at: new Date().toISOString(),
+    } as Place;
+  }
+
+  public get selectedStopCommuteInfo(): CommuteInfo | undefined {
+    if (!this.selectedStop) return undefined;
+    return this.getCommuteInfo(this.selectedStop);
+  }
+
   public openInGoogleMaps(item: ItineraryItem): void {
     const lat = item.place?.latitude || item.custom_lat;
     const lng = item.place?.longitude || item.custom_lng;
@@ -811,6 +895,9 @@ export class ItineraryDetailPage implements OnInit, OnDestroy {
       currentDay.items = [];
     }
 
+    const fallbackLat = currentDay.items[0]?.place?.latitude ?? 15.6315;
+    const fallbackLng = currentDay.items[0]?.place?.longitude ?? 121.1466;
+
     const newStop: ItineraryItem = {
       id: `nearby-added-${Date.now()}`,
       day_id: currentDay.id || `day-${currentDay.day_number}`,
@@ -822,8 +909,8 @@ export class ItineraryDetailPage implements OnInit, OnDestroy {
         id: place.id,
         name: place.name,
         category: place.category === 'restaurant' ? 'restaurant' : place.category === 'hospital' ? 'pharmacy' : 'convenience_store',
-        latitude: 15.63,
-        longitude: 121.14,
+        latitude: place.latitude ?? fallbackLat,
+        longitude: place.longitude ?? fallbackLng,
         municipality_name: place.municipality,
         opening_hours: place.openingHours,
         cost_currency: 'PHP',
@@ -938,6 +1025,143 @@ export class ItineraryDetailPage implements OnInit, OnDestroy {
       ],
     });
     await alert.present();
+  }
+
+  // --- Embedded Leaflet Day Route Preview & Turn Tracking (Phase 25.3) ---
+
+  public initPreviewMap(): void {
+    const el =
+      this.previewMapElementRef?.nativeElement ||
+      document.getElementById('route-preview-map');
+    if (!el || this.previewMap || !this.isBrowser) return;
+
+    this.previewMap = L.map(el, {
+      center: [15.58, 121.0],
+      zoom: 11,
+      zoomControl: false,
+      attributionControl: false,
+    });
+
+    const tileUrl =
+      environment.tileUrlTemplate ||
+      'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+    L.tileLayer(tileUrl, { maxZoom: 19 }).addTo(this.previewMap);
+
+    this.previewStopsLayer = L.layerGroup().addTo(this.previewMap);
+    this.updatePreviewMap();
+  }
+
+  public updatePreviewMap(): void {
+    if (!this.previewMap || !this.isBrowser) return;
+
+    if (this.previewPolylineLayer) {
+      this.previewMap.removeLayer(this.previewPolylineLayer);
+      this.previewPolylineLayer = null;
+    }
+    if (this.previewStopsLayer) {
+      this.previewStopsLayer.clearLayers();
+    } else {
+      this.previewStopsLayer = L.layerGroup().addTo(this.previewMap);
+    }
+
+    const day = this.currentDay;
+    if (!day) return;
+
+    const items = day.items || [];
+    const stopCoords: Array<[number, number]> = [];
+
+    items.forEach((item, idx) => {
+      const lat = item.place?.latitude ?? item.custom_lat;
+      const lng = item.place?.longitude ?? item.custom_lng;
+      if (lat != null && lng != null) {
+        stopCoords.push([lat, lng]);
+        const pinIcon = L.divIcon({
+          className: 'preview-stop-marker-container',
+          html: `<div class="preview-stop-pin"><div class="pin-badge">${idx + 1}</div></div>`,
+          iconSize: [26, 26],
+          iconAnchor: [13, 13],
+        });
+        const marker = L.marker([lat, lng], { icon: pinIcon });
+        marker.on('click', () => {
+          this.openStopDetail(item);
+        });
+        this.previewStopsLayer?.addLayer(marker);
+      }
+    });
+
+    if (day.day_overview_polyline) {
+      const latlngs = decodePolyline(day.day_overview_polyline);
+      this.previewPolylineLayer = L.polyline(latlngs, {
+        color: '#2563eb',
+        weight: 4,
+        opacity: 0.88,
+        lineJoin: 'round',
+      }).addTo(this.previewMap);
+      this.previewMap.fitBounds(this.previewPolylineLayer.getBounds(), {
+        padding: [25, 25],
+      });
+    } else if (stopCoords.length > 1) {
+      this.previewPolylineLayer = L.polyline(stopCoords, {
+        color: '#94a3b8',
+        weight: 3,
+        dashArray: '6, 6',
+      }).addTo(this.previewMap);
+      this.previewMap.fitBounds(this.previewPolylineLayer.getBounds(), {
+        padding: [25, 25],
+      });
+    } else if (stopCoords.length === 1) {
+      this.previewMap.setView(stopCoords[0], 13);
+    }
+
+    setTimeout(() => {
+      this.previewMap?.invalidateSize();
+    }, 100);
+  }
+
+  public togglePreviewMap(): void {
+    this.isPreviewMapExpanded = !this.isPreviewMapExpanded;
+    if (this.isPreviewMapExpanded) {
+      setTimeout(() => {
+        this.previewMap?.invalidateSize();
+        this.updatePreviewMap();
+      }, 150);
+    }
+  }
+
+  public startNavigationForActiveDay(): void {
+    const day = this.currentDay;
+    if (!day) return;
+    this.routeTrackingService.startTracking(day);
+    this.router.navigate(['/tabs/map'], {
+      queryParams: {
+        followRoute: 'true',
+        dayNumber: day.day_number,
+      },
+    });
+  }
+
+  public formatMetersToKm(meters: number | null | undefined): string {
+    if (meters == null) return '';
+    if (meters < 1000) return `${Math.round(meters)} m`;
+    return `${(meters / 1000).toFixed(1)} km`;
+  }
+
+  public formatTravelDurationSeconds(seconds: number | null | undefined): string {
+    if (seconds == null) return '';
+    const mins = Math.round(seconds / 60);
+    if (mins < 60) return `${mins} min`;
+    const hrs = Math.floor(mins / 60);
+    const remMins = mins % 60;
+    return `${hrs}h ${remMins}m`;
+  }
+
+  private escapeHtml(text: string): string {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
   }
 
   public onBack(): void {

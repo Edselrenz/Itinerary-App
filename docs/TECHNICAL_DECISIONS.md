@@ -149,4 +149,41 @@ This document records key technical decisions, their context, alternatives evalu
   - *Advantages*: Preserves 100% functionality and cross-device testing capability for the current GitHub Pages live pilot demo while formally specifying and enforcing the migration path for enterprise web production and native app store distributions.
   - *Disadvantages*: Requires backend cookie-handling support flags and domain-level DNS configuration upon production deployment.
 
+---
+
+## ADR-011: Enterprise GIS Integration & Safe Google API Proxying
+
+- **Date**: 2026-11-05
+- **Context**: The application required live Google Places POI discovery, photo galleries, user ratings/reviews, and turn-by-turn road route computations. However, Google API keys must never be exposed to client bundles, billing costs must be contained, and the app must operate seamlessly offline.
+- **Problem**: How to integrate Google Maps Platform (Places API New, Routes API v2) without client key leakage, quota overruns, or breaking offline-first resilience.
+- **Options Considered**:
+  1. *Direct client-side Google Maps JS SDK*: Leaks API key in client bundle, requires paying for map vector tiles, and breaks when offline.
+  2. *Backend proxy service with multi-tier caching and automatic fallback*: Server-side API key containment, strict FieldMask projection to reduce billing tier, database `geospatial_cache` table with 24h–168h TTL, Cloudflare Worker KV edge caching, and automatic fallback to public OSRM and Haversine calculations when offline or unconfigured.
+- **Selected Approach**: Option 2.
+  - Backend `GoogleMapsService` (`backend/app/services/google_maps_service.py`) handles all external calls using explicit `X-Goog-FieldMask`.
+  - Photo proxy endpoint (`GET /api/v1/places/photos/{photo_name}`) streams image bytes without exposing underlying Google photo references.
+  - Upsert-on-save helper (`resolve_or_upsert_item_place`) stores external Places in the local relational database with zero foreign key integrity errors.
+- **Consequences**:
+  - *Advantages*: 100% security against API key scraping, predictable billing through database and edge caching, and graceful offline fallback.
+  - *Disadvantages*: Adds routing latency on initial cache misses (mitigated by asynchronous pre-computation).
+
+---
+
+## ADR-012: Unified Place Detail Bottom Sheet Architecture
+
+- **Date**: 2026-11-06
+- **Context**: `MapPage`, `SuggestedWizardPage`, and `ItineraryDetailPage` originally each maintained separate, duplicated modal markup and logic for showing destination details, leading to divergent designs and repetitive maintenance.
+- **Problem**: Inconsistent presentation of photo galleries, reviews, open/closed hours, traveler notes, and commute guides across different application pages.
+- **Options Considered**:
+  1. *Maintain separate modals in each page*: Results in hundreds of redundant template lines and styling inconsistencies.
+  2. *Create a single standalone `PlaceDetailSheetComponent`*: Shared component accepting inputs for `place`, `isOpen`, `stopNotes`, and `commuteInfo`, emitting action events for itinerary actions and directions.
+- **Selected Approach**: Option 2.
+  - Standalone Angular component `PlaceDetailSheetComponent` placed in `Project/src/app/shared/components/place-detail-sheet/`.
+  - Employs `ChangeDetectionStrategy.OnPush` with custom backdrop blur and responsive slide-up animation.
+  - Consolidated into `map.page.html`, `suggested-wizard.page.html`, and `itinerary-detail.page.html`.
+- **Consequences**:
+  - *Advantages*: Eliminated over 250 lines of duplicate template markup, standardized the user experience across all three pages, and simplified test coverage.
+  - *Disadvantages*: Unit tests must trigger change detection via `fixture.componentRef.setInput()` due to `OnPush`.
+
+
 

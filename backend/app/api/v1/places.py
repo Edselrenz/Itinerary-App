@@ -1,12 +1,20 @@
 """REST endpoints for Nueva Ecija municipalities and POI search/filtering."""
 
 import uuid
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, joinedload
+from app.core.config import settings
 from app.core.database import get_db
 from app.models.entities import Municipality, Place
-from app.schemas.place import MunicipalityOut, PaginatedPlacesOut, PlaceOut
+from app.schemas.place import (
+    LivePlaceSearchRequest,
+    LivePlaceSearchResponse,
+    MunicipalityOut,
+    PaginatedPlacesOut,
+    PlaceOut,
+)
+from app.services.google_maps_service import google_maps_service
 
 router = APIRouter(tags=["places"])
 
@@ -36,7 +44,7 @@ def escape_like(query: str) -> str:
 
 
 def serialize_place(place: Place) -> PlaceOut:
-    """Converts a Place ORM instance into a PlaceOut response with external Google Maps URL."""
+    """Converts a Place ORM instance into a PlaceOut response with external Google Maps URL and GIS fields."""
     return PlaceOut(
         id=place.id,
         name=place.name,
@@ -67,8 +75,21 @@ def serialize_place(place: Place) -> PlaceOut:
         is_featured=place.is_featured,
         tags=place.tags or [],
         directions_url=(
-            f"https://www.google.com/maps/dir/?api=1&destination={place.latitude},{place.longitude}"
+            place.google_maps_uri
+            or f"https://www.google.com/maps/dir/?api=1&destination={place.latitude},{place.longitude}"
         ),
+        google_place_id=place.google_place_id,
+        google_types=place.google_types or [],
+        editorial_summary=place.editorial_summary,
+        regular_opening_hours=place.regular_opening_hours,
+        rating=place.rating,
+        user_rating_count=place.user_rating_count,
+        price_level=place.price_level,
+        photos=place.photos or [],
+        reviews=place.reviews or [],
+        business_status=place.business_status,
+        google_maps_uri=place.google_maps_uri,
+        details_cached_at=place.details_cached_at,
     )
 
 
@@ -182,3 +203,75 @@ def get_place_detail(
     if not place:
         raise HTTPException(status_code=404, detail="Place not found")
     return serialize_place(place)
+
+
+@router.post("/places/discover", response_model=LivePlaceSearchResponse)
+def discover_places(
+    payload: LivePlaceSearchRequest,
+    db: Session = Depends(get_db),
+) -> LivePlaceSearchResponse:
+    """Performs live Google Places (New) or cached/local POI discovery for Nueva Ecija."""
+    bias = None
+    if payload.latitude is not None and payload.longitude is not None:
+        bias = {
+            "latitude": payload.latitude,
+            "longitude": payload.longitude,
+            "radius_meters": payload.radius_meters or 50000.0,
+        }
+
+    places_dict, source = google_maps_service.search_places_text(
+        db=db,
+        query=payload.query,
+        location_bias=bias,
+        included_types=payload.included_types,
+        min_rating=payload.min_rating,
+        open_now=payload.open_now,
+    )
+
+    return LivePlaceSearchResponse(
+        places=[PlaceOut.model_validate(p) for p in places_dict],
+        source=source,
+        total=len(places_dict),
+    )
+
+
+@router.get("/places/google/{google_place_id}", response_model=PlaceOut)
+def get_google_place_detail(
+    google_place_id: str,
+    db: Session = Depends(get_db),
+) -> PlaceOut:
+    """Fetches rich Atmosphere details for a Google Place, caching per Google ToS."""
+    data = google_maps_service.fetch_place_details(db, google_place_id)
+    if not data:
+        raise HTTPException(status_code=404, detail="Google Place details not found")
+    return PlaceOut.model_validate(data)
+
+
+@router.get("/places/photos/{photo_name:path}")
+def get_place_photo(photo_name: str) -> Response:
+    """Proxies Google Places photo media to protect Google Maps API key from frontend leakage."""
+    api_key = settings.google_maps_api_key
+    if not api_key:
+        return Response(
+            content='<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>',
+            media_type="image/svg+xml",
+        )
+
+    url = f"https://places.googleapis.com/v1/{photo_name}/media?maxHeightPx=800&maxWidthPx=1200&key={api_key}"
+    try:
+        import httpx
+
+        resp = httpx.get(url, timeout=6.0)
+        if resp.status_code == 200:
+            return Response(
+                content=resp.content,
+                media_type=resp.headers.get("content-type", "image/jpeg"),
+                headers={"Cache-Control": "public, max-age=86400"},
+            )
+    except Exception:
+        pass
+
+    return Response(
+        content='<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>',
+        media_type="image/svg+xml",
+    )

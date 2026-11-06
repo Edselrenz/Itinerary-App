@@ -22,9 +22,12 @@ from app.schemas.itinerary import (
     ItineraryOut,
     ItineraryReorderIn,
     ItineraryUpdate,
+    RouteComputeRequest,
+    RouteComputeResponse,
     SuggestedItineraryRequest,
 )
 from app.services.auth_service import get_current_user, get_current_user_optional
+from app.services.google_maps_service import google_maps_service
 from app.algorithms.itinerary_generator import (
     generate_suggested_itinerary_data,
     persist_generated_itinerary,
@@ -47,7 +50,7 @@ def get_eager_itinerary_stmt(itinerary_id: uuid.UUID, user_id: uuid.UUID):
 
 
 def serialize_itinerary(itinerary: Itinerary) -> ItineraryOut:
-    """Converts an Itinerary ORM entity into a serialized ItineraryOut schema."""
+    """Converts an Itinerary ORM entity into a serialized ItineraryOut schema with GIS routing fields."""
     sorted_days = sorted(itinerary.days, key=lambda d: d.day_number)
     days_out: list[ItineraryDayOut] = []
 
@@ -81,6 +84,11 @@ def serialize_itinerary(itinerary: Itinerary) -> ItineraryOut:
                     created_at=item.created_at,
                     updated_at=item.updated_at,
                     place=serialize_place(item.place) if item.place else None,
+                    google_place_id=item.google_place_id,
+                    travel_mode_from_prev=item.travel_mode_from_prev,
+                    travel_distance_meters=item.travel_distance_meters,
+                    travel_duration_seconds=item.travel_duration_seconds,
+                    route_polyline_from_prev=item.route_polyline_from_prev,
                 )
             )
 
@@ -92,6 +100,10 @@ def serialize_itinerary(itinerary: Itinerary) -> ItineraryOut:
                 travel_date=day.travel_date,
                 title=day.title,
                 items=items_out,
+                day_overview_polyline=day.day_overview_polyline,
+                total_distance_meters=day.total_distance_meters,
+                total_travel_duration_seconds=day.total_travel_duration_seconds,
+                route_legs=day.route_legs or [],
             )
         )
 
@@ -148,6 +160,11 @@ def suggest_itinerary(
                         created_at=item["created_at"],
                         updated_at=item["updated_at"],
                         place=serialize_place(item["place"]) if item.get("place") else None,
+                        google_place_id=item.get("google_place_id"),
+                        travel_mode_from_prev=item.get("travel_mode_from_prev", "DRIVE"),
+                        travel_distance_meters=item.get("travel_distance_meters"),
+                        travel_duration_seconds=item.get("travel_duration_seconds"),
+                        route_polyline_from_prev=item.get("route_polyline_from_prev"),
                     )
                 )
             days_out.append(
@@ -158,6 +175,10 @@ def suggest_itinerary(
                     travel_date=d["travel_date"],
                     title=d["title"],
                     items=items_out,
+                    day_overview_polyline=d.get("day_overview_polyline"),
+                    total_distance_meters=d.get("total_distance_meters"),
+                    total_travel_duration_seconds=d.get("total_travel_duration_seconds"),
+                    route_legs=d.get("route_legs", []),
                 )
             )
 
@@ -183,6 +204,40 @@ def suggest_itinerary(
         )
 
 
+def resolve_or_upsert_item_place(
+    db: Session, item_payload: ItineraryItemCreate
+) -> tuple[uuid.UUID | None, str | None]:
+    """Safely resolves place_id and google_place_id for an item, upserting when appropriate."""
+    place_id = item_payload.place_id
+    google_place_id = item_payload.google_place_id
+
+    # 1. Existing place by UUID
+    if place_id:
+        existing = db.get(Place, place_id)
+        if existing:
+            return existing.id, existing.google_place_id or (str(google_place_id) if google_place_id else None)
+
+    # 2. Existing place by google_place_id
+    if google_place_id:
+        existing_g = db.scalar(select(Place).where(Place.google_place_id == str(google_place_id)))
+        if existing_g:
+            return existing_g.id, str(google_place_id)
+
+    # 3. Payload provided
+    if item_payload.place_payload:
+        upserted = google_maps_service.upsert_google_place_to_db(db, item_payload.place_payload)
+        return upserted.id, upserted.google_place_id or (str(google_place_id) if google_place_id else None)
+
+    # 4. google_place_id provided without payload -> fetch details and upsert
+    if google_place_id:
+        details = google_maps_service.fetch_place_details(db, str(google_place_id))
+        if details:
+            upserted = google_maps_service.upsert_google_place_to_db(db, details)
+            return upserted.id, str(google_place_id)
+
+    return None, str(google_place_id) if google_place_id else None
+
+
 @router.post("", response_model=ItineraryOut, status_code=status.HTTP_201_CREATED)
 def create_itinerary(
     payload: ItineraryCreate,
@@ -190,23 +245,19 @@ def create_itinerary(
     db: Session = Depends(get_db),
 ) -> ItineraryOut:
     """Creates a new multi-day custom travel itinerary owned by the authenticated traveler."""
-    # Validate place_id existence to prevent unhandled 500 foreign key IntegrityError
-    all_place_ids = {
-        item.place_id
-        for day in payload.days
-        for item in day.items
-        if item.place_id is not None
-    }
-    if all_place_ids:
-        existing_place_ids = set(
-            db.scalars(select(Place.id).where(Place.id.in_(all_place_ids))).all()
+    # Validate place_id existence for explicit UUIDs that do not provide fallback google_place_id or place_payload
+    missing_place_ids: list[str] = []
+    for day in payload.days:
+        for item in day.items:
+            if item.place_id is not None and not item.google_place_id and not item.place_payload:
+                existing = db.get(Place, item.place_id)
+                if not existing:
+                    missing_place_ids.append(str(item.place_id))
+    if missing_place_ids:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"The following place IDs do not exist: {missing_place_ids}",
         )
-        missing_place_ids = all_place_ids - existing_place_ids
-        if missing_place_ids:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"The following place IDs do not exist: {[str(pid) for pid in missing_place_ids]}",
-            )
 
     itinerary = Itinerary(
         user_id=current_user.id,
@@ -233,9 +284,11 @@ def create_itinerary(
         db.flush()
 
         for item_payload in day_payload.items:
+            resolved_pid, resolved_gid = resolve_or_upsert_item_place(db, item_payload)
             item = ItineraryItem(
                 day_id=day.id,
-                place_id=item_payload.place_id,
+                place_id=resolved_pid,
+                google_place_id=resolved_gid,
                 custom_title=item_payload.custom_title,
                 custom_lat=item_payload.custom_lat,
                 custom_lng=item_payload.custom_lng,
@@ -245,6 +298,10 @@ def create_itinerary(
                 notes=item_payload.notes,
                 estimated_cost_min=item_payload.estimated_cost_min,
                 estimated_cost_max=item_payload.estimated_cost_max,
+                travel_mode_from_prev=item_payload.travel_mode_from_prev or "DRIVE",
+                travel_distance_meters=item_payload.travel_distance_meters,
+                travel_duration_seconds=item_payload.travel_duration_seconds,
+                route_polyline_from_prev=item_payload.route_polyline_from_prev,
             )
             db.add(item)
 
@@ -342,9 +399,11 @@ def update_itinerary(
             db.flush()
 
             for item_payload in day_payload.items:
+                resolved_pid, resolved_gid = resolve_or_upsert_item_place(db, item_payload)
                 item = ItineraryItem(
                     day_id=day.id,
-                    place_id=item_payload.place_id,
+                    place_id=resolved_pid,
+                    google_place_id=resolved_gid,
                     custom_title=item_payload.custom_title,
                     custom_lat=item_payload.custom_lat,
                     custom_lng=item_payload.custom_lng,
@@ -354,6 +413,10 @@ def update_itinerary(
                     notes=item_payload.notes,
                     estimated_cost_min=item_payload.estimated_cost_min,
                     estimated_cost_max=item_payload.estimated_cost_max,
+                    travel_mode_from_prev=item_payload.travel_mode_from_prev or "DRIVE",
+                    travel_distance_meters=item_payload.travel_distance_meters,
+                    travel_duration_seconds=item_payload.travel_duration_seconds,
+                    route_polyline_from_prev=item_payload.route_polyline_from_prev,
                 )
                 db.add(item)
 
@@ -452,19 +515,19 @@ def add_itinerary_item(
             detail="Itinerary day not found in this itinerary",
         )
 
-    # Validate place_id existence
-    if payload.place_id:
-        place = db.get(Place, payload.place_id)
-        if not place:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Place with id '{payload.place_id}' not found.",
-            )
+    # Resolve or upsert place
+    resolved_pid, resolved_gid = resolve_or_upsert_item_place(db, payload)
+    if payload.place_id and not resolved_pid:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Place with id '{payload.place_id}' not found.",
+        )
 
+    if resolved_pid:
         duplicate = db.scalar(
             select(ItineraryItem).where(
                 ItineraryItem.day_id == day_id,
-                ItineraryItem.place_id == payload.place_id,
+                ItineraryItem.place_id == resolved_pid,
             )
         )
         if duplicate:
@@ -488,7 +551,8 @@ def add_itinerary_item(
 
     item = ItineraryItem(
         day_id=day.id,
-        place_id=payload.place_id,
+        place_id=resolved_pid,
+        google_place_id=resolved_gid,
         custom_title=payload.custom_title,
         custom_lat=payload.custom_lat,
         custom_lng=payload.custom_lng,
@@ -498,6 +562,10 @@ def add_itinerary_item(
         notes=payload.notes,
         estimated_cost_min=payload.estimated_cost_min,
         estimated_cost_max=payload.estimated_cost_max,
+        travel_mode_from_prev=payload.travel_mode_from_prev or "DRIVE",
+        travel_distance_meters=payload.travel_distance_meters,
+        travel_duration_seconds=payload.travel_duration_seconds,
+        route_polyline_from_prev=payload.route_polyline_from_prev,
     )
     db.add(item)
     db.commit()
@@ -651,6 +719,103 @@ def reorder_itinerary_items(
 
     db.commit()
 
+    loaded = db.scalar(get_eager_itinerary_stmt(itinerary_id, current_user.id))
+    return serialize_itinerary(loaded)
+
+
+@router.post("/compute-day-route", response_model=RouteComputeResponse)
+def compute_day_route(
+    payload: RouteComputeRequest,
+    db: Session = Depends(get_db),
+) -> RouteComputeResponse:
+    """Calculates turn-by-turn route, legs, and encoded polyline for real-time itinerary route preview."""
+    route_result = google_maps_service.compute_route(
+        db=db,
+        origin=payload.origin,
+        destination=payload.destination,
+        intermediates=payload.intermediates,
+        travel_mode=payload.travel_mode,
+    )
+    return RouteComputeResponse.model_validate(route_result)
+
+
+@router.post("/{itinerary_id}/days/{day_id}/compute-route", response_model=ItineraryOut)
+def compute_and_save_day_route(
+    itinerary_id: uuid.UUID,
+    day_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ItineraryOut:
+    """Computes and persists driving routes, overview polyline, and turn legs for all stops in an itinerary day."""
+    itinerary = db.scalar(get_eager_itinerary_stmt(itinerary_id, current_user.id))
+    if not itinerary:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Itinerary not found")
+
+    day = next((d for d in itinerary.days if d.id == day_id), None)
+    if not day:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Day not found in this itinerary",
+        )
+
+    sorted_items = sorted(day.items, key=lambda i: i.sort_order)
+    if len(sorted_items) < 2:
+        day.day_overview_polyline = None
+        day.total_distance_meters = 0
+        day.total_travel_duration_seconds = 0
+        day.route_legs = []
+        db.commit()
+        loaded = db.scalar(get_eager_itinerary_stmt(itinerary_id, current_user.id))
+        return serialize_itinerary(loaded)
+
+    def get_stop_coords(item: ItineraryItem) -> tuple[float, float] | None:
+        if item.place:
+            return float(item.place.latitude), float(item.place.longitude)
+        if item.custom_lat is not None and item.custom_lng is not None:
+            return float(item.custom_lat), float(item.custom_lng)
+        return None
+
+    coords_list = [get_stop_coords(it) for it in sorted_items]
+    valid_pairs = [(it, c) for it, c in zip(sorted_items, coords_list) if c is not None]
+
+    if len(valid_pairs) < 2:
+        db.commit()
+        loaded = db.scalar(get_eager_itinerary_stmt(itinerary_id, current_user.id))
+        return serialize_itinerary(loaded)
+
+    origin = {"latitude": valid_pairs[0][1][0], "longitude": valid_pairs[0][1][1]}
+    destination = {"latitude": valid_pairs[-1][1][0], "longitude": valid_pairs[-1][1][1]}
+    intermediates = [
+        {"latitude": c[0], "longitude": c[1]}
+        for _, c in valid_pairs[1:-1]
+    ]
+
+    travel_mode = valid_pairs[1][0].travel_mode_from_prev or "DRIVE"
+    route_data = google_maps_service.compute_route(
+        db=db,
+        origin=origin,
+        destination=destination,
+        intermediates=intermediates,
+        travel_mode=travel_mode,
+    )
+
+    day.day_overview_polyline = route_data.get("overview_polyline")
+    day.total_distance_meters = route_data.get("total_distance_meters", 0)
+    day.total_travel_duration_seconds = route_data.get("total_duration_seconds", 0)
+    day.route_legs = route_data.get("legs", [])
+
+    legs = route_data.get("legs", [])
+    for idx, (item, _) in enumerate(valid_pairs[1:], start=0):
+        if idx < len(legs):
+            item.travel_distance_meters = legs[idx].get("distance_meters")
+            item.travel_duration_seconds = legs[idx].get("duration_seconds")
+            item.route_polyline_from_prev = legs[idx].get("polyline")
+
+    from datetime import datetime, timezone
+    day.updated_at = datetime.now(timezone.utc)
+    itinerary.updated_at = datetime.now(timezone.utc)
+
+    db.commit()
     loaded = db.scalar(get_eager_itinerary_stmt(itinerary_id, current_user.id))
     return serialize_itinerary(loaded)
 

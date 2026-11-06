@@ -18,8 +18,38 @@ class MunicipalityOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class PlacePhotoOut(BaseModel):
+    """Serialized photo attribution from Google Places."""
+
+    name: str | None = None
+    width_px: int | None = None
+    height_px: int | None = None
+    author_attributions: list[dict] = []
+    photo_uri: str | None = None
+
+
+class PlaceReviewOut(BaseModel):
+    """Serialized user review from Google Places."""
+
+    name: str | None = None
+    author_name: str | None = None
+    author_photo_uri: str | None = None
+    rating: int | None = None
+    text: str | None = None
+    publish_time: str | None = None
+    relative_publish_time_description: str | None = None
+
+
+class PlaceRegularOpeningHoursOut(BaseModel):
+    """Structured opening hours schedule from Google Places."""
+
+    open_now: bool | None = None
+    periods: list[dict] = []
+    weekday_descriptions: list[str] = []
+
+
 class PlaceOut(BaseModel):
-    """Serialized Point of Interest (POI) with provenance and verification status."""
+    """Serialized Point of Interest (POI) with provenance, verification, and GIS details."""
 
     id: uuid.UUID
     name: str
@@ -47,7 +77,41 @@ class PlaceOut(BaseModel):
     tags: list[str]
     directions_url: str
 
+    # Google Places v1 GIS extensions
+    google_place_id: str | None = None
+    google_types: list[str] = []
+    editorial_summary: str | None = None
+    regular_opening_hours: dict | None = None
+    rating: float | None = None
+    user_rating_count: int | None = None
+    price_level: int | None = None
+    photos: list[dict] = []
+    reviews: list[dict] = []
+    business_status: str | None = None
+    google_maps_uri: str | None = None
+    details_cached_at: datetime | None = None
+
     model_config = ConfigDict(from_attributes=True)
+
+
+class LivePlaceSearchRequest(BaseModel):
+    """Request payload for live Google Places text/nearby search."""
+
+    query: str
+    latitude: float | None = None
+    longitude: float | None = None
+    radius_meters: float | None = 50000.0
+    included_types: list[str] | None = None
+    min_rating: float | None = None
+    open_now: bool | None = None
+
+
+class LivePlaceSearchResponse(BaseModel):
+    """Response payload wrapping discovered Google or cached places."""
+
+    places: list[PlaceOut]
+    source: str  # "google_live" | "cache" | "local_db"
+    total: int
 
 
 class PaginatedPlacesOut(BaseModel):

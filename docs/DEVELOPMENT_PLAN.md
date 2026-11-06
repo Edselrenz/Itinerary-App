@@ -381,3 +381,48 @@ The bottom navigation bar implements all 4 planned primary tabs (`/tabs/home`, `
 - [x] **22.4: Full Regression & E2E Verification Suite**
   - **Target Files**: `Project/e2e/app.spec.ts`, `scripts/verify_acceptance_gate.py`
   - **Implementation**: Extend `Project/e2e/app.spec.ts` and `verify_acceptance_gate.py` to test the Popular Destinations catalog, Stop Detail + Commute Guide modal, Custom Builder Edit Stop modal, Map multi-select filter sheet, and Profile sub-windows.
+
+#### Milestone 23: UI Layout Alignment, CI Robustness & Native Tooling (COMPLETED)
+
+**Objective**: Align Saved Itineraries and Trip Details views with user layout specifications, eliminate infinite loading spinners, decouple native plugins for CI, and isolate Gradle conflicts.
+
+- [x] **23.1: Saved Itineraries & Trip Details Layout Alignment**
+  - **Target Files**: `history.page.html`, `history.page.scss`, `itinerary-detail.page.html`, `itinerary-detail.page.scss`
+  - **Implementation**: Redesigned Saved Itineraries cards with pill badges, trash button, location pin, and divider; redesigned Trip Details view with day cards, schedule time, duration, cost estimation, description, and notes; built In-Place Trip Editor (reorder, delete, move across days, add activity); added synchronous cached retrieval (`getCachedItineraryById`) and 4s timeout fallback.
+- [x] **23.2: Headless CI Dependency Injection Token**
+  - **Target Files**: `Project/src/app/core/services/secure-token-storage.service.ts`
+  - **Implementation**: Introduced `SECURE_STORAGE_PLUGIN` Angular `InjectionToken`, resolving esbuild mock decoupling errors during headless Linux CI runs.
+- [x] **23.3: VS Code Java 25 & Gradle Conflict Isolation**
+  - **Target Files**: `.vscode/settings.json`, `Project/.vscode/settings.json`
+  - **Implementation**: Added `java.import.exclusions` for `**/Project/android/**` suppressing Gradle 9.6 incompatibility warnings.
+
+#### Milestone 24: Pilot Field Testing, Cloudflare Edge & Playwright E2E (COMPLETED)
+
+**Objective**: Verify live production endpoints, synchronize native Capacitor Android plugins, configure Cloudflare edge caching, and execute headless browser E2E journeys.
+
+- [x] **24.1: Live Production Smoke Testing & Edge Caching**
+  - **Target Files**: `cloudflare-worker/worker.js`, live GitHub Pages deployment
+  - **Implementation**: Probed live GitHub Pages deployment (HTTP 200) and Cloudflare Worker status (HTTP 200); added 24h KV edge caching (`env.TUNNEL_KV`) for `/api/v1/places/` and `/compute-day-route` with `X-Edge-Cache: HIT` fallback.
+- [x] **24.2: Android Device Installation & Native Packaging Sync**
+  - **Target Files**: `Project/android/`
+  - **Implementation**: Synchronized web assets and 6 Capacitor Android plugins (`@capacitor/app@8.1.2`, `@capacitor/geolocation@8.2.4`, `@capacitor/haptics@8.0.2`, `@capacitor/keyboard@8.0.6`, `@capacitor/status-bar@8.0.4`, and `capacitor-secure-storage-plugin@0.13.0`) via `npx cap sync android`.
+- [x] **24.3: Automated Playwright Browser Journey Execution**
+  - **Target Files**: `Project/e2e/app.spec.ts`
+  - **Implementation**: Installed Playwright Chromium v1248 binaries; executed 5 full browser journey tests passing 100% in 11.9s with cold-start splash bypass via `sessionStorage`.
+
+#### Milestone 25: Enterprise GIS Upgrade, Live Google Places Discovery & Active Routing (COMPLETED)
+
+**Objective**: Implement production-grade GIS architecture, live Google Places proxying, turn-by-turn road routing, Bayesian quality ranking, active geolocation tracking, and unified modal architecture.
+
+- [x] **25.1: Foundation, Schemas & Proxy Services**
+  - **Target Files**: `backend/app/models/entities.py`, `backend/alembic/versions/0002_google_places_and_routing.py`, `backend/app/services/google_maps_service.py`, `backend/app/api/v1/places.py`, `backend/app/api/v1/itineraries.py`
+  - **Implementation**: Created reversible migration 0002, expanded `Place`/`ItineraryDay`/`ItineraryItem` models, added `GeospatialCache` with `JsonType`, implemented `GoogleMapsService` with Places New & Routes v2 APIs and OSRM fallback, and added upsert-on-save foreign key resolver.
+- [x] **25.2: Live Discovery & Recommendation Engine Upgrade**
+  - **Target Files**: `backend/app/algorithms/itinerary_generator.py`, `Project/src/app/core/utils/polyline.util.ts`, `Project/src/app/core/services/itinerary.service.ts`
+  - **Implementation**: Bayesian quality scoring, opening hours gating (`is_open_during_slot`), 2-Opt TSP permutation, dynamic travel-time pacing, polyline utilities (`encodePolyline`, `decodePolyline`), and offline generator destination matching fixes.
+- [x] **25.3: Active Routing & Geolocation Tracking**
+  - **Target Files**: `Project/android/app/src/main/AndroidManifest.xml`, `Project/src/app/core/services/route-tracking.service.ts`, `Project/src/app/tabs/map/map.page.ts`, `Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.ts`
+  - **Implementation**: Configured Capacitor Geolocation v8 permissions, implemented `RouteTrackingService` (10m movement throttle, 100m off-route detection, 50m stop arrival threshold), unclustered Leaflet route layers, navigation HUD banner, embedded detail route preview map, and inter-stop leg badges.
+- [x] **25.4: Unified PlaceDetailSheetComponent & UI Polish**
+  - **Target Files**: `Project/src/app/shared/components/place-detail-sheet/`, `Project/src/app/features/itinerary/suggested-wizard/`, `Project/src/app/features/itinerary/itinerary-detail/`
+  - **Implementation**: Consolidated duplicate modal markup across all pages with `<app-place-detail-sheet>`, added traveler annotations and public transit commute guide, added Travel Mode and Minimum Rating controls to Suggested Wizard, and added inter-stop road travel leg connectors.

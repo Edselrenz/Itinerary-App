@@ -1,6 +1,13 @@
 import { expect, test } from '@playwright/test';
 
 test.describe('Nueva Ecija Travel Itinerary Planner E2E Journey', () => {
+  test.beforeEach(async ({ page }) => {
+    // Mark loading/splash screen as already seen to prevent overlay interception in headless journeys (UI-05)
+    await page.addInitScript(() => {
+      sessionStorage.setItem('ne_splash_seen_v1', 'true');
+    });
+  });
+
   test('redirects root url to welcome page with brand elements', async ({ page }) => {
     await page.goto('/');
     await expect(page).toHaveURL(/\/welcome/);
@@ -24,7 +31,7 @@ test.describe('Nueva Ecija Travel Itinerary Planner E2E Journey', () => {
 
     // Verify Guest explanation view
     await expect(page.locator('.guest-title')).toContainText('Explore as a guest');
-    await expect(page.locator('.guest-subtitle')).toContainText("Your data won't be saved");
+    await expect(page.locator('.guest-subtitle')).toContainText('Your trips are saved locally on this device');
 
     // Click Continue as Guest button to enter main tabs
     await page.locator('.guest-content-section ion-button', { hasText: 'Continue as Guest' }).click();
@@ -48,7 +55,7 @@ test.describe('Nueva Ecija Travel Itinerary Planner E2E Journey', () => {
 
     // Verify Map canvas and filter bar are loaded
     await expect(page.locator('#leaflet-map')).toBeVisible();
-    await expect(page.locator('.map-filter-bar')).toBeVisible();
+    await expect(page.locator('.map-top-bar')).toBeVisible();
 
     // Navigate back to Home tab
     await page.locator('ion-tab-button[tab="home"]').click();

@@ -6,7 +6,6 @@ import {
   IonContent,
   IonHeader,
   IonIcon,
-  IonModal,
   IonSpinner,
   IonToolbar,
   ToastController,
@@ -17,8 +16,10 @@ import {
   alertCircleOutline,
   arrowBack,
   arrowForwardOutline,
+  bicycleOutline,
   busOutline,
   calendarOutline,
+  carOutline,
   cartOutline,
   cashOutline,
   checkmarkCircle,
@@ -38,16 +39,19 @@ import {
   searchOutline,
   shieldCheckmarkOutline,
   sparkles,
+  star,
+  starHalf,
   storefrontOutline,
   timeOutline,
   walkOutline,
 } from 'ionicons/icons';
-import { Itinerary, ItineraryBudgetSummary, ItineraryDay, ItineraryItem } from '../../../core/models/itinerary.models';
+import { Itinerary, ItineraryBudgetSummary, ItineraryDay, ItineraryItem, SuggestedItineraryRequest } from '../../../core/models/itinerary.models';
 import { Place } from '../../../core/models/place.models';
 import { addDaysLocal, diffDaysLocal, formatDateRange, parseLocalIsoDate, toLocalIsoDate } from '../../../core/utils/date.utils';
 import { ItineraryService } from '../../../core/services/itinerary.service';
 import { NearbyPlaceItem, PlaceService } from '../../../core/services/place.service';
 import { CommuteInfo, getCommuteInfoForMunicipality } from '../../../core/data/commute-guide.data';
+import { PlaceDetailSheetComponent } from '../../../shared/components/place-detail-sheet/place-detail-sheet.component';
 
 export interface PreferenceOption {
   key: string;
@@ -68,7 +72,7 @@ export interface PreferenceOption {
     IonToolbar,
     IonIcon,
     IonSpinner,
-    IonModal,
+    PlaceDetailSheetComponent,
   ],
 })
 export class SuggestedWizardPage implements OnInit {
@@ -112,6 +116,22 @@ export class SuggestedWizardPage implements OnInit {
   public popupEndDate = '';
   public minDate = toLocalIsoDate();
 
+  // Wizard GIS & Quality Options (Phase 25)
+  public travelMode: 'DRIVE' | 'TWO_WHEELER' | 'WALK' = 'DRIVE';
+  public minRating: number = 0; // 0 = All, 4.0 = 4.0+, 4.5 = 4.5+
+
+  public travelModeOptions = [
+    { value: 'DRIVE' as const, label: 'Drive / Car', icon: 'car-outline' },
+    { value: 'TWO_WHEELER' as const, label: 'Motorcycle / Tricycle', icon: 'bicycle-outline' },
+    { value: 'WALK' as const, label: 'Walking / Transit', icon: 'walk-outline' },
+  ];
+
+  public minRatingOptions = [
+    { value: 0, label: 'All Ratings' },
+    { value: 4.0, label: '4.0+ ★' },
+    { value: 4.5, label: '4.5+ ★' },
+  ];
+
   public isStopModalOpen = false;
   public selectedStop: ItineraryItem | null = null;
   public isAssumptionsExpanded = false;
@@ -128,8 +148,12 @@ export class SuggestedWizardPage implements OnInit {
       addCircleOutline,
       arrowBack,
       arrowForwardOutline,
+      bicycleOutline,
       busOutline,
+      carOutline,
       sparkles,
+      star,
+      starHalf,
       searchOutline,
       locationOutline,
       locationSharp,
@@ -306,6 +330,14 @@ export class SuggestedWizardPage implements OnInit {
     return `${rangeStr} (${days} ${days === 1 ? 'day' : 'days'}, ${nights} ${nights === 1 ? 'night' : 'nights'})`;
   }
 
+  public setTravelMode(mode: 'DRIVE' | 'TWO_WHEELER' | 'WALK'): void {
+    this.travelMode = mode;
+  }
+
+  public setMinRating(rating: number): void {
+    this.minRating = rating;
+  }
+
   public generateItinerary(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -315,7 +347,7 @@ export class SuggestedWizardPage implements OnInit {
     this.isGenerating = true;
     const vals = this.form.value;
 
-    const req = {
+    const req: SuggestedItineraryRequest = {
       title: `Suggested ${vals.destination} Trip`,
       destination: vals.destination,
       start_date: vals.start_date,
@@ -323,6 +355,9 @@ export class SuggestedWizardPage implements OnInit {
       daily_budget: Number(vals.daily_budget),
       preferences: Array.from(this.selectedPreferences),
       save_immediately: false,
+      travel_mode: this.travelMode,
+      min_rating: this.minRating > 0 ? this.minRating : undefined,
+      include_live_places: true,
     };
 
     this.itineraryService.suggestItinerary(req).subscribe({
@@ -437,10 +472,11 @@ export class SuggestedWizardPage implements OnInit {
       custom_title: place.name,
       place: {
         id: place.id,
+        google_place_id: place.google_place_id,
         name: place.name,
         category: place.category === 'restaurant' ? 'restaurant' : place.category === 'hospital' ? 'pharmacy' : 'convenience_store',
-        latitude: 15.63,
-        longitude: 121.14,
+        latitude: place.latitude ?? 15.63,
+        longitude: place.longitude ?? 121.14,
         municipality_name: place.municipality,
         opening_hours: place.openingHours,
         cost_currency: 'PHP',
@@ -461,6 +497,45 @@ export class SuggestedWizardPage implements OnInit {
       position: 'bottom',
     });
     await toast.present();
+  }
+
+  public get selectedStopPlace(): Place | null {
+    if (!this.selectedStop) return null;
+    if (this.selectedStop.place) {
+      return this.selectedStop.place;
+    }
+    return {
+      id: this.selectedStop.place_id || `stop-${this.selectedStop.id}`,
+      name: this.selectedStop.custom_title || 'Stop',
+      latitude: this.selectedStop.custom_lat ?? 15.58,
+      longitude: this.selectedStop.custom_lng ?? 121.0,
+      category: 'attraction',
+      municipality_name: this.generatedPlan?.destination || 'Nueva Ecija',
+      description: this.selectedStop.notes,
+      is_featured: false,
+      source_name: 'CustomStop',
+      imported_at: new Date().toISOString(),
+    } as Place;
+  }
+
+  public get selectedStopCommuteInfo(): CommuteInfo | undefined {
+    if (!this.selectedStop) return undefined;
+    return this.getCommuteInfo(this.selectedStop);
+  }
+
+  public formatMetersToKm(meters: number | null | undefined): string {
+    if (meters == null) return '';
+    if (meters < 1000) return `${Math.round(meters)} m`;
+    return `${(meters / 1000).toFixed(1)} km`;
+  }
+
+  public formatTravelDurationSeconds(seconds: number | null | undefined): string {
+    if (seconds == null) return '';
+    const mins = Math.round(seconds / 60);
+    if (mins < 60) return `${mins} min`;
+    const hrs = Math.floor(mins / 60);
+    const remMins = mins % 60;
+    return `${hrs}h ${remMins}m`;
   }
 
   public openNearbyPlaces(stop?: any): void {

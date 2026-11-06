@@ -53,7 +53,10 @@ import {
   searchOutline,
   shieldCheckmarkOutline,
   sparklesOutline,
+  speedometerOutline,
+  stopCircleOutline,
   timeOutline,
+  warningOutline,
   waterOutline,
   cartOutline,
 } from 'ionicons/icons';
@@ -62,6 +65,13 @@ import 'leaflet.markercluster';
 
 import { Municipality, Place } from '../../core/models/place.models';
 import { PlaceService } from '../../core/services/place.service';
+import {
+  RouteTrackingService,
+  RouteTrackingState,
+} from '../../core/services/route-tracking.service';
+import { PlaceDetailSheetComponent } from '../../shared/components/place-detail-sheet/place-detail-sheet.component';
+import { ItineraryDay, ItineraryItem } from '../../core/models/itinerary.models';
+import { decodePolyline } from '../../core/utils/polyline.util';
 import { environment } from '../../../environments/environment';
 
 export interface CategoryFilterItem {
@@ -118,6 +128,7 @@ export const NUEVA_ECIJA_BOUNDS: [[number, number], [number, number]] = [
     IonIcon,
     IonModal,
     IonSpinner,
+    PlaceDetailSheetComponent,
   ],
 })
 export class MapPage implements OnInit, AfterViewInit, OnDestroy {
@@ -142,6 +153,13 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
   // Accessible Collapsible POI List Drawer (UI-16)
   public isPoiDrawerOpen = false;
 
+  // Route Navigation & Turn-by-Turn Tracking Layer State (Phase 25.3)
+  public routePolylineLayer: L.Polyline | null = null;
+  public itineraryStopsLayer: L.LayerGroup | null = null;
+  public userLocationMarker: L.Marker | null = null;
+  public activeTrackingState: RouteTrackingState | null = null;
+  public activeRouteMode: 'browse' | 'follow' = 'browse';
+
   private searchSubject = new Subject<string>();
   private viewportDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   private subscriptions = new Subscription();
@@ -153,6 +171,7 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
 
   constructor(
     private placeService: PlaceService,
+    public routeTrackingService: RouteTrackingService,
     private route: ActivatedRoute,
     private router: Router,
     private cdr: ChangeDetectorRef,
@@ -195,7 +214,10 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
       searchOutline,
       shieldCheckmarkOutline,
       sparklesOutline,
+      speedometerOutline,
+      stopCircleOutline,
       timeOutline,
+      warningOutline,
       waterOutline,
       cartOutline,
     });
@@ -204,6 +226,35 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
   public ngOnInit(): void {
     this.loadPlaces();
     this.loadMunicipalities();
+
+    this.subscriptions.add(
+      this.routeTrackingService.state$.subscribe((state) => {
+        this.activeTrackingState = state;
+        if (this.map && state.isTracking && state.activeDay) {
+          if (!this.routePolylineLayer) {
+            this.renderRouteOnMap(state.activeDay);
+          }
+          if (state.currentPosition) {
+            this.updateUserLocationMarker(state.currentPosition, state.heading);
+            if (this.activeRouteMode === 'follow') {
+              const target = state.snappedPosition || state.currentPosition;
+              this.map.panTo(target, { animate: true, duration: 0.5 });
+            }
+          }
+        } else if (!state.isTracking && this.routePolylineLayer) {
+          this.clearRouteFromMap();
+        }
+        this.cdr.detectChanges();
+      })
+    );
+
+    this.subscriptions.add(
+      this.routeTrackingService.recenter$.subscribe((pos) => {
+        if (this.map) {
+          this.map.flyTo(pos, 16, { duration: 0.8 });
+        }
+      })
+    );
 
     this.subscriptions.add(
       this.searchSubject
@@ -220,6 +271,15 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
         const lng = params['lng'] ? parseFloat(params['lng']) : undefined;
         const destination = params['destination'] || undefined;
         const municipality = params['municipality'] || undefined;
+        const follow = params['followRoute'] === 'true';
+
+        if (follow) {
+          this.activeRouteMode = 'follow';
+          const day = this.routeTrackingService.currentState.activeDay;
+          if (day && this.map) {
+            this.renderRouteOnMap(day);
+          }
+        }
 
         if (lat !== undefined && lng !== undefined) {
           this.pendingTarget = { lat, lng, destination, municipality };
@@ -259,6 +319,7 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
 
   public ngOnDestroy(): void {
     this.subscriptions.unsubscribe();
+    this.clearRouteFromMap();
     if (this.viewportDebounceTimer) {
       clearTimeout(this.viewportDebounceTimer);
       this.viewportDebounceTimer = null;
@@ -353,6 +414,10 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
     // Render any places already loaded
     if (this.places.length > 0) {
       this.updateMarkers();
+    }
+
+    if (this.activeTrackingState?.isTracking && this.activeTrackingState.activeDay) {
+      this.renderRouteOnMap(this.activeTrackingState.activeDay);
     }
   }
 
@@ -797,6 +862,162 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
 
   public getPlaceImageUrl(place: Place): string {
     return this.placeService.getPlaceImage(place.name, place.image_url);
+  }
+
+  // --- Active Route & Turn Tracking Actions (Phase 25.3) ---
+
+  public toggleRouteMode(): void {
+    this.activeRouteMode = this.activeRouteMode === 'follow' ? 'browse' : 'follow';
+    if (this.activeRouteMode === 'follow') {
+      const pos =
+        this.activeTrackingState?.snappedPosition ||
+        this.activeTrackingState?.currentPosition;
+      if (pos && this.map) {
+        this.map.flyTo(pos, 16, { duration: 0.6 });
+      } else if (this.routePolylineLayer && this.map) {
+        this.map.fitBounds(this.routePolylineLayer.getBounds(), { padding: [40, 40] });
+      }
+    }
+    this.cdr.detectChanges();
+  }
+
+  public recenterUserLocation(): void {
+    const pos = this.activeTrackingState?.currentPosition;
+    if (pos && this.map) {
+      this.map.flyTo(pos, 16, { duration: 0.8 });
+    }
+  }
+
+  public stopRouteTracking(): void {
+    this.routeTrackingService.stopTracking();
+    this.clearRouteFromMap();
+    this.activeRouteMode = 'browse';
+    this.cdr.detectChanges();
+  }
+
+  public renderRouteOnMap(day: ItineraryDay): void {
+    if (!this.map) return;
+
+    this.clearRouteFromMap();
+    this.itineraryStopsLayer = L.layerGroup().addTo(this.map);
+
+    if (day.day_overview_polyline) {
+      const latlngs = decodePolyline(day.day_overview_polyline);
+      this.routePolylineLayer = L.polyline(latlngs, {
+        color: '#2563eb',
+        weight: 5,
+        opacity: 0.88,
+        lineJoin: 'round',
+      }).addTo(this.map);
+
+      this.map.fitBounds(this.routePolylineLayer.getBounds(), {
+        padding: [50, 50],
+      });
+    }
+
+    const items = day.items || [];
+    items.forEach((item, idx) => {
+      const lat = item.place?.latitude ?? item.custom_lat;
+      const lng = item.place?.longitude ?? item.custom_lng;
+      if (lat == null || lng == null) return;
+
+      const stopTitle = this.escapeHtml(item.place?.name || item.custom_title || `Stop ${idx + 1}`);
+      const stopIcon = L.divIcon({
+        className: 'route-stop-marker-container',
+        html: `
+          <div class="route-stop-pin" role="button" aria-label="Stop ${idx + 1}: ${stopTitle}">
+            <div class="route-stop-badge">${idx + 1}</div>
+            <div class="route-stop-tooltip">${stopTitle}</div>
+          </div>
+        `,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
+      });
+
+      const marker = L.marker([lat, lng], { icon: stopIcon });
+      marker.on('click', (e: L.LeafletMouseEvent) => {
+        L.DomEvent.stopPropagation(e);
+        if (item.place) {
+          this.selectedPlace = item.place;
+          this.cdr.detectChanges();
+        }
+      });
+
+      this.itineraryStopsLayer?.addLayer(marker);
+    });
+
+    if (this.activeTrackingState?.currentPosition) {
+      this.updateUserLocationMarker(
+        this.activeTrackingState.currentPosition,
+        this.activeTrackingState.heading
+      );
+    }
+  }
+
+  public clearRouteFromMap(): void {
+    if (this.routePolylineLayer && this.map) {
+      this.map.removeLayer(this.routePolylineLayer);
+      this.routePolylineLayer = null;
+    }
+    if (this.itineraryStopsLayer && this.map) {
+      this.itineraryStopsLayer.clearLayers();
+      this.map.removeLayer(this.itineraryStopsLayer);
+      this.itineraryStopsLayer = null;
+    }
+    if (this.userLocationMarker && this.map) {
+      this.map.removeLayer(this.userLocationMarker);
+      this.userLocationMarker = null;
+    }
+  }
+
+  public updateUserLocationMarker(pos: [number, number], heading: number | null): void {
+    if (!this.map) return;
+
+    const headingHtml =
+      heading != null
+        ? `<div class="user-heading-pointer" style="transform: rotate(${heading}deg);"></div>`
+        : '';
+
+    const userIcon = L.divIcon({
+      className: 'user-location-marker-container',
+      html: `
+        <div class="user-pulse-marker">
+          <div class="pulse-beacon"></div>
+          <div class="pulse-core"></div>
+          ${headingHtml}
+        </div>
+      `,
+      iconSize: [28, 28],
+      iconAnchor: [14, 14],
+    });
+
+    if (!this.userLocationMarker) {
+      this.userLocationMarker = L.marker(pos, { icon: userIcon, zIndexOffset: 1000 }).addTo(this.map);
+    } else {
+      this.userLocationMarker.setLatLng(pos);
+      this.userLocationMarker.setIcon(userIcon);
+    }
+  }
+
+  public formatMetersToKm(meters: number | null | undefined): string {
+    if (meters == null) return '0 m';
+    if (meters < 1000) return `${Math.round(meters)} m`;
+    return `${(meters / 1000).toFixed(1)} km`;
+  }
+
+  public formatEtaSeconds(seconds: number | null | undefined): string {
+    if (seconds == null) return '--';
+    if (seconds < 60) return `${seconds}s`;
+    const mins = Math.round(seconds / 60);
+    if (mins < 60) return `${mins} min`;
+    const hrs = Math.floor(mins / 60);
+    const remMins = mins % 60;
+    return `${hrs}h ${remMins}m`;
+  }
+
+  public getStopDisplayName(item: ItineraryItem | null | undefined): string {
+    if (!item) return 'Route Destination';
+    return item.place?.name || item.custom_title || 'Next Waypoint';
   }
 
   private escapeHtml(text: string): string {

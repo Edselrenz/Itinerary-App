@@ -124,6 +124,42 @@
         </div>
       </div>
 
+      <!-- Travel Mode Selection (Phase 25) -->
+      <div class="form-group">
+        <label class="group-label">Travel Mode</label>
+        <div class="figma-pref-grid travel-mode-grid">
+          @for (mode of travelModeOptions; track mode.value) {
+          <button
+            type="button"
+            class="figma-pref-pill travel-mode-pill"
+            [class.active]="travelMode === mode.value"
+            (click)="setTravelMode(mode.value)"
+          >
+            <ion-icon [name]="mode.icon"></ion-icon>
+            <span>{{ mode.label }}</span>
+          </button>
+          }
+        </div>
+      </div>
+
+      <!-- Minimum Rating Filter (Phase 25) -->
+      <div class="form-group">
+        <label class="group-label">Minimum Place Rating</label>
+        <div class="rating-filter-row">
+          @for (opt of minRatingOptions; track opt.value) {
+          <button
+            type="button"
+            class="rating-filter-chip"
+            [class.active]="minRating === opt.value"
+            (click)="setMinRating(opt.value)"
+          >
+            <ion-icon name="star" *ngIf="opt.value > 0" class="rating-star-icon"></ion-icon>
+            <span>{{ opt.label }}</span>
+          </button>
+          }
+        </div>
+      </div>
+
       <!-- Action CTA (Figma: "Find Itinerary") -->
       <button
         type="button"
@@ -271,6 +307,19 @@
       <!-- Stop Cards List -->
       <div class="stop-cards-vertical-list">
         @for (stop of curDay.items; track stop.id; let sIdx = $index) {
+        <!-- Leg Travel Badge Between Consecutive Stops (Phase 25) -->
+        <div
+          *ngIf="sIdx > 0 && (stop.travel_distance_meters || stop.travel_duration_seconds)"
+          class="route-leg-badge"
+        >
+          <div class="leg-pill">
+            <ion-icon name="car-outline"></ion-icon>
+            <span *ngIf="stop.travel_duration_seconds">{{ formatTravelDurationSeconds(stop.travel_duration_seconds) }}</span>
+            <span *ngIf="stop.travel_duration_seconds && stop.travel_distance_meters" class="leg-dot">&bull;</span>
+            <span *ngIf="stop.travel_distance_meters">{{ formatMetersToKm(stop.travel_distance_meters) }}</span>
+          </div>
+        </div>
+
         <div class="figma-stop-card" (click)="openStopDetail(stop)">
           <div class="stop-thumb-container">
             <img
@@ -281,7 +330,14 @@
             />
           </div>
           <div class="stop-text-stack">
-            <h4 class="stop-title-text">{{ sIdx + 1 }}. {{ stop.place?.name || stop.custom_title }}</h4>
+            <div class="stop-header-row">
+              <h4 class="stop-title-text">{{ sIdx + 1 }}. {{ stop.place?.name || stop.custom_title }}</h4>
+              <div *ngIf="stop.place?.rating" class="stop-rating-pill">
+                <ion-icon name="star"></ion-icon>
+                <span>{{ stop.place.rating.toFixed(1) }}</span>
+                <span *ngIf="stop.place.user_rating_count" class="rating-count">({{ stop.place.user_rating_count }})</span>
+              </div>
+            </div>
             <div class="stop-timing-block">
               <span class="timing-hours">{{ getTimingTime(stop) }}</span>
               <span class="timing-duration">({{ getTimingDuration(stop) }})</span>
@@ -523,111 +579,18 @@
   </div>
 
   <!-- ========================================================
-       STOP DETAILS MODAL SHEET (UI-12, UI-13)
+       STOP DETAILS SHEET (Powered by PlaceDetailSheetComponent)
        ======================================================== -->
-  <ion-modal
-    [isOpen]="isStopModalOpen"
-    (didDismiss)="closeStopDetail()"
-    class="destination-modal"
-    [initialBreakpoint]="0.85"
-    [breakpoints]="[0, 0.85, 1.0]"
-  >
-    <ng-template>
-      @if (selectedStop) {
-      <div class="modal-detail-content">
-        <div class="modal-handle-bar"></div>
-
-        <div class="modal-image-wrap">
-          <img
-            [src]="getStopImage(selectedStop)"
-            [alt]="selectedStop.place?.name || selectedStop.custom_title || 'Stop'"
-            class="modal-hero-img"
-          />
-          <button type="button" class="modal-close-btn" (click)="closeStopDetail()" aria-label="Close modal">
-            <ion-icon name="close-outline"></ion-icon>
-          </button>
-          <span class="modal-category-badge">{{ getStopCategory(selectedStop) }}</span>
-        </div>
-
-        <div class="modal-body-content">
-          <div class="modal-muni-tag">
-            <ion-icon name="location-outline"></ion-icon>
-            <span
-              >{{ selectedStop.place?.municipality_name || generatedPlan?.destination || 'Nueva Ecija' }}, Nueva
-              Ecija</span
-            >
-          </div>
-
-          <h2 class="modal-title">{{ selectedStop.place?.name || selectedStop.custom_title }}</h2>
-
-          <div class="modal-meta-grid">
-            @if (selectedStop.place?.opening_hours) {
-            <div class="modal-meta-item">
-              <ion-icon name="time-outline"></ion-icon>
-              <span>{{ selectedStop.place.opening_hours }}</span>
-            </div>
-            }
-            <div class="modal-meta-item">
-              <ion-icon name="cash-outline"></ion-icon>
-              <span>{{ getStopCost(selectedStop) }}</span>
-            </div>
-          </div>
-
-          @if (selectedStop.place?.description) {
-          <p class="modal-full-desc">{{ selectedStop.place.description }}</p>
-          } @if (selectedStop.notes) {
-          <div class="stop-notes-box">
-            <span class="notes-label">Traveler Note:</span>
-            <p>{{ selectedStop.notes }}</p>
-          </div>
-          }
-
-          <!-- How to Get There? Commute Guide (UI-13) -->
-          @if (getCommuteInfo(selectedStop); as commute) {
-          <div class="commute-guide-box">
-            <div class="commute-header-row">
-              <ion-icon name="bus-outline" class="commute-title-icon"></ion-icon>
-              <h4 class="commute-title">How to get there?</h4>
-            </div>
-
-            <div class="commute-detail-list">
-              <div class="commute-detail-item">
-                <span class="commute-label">Transit & Hub</span>
-                <span class="commute-value">{{ commute.transitMode }} &bull; {{ commute.departureHub }}</span>
-              </div>
-              <div class="commute-detail-item">
-                <span class="commute-label">Drop-off Point</span>
-                <span class="commute-value">{{ commute.dropOffPoint }}</span>
-              </div>
-              <div class="commute-detail-item">
-                <span class="commute-label">Estimated Travel Time</span>
-                <span class="commute-value">{{ commute.estimatedTravelTime }}</span>
-              </div>
-              <div class="commute-detail-item">
-                <span class="commute-label">Estimated Fare</span>
-                <span class="commute-value">{{ commute.estimatedFare }}</span>
-              </div>
-            </div>
-
-            <div class="travel-reminder-card">
-              <ion-icon name="information-circle" class="reminder-icon"></ion-icon>
-              <div class="reminder-text">
-                <span class="reminder-heading">Travel Reminder</span>
-                <p class="reminder-body">{{ commute.travelReminder }}</p>
-              </div>
-            </div>
-          </div>
-          }
-
-          <div class="modal-actions-grid" style="margin-top: 14px">
-            <button type="button" class="external-map-btn" (click)="openInGoogleMaps(selectedStop)">
-              <ion-icon name="open-outline"></ion-icon>
-              <span>Open in Google Maps</span>
-            </button>
-          </div>
-        </div>
-      </div>
-      }
-    </ng-template>
-  </ion-modal>
+  @if (isStopModalOpen && selectedStopPlace) {
+    <div class="bottom-sheet-backdrop" (click)="closeStopDetail()"></div>
+    <app-place-detail-sheet
+      class="poi-bottom-sheet"
+      [place]="selectedStopPlace"
+      [stopNotes]="selectedStop?.notes"
+      [commuteInfo]="selectedStopCommuteInfo"
+      [showAddToTripActions]="false"
+      [showNavigationAction]="true"
+      (closeSheet)="closeStopDetail()"
+    ></app-place-detail-sheet>
+  }
 </ion-content>

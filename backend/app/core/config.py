@@ -30,6 +30,10 @@ class Settings(BaseSettings):
     google_oauth_client_id: str = ""
     enable_apple_auth: bool = False
     default_dest_radius_km: float = 25.0
+    google_maps_api_key: str = ""
+    google_places_cache_ttl_hours: int = 168  # 7 days for discovery
+    google_details_cache_ttl_hours: int = 24  # 24 hours for rich reviews/photos
+    google_routes_cache_ttl_hours: int = 336  # 14 days for routes
 
     @model_validator(mode="after")
     def validate_secrets(self) -> "Settings":

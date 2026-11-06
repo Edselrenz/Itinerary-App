@@ -7,11 +7,61 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ---
 
 ## [Unreleased]
-### Documentation & Roadmap
-- **Adopted Development Plan & UI/UX Audit (`v2.0`)**:
-  - Integrated 9 missing Figma/MVP windows and modals into `docs/DEVELOPMENT_PLAN.md`.
-  - Added 24 audit defect registry items (`UI-01` to `UI-24`).
-  - Expanded engineering roadmap across `docs/DEVELOPMENT_PLAN.md`, `docs/TODO.md`, `docs/DEVELOPMENT_LOG.md`, and `docs/PROJECT_STATE.md` with Milestones 16–22.
+
+## [0.19.0] - 2026-11-06
+### Added
+- **Full Modal Consolidation Across All Pages (Phase 25.4.2)**:
+  - Extended `PlaceDetailSheetComponent` with `@Input() stopNotes` and `@Input() commuteInfo` to render personal traveler annotations and public transit guide (transit mode, departure hub, drop-off point, travel time, estimated fare, travel reminder).
+  - Consolidated modal markup across `suggested-wizard.page.html` (removed 107 lines of duplicate modal markup) and `itinerary-detail.page.html` (removed 57 lines of duplicate modal markup) with `<app-place-detail-sheet>`.
+  - Added global `.bottom-sheet-backdrop` with backdrop blur in `global.scss`.
+- **Suggested Wizard Quality & GIS Controls (Phase 25.4.4)**:
+  - Added Travel Mode selector chips (`Drive`, `Motorcycle`, `Walk`) and Minimum Star Rating filters (`Any`, `★ 4.0+`, `★ 4.5+`) in `SuggestedWizardPage`.
+  - Added star rating badges (`★ 4.7 (340)`) on stop cards and road travel leg connector badges (`.route-leg-badge`) between consecutive stops.
+  - Linked authentic coordinates (`latitude`, `longitude`, `google_place_id`) for added nearby places in wizard.
+- **Edge Caching via Cloudflare Worker KV (Phase 24.1 & 25.1)**:
+  - Configured edge caching in `cloudflare-worker/worker.js` with `env.TUNNEL_KV` (24h TTL) for `GET /api/v1/places/` and `POST /api/v1/itineraries/compute-day-route`.
+  - Serving cached responses with `X-Edge-Cache: HIT` when upstream developer tunnel is temporarily offline, guaranteeing resilient 24/7 client uptime.
+- **Capacitor Native Android Plugin Synchronization (Phase 24.2)**:
+  - Synchronized web assets and 6 Capacitor Android plugins (`@capacitor/app@8.1.2`, `@capacitor/geolocation@8.2.4`, `@capacitor/haptics@8.0.2`, `@capacitor/keyboard@8.0.6`, `@capacitor/status-bar@8.0.4`, and `capacitor-secure-storage-plugin@0.13.0`) via `npx cap sync android`.
+- **Automated Playwright Browser Journey Test Suite (Phase 24.3)**:
+  - Installed Playwright Chromium v1248 headless shell, FFmpeg, and Winldd binaries.
+  - Automated 5 end-to-end user journeys in `Project/e2e/app.spec.ts` bypassing cold-start splash interception via `sessionStorage`. All 5 tests passed in 11.9s.
+
+## [0.18.0] - 2026-11-06
+### Added
+- **Active GPS Routing & Real-Time Geolocation Tracking (Phase 25.3)**:
+  - Installed `@capacitor/geolocation` v8.2.4 and configured Android hardware permissions (`ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`, GPS feature).
+  - Extended `polyline.util.ts` with orthogonal segment projection, perpendicular polyline distance, and cumulative remaining distance calculations.
+  - Implemented `RouteTrackingService`:
+    - 10m movement throttle to eliminate stationary GPS jitter.
+    - 100m off-route detection dispatching `rerouteNeeded$` events.
+    - 50m stop arrival threshold advancing waypoints and updating completed stop states.
+    - Reactive state streams (`state$`, `recenter$`, `stopReached$`).
+  - Added Leaflet unclustered route layer in `map.page.ts` with encoded route polylines and numbered stop pins $1..N$ outside cluster groups.
+  - Added animated pulsing blue user location marker with directional heading chevron.
+  - Added Active Route Tracking Navigation HUD with next waypoint name, remaining distance/ETA, off-route alert, and recenter/stop controls.
+  - Added embedded interactive Leaflet route preview map, Day Route Metrics banner, and "Navigate Day" CTA in `itinerary-detail.page.ts`.
+  - Added leg travel divider badges (`🚗 12 km • 18 min drive`) between consecutive stops in the itinerary view.
+- **Unified `PlaceDetailSheetComponent` & UI Modal Consolidation (Phase 25.4)**:
+  - Created standalone `PlaceDetailSheetComponent` (`Project/src/app/shared/components/place-detail-sheet/`):
+    - Photo carousel with thumbnails backed by backend photo proxy (`/api/v1/places/photos/{photo_name}`).
+    - Open Now / Closed status badges with expandable weekly operating schedule accordion.
+    - Star ratings, review count badges, and traveler review snippets.
+    - Direct itinerary planning CTAs ("Start Trip Here", "Add to Trip", "Add to Day X").
+  - Consolidated duplicate modal markup in `map.page.html` with `<app-place-detail-sheet>`.
+  - Fixed coordinate binding in `offline-places.data.ts` and `itinerary-detail.page.ts` to assign real latitude and longitude to added nearby places.
+- **Enterprise GIS & Recommendation Engine Upgrade (Phases 25.1 & 25.2)**:
+  - Reversible Alembic migration `0002_google_places_and_routing` and `geospatial_cache` table with multi-engine portable `JsonType`.
+  - Backend `GoogleMapsService` with Google Places API (New), Routes Directions v2 API, and automatic OSRM/Haversine fallbacks.
+  - Endpoints: `POST /places/discover`, `GET /places/google/{google_place_id}`, `GET /places/photos/{photo_name}`, `POST /itineraries/compute-day-route`, `POST /itineraries/{id}/days/{day_id}/compute-route`.
+  - Bayesian quality scoring (`bayesian_quality_score`) and operating hours gate (`is_open_during_slot`) in itinerary recommendation generator.
+  - 2-Opt TSP path permutation ($N! \le 24$) eliminating zigzag backtracking.
+  - Dynamic road-paced arrival calculation from road distance legs.
+
+### Fixed
+- **Offline Generator Destination Matching**: Fixed `generateOfflineSuggestedItinerary()` in `itinerary.service.ts` to respect non-Bongabon destinations and calculate offline overview polylines and turn legs.
+- **Nearby Places Hardcoded Coordinates**: Replaced hardcoded coordinates in `addNearbyPlaceToActiveDay()` with authentic coordinates from `NearbyPlaceItem`.
+- **CSS Budget Warnings**: Updated component style budget thresholds in `angular.json` to 16kB warning / 24kB error to support rich Leaflet and HUD styling without warnings.
 
 ---
 

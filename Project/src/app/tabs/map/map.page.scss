@@ -437,4 +437,297 @@
   }
 }
 
+/* Floating Follow Mode Toggle Button (Phase 25.3) */
+.follow-mode-btn {
+  &.active-follow {
+    background: #2563eb !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4) !important;
+  }
+}
+
+/* Route Stop Marker Pin */
+:host ::ng-deep .route-stop-marker-container {
+  background: transparent;
+  border: none;
+
+  .route-stop-pin {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    cursor: pointer;
+
+    .route-stop-badge {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #2563eb;
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2.5px solid #ffffff;
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+      transition: transform 0.2s ease;
+    }
+
+    .route-stop-tooltip {
+      position: absolute;
+      top: -24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.88);
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+      white-space: nowrap;
+      pointer-events: none;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    }
+
+    &:hover .route-stop-badge {
+      transform: scale(1.15);
+      background: #1d4ed8;
+    }
+  }
+}
+
+/* User Location Pulsing Dot with Direction Indicator */
+:host ::ng-deep .user-location-marker-container {
+  background: transparent;
+  border: none;
+
+  .user-pulse-marker {
+    position: relative;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    .pulse-beacon {
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: rgba(59, 130, 246, 0.35);
+      animation: pulse-ring 2s infinite cubic-bezier(0.215, 0.61, 0.355, 1);
+    }
+
+    .pulse-core {
+      position: relative;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #2563eb;
+      border: 2.5px solid #ffffff;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+      z-index: 2;
+    }
+
+    .user-heading-pointer {
+      position: absolute;
+      top: 0px;
+      width: 0;
+      height: 0;
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-bottom: 9px solid #2563eb;
+      transform-origin: center 14px;
+      z-index: 1;
+    }
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
+
+/* Route Tracking Navigation HUD (Phase 25.3) */
+.route-tracking-hud {
+  position: absolute;
+  bottom: 4.8rem;
+  left: 1rem;
+  right: 1rem;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  animation: slideUpHud 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+
+  .hud-offroute-alert {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #b91c1c;
+    padding: 0.4rem 0.8rem;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    box-shadow: 0 2px 8px rgba(185, 28, 28, 0.15);
+
+    ion-icon {
+      font-size: 1.1rem;
+    }
+  }
+
+  .hud-content-card {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 0.85rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    box-shadow: 0 6px 20px rgba(15, 23, 42, 0.16);
+    border: 1px solid #f1f5f9;
+
+    .hud-icon-wrap {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: #eff6ff;
+      color: #2563eb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+
+      .hud-direction-icon {
+        font-size: 1.4rem;
+      }
+    }
+
+    .hud-text-details {
+      flex: 1;
+      min-width: 0;
+
+      .hud-next-label {
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        color: #64748b;
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+
+        .hud-stop-index {
+          background: #e2e8f0;
+          color: #334155;
+          padding: 1px 5px;
+          border-radius: 4px;
+          font-size: 0.65rem;
+        }
+      }
+
+      .hud-stop-name {
+        margin: 0.15rem 0 0.35rem;
+        font-size: 0.98rem;
+        font-weight: 700;
+        color: #0f172a;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .hud-metrics-row {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+
+        .hud-metric-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.2rem;
+          font-size: 0.78rem;
+          font-weight: 600;
+          color: #334155;
+          background: #f8fafc;
+          padding: 2px 6px;
+          border-radius: 5px;
+
+          ion-icon {
+            font-size: 0.85rem;
+            color: #2563eb;
+          }
+        }
+
+        .hud-total-remaining {
+          font-size: 0.72rem;
+          color: #64748b;
+        }
+      }
+    }
+
+    .hud-actions-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      flex-shrink: 0;
+
+      .hud-recenter-btn,
+      .hud-stop-btn {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background 0.15s ease;
+      }
+
+      .hud-recenter-btn {
+        background: #f1f5f9;
+        color: #334155;
+
+        &:hover {
+          background: #e2e8f0;
+        }
+        ion-icon {
+          font-size: 1.1rem;
+        }
+      }
+
+      .hud-stop-btn {
+        background: #fee2e2;
+        color: #ef4444;
+
+        &:hover {
+          background: #fecaca;
+        }
+        ion-icon {
+          font-size: 1.25rem;
+        }
+      }
+    }
+  }
+}
+
+@keyframes slideUpHud {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
 

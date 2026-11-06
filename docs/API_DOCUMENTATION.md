@@ -174,6 +174,60 @@ Interactive OpenAPI / Swagger documentation is available in development mode at:
   - `200 OK`: Full `PlaceOut` details and provenance.
   - `404 Not Found`: Place not found or inactive.
 
+### 2.4 Discover Places (Google Places API New & Local Fallback)
+- **Endpoint**: `POST /api/v1/places/discover`
+- **Authentication**: None.
+- **Request Body**:
+  ```json
+  {
+    "query": "Cafe in Cabanatuan",
+    "latitude": 15.4859,
+    "longitude": 120.9669,
+    "radius_meters": 50000.0,
+    "included_types": ["cafe", "restaurant"],
+    "min_rating": 4.0,
+    "open_now": false
+  }
+  ```
+- **Responses**:
+  - `200 OK`:
+    ```json
+    {
+      "places": [
+        {
+          "id": "e4f5a6b7-...",
+          "name": "Brew & Co.",
+          "category": "cafe",
+          "latitude": 15.4870,
+          "longitude": 120.9680,
+          "google_place_id": "ChIJ...",
+          "rating": 4.6,
+          "user_rating_count": 230,
+          "photos": [],
+          "directions_url": "https://www.google.com/maps/dir/?api=1&destination=15.487,120.968"
+        }
+      ],
+      "source": "google_live",
+      "total": 1
+    }
+    ```
+    *(Note: If `GOOGLE_MAPS_API_KEY` is not configured or network fails, gracefully falls back to local database search with `source = "local_db"`.)*
+
+### 2.5 Google Place Rich Details (Atmosphere Tier)
+- **Endpoint**: `GET /api/v1/places/google/{google_place_id}`
+- **Authentication**: None.
+- **Responses**:
+  - `200 OK`: Full `PlaceOut` schema populated with Google Atmosphere fields (`editorial_summary`, `regular_opening_hours`, `photos`, `reviews`, `rating`). Cached in `geospatial_cache` adhering to Google ToS.
+  - `404 Not Found`: Google place not found.
+
+### 2.6 Place Photo Proxy (API Key Protection)
+- **Endpoint**: `GET /api/v1/places/photos/{photo_name}`
+- **Authentication**: None.
+- **Purpose**: Proxies Google Places photo media on backend so that `GOOGLE_MAPS_API_KEY` is never leaked to the client browser.
+- **Responses**:
+  - `200 OK`: Image binary (`image/jpeg` or `image/png`) with HTTP Cache-Control header `public, max-age=86400`.
+  - `200 OK (SVG Fallback)`: Transparent 1x1 SVG if key is unconfigured or request fails.
+
 ---
 
 ## 3. System Health Check
@@ -385,7 +439,12 @@ All operations enforce strict Broken Object Level Authorization (BOLA): querying
     "end_date": "2026-11-02",
     "daily_budget": 2500.0,
     "preferences": ["nature", "food"],
-    "save_immediately": false
+    "save_immediately": false,
+    "origin_lat": 15.4859,
+    "origin_lng": 120.9669,
+    "travel_mode": "DRIVE",
+    "min_rating": 4.0,
+    "include_live_places": false
   }
   ```
 - **Clustering & Pacing Rules**:
@@ -395,6 +454,60 @@ All operations enforce strict Broken Object Level Authorization (BOLA): querying
 - **Responses**:
   - `200 OK`: `ItineraryOut` model with `type: "suggested"`, structured multi-day items, and generated transparent assumptions list.
   - `422 Unprocessable Content`: Invalid date range (end date before start date or trip longer than 7 days) or negative daily budget.
+
+### 4.11 Compute Day Route (Stateless Preview)
+- **Endpoint**: `POST /api/v1/itineraries/compute-day-route`
+- **Authentication**: None.
+- **Purpose**: Computes turn-by-turn routes, distance, duration, and encoded polylines on-the-fly for frontend route previews.
+- **Request Body**:
+  ```json
+  {
+    "origin": { "latitude": 15.4859, "longitude": 120.9669 },
+    "destination": { "latitude": 15.5414, "longitude": 121.0844 },
+    "intermediates": [
+      { "latitude": 15.5100, "longitude": 121.0200 }
+    ],
+    "travel_mode": "DRIVE"
+  }
+  ```
+- **Responses**:
+  - `200 OK`:
+    ```json
+    {
+      "overview_polyline": "{qo}AcjiaV...",
+      "total_distance_meters": 14250,
+      "total_duration_seconds": 1280,
+      "legs": [
+        {
+          "start_location": { "latitude": 15.4859, "longitude": 120.9669 },
+          "end_location": { "latitude": 15.5100, "longitude": 121.0200 },
+          "distance_meters": 6800,
+          "duration_seconds": 610,
+          "polyline": "...",
+          "steps": [
+            {
+              "instruction": "Head northeast on Maharlika Highway",
+              "distance_meters": 3200,
+              "duration_seconds": 290,
+              "polyline": "...",
+              "maneuver": "straight"
+            }
+          ]
+        }
+      ],
+      "source": "google_routes"
+    }
+    ```
+    *(Note: Falls back seamlessly to OSRM or offline Haversine direct calculation if Google API key is unconfigured or rate-limited.)*
+
+### 4.12 Compute & Save Day Route (Persistent Route Calculation)
+- **Endpoint**: `POST /api/v1/itineraries/{id}/days/{day_id}/compute-route`
+- **Authentication**: `Bearer <access_token>` (BOLA protected).
+- **Purpose**: Computes driving/walking route for all scheduled stops on a day, persists `day_overview_polyline`, `total_distance_meters`, `total_travel_duration_seconds`, and `route_legs` on `ItineraryDay`, and writes per-leg distance/duration on each `ItineraryItem`.
+- **Responses**:
+  - `200 OK`: Full updated `ItineraryOut` model with persisted routing fields.
+  - `404 Not Found`: Itinerary or day not found, or BOLA violation.
+
 
 
 

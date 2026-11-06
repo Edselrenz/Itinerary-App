@@ -20,14 +20,30 @@ class ItineraryItemBase(BaseModel):
     estimated_cost_min: float | None = Field(None, ge=0.0)
     estimated_cost_max: float | None = Field(None, ge=0.0)
 
+    # GIS & Turn-by-Turn routing extensions
+    google_place_id: str | None = None
+    travel_mode_from_prev: str | None = "DRIVE"
+    travel_distance_meters: int | None = None
+    travel_duration_seconds: int | None = None
+    route_polyline_from_prev: str | None = None
+
 
 class ItineraryItemCreate(ItineraryItemBase):
     """Payload to add a new stop to an itinerary day."""
 
+    place_payload: dict | None = None
+
     @model_validator(mode="after")
     def validate_place_or_custom(self) -> "ItineraryItemCreate":
-        if not self.place_id and not (self.custom_title and self.custom_title.strip()):
-            raise ValueError("Either place_id or custom_title must be provided for a stop.")
+        if (
+            not self.place_id
+            and not self.google_place_id
+            and not (self.custom_title and self.custom_title.strip())
+            and not (self.place_payload and self.place_payload.get("name"))
+        ):
+            raise ValueError(
+                "A stop must specify place_id, google_place_id, place_payload, or custom_title."
+            )
         if self.estimated_cost_min is not None and self.estimated_cost_max is not None:
             if self.estimated_cost_max < self.estimated_cost_min:
                 raise ValueError("estimated_cost_max cannot be less than estimated_cost_min.")
@@ -46,6 +62,10 @@ class ItineraryItemUpdate(BaseModel):
     notes: str | None = None
     estimated_cost_min: float | None = Field(None, ge=0.0)
     estimated_cost_max: float | None = Field(None, ge=0.0)
+    travel_mode_from_prev: str | None = None
+    travel_distance_meters: int | None = None
+    travel_duration_seconds: int | None = None
+    route_polyline_from_prev: str | None = None
 
 
 class ItineraryItemOut(ItineraryItemBase):
@@ -70,7 +90,7 @@ class ItineraryDayCreate(BaseModel):
 
 
 class ItineraryDayOut(BaseModel):
-    """Serialized itinerary day with chronological stops."""
+    """Serialized itinerary day with chronological stops and computed route overview."""
 
     id: uuid.UUID
     itinerary_id: uuid.UUID
@@ -78,6 +98,12 @@ class ItineraryDayOut(BaseModel):
     travel_date: date
     title: str | None = None
     items: list[ItineraryItemOut] = []
+
+    # Day routing overview
+    day_overview_polyline: str | None = None
+    total_distance_meters: int | None = None
+    total_travel_duration_seconds: int | None = None
+    route_legs: list[dict] = []
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -147,6 +173,11 @@ class SuggestedItineraryRequest(BaseModel):
     save_immediately: bool = Field(
         False, description="If True and authenticated, persists directly to database."
     )
+    origin_lat: float | None = None
+    origin_lng: float | None = None
+    travel_mode: str = "DRIVE"
+    min_rating: float | None = None
+    include_live_places: bool = False
 
     @model_validator(mode="after")
     def validate_dates(self) -> "SuggestedItineraryRequest":
@@ -168,4 +199,47 @@ class ItineraryReorderIn(BaseModel):
     """Batch reorder request payload."""
 
     items: list[ItineraryReorderItem]
+
+
+class RouteStepOut(BaseModel):
+    """Step-by-step turn instructions for active navigation."""
+
+    instruction: str
+    distance_meters: int
+    duration_seconds: int
+    polyline: str | None = None
+    start_location: dict | None = None
+    end_location: dict | None = None
+    maneuver: str | None = None
+
+
+class RouteLegOut(BaseModel):
+    """Single leg connecting consecutive stops."""
+
+    start_location: dict
+    end_location: dict
+    distance_meters: int
+    duration_seconds: int
+    polyline: str | None = None
+    steps: list[RouteStepOut] = []
+
+
+class RouteComputeRequest(BaseModel):
+    """Stateless request to calculate driving/walking routes between stops."""
+
+    origin: dict  # {"latitude": float, "longitude": float}
+    destination: dict  # {"latitude": float, "longitude": float}
+    intermediates: list[dict] = []
+    travel_mode: str = "DRIVE"
+
+
+class RouteComputeResponse(BaseModel):
+    """Computed route with turn-by-turn legs and polyline."""
+
+    overview_polyline: str
+    total_distance_meters: int
+    total_duration_seconds: int
+    legs: list[RouteLegOut] = []
+    source: str = "google_routes"  # "google_routes" | "osrm" | "haversine_direct"
+
 

@@ -91,10 +91,30 @@ export default {
       );
     }
 
-    // 3. Proxy API requests to active Cloudflare Tunnel first, falling back to ngrok
+    // 3. Edge caching & Proxy API requests to active Cloudflare Tunnel first, falling back to ngrok
     let stored = null;
     if (env.TUNNEL_KV) {
       stored = await env.TUNNEL_KV.get('ACTIVE_TUNNELS', { type: 'json' });
+    }
+
+    // Check if request is edge-cacheable for offline resilience (Google Places details / routes)
+    const isPlacesGet = request.method === 'GET' && url.pathname.includes('/api/v1/places');
+    const isRouteCompute = request.method === 'POST' && url.pathname.includes('/compute-day-route');
+    let requestBodyText = null;
+    let cacheKey = null;
+
+    if (env.TUNNEL_KV && (isPlacesGet || isRouteCompute)) {
+      if (isRouteCompute) {
+        requestBodyText = await request.clone().text();
+        let hash = 0;
+        for (let i = 0; i < requestBodyText.length; i++) {
+          hash = ((hash << 5) - hash) + requestBodyText.charCodeAt(i);
+          hash |= 0;
+        }
+        cacheKey = `EDGE_CACHE_${url.pathname}_${Math.abs(hash)}`;
+      } else {
+        cacheKey = `EDGE_CACHE_${url.pathname}${url.search}`;
+      }
     }
 
     const candidates = [
@@ -125,6 +145,13 @@ export default {
           (upstreamRes.status === 404 && (upstreamRes.headers.get('content-type') || '').includes('text/html'));
 
         if (upstreamRes.status < 500 && !isNgrokOffline) {
+          if (env.TUNNEL_KV && cacheKey && upstreamRes.status === 200) {
+            const clone = upstreamRes.clone();
+            clone.text().then((text) => {
+              env.TUNNEL_KV.put(cacheKey, text, { expirationTtl: 86400 }).catch(() => {});
+            }).catch(() => {});
+          }
+
           const resHeaders = new Headers(upstreamRes.headers);
           Object.entries(corsHeaders).forEach(([k, v]) => resHeaders.set(k, v));
           return new Response(upstreamRes.body, {
@@ -134,6 +161,21 @@ export default {
         }
       } catch (err) {
         lastError = err;
+      }
+    }
+
+    // Both candidate tunnels failed or backend is offline - serve edge cache if present
+    if (env.TUNNEL_KV && cacheKey) {
+      const cached = await env.TUNNEL_KV.get(cacheKey);
+      if (cached) {
+        return new Response(cached, {
+          status: 200,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json',
+            'X-Edge-Cache': 'HIT',
+          },
+        });
       }
     }
 
