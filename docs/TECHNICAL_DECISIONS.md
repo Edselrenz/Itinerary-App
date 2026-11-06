@@ -230,3 +230,26 @@ This document records key technical decisions, their context, alternatives evalu
   - *Advantages*: Zero paid API costs (ADR-001 compliant); bulletproof pin rendering in production; 66.3% transit distance reduction for travelers; universal multi-stop Google Maps navigation; leg-aware commute guidance; full offline support.
   - *Disadvantages*: Requires refactoring `map.page.ts` cluster initialization and updating offline preset mock data.
   - *Consequences*: Phased rollout tracked across Phase 27.1 (Immediate Bug Fixes), Phase 27.2 (Route Map & TSP), and Phase 27.3 (Router Guards & Commute Guide).
+
+
+---
+
+## ADR-015: Saved Itinerary Visual Flagship Alignment & Multi-Waypoint Navigation Architecture
+
+- **Date**: 2026-11-06
+- **Context**: A live evaluation of `https://edselrenz.github.io/Itinerary-App/` documented in `itinerary_app_ui_ux_evaluation_report.pdf` (and detailed in [UI_UX_EVALUATION_REPORT.md](./UI_UX_EVALUATION_REPORT.md)) revealed that upon saving a generated itinerary and opening `/itinerary/:id`, the visual presentation severely regressed compared to the pre-save Suggested Wizard preview. Stop photos, segmented day switching, rich time windows, Nearby Places, and Share triggers were stripped or orphaned, while `?? 200` cost fallbacks in `itinerary-detail.page.ts` inflated budgets and contradicted top banners.
+- **Problem**: How to restore parity between the pre-save preview and saved trip detail views, eliminate fabricated fees, unbundle orphaned features, and enable seamless multi-stop navigation without violating ADR-001 (Zero Paid APIs) or SCSS bundle budgets.
+- **Options Considered**:
+  1. *Leave views divergent*: Results in traveler confusion ("bait-and-switch" sensation), fabricated ₱200 fees, and 8-tap single-stop navigation friction.
+  2. *Align Saved Itinerary Detail as the Visual Flagship*:
+     - Restore 68×68px stop photo thumbnails, step badges, and rich start-end time windows on saved activity cards.
+     - Eliminate `?? 200` cost fallbacks; show *Fee not listed* on unpriced cards and delegate to `this.budgetSummary`.
+     - Wire `openShareModal()` to a visible header action button.
+     - Restore the interactive dashed *Nearby Places* trigger banner on each day card.
+     - Unify into a single clean header toolbar (`← Trip Title | [Share] [Edit]`).
+     - Implement `buildGoogleMapsDayRouteUrl(items)` for one-tap multi-stop day navigation in Google Maps.
+- **Selected Approach**: Option 2.
+- **Consequences**:
+  - *Advantages*: Eliminates post-save visual drop-off; restores honest budget accounting adhering to ADR-001; reduces multi-stop navigation from 8 taps to 1 tap; un-orphans Share/Export and Nearby Places features.
+  - *Disadvantages*: Requires template refactoring in `itinerary-detail.page.html` and updating unit tests in `itinerary-detail.page.spec.ts`.
+  - *Consequences*: Remediation tracked across Phase 28 (P0 Immediate, P1 Navigation & Map, P2 Modals).

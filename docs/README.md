@@ -24,6 +24,7 @@ This documentation suite is maintained continuously throughout development to pr
 | [**TESTING_DOCUMENTATION.md**](./TESTING_DOCUMENTATION.md) | Test suite strategy, unit/integration tests, in-memory SQLite test harness, build verification, and test outputs. | QA, Test Engineers |
 | [**TECHNICAL_DECISIONS.md**](./TECHNICAL_DECISIONS.md) | Architectural Decision Records (ADRs) explaining context, alternatives, trade-offs, and consequences of key choices. | System Architects |
 | [**MAP_AND_ROUTING_PROPOSAL.md**](./MAP_AND_ROUTING_PROPOSAL.md) | Full architectural analysis & engineering blueprints from `itinerary_app_map_and_routing_proposal.pdf` (MAP-01 to MAP-03, ROUTE-01 to ROUTE-05). | System Architects, Fullstack Engineers |
+| [**UI_UX_EVALUATION_REPORT.md**](./UI_UX_EVALUATION_REPORT.md) | Live UI/UX evaluation & developer template critique from `itinerary_app_ui_ux_evaluation_report.pdf` (UIUX-01 to UIUX-10, P0–P2). | UI/UX Designers, Frontend Engineers |
 | [**KNOWN_ISSUES.md**](./KNOWN_ISSUES.md) | Active bugs, intentional limitations, deferred features, and resolution pathways. | Developers, QA |
 | [**TODO.md**](./TODO.md) | Granular actionable checklist tracking remaining tasks across all development phases. | Developers |
 

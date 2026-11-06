@@ -167,3 +167,4 @@ this.map.addLayer(this.markerCluster);
 | **Directions Handoff** | Multi-waypoint Google Maps URLs | Single-stop destination URLs | Add multi-stop URL builder function. |
 | **Commute Guidance** | Leg-aware across 32 towns | Static Cabanatuan-only guide (8 towns) | Build `getLegCommuteInfo(prev, curr)` across 32 towns. |
 | **Router Guards & Back**| `pendingChangesGuard` on `/itinerary/:id` & history back | Missing guard & hardcoded back | Attach guard in `app.routes.ts` & use `IonRouterOutlet`. |
+

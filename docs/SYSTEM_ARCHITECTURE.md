@@ -75,6 +75,12 @@ The system is organized as a monorepo containing a standalone client, an asynchr
 - **Reusable Route Map & Multi-Stop Waypoints (`ROUTE-01`)**: A unified `ItineraryRouteMapComponent` rendering numbered pins, OSRM road polylines with offline Catmull-Rom geodesic spline fallback, and universal multi-waypoint Google Maps URLs (`&origin=...&destination=...&waypoints=...`).
 - **Leg-Aware Provincial Commute Engine (`ROUTE-05`)**: Leg-level commute intelligence comparing consecutive stops to provide contextual recommendations: walking/tricycles ($\le 1.2$ km, ₱15–₱25), local tricycles ($> 1.2$ km), and direct inter-municipality highway corridor transfers across all 32 municipalities without routing through Cabanatuan City.
 
+### 2.7 Trip Lifecycle & Presentation Architecture (Flagship Alignment)
+> Ref: [itinerary_app_ui_ux_evaluation_report.pdf](file:///c:/Users/Edward/Desktop/CaseStudy/itinerary_app_ui_ux_evaluation_report.pdf) & [UI_UX_EVALUATION_REPORT.md](./UI_UX_EVALUATION_REPORT.md)
+- **Visual Flagship Parity (`UIUX-01`, `UIUX-03`, `UIUX-09`)**: Eliminates post-save visual downgrade by preserving 68×68px stop photo thumbnails, full start-end time ranges (`12:00 PM - 2:00 PM (2 hrs)`), and segmented sticky day switcher tabs across `/itinerary/:id`.
+- **Zero-Fabricated-Cost Accounting (`UIUX-02`)**: Enforces strict adherence to ADR-001 by removing synthetic `?? 200` cost fallbacks in `itinerary-detail.page.ts`, showing truthful *Fee not listed* labels on unpriced venues, and synchronizing bottom activity expenses with top `budgetSummary` ledgers.
+- **One-Tap Multi-Waypoint Navigation (`UIUX-08`)**: Implements client-side `buildGoogleMapsDayRouteUrl()` generating universal cross-platform Google Maps URLs chaining the day's entire stop sequence (`&origin=...&destination=...&waypoints=...`), reducing navigation friction from 8 taps to 1 tap.
+
 ---
 
 ## 3. Data Flow Diagrams
