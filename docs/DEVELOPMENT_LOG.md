@@ -2813,3 +2813,51 @@ This log records chronological development sessions, detailing objectives, execu
   - `docs/TODO.md`
   - `docs/CHANGELOG.md`
   - `docs/DEVELOPMENT_LOG.md`
+
+---
+
+## Session 78: Leaflet Marker Cluster Hardening & Production Live Verification
+- **Date & Time**: 2026-11-06 16:20:00 (Local)
+- **Objective**: Fix GitHub Pages map display issue where all 2,673 places were loaded into the place service but map canvas rendered 0 clusters due to an uncaught constructor exception, and verify zero-watermark routing.
+- **Tasks Performed**:
+  - Investigated production browser bundle execution using Playwright on `https://edselrenz.github.io/Itinerary-App/tabs/map`.
+  - Discovered console warning: `TypeError: L.MarkerClusterGroup is not a constructor at L.markerClusterGroup`.
+  - Spied on `window.L` mutations: discovered that `leaflet.markercluster` was successfully loaded and attached `MarkerClusterGroup` to `window.L`, but subsequent component constructors (`MapPage`, `ItineraryDetailPage`, `ItineraryRouteMapComponent`) performed `(window as any).L = L` which overwrote `window.L` with the static unextended module namespace `L`, stripping away `MarkerClusterGroup`.
+  - Refactored `Project/src/main.ts` with an `Object.defineProperty` getter/setter on `window.L` that safely intercepts re-assignments and merges properties, preventing any code from wiping out Leaflet plugin attachments.
+  - Removed destructive `(window as any).L = L` assignments across `map.page.ts`, `itinerary-detail.page.ts`, and `itinerary-route-map.component.ts`.
+  - Replaced CartoDB Voyager tiles with OpenStreetMap raster tiles (`tile.openstreetmap.org`) in `ItineraryRouteMapComponent` and verified zero "API KEY REQUIRED" watermarks.
+  - Ran unit test suite (Vitest): 252/252 tests passed.
+  - Built Angular production bundle: 0 errors.
+  - Ran Playwright verification against live site with property protection: 2,673 places rendered across 73 interactive cluster circles and 91 visible pins.
+- **Verification**:
+  - Vitest: 252/252 passed.
+  - Angular build: 0 errors.
+  - Live Playwright test: clusters = 73, markers = 91, list view count = 2673.
+
+---
+
+## Session 79: Custom & Suggested Itinerary Proposal Analysis & Roadmap Staging
+- **Date & Time**: 2026-11-06 16:55:00 (Local)
+- **Objective**: Analyze `custom_and_suggested_itinerary_proposal.pdf`, audit all 11 use cases across Suggested Wizard (`/suggested-wizard`) and Custom Builder (`/custom-builder`, `/custom-builder/:id`, `/itinerary/:id`), document all 12 functional and UI/UX defects, and structure the phased engineering remediation plan into `docs/`.
+- **Tasks Performed**:
+  - Extracted and analyzed all 7 pages of `custom_and_suggested_itinerary_proposal.pdf`.
+  - Audited 11 complete use cases (`UC-S1`–`UC-S6` for Suggested Itinerary, `UC-C1`–`UC-C5` for Custom Itinerary).
+  - Isolated the root cause for **two critical data-corruption bugs**:
+    1. **`C-BUG-06` (Critical)**: `custom-builder.page.ts:806–826, 1114–1126` drops `it.name` and `place` in `saveItinerary()`. In Guest Mode (`createGuestItinerary()`), stops are saved with `place: null` and `custom_title: undefined`, causing saved stops on `/itinerary/:id` to render as generic *"Destination Stop"* with zero coordinates and fabricated ₱200 fee.
+    2. **`S-BUG-03` (Critical)**: `itinerary.service.ts:753–796` filters and sorts `matchedPool` for non-Bongabon municipalities, but never connects `matchedPool` to `dayPlaces`, falling back to `curatedPool[0..2]` and scheduling the exact same 3 Bongabon venues on every single day of the trip.
+  - Documented 4 High-severity defects:
+    - **`S-BUG-04`**: 4-second HTTP timeout stall when offline before falling back to local generator.
+    - **`C-BUG-01`**: Missing Trip Title input and quick chips in Custom Builder Step 1 HTML.
+    - **`C-BUG-02`**: `catMap` drops 7 of the 16 canonical categories in Custom Builder Browse view.
+    - **`C-BUG-05`**: Date edits in Step 3 settings do not sync `this.days` array or update `day.travel_date`.
+  - Synthesized 6 traveler UX friction points into concrete engineering proposals (Proposals 1 through 4).
+  - Created standalone comprehensive proposal documentation: [`docs/CUSTOM_AND_SUGGESTED_ITINERARY_PROPOSAL.md`](file:///c:/Users/Edward/Desktop/CaseStudy/docs/CUSTOM_AND_SUGGESTED_ITINERARY_PROPOSAL.md).
+  - Staged **Phase 29** in [`docs/TODO.md`](file:///c:/Users/Edward/Desktop/CaseStudy/docs/TODO.md) partitioned into Phase 29.1 (P0: Data Integrity & Offline Engines), Phase 29.2 (P1: Form, Browse & Date Sync), and Phase 29.3 (P2: Unified Editor & Route Map).
+  - Logged all 12 defects in [`docs/KNOWN_ISSUES.md`](file:///c:/Users/Edward/Desktop/CaseStudy/docs/KNOWN_ISSUES.md) Section 9.
+- **Files Created / Modified**:
+  - `docs/CUSTOM_AND_SUGGESTED_ITINERARY_PROPOSAL.md` (Created)
+  - `docs/TODO.md` (Modified)
+  - `docs/KNOWN_ISSUES.md` (Modified)
+  - `docs/DEVELOPMENT_LOG.md` (Modified)
+- **Status**: Documented & Staged for Phased Implementation (Phase 29).
+

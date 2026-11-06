@@ -665,3 +665,46 @@ This checklist tracks completed, active, and pending tasks across all developmen
   - Replace CartoDB Voyager raster tiles with OpenStreetMap raster tiles (`tile.openstreetmap.org`) in `ItineraryRouteMapComponent` to eliminate the "API KEY REQUIRED" watermark.
   - Wire client-side OSRM driving API (`router.project-osrm.org`) with geodesic spline fallback and IndexedDB caching for 100% free road routing adhering to ADR-001.
 
+---
+
+## Phase 29: Custom & Suggested Itinerary Workflow Remediation
+> Ref: [custom_and_suggested_itinerary_proposal.pdf](file:///c:/Users/Edward/Desktop/CaseStudy/custom_and_suggested_itinerary_proposal.pdf) & [CUSTOM_AND_SUGGESTED_ITINERARY_PROPOSAL.md](./CUSTOM_AND_SUGGESTED_ITINERARY_PROPOSAL.md)
+
+### Phase 29.1: P0 Data Integrity & Offline Engines (STAGED)
+- [ ] **29.1.1 (C-BUG-06: Custom Stop Metadata Retention in Guest Save)**:
+  - In `custom-builder.page.ts` (`BuilderStop` interface & `addPlaceStop`), retain full `place: Place` reference and set `custom_title: place.name`.
+  - In `saveItinerary()`, serialize `place` object, `custom_title || it.name`, and coordinates `custom_lat/custom_lng` from `it.place`.
+  - In `ItineraryService.mapGuestItinerary()`, hydrate stops with `place_id` against `PlaceService` to eliminate fallback to generic "Destination Stop" with ₱200 fabricated fee.
+- [ ] **29.1.2 (S-BUG-03: Wire matchedPool in Offline Suggested Generator)**:
+  - In `itinerary.service.ts` (`generateOfflineSuggestedItinerary`), connect `matchedPool` (filtered by municipality, budget, and Haversine proximity) to `dayPlaces` instead of discarding it and falling back to Bongabon `curatedPool[0..2]`.
+- [ ] **29.1.3 (S-BUG-04: 0ms Immediate Offline Short-Circuit)**:
+  - Inject `ConnectivityService` into `ItineraryService.suggestItinerary()`; if `isHostOfflineSnapshot` or `!navigator.onLine`, invoke `generateOfflineSuggestedItinerary()` immediately without waiting for the 4-second HTTP timeout.
+- [ ] **29.1.4 (S-BUG-02: Enforce Local ISO Date Helpers in Suggested Wizard)**:
+  - Replace UTC `new Date(str).toISOString()` in `SuggestedWizardPage.openDatePicker()` and `setPresetDuration()` with `parseLocalIsoDate()` / `toLocalIsoDate()` to prevent UTC+8 off-by-one shifts.
+- [ ] **29.1.5 (S-BUG-01: Anchor placeId in Suggested Deep-Link)**:
+  - In `SuggestedWizardPage.ngOnInit()`, read `params['placeId']` and lock the selected POI as Stop 1 of Day 1 in the generated itinerary request.
+
+### Phase 29.2: P1 Form, Browse & Date Sync (STAGED)
+- [ ] **29.2.1 (C-BUG-01: Custom Builder Step 1 Title & Quick Chips)**:
+  - Add Trip Title input field (e.g., "Weekend Family Roadtrip") and reusable Quick Destination & Budget preset chips to `custom-builder.page.html`.
+  - Rename bottom CTA button from "Find Itinerary" to "Start Building Itinerary →".
+- [ ] **29.2.2 (C-BUG-02: Complete 16-Category Filter Mapping in catMap)**:
+  - Expand `catMap` in `custom-builder.page.ts` to map all 16 canonical categories: All, Attractions & Nature, Food & Cafes, Resorts & Stays, Culture & Heritage, Shopping & Markets, and Transit & Essentials (terminals, hospitals, pharmacies, ATMs, gas stations, convenience stores).
+- [ ] **29.2.3 (C-BUG-05: Reactive Date Range to Days Synchronization)**:
+  - Implement `syncDaysWithDateRange()` in `custom-builder.page.ts` triggered when `start_date` or `end_date` is edited in Step 3 settings, preserving existing stops while updating `day.travel_date`.
+- [ ] **29.2.4 (UC-C4: Direct Modal Tab Routing for Off-Grid Venues)**:
+  - Update `openPlacePicker(defaultTab: 'browse' | 'custom' = 'browse')` in `custom-builder.page.ts` and bind "Add Off-Grid Custom Venue" directly to `openPlacePicker('custom')`.
+  - Enable `.picker-add-action-btn` for already-added places so clicking triggers the duplicate confirmation alert (`selectPlaceFromPicker`).
+
+### Phase 29.3: P2 Unified Editor & Draft State Handoff (STAGED)
+- [ ] **29.3.1 (S-BUG-06: In-Memory Router State for Customize in Builder)**:
+  - Update `SuggestedWizardPage.customizeInBuilder()` to pass `this.generatedPlan` via `router.navigate(['/custom-builder'], { state: { draftItinerary: this.generatedPlan } })` to eliminate duplicate premature saves.
+- [ ] **29.3.2 (UC-C5: Unified Saved Trip Editor)**:
+  - Direct the Edit action on `ItineraryDetailPage` to open `/custom-builder/:id` (or embed the catalog place picker and `pendingChangesGuard` directly while preserving separate `estimated_cost_min` and `estimated_cost_max` fields).
+- [ ] **29.3.3 (C-BUG-04: Card Inspection in Browse Grid)**:
+  - Make destination cards in `CustomBuilderPage` Browse view clickable to open `<app-place-detail-sheet>` with an inline "+ Add to Day {{ activeDayNumber }}" button.
+- [ ] **29.3.4 (Automated Schedule Chaining & Post-Save Redirect)**:
+  - Auto-chain sequential stop time windows with a 30-min transit buffer when adding places in Custom Builder.
+  - Redirect user to `/itinerary/:id` upon successful save instead of exiting to `/tabs/home`.
+
+
