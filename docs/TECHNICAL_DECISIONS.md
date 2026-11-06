@@ -207,3 +207,26 @@ This document records key technical decisions, their context, alternatives evalu
 
 
 
+
+---
+
+## ADR-014: Map & Routing System Overhaul (Production ESM Clustering, Corridor Preset Optimization, and Multi-Waypoint Routing Architecture)
+
+- **Date**: 2026-11-06
+- **Context**: An architectural audit of the live deployment on GitHub Pages (`edselrenz.github.io/Itinerary-App`) documented in `itinerary_app_map_and_routing_proposal.pdf` (and detailed in [MAP_AND_ROUTING_PROPOSAL.md](./MAP_AND_ROUTING_PROPOSAL.md)) revealed critical-to-high map and routing gaps: production builds failed to render map pins due to ESM/UMD bundling incompatibilities in `leaflet.markercluster`; offline presets caused 176.2 km cross-province zig-zagging; itineraries lacked multi-waypoint directions and route maps; and commute advice was static Cabanatuan-only.
+- **Problem**: How to guarantee resilient production pin rendering on modern esbuild bundlers, eliminate cross-province travel backtracking without breaking existing itineraries, provide universal multi-waypoint directions without paid APIs, and make commute advice route-aware across all 32 municipalities.
+- **Options Considered**:
+  1. *Use paid routing and map SDKs (Google Maps JavaScript SDK / Mapbox GL)*: Violates ADR-001; incurs recurring API billing and risks bundle key scraping.
+  2. *Retain existing static Leaflet and text card architecture*: Leaves production map blank on GitHub Pages and subjects travelers to 176.2 km zig-zags.
+  3. *Comprehensive Open-Data Architecture Overhaul (Proposal Blueprints 1–5)*:
+     - Fix ESM namespace initialization: unwrap `(L as any).default ?? L`, bind `(window as any).L = LeafletLib` at module top level, and add `L.layerGroup()` fallback.
+     - Re-cluster offline presets into 3 geographic corridors (East, North, South) with 2-opt TSP ordering, cutting straight-line transit distance from 176.2 km to 59.4 km (-66.3%).
+     - Build reusable `ItineraryRouteMapComponent` with OSRM polylines and Catmull-Rom geodesic spline fallback ($d_{\text{road}} \approx 1.28 \times d_{\text{haversine}}$ for lowlands, $1.45 \times$ for mountains).
+     - Construct universal cross-platform multi-stop Google Maps URLs (`&origin=...&destination=...&waypoints=...`).
+     - Upgrade commute guide to `getLegCommuteInfo(prevStop, currentStop)`: local tricycles ($\le 1.2$ km), inter-town corridor transfers, and 32-municipality coverage.
+     - Add `canDeactivate` guard to `/itinerary/:id`, history-aware back navigation via `IonRouterOutlet`, and true GPS Locate Me control.
+- **Selected Approach**: Option 3.
+- **Consequences**:
+  - *Advantages*: Zero paid API costs (ADR-001 compliant); bulletproof pin rendering in production; 66.3% transit distance reduction for travelers; universal multi-stop Google Maps navigation; leg-aware commute guidance; full offline support.
+  - *Disadvantages*: Requires refactoring `map.page.ts` cluster initialization and updating offline preset mock data.
+  - *Consequences*: Phased rollout tracked across Phase 27.1 (Immediate Bug Fixes), Phase 27.2 (Route Map & TSP), and Phase 27.3 (Router Guards & Commute Guide).

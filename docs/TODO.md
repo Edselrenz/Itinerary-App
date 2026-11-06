@@ -560,3 +560,56 @@ This checklist tracks completed, active, and pending tasks across all developmen
 
 
 
+---
+
+## Phase 27: Map & Routing System Architecture Overhaul (Phased Engineering Proposal)
+> Ref: [itinerary_app_map_and_routing_proposal.pdf](file:///c:/Users/Edward/Desktop/CaseStudy/itinerary_app_map_and_routing_proposal.pdf) & [MAP_AND_ROUTING_PROPOSAL.md](./MAP_AND_ROUTING_PROPOSAL.md)
+
+### Phase 27.1: Immediate Production Bug Fixes (Day 1)
+- [ ] **27.1.1 (MAP-01: Leaflet MarkerCluster ESM Initialization)**:
+  - Unwrap canonical Leaflet object via `const LeafletLib = (L as any).default ?? L; (window as any).L = LeafletLib;` at module top-level in `Project/src/app/tabs/map/map.page.ts`.
+  - Add graceful fallback to `L.layerGroup()` if `markerClusterGroup` is not found, ensuring pins always render on production esbuild bundles (GitHub Pages).
+- [ ] **27.1.2 (MAP-02: Full-Stack Municipality & Price Tier Filtering)**:
+  - Extend `backend/app/api/v1/places.py` `GET /api/v1/places` with `municipality_name: str | None` and `price_tier: str | None` to filter in SQL before LIMIT is applied.
+  - Mirror bounding-box, municipality, and price filtering logic inside `PlaceService.getFallbackPaginatedPlaces()`.
+  - Pass municipality and price tier filters from `MapPage.loadPlaces()`.
+- [ ] **27.1.3 (MAP-03: Deep-Link Pin Selection & Programmatic Fly Guard)**:
+  - Pass `placeId` in `HomePage.viewDestinationOnMap()` deep-links.
+  - Set `isProgrammaticFly = true` during `flyTo()` in `MapPage` so `onMapMoveEnd()` does not wipe markers mid-flight.
+  - Automatically resolve and assign `this.selectedPlace` to open `PlaceDetailSheetComponent`.
+  - Remove hardcoded `15.48, 120.97` fallback in `home.page.ts`.
+- [ ] **27.1.4 (ROUTE-02: Re-cluster Offline Day Presets into Corridors)**:
+  - Update `getOfflineDayClusterPresets()` in `Project/src/app/core/data/offline-places.data.ts`.
+  - Re-cluster stops into East Corridor (Bongabon, 1.5 km), North Corridor (San Jose–Pantabangan, 13.8 km), and South Corridor (Cabanatuan–Gen. Tinio–Gapan, 45.5 km), cutting straight-line transit distance by 66.3% from 176.2 km to 59.4 km.
+- [ ] **27.1.5 (ROUTE-03: Nearby Place Coordinates & Storage Persistence)**:
+  - Ensure verified coordinates on `NearbyPlaceItem` in `itinerary-detail.page.ts` and `suggested-wizard.page.ts`, removing hardcoded `15.63, 121.14` fallback.
+  - Persist added nearby stops via `this.itineraryService.updateItinerary()` so changes survive page refresh.
+
+### Phase 27.2: Reusable Route Map & Multi-Stop Waypoints (Days 2–3)
+- [ ] **27.2.1 (ROUTE-01: Shared ItineraryRouteMapComponent)**:
+  - Create reusable standalone component `ItineraryRouteMapComponent` rendering numbered pins, connecting polylines, and bounds fitting.
+  - Embed into `ItineraryDetailPage`, `SuggestedWizardPage` (Step 2), and `CustomBuilderPage` (Timeline view).
+  - Add "Open Full Route on Map" action deep-linking to `/tabs/map?itineraryId={id}&day={dayNumber}`.
+- [ ] **27.2.2 (ROUTE-01: Road Polylines & Geodesic Spline Fallback)**:
+  - Integrate OSRM public routing API with local IndexedDB caching and 2.5s timeout.
+  - Implement offline fallback rendering dashed Catmull-Rom geodesic spline arcs with road-winding multiplier ($1.28 \times$ lowlands, $1.45 \times$ mountains).
+- [ ] **27.2.3 (ROUTE-01: Multi-Stop Google Maps URL Builder)**:
+  - Add "Navigate Entire Day in Google Maps" action building standard universal cross-platform multi-stop URLs:  
+    `https://www.google.com/maps/dir/?api=1&origin={origin}&destination={dest}&waypoints={w1}|{w2}&travelmode=driving`.
+- [ ] **27.2.4 (ROUTE-02: Corridor Selection & 2-Opt TSP Engine Refinement)**:
+  - Enhance backend `backend/app/algorithms/itinerary_generator.py` candidate clustering to partition multi-day trips across adjacent corridors and apply 2-opt TSP permutation before slot assignment.
+
+### Phase 27.3: Router Polish & Leg-Aware Commute Guide (Day 4)
+- [ ] **27.3.1 (ROUTE-04: CanDeactivate Guard on /itinerary/:id)**:
+  - Attach `pendingChangesGuard` to `/itinerary/:id` in `Project/src/app/app.routes.ts` to prevent accidental loss of unsaved in-place edits.
+- [ ] **27.3.2 (ROUTE-04: History-Aware Back Navigation)**:
+  - Replace hardcoded `this.router.navigate(['/tabs/history'])` in `itinerary-detail.page.ts` with `IonRouterOutlet.canGoBack()` check and `this.navCtrl.back()`.
+  - Add root session guard redirecting returning users from `/` directly to `/tabs/home`.
+- [ ] **27.3.3 (ROUTE-04: True GPS Locate Me Control)**:
+  - Add dedicated "Locate Me" button invoking `navigator.geolocation.getCurrentPosition` with blue user dot and distance-to-POI badges.
+  - Maintain a separate "Reset Province View" button flying to `NUEVA_ECIJA_CENTER`.
+- [ ] **27.3.4 (ROUTE-04: URL Query Parameter Synchronization)**:
+  - Synchronize active map search, category, municipality, and price filters to URL query parameters via `router.navigate()`.
+- [ ] **27.3.5 (ROUTE-05: Leg-Aware Provincial Commute Engine)**:
+  - Upgrade `commute-guide.data.ts` to `getLegCommuteInfo(prevStop, currentStop)`.
+  - Provide specific route advice for intra-town hops ($\le 1.2$ km walk/tricycle ₱15–₱25), inter-town corridors, and provincial hubs across all 32 municipalities.

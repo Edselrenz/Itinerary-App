@@ -2564,3 +2564,35 @@ This log records chronological development sessions, detailing objectives, execu
 
 
 
+
+---
+
+## Session 73: Map & Routing System Architecture Analysis & Engineering Proposal Documentation
+- **Date & Time**: 2026-11-06 13:10:00 (Local)
+- **Objective**: Thoroughly read, analyze, and incorporate the findings, spatial calculations, architectural blueprints, and phased implementation roadmap from `itinerary_app_map_and_routing_proposal.pdf` into the project documentation suite prior to code modifications.
+- **Tasks Performed & Implementation Details**:
+  - **1. Extraction & Document Analysis**:
+    - Extracted all 6 pages of `itinerary_app_map_and_routing_proposal.pdf`, analyzing the live production audit of `edselrenz.github.io/Itinerary-App/tabs/home`.
+    - Identified the 4 critical-to-high core gaps: silent map pin failure in production (`MAP-01`), zero in-app route polylines or multi-stop directions (`ROUTE-01`), 176.2 km cross-province zig-zagging in offline presets (`ROUTE-02`), and truncated client filtering / unpersisted nearby stops (`MAP-02`, `MAP-03`, `ROUTE-03`).
+  - **2. Root-Cause Diagnostic Matrix (8 Verified Defects)**:
+    - Detailed the root causes, line references, and remediation strategies for all 8 defects (`MAP-01` through `MAP-03`, `ROUTE-01` through `ROUTE-05`).
+  - **3. Quantitative Spatial Analysis**:
+    - Analyzed the 10 curated coordinates in `offline-places.data.ts`: documented that Day 3 currently routes General Tinio $\rightarrow$ Pantabangan (57.2 km north) $\rightarrow$ Gapan City (58.9 km south), causing 116.17 km of unnecessary travel.
+    - Verified that re-clustering into East (Bongabon 1.5 km), North (San Jose–Pantabangan 13.8 km), and South (Cabanatuan–Gen. Tinio–Gapan 45.5 km) corridors with 2-opt TSP ordering cuts straight-line transit distance by 66.3% (from 176.2 km down to 59.4 km).
+  - **4. Documentation Suite Ingestion**:
+    - Authored [`docs/MAP_AND_ROUTING_PROPOSAL.md`](./MAP_AND_ROUTING_PROPOSAL.md): Complete, permanent reference guide with code snippets, blueprints, and delta comparisons against Session 72 codebase state.
+    - Updated [`docs/KNOWN_ISSUES.md`](./KNOWN_ISSUES.md): Added Section 7 tracking all 8 defects (`MAP-01` to `MAP-03`, `ROUTE-01` to `ROUTE-05`) with severities, root causes, and planned remediations.
+    - Updated [`docs/TECHNICAL_DECISIONS.md`](./TECHNICAL_DECISIONS.md): Recorded **ADR-014** (Map & Routing System Overhaul: Production ESM Clustering, Corridor Preset Optimization, and Multi-Waypoint Routing Architecture).
+    - Updated [`docs/TODO.md`](./TODO.md): Staged **Phase 27** with granular task checklists across Phase 27.1 (Immediate Bug Fixes), Phase 27.2 (Route Map & Multi-Stop Waypoints), and Phase 27.3 (Router Guards & Commute Guide).
+    - Updated [`docs/SYSTEM_ARCHITECTURE.md`](./SYSTEM_ARCHITECTURE.md): Added Section 2.6 outlining the target spatial and routing architecture.
+    - Updated [`docs/README.md`](./README.md): Indexed `MAP_AND_ROUTING_PROPOSAL.md` in the documentation repository table.
+- **Files Created / Modified**:
+  - `docs/MAP_AND_ROUTING_PROPOSAL.md` (created)
+  - `docs/KNOWN_ISSUES.md` (modified)
+  - `docs/TECHNICAL_DECISIONS.md` (modified)
+  - `docs/TODO.md` (modified)
+  - `docs/SYSTEM_ARCHITECTURE.md` (modified)
+  - `docs/README.md` (modified)
+  - `docs/DEVELOPMENT_LOG.md` (modified)
+- **Status & Next Steps**:
+  - Documentation is complete, accurate, and aligned. Standing by for user instruction to begin development on Phase 27.1.

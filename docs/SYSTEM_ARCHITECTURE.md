@@ -68,6 +68,13 @@ The system is organized as a monorepo containing a standalone client, an asynchr
 ### 2.5 Real-Time OpenStreetMap Overpass Client Service
 - **`OsmOverpassService` (`Project/src/app/core/services/osm-overpass.service.ts`)**: Enables client-side real-time querying of OpenStreetMap's live Overpass API (`https://overpass-api.de/api/interpreter`) for current map viewport bounds on demand, merging live crowd-sourced findings into the active map state.
 
+### 2.6 Target Spatial & Routing Architecture (Proposal Blueprint)
+> Ref: [itinerary_app_map_and_routing_proposal.pdf](file:///c:/Users/Edward/Desktop/CaseStudy/itinerary_app_map_and_routing_proposal.pdf) & [MAP_AND_ROUTING_PROPOSAL.md](./MAP_AND_ROUTING_PROPOSAL.md)
+- **ESM-Safe Marker Clustering (`MAP-01`)**: Canonical Leaflet object unwrapping (`(L as any).default ?? L`) and top-level assignment to `(window as any).L` prior to plugin evaluation, paired with a runtime fallback to native `L.layerGroup()` if clustering fails, ensuring pins always render under modern Angular esbuild bundlers.
+- **Corridor-First Spatial Clustering (`ROUTE-02`)**: Restructures travel day presets into coherent geographic corridors (East/Bongabon 1.5 km, North/San Jose–Pantabangan 13.8 km, South/Cabanatuan–Gen. Tinio–Gapan 45.5 km) with 2-opt TSP sequencing, slashing cross-province transit distances by 66.3% (from 176.2 km to 59.4 km).
+- **Reusable Route Map & Multi-Stop Waypoints (`ROUTE-01`)**: A unified `ItineraryRouteMapComponent` rendering numbered pins, OSRM road polylines with offline Catmull-Rom geodesic spline fallback, and universal multi-waypoint Google Maps URLs (`&origin=...&destination=...&waypoints=...`).
+- **Leg-Aware Provincial Commute Engine (`ROUTE-05`)**: Leg-level commute intelligence comparing consecutive stops to provide contextual recommendations: walking/tricycles ($\le 1.2$ km, ₱15–₱25), local tricycles ($> 1.2$ km), and direct inter-municipality highway corridor transfers across all 32 municipalities without routing through Cabanatuan City.
+
 ---
 
 ## 3. Data Flow Diagrams
