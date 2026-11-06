@@ -655,7 +655,7 @@ This checklist tracks completed, active, and pending tasks across all developmen
 - [x] **28.3.2: Leg-Aware Commute Guidance**:
   - Coordinate with Phase 27.3.5 to render leg-level commute advice for intra-town hops (walk/tricycle) vs. inter-town corridors.
 
-### Phase 28.4: Leaflet Marker Clustering & Zero-Watermark Production Hardening (COMPLETED)
+### Phase 28.4: Leaflet Marker Clustering & Zstopero-Watermark Production Hardening (COMPLETED)
 - [x] **28.4.1 (Production Marker Clustering Hardening)**:
   - Guard `window.L` in `Project/src/main.ts` with an ES5 property descriptor getter/setter that prevents destructive overwrites from wiping out plugin attachments (`L.MarkerClusterGroup`, `L.markerClusterGroup`).
   - Eliminate redundant destructive `window.L = L` assignments across `map.page.ts`, `itinerary-detail.page.ts`, and `itinerary-route-map.component.ts`.
@@ -709,5 +709,41 @@ This checklist tracks completed, active, and pending tasks across all developmen
   - Implement `calculateNextStopTime()` auto-chaining sequential stop time windows with a 30-min transit buffer when adding places in Custom Builder.
   - Add one-tap `autoOptimizeDaySchedule()` action button to timeline day banner.
   - Redirect user to `/itinerary/:id` upon successful save instead of exiting to `/tabs/home`.
+
+---
+
+## Phase 30: Live-Server Map & Suggested Itinerary Routing Upgrade
+> Ref: [live_server_map_and_suggested_itinerary_proposal.pdf](file:///c:/Users/Edward/Desktop/CaseStudy/live_server_map_and_suggested_itinerary_proposal.pdf) & [LIVE_SERVER_MAP_AND_SUGGESTED_ITINERARY_PROPOSAL.md](./LIVE_SERVER_MAP_AND_SUGGESTED_ITINERARY_PROPOSAL.md)
+
+### Phase 30.1: P0 Map Tab False-Offline Banner & Tile Latching Fix (STAGED)
+- [ ] **30.1.1 (GAP-04: Auto-Clear Map Tile Error Banner)**:
+  - In `map.page.ts`, listen to `tilelayer.on('tileload')` to automatically clear `hasTileError = false` when tiles load successfully.
+  - Guard `tileerror` so only sustained tile delivery failures trigger the banner, rather than a single canceled or out-of-viewport tile request.
+- [ ] **30.1.2 (GAP-04: Resilient Connectivity State Reconciliation)**:
+  - In `connectivity.service.ts` and `connectivity.interceptor.ts`, ensure successful health check responses (`GET /api/v1/health`) or cached/local fallbacks automatically reset `isOffline$ = false` when the backend is reachable.
+  - Prevent secondary background request aborts during 2,673-POI batch hydration from overriding verified online state.
+
+### Phase 30.2: P1 Focused Route Mode & Pre-Save Draft Persistence (STAGED)
+- [ ] **30.2.1 (GAP-02: Isolated Route Focus Mode on MapPage)**:
+  - In `map.page.ts` / `map.page.html`, implement `isFollowRouteMode`: when `followRoute=true`, hide the 2,673 background discovery markers/clusters by default so the active day's stops and route polyline are isolated.
+  - Add a floating Active Route Control Bar with `← Back to Plan` button, `Day 1 | Day 2 | All Days` switcher chips, and a `"Show Nearby POIs (+2,673)"` toggle switch.
+  - Add an interactive bottom route card carousel (`Stop 1 of 3 → Stop 2 of 3 → Stop 3 of 3`) with a `"Start Multi-Stop Google Maps Navigation"` CTA.
+- [ ] **30.2.2 (GAP-03: Pre-Save In-Memory Draft Persistence)**:
+  - In `itinerary.service.ts`, implement `activeDraftItinerary$` caching in memory / `sessionStorage`.
+  - When clicking "Full Map" from `SuggestedWizardPage`, preserve `this.generatedPlan` so navigating back from `/tabs/map` returns to the generated itinerary without resetting to the blank wizard form.
+
+### Phase 30.3: P2 Road-Snapped Polylines, Commute Badges & Bi-Directional Pin Sync (STAGED)
+- [ ] **30.3.1 (GAP-01: Per-Leg Distance & Commute Pills)**:
+  - Display compact connector pills between stop cards in `suggested-wizard.page.html` and `itinerary-detail.page.html`: `🚗 5.2 km • ~11 mins drive / 18 mins tricycle • Est. Fare ₱50–₱80`.
+  - In `backend/app/algorithms/itinerary_generator.py`, implement `enrich_day_route_legs()` calculating arterial road circuity distance (`straight_km * 1.28`), drive/tricycle durations, and route geometry.
+- [ ] **30.3.2 (GAP-05: Bi-Directional Stop Card & Map Pin Highlighting)**:
+  - In `ItineraryRouteMapComponent` and parent wizard/detail views, implement reactive `selectedStopIndex: number | null` two-way synchronization.
+  - Tapping a stop card centers and pulses its numbered pin on the preview map; tapping a map pin scrolls to the corresponding stop card.
+
+### Phase 30.4: P3 Spatial Indexing & Canvas Clustering for 2,673+ POIs (STAGED)
+- [ ] **30.4.1 (Performance: Canvas Rendering & Viewport SQL Indexing)**:
+  - Set `preferCanvas: true` on `MapPage` Leaflet options to eliminate DOM element overhead across 2,673+ markers.
+  - In `backend/app/api/v1/places.py`, add SQL spatial bounding box queries and composite indices on `(latitude, longitude, is_active)`.
+
 
 

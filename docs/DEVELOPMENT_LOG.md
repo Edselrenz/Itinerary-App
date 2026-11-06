@@ -2987,6 +2987,33 @@ This log records chronological development sessions, detailing objectives, execu
   - `docs/DEVELOPMENT_LOG.md`
 - **Status**: Completed Phase 29.3; Full Phase 29 remediation completed and verified.
 
+---
+
+## Session 83: Ingestion & Formal Documentation of Live-Server Map & Suggested Itinerary Proposal (Phase 30)
+- **Date & Time**: 2026-11-07 06:45:00 (Local)
+- **Objective**: Ingest, analyze, and formally document `live_server_map_and_suggested_itinerary_proposal.pdf` (v3.0), recording live server audit findings (`edselrenz.github.io/Itinerary-App`), identifying the 5 priority gaps (GAP-01 to GAP-05), and establishing the 4-phase implementation roadmap for Phase 30.
+- **Tasks Performed**:
+  - Extracted and read all 7 pages of `live_server_map_and_suggested_itinerary_proposal.pdf`.
+  - Analyzed the live server baseline: 2,673 active POIs hydrated across Leaflet marker clusters (`520`, `186`, `150`, `114`), live Cabanatuan City generation (Camp Pangatian $\to$ Casa Batik $\to$ Edna's Cakeland), and `followRoute=true` deep link handoff.
+  - Formulated the 5 priority gap analyses across User POV and Developer POV:
+    - **GAP-01 (High)**: Straight Euclidean line preview without road-network geometry, per-leg km, drive/tricycle time, or 2-Opt route smoothing.
+    - **GAP-02 (High)**: Full Map handoff visual clutter (active route stops drowned inside the 2,673-place dataset and 520-pin Cabanatuan cluster; missing isolated route mode and back-navigation).
+    - **GAP-03 (Med-High)**: Pre-save draft loss on Full Map navigation before persisting to database.
+    - **GAP-04 (Med-High)**: False-positive "Offline Mode" / tile error banner on Map Tab even when backend is online and 2,673 POIs are loaded.
+    - **GAP-05 (Med)**: One-way preview map lacking bi-directional stop card click $\leftrightarrow$ map pin highlight sync.
+  - Authored comprehensive specification document [`docs/LIVE_SERVER_MAP_AND_SUGGESTED_ITINERARY_PROPOSAL.md`](file:///c:/Users/Edward/Desktop/CaseStudy/docs/LIVE_SERVER_MAP_AND_SUGGESTED_ITINERARY_PROPOSAL.md).
+  - Updated [`docs/TODO.md`](file:///c:/Users/Edward/Desktop/CaseStudy/docs/TODO.md) adding Phase 30 (Phases 30.1, 30.2, 30.3, and 30.4).
+  - Updated [`docs/KNOWN_ISSUES.md`](file:///c:/Users/Edward/Desktop/CaseStudy/docs/KNOWN_ISSUES.md) adding Section 10 tracking GAP-01 through GAP-05 as staged.
+  - Updated [`docs/PROJECT_STATE.md`](file:///c:/Users/Edward/Desktop/CaseStudy/docs/PROJECT_STATE.md) linking Phase 30 as active staged roadmap.
+- **Files Created / Modified**:
+  - `docs/LIVE_SERVER_MAP_AND_SUGGESTED_ITINERARY_PROPOSAL.md` (Created)
+  - `docs/TODO.md`
+  - `docs/KNOWN_ISSUES.md`
+  - `docs/DEVELOPMENT_LOG.md`
+  - `docs/PROJECT_STATE.md`
+- **Status**: Documented & Staged for Execution (Phase 30).
+
+
 
 
 

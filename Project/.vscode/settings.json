@@ -15,5 +15,9 @@
     "**/META-INF/maven/**",
     "**/android/**"
   ],
-  "java.autobuild.enabled": false
+  "java.autobuild.enabled": false,
+  "java.server.launchMode": "LightWeight",
+  "java.import.gradle.enabled": false,
+  "java.import.maven.enabled": false,
+  "java.configuration.updateBuildConfiguration": "disabled"
 }
