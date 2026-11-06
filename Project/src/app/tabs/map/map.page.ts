@@ -64,6 +64,11 @@ import {
 import * as L from 'leaflet';
 import 'leaflet.markercluster';
 
+const LeafletLib: any = (L as any).default ?? L;
+if (typeof window !== 'undefined') {
+  (window as any).L = LeafletLib;
+}
+
 import { Municipality, Place } from '../../core/models/place.models';
 import { PlaceService } from '../../core/services/place.service';
 import { OsmOverpassService } from '../../core/services/osm-overpass.service';
@@ -169,7 +174,8 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
   private searchSubject = new Subject<string>();
   private viewportDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   private subscriptions = new Subscription();
-  private pendingTarget: { lat?: number; lng?: number; destination?: string; municipality?: string } | null = null;
+  private pendingTarget: { lat?: number; lng?: number; destination?: string; municipality?: string; placeId?: string } | null = null;
+  public isProgrammaticFly = false;
 
   @ViewChild('mapElement', { static: false }) private mapElementRef?: ElementRef<HTMLDivElement>;
 
@@ -277,6 +283,7 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
       this.route.queryParams.subscribe((params) => {
         const lat = params['lat'] ? parseFloat(params['lat']) : undefined;
         const lng = params['lng'] ? parseFloat(params['lng']) : undefined;
+        const placeId = params['placeId'] || undefined;
         const destination = params['destination'] || undefined;
         const municipality = params['municipality'] || undefined;
         const follow = params['followRoute'] === 'true';
@@ -289,7 +296,10 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
           }
         }
 
-        if (lat !== undefined && lng !== undefined) {
+        if (placeId) {
+          this.pendingTarget = { lat, lng, destination, municipality, placeId };
+          this.resolveAndSelectPlace(placeId, lat, lng, destination, municipality);
+        } else if (lat !== undefined && lng !== undefined) {
           this.pendingTarget = { lat, lng, destination, municipality };
           this.flyToTarget(lat, lng);
         } else if (destination || municipality) {
@@ -396,15 +406,25 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
     });
     tileLayer.addTo(this.map);
 
-    // MarkerClusterGroup
-    this.markerCluster = (L as unknown as { markerClusterGroup: (opts?: unknown) => L.MarkerClusterGroup }).markerClusterGroup({
-      showCoverageOnHover: false,
-      maxClusterRadius: 40,
-      spiderfyOnMaxZoom: true,
-      chunkedLoading: true,
-    });
+    // MarkerClusterGroup with safe layerGroup fallback (MAP-01)
+    const clusterFactory =
+      LeafletLib?.markerClusterGroup ||
+      (L as any)?.markerClusterGroup ||
+      (typeof window !== 'undefined' && (window as any).L?.markerClusterGroup);
 
-    this.map.addLayer(this.markerCluster);
+    if (typeof clusterFactory === 'function') {
+      this.markerCluster = clusterFactory({
+        showCoverageOnHover: false,
+        maxClusterRadius: 40,
+        spiderfyOnMaxZoom: true,
+        chunkedLoading: true,
+      });
+    } else {
+      console.warn('[MapPage] leaflet.markercluster not detected, falling back to L.layerGroup()');
+      this.markerCluster = (LeafletLib.layerGroup ? LeafletLib.layerGroup() : L.layerGroup()) as any;
+    }
+
+    this.map.addLayer(this.markerCluster as any);
 
     // Clicking map background dismisses bottom sheet
     this.map.on('click', () => {
@@ -433,6 +453,10 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
    * Listen to Leaflet moveend (debounced 350ms) to dynamically query viewport bounds (UI-17).
    */
   public onMapMoveEnd(): void {
+    if (this.isProgrammaticFly) {
+      this.isProgrammaticFly = false;
+      return;
+    }
     if (this.viewportDebounceTimer) {
       clearTimeout(this.viewportDebounceTimer);
     }
@@ -474,6 +498,8 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
       min_lng?: number;
       max_lng?: number;
       limit?: number;
+      municipality_name?: string;
+      price_tier?: 'all' | 'free' | 'budget' | 'mid';
     } = {};
 
     if (this.searchQuery && this.searchQuery.trim().length > 0) {
@@ -484,6 +510,14 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
       searchParams.categories = Array.from(this.selectedCategories);
     } else if (this.selectedCategory) {
       searchParams.categories = [this.selectedCategory];
+    }
+
+    if (this.selectedMunicipality) {
+      searchParams.municipality_name = this.selectedMunicipality;
+    }
+
+    if (this.selectedPriceTier && this.selectedPriceTier !== 'all') {
+      searchParams.price_tier = this.selectedPriceTier;
     }
 
     if (bounds) {
@@ -502,7 +536,15 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
         this.places = this.applyLocalFilters(items);
         this.isLoading = false;
         this.updateMarkers();
-        if (this.pendingTarget?.lat !== undefined && this.pendingTarget?.lng !== undefined) {
+        if (this.pendingTarget?.placeId) {
+          this.resolveAndSelectPlace(
+            this.pendingTarget.placeId,
+            this.pendingTarget.lat,
+            this.pendingTarget.lng,
+            this.pendingTarget.destination,
+            this.pendingTarget.municipality
+          );
+        } else if (this.pendingTarget?.lat !== undefined && this.pendingTarget?.lng !== undefined) {
           this.flyToTarget(this.pendingTarget.lat, this.pendingTarget.lng);
         } else if (this.pendingTarget?.destination || this.pendingTarget?.municipality) {
           this.flyToDestinationOrMunicipality(this.pendingTarget.destination, this.pendingTarget.municipality);
@@ -900,8 +942,51 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
 
   private flyToTarget(lat: number, lng: number): void {
     if (this.map && !isNaN(lat) && !isNaN(lng)) {
+      this.isProgrammaticFly = true;
       this.map.flyTo([lat, lng], 14, { duration: 1.0 });
     }
+  }
+
+  public resolveAndSelectPlace(
+    placeId: string,
+    lat?: number,
+    lng?: number,
+    destination?: string,
+    municipality?: string
+  ): void {
+    const existing = this.places.find((p) => String(p.id) === String(placeId));
+    if (existing) {
+      this.selectedPlace = existing;
+      if (typeof existing.latitude === 'number' && typeof existing.longitude === 'number') {
+        this.flyToTarget(existing.latitude, existing.longitude);
+      }
+      this.cdr.detectChanges();
+      return;
+    }
+
+    // Attempt to load place entity by ID
+    this.placeService.getPlaceById(placeId).subscribe({
+      next: (place) => {
+        if (place) {
+          if (!this.places.some((p) => p.id === place.id)) {
+            this.places.push(place);
+            this.updateMarkers();
+          }
+          this.selectedPlace = place;
+          if (typeof place.latitude === 'number' && typeof place.longitude === 'number') {
+            this.flyToTarget(place.latitude, place.longitude);
+          }
+          this.cdr.detectChanges();
+        }
+      },
+      error: () => {
+        if (lat !== undefined && lng !== undefined) {
+          this.flyToTarget(lat, lng);
+        } else if (destination || municipality) {
+          this.flyToDestinationOrMunicipality(destination, municipality);
+        }
+      },
+    });
   }
 
   private flyToDestinationOrMunicipality(destination?: string, municipality?: string): void {

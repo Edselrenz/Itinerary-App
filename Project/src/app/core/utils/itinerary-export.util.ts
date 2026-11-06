@@ -272,3 +272,39 @@ export function triggerPrintItinerary(): void {
     window.print();
   }
 }
+
+/**
+ * Generates a keyless multi-waypoint Google Maps navigation URL for a day's stops (ROUTE-04, UIUX-06).
+ * Format: https://www.google.com/maps/dir/?api=1&origin=LAT,LNG&destination=LAT,LNG&waypoints=LAT,LNG|LAT,LNG&travelmode=driving
+ */
+export function buildGoogleMapsDayRouteUrl(items: ItineraryItem[]): string | null {
+  if (!items || items.length === 0) return null;
+
+  const validStops = items
+    .map((item) => {
+      const lat = item.place?.latitude ?? item.custom_lat;
+      const lng = item.place?.longitude ?? item.custom_lng;
+      if (lat != null && lng != null && !isNaN(lat) && !isNaN(lng)) {
+        return { lat, lng, name: item.place?.name || item.custom_title || '' };
+      }
+      return null;
+    })
+    .filter((s): s is { lat: number; lng: number; name: string } => s !== null);
+
+  if (validStops.length === 0) return null;
+  if (validStops.length === 1) {
+    return `https://www.google.com/maps/dir/?api=1&destination=${validStops[0].lat},${validStops[0].lng}&travelmode=driving`;
+  }
+
+  const origin = `${validStops[0].lat},${validStops[0].lng}`;
+  const destination = `${validStops[validStops.length - 1].lat},${validStops[validStops.length - 1].lng}`;
+
+  if (validStops.length === 2) {
+    return `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`;
+  }
+
+  const intermediate = validStops.slice(1, validStops.length - 1);
+  const waypoints = intermediate.map((s) => `${s.lat},${s.lng}`).join('|');
+
+  return `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&waypoints=${encodeURIComponent(waypoints)}&travelmode=driving`;
+}

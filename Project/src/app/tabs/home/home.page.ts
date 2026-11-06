@@ -222,23 +222,34 @@ export class HomePage implements OnInit, OnDestroy {
                 total: localMatches.length,
                 limit: 20,
                 offset: 0,
-                items: localMatches.map((item) => ({
-                  id: item.id,
-                  name: item.name,
-                  category: item.categoryKey,
-                  latitude: 15.48,
-                  longitude: 120.97,
-                  municipality_name: item.municipality,
-                  address_text: `${item.municipality}, Nueva Ecija`,
-                  description: item.description,
-                  cost_currency: 'PHP',
-                  source_name: 'Fallback',
-                  source_record_id: item.id,
-                  imported_at: new Date().toISOString(),
-                  is_featured: true,
-                  tags: item.tags,
-                  directions_url: item.directionsUrl,
-                } as Place)),
+                items: localMatches.map((item) => {
+                  let lat = 15.48;
+                  let lng = 120.97;
+                  if (item.directionsUrl) {
+                    const match = item.directionsUrl.match(/destination=(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+                    if (match) {
+                      lat = parseFloat(match[1]);
+                      lng = parseFloat(match[2]);
+                    }
+                  }
+                  return {
+                    id: item.id,
+                    name: item.name,
+                    category: item.categoryKey,
+                    latitude: lat,
+                    longitude: lng,
+                    municipality_name: item.municipality,
+                    address_text: `${item.municipality}, Nueva Ecija`,
+                    description: item.description,
+                    cost_currency: 'PHP',
+                    source_name: 'Fallback',
+                    source_record_id: item.id,
+                    imported_at: new Date().toISOString(),
+                    is_featured: true,
+                    tags: item.tags,
+                    directions_url: item.directionsUrl,
+                  } as Place;
+                }),
               });
             }),
             finalize(() => {
@@ -435,6 +446,7 @@ export class HomePage implements OnInit, OnDestroy {
     const queryParams: Record<string, string> = {
       destination: destination.name,
       municipality: destination.municipality,
+      placeId: destination.id,
     };
     if (destination.directionsUrl) {
       const match = destination.directionsUrl.match(/destination=(-?\d+\.?\d*),(-?\d+\.?\d*)/);

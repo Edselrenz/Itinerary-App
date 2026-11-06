@@ -565,23 +565,23 @@ This checklist tracks completed, active, and pending tasks across all developmen
 ## Phase 27: Map & Routing System Architecture Overhaul (Phased Engineering Proposal)
 > Ref: [itinerary_app_map_and_routing_proposal.pdf](file:///c:/Users/Edward/Desktop/CaseStudy/itinerary_app_map_and_routing_proposal.pdf) & [MAP_AND_ROUTING_PROPOSAL.md](./MAP_AND_ROUTING_PROPOSAL.md)
 
-### Phase 27.1: Immediate Production Bug Fixes (Day 1)
-- [ ] **27.1.1 (MAP-01: Leaflet MarkerCluster ESM Initialization)**:
+### Phase 27.1: Immediate Production Bug Fixes (Day 1) (COMPLETED)
+- [x] **27.1.1 (MAP-01: Leaflet MarkerCluster ESM Initialization)**:
   - Unwrap canonical Leaflet object via `const LeafletLib = (L as any).default ?? L; (window as any).L = LeafletLib;` at module top-level in `Project/src/app/tabs/map/map.page.ts`.
   - Add graceful fallback to `L.layerGroup()` if `markerClusterGroup` is not found, ensuring pins always render on production esbuild bundles (GitHub Pages).
-- [ ] **27.1.2 (MAP-02: Full-Stack Municipality & Price Tier Filtering)**:
+- [x] **27.1.2 (MAP-02: Full-Stack Municipality & Price Tier Filtering)**:
   - Extend `backend/app/api/v1/places.py` `GET /api/v1/places` with `municipality_name: str | None` and `price_tier: str | None` to filter in SQL before LIMIT is applied.
   - Mirror bounding-box, municipality, and price filtering logic inside `PlaceService.getFallbackPaginatedPlaces()`.
   - Pass municipality and price tier filters from `MapPage.loadPlaces()`.
-- [ ] **27.1.3 (MAP-03: Deep-Link Pin Selection & Programmatic Fly Guard)**:
+- [x] **27.1.3 (MAP-03: Deep-Link Pin Selection & Programmatic Fly Guard)**:
   - Pass `placeId` in `HomePage.viewDestinationOnMap()` deep-links.
   - Set `isProgrammaticFly = true` during `flyTo()` in `MapPage` so `onMapMoveEnd()` does not wipe markers mid-flight.
   - Automatically resolve and assign `this.selectedPlace` to open `PlaceDetailSheetComponent`.
   - Remove hardcoded `15.48, 120.97` fallback in `home.page.ts`.
-- [ ] **27.1.4 (ROUTE-02: Re-cluster Offline Day Presets into Corridors)**:
+- [x] **27.1.4 (ROUTE-02: Re-cluster Offline Day Presets into Corridors)**:
   - Update `getOfflineDayClusterPresets()` in `Project/src/app/core/data/offline-places.data.ts`.
   - Re-cluster stops into East Corridor (Bongabon, 1.5 km), North Corridor (San Jose–Pantabangan, 13.8 km), and South Corridor (Cabanatuan–Gen. Tinio–Gapan, 45.5 km), cutting straight-line transit distance by 66.3% from 176.2 km to 59.4 km.
-- [ ] **27.1.5 (ROUTE-03: Nearby Place Coordinates & Storage Persistence)**:
+- [x] **27.1.5 (ROUTE-03: Nearby Place Coordinates & Storage Persistence)**:
   - Ensure verified coordinates on `NearbyPlaceItem` in `itinerary-detail.page.ts` and `suggested-wizard.page.ts`, removing hardcoded `15.63, 121.14` fallback.
   - Persist added nearby stops via `this.itineraryService.updateItinerary()` so changes survive page refresh.
 
@@ -620,28 +620,28 @@ This checklist tracks completed, active, and pending tasks across all developmen
 ## Phase 28: Suggested Itinerary, Route Map & Navigation UI/UX Remediation
 > Ref: [itinerary_app_ui_ux_evaluation_report.pdf](file:///c:/Users/Edward/Desktop/CaseStudy/itinerary_app_ui_ux_evaluation_report.pdf) & [UI_UX_EVALUATION_REPORT.md](./UI_UX_EVALUATION_REPORT.md)
 
-### Phase 28.1: P0 Immediate Quick Wins (`itinerary-detail.page.html & .ts`)
-- [ ] **28.1.1 (UIUX-04: Restore Header Share Button)**:
+### Phase 28.1: P0 Immediate Quick Wins (`itinerary-detail.page.html & .ts`) (COMPLETED)
+- [x] **28.1.1 (UIUX-04: Restore Header Share Button)**:
   - Add visible Share button (`share-social-outline`) in `itinerary-detail.page.html` header toolbar wired to `openShareModal()`.
-- [ ] **28.1.2 (UIUX-05: Restore Nearby Places Banner)**:
+- [x] **28.1.2 (UIUX-05: Restore Nearby Places Banner)**:
   - Restore the interactive dashed *Nearby Places in {{ getDayLocation(day) }}* trigger banner inside each day card calling `openNearbyPlaces()`.
-- [ ] **28.1.3 (UIUX-03: Rich Time Window Formatting)**:
+- [x] **28.1.3 (UIUX-03: Rich Time Window Formatting)**:
   - Replace `formatTimingHour()` with `getTimingTime(stop, sIdx)` in `itinerary-detail.page.html` to display full start-end time windows and duration (`12:00 PM - 2:00 PM (2 hrs)`).
-- [ ] **28.1.4 (UIUX-02: Eliminate Fabricated ₱200 Cost Fallbacks)**:
+- [x] **28.1.4 (UIUX-02: Eliminate Fabricated ₱200 Cost Fallbacks)**:
   - Remove `return '200'` in `getStopEstimatedCost()` and `?? 200` in `calculateTotalActivityExpenses()` in `itinerary-detail.page.ts`.
   - Display *Fee not listed* on unpriced stop cards and delegate directly to `this.budgetSummary` to align with the top Verified Estimated Costs banner.
-- [ ] **28.1.5 (UIUX-07: Human-Readable Date Range Formatting)**:
+- [x] **28.1.5 (UIUX-07: Human-Readable Date Range Formatting)**:
   - Bind `formattedDateSpan` in `itinerary-detail.page.html` to display human-readable formatted dates (`Nov 6 – Nov 8, 2026 (3 Days, 2 Nights)`).
-- [ ] **28.1.6 (UIUX-06: Header Chrome Simplification & False Affordances)**:
+- [x] **28.1.6 (UIUX-06: Header Chrome Simplification & False Affordances)**:
   - Remove the redundant top `Saved Itineraries [+]` bar on `/itinerary/:id`, unifying into a single header toolbar (`← Trip Title | [Share] [Edit]`).
   - Remove non-interactive right-arrow (`→`) icon in card footer.
-- [ ] **28.1.7 (UIUX-01: Stop Card Photo Thumbnails & Badges)**:
+- [x] **28.1.7 (UIUX-01: Stop Card Photo Thumbnails & Badges)**:
   - Restore 68×68px stop thumbnail photos and step numbering badges on `.activity-view-card` in `itinerary-detail.page.html`.
 
 ### Phase 28.2: P1 Navigation & Route Visualization
-- [ ] **28.2.1 (UIUX-08: Multi-Waypoint Day Route Builder)**:
+- [x] **28.2.1 (UIUX-08: Multi-Waypoint Day Route Builder)**:
   - Implement `buildGoogleMapsDayRouteUrl(items: ItineraryItem[]): string | null` in `Project/src/app/core/utils/itinerary-export.util.ts`.
-- [ ] **28.2.2 (UIUX-08: "Start Day Route in Google Maps" Primary Action)**:
+- [x] **28.2.2 (UIUX-08: "Start Day Route in Google Maps" Primary Action)**:
   - Add primary action button on each day header to launch a single multi-waypoint Google Maps route for all stops on that day in sequence.
 - [ ] **28.2.3 (UIUX-08: Inline Per-Stop Quick Navigation)**:
   - Place a quick-action directions icon button (`navigate-outline`) on the right edge of every stop card for one-tap single-leg navigation without opening the detail sheet.

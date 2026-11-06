@@ -833,29 +833,20 @@ describe('ItineraryService', () => {
 
       expect(day1.items[3].sort_order).toBe(4);
 
-      // Verify Day 2: 09:00 AM before 10:30 AM before 11:30 AM
-
+      // Verify Day 2: North Corridor (San Jose & Pantabangan) strictly chronological (ROUTE-02, DEF-03)
       const day2 = plan.days[1];
-
-      expect(day2.items.length).toBe(3);
-
+      expect(day2.items.length).toBe(4);
       expect(day2.items[0].custom_title).toBe('Farm Villaronte');
-
       expect(day2.items[0].planned_time).toBe('09:00');
-
       expect(day2.items[0].sort_order).toBe(1);
-
-      expect(day2.items[1].custom_title).toBe('Casa Batik');
-
-      expect(day2.items[1].planned_time).toBe('11:00');
-
+      expect(day2.items[1].custom_title).toBe('George Point');
+      expect(day2.items[1].planned_time).toBe('12:00');
       expect(day2.items[1].sort_order).toBe(2);
-
-      expect(day2.items[2].custom_title).toBe("D' Pavilion Farm and Resort");
-
+      expect(day2.items[2].custom_title).toBe('Pantabangan Dam and Lake Viewpoint');
       expect(day2.items[2].planned_time).toBe('13:00');
-
       expect(day2.items[2].sort_order).toBe(3);
+      expect(day2.items[3].custom_title).toBe('Highland Bali Villas Resort and Spa');
+      expect(day2.items[3].sort_order).toBe(4);
 
     });
 

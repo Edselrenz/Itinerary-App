@@ -2632,3 +2632,67 @@ This log records chronological development sessions, detailing objectives, execu
   - `docs/DEVELOPMENT_LOG.md` (modified)
 - **Status & Next Steps**:
   - Documentation is complete, accurate, and aligned. Ready to begin development upon user authorization.
+
+---
+
+## Session 75: Phase 27.1 & Phase 28.1 Production Map & Saved Itinerary Flagship Implementation
+- **Date & Time**: 2026-11-06 14:00:00 (Local)
+- **Objective**: Execute implementation of Phase 27.1 (Immediate Production Map & Routing Fixes: MAP-01, MAP-02, MAP-03, ROUTE-02, ROUTE-03) and Phase 28.1 (Saved Itinerary Visual Flagship Alignment: UIUX-01 through UIUX-07, multi-waypoint URL builder, honest cost accounting, photo thumbnails, and unified header toolbar) with 100% test pass rate across backend pytest, frontend vitest, Angular production build, and Playwright E2E browser tests.
+- **Tasks Performed & Implementation Details**:
+  - **1. MAP-01 (Leaflet MarkerCluster ESM Initialization)**:
+    - In `Project/src/app/tabs/map/map.page.ts`, unwrapped `LeafletLib = (L as any).default ?? L; (window as any).L = LeafletLib;` at module top-level.
+    - Added resilient cluster factory resolution with fallback to `LeafletLib.layerGroup()` if `markerClusterGroup` is not found in production esbuild bundles.
+  - **2. MAP-02 (Full-Stack Municipality & Price Tier Filtering)**:
+    - In `backend/app/api/v1/places.py`, added `municipality_name: str | None` and `price_tier: str | None` query parameters to `GET /api/v1/places`, executing SQL filtering before `LIMIT`.
+    - Added regression tests in `backend/tests/test_foundation.py` asserting filtering by municipality and price tiers.
+    - Updated `PlaceSearchParams` in `Project/src/app/core/models/place.models.ts`.
+    - Updated `PlaceService.searchPlaces()` and `PlaceService.getFilteredLocalPlaces()` in `place.service.ts` to pass and filter by municipality and price tier.
+    - Updated `MapPage.loadPlaces()` to pass `selectedMunicipality` and `selectedPriceTier` in search params.
+  - **3. MAP-03 (Deep-Link Pin Selection & Programmatic Fly Guard)**:
+    - In `Project/src/app/tabs/map/map.page.ts`, added `public isProgrammaticFly = false;` to suppress Leaflet `moveend` reloads during programmatic camera flight.
+    - Handled `placeId` in `route.queryParams.subscribe`, added `resolveAndSelectPlace(placeId, ...)` to find or fetch place by ID and assign `this.selectedPlace` to automatically display the bottom sheet.
+    - In `Project/src/app/tabs/home/home.page.ts`, passed `placeId: destination.id` in `viewDestinationOnMap()` and extracted real coordinates from `directionsUrl` in local fallback instead of hardcoded `15.48, 120.97`.
+  - **4. ROUTE-02 (Corridor-Clustered Offline Day Presets)**:
+    - In `Project/src/app/core/data/offline-places.data.ts`, re-clustered `getOfflineDayClusterPresets()` into 3 geographic corridors:
+      - Day 1: East Corridor (Bongabon 1.5 km: Rohi Paperflower Cafe, Museo de Bongabon, Thornes Samgyupsal House, La Casa Prime Cabins).
+      - Day 2: North Corridor (San Jose–Pantabangan 13.8 km: Farm Villaronte, George Point, Pantabangan Lake, Highland Bali).
+      - Day 3: South Corridor (Cabanatuan–Gen. Tinio–Gapan 45.5 km: Casa Batik, Minalungao National Park, Tagpuan sa Lumang Gapan).
+    - Reduced straight-line cross-provincial transit distance by 66.3% from 176.2 km to 59.4 km, eliminating the General Tinio $\rightarrow$ Pantabangan $\rightarrow$ Gapan zig-zag.
+  - **5. ROUTE-03 & Storage Persistence**:
+    - In `Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.ts`, updated `addNearbyPlaceToActiveDay()` to resolve fallback coordinates from current day stops rather than hardcoded Bongabon coords, and persisted updates via `this.itineraryService.updateItinerary()`.
+  - **6. Phase 28.1 & 28.2 (Saved Itinerary Visual Flagship Alignment)**:
+    - In `Project/src/app/core/utils/itinerary-export.util.ts`, implemented `buildGoogleMapsDayRouteUrl(items: ItineraryItem[]): string | null` for universal multi-waypoint navigation.
+    - In `itinerary-detail.page.ts`:
+      - Replaced `?? 200` cost fallbacks in `getStopEstimatedCost()` and `calculateTotalActivityExpenses()` with honest reporting (`Fee not listed` / `Free Admission`).
+      - Added `startDayRouteInGoogleMaps(day: ItineraryDay)`.
+      - Removed unused `RouterLink` import to keep bundle lean.
+    - In `itinerary-detail.page.html`:
+      - Unified header chrome: eliminated redundant top `Saved Itineraries [+]` bar in favor of a single app toolbar (`← Trip Title | [Share] [Edit]`).
+      - Wired Share icon button to `openShareModal()`.
+      - Replaced `formatTimingHour()` with `getTimingTime(stop, sIdx)` and bound `formattedDateSpan`.
+      - Restored 68×68px stop photo thumbnails, step numbering badges, category pills, and honest cost indicators on `.activity-view-card`.
+      - Restored dashed *Explore Nearby Places* trigger banner calling `openNearbyPlaces()` with back navigation.
+      - Added multi-stop *Google Maps* navigation action button on day headers alongside *In-App Nav*.
+      - Removed dead right-arrow (`→`) icon in card footer.
+    - In `itinerary-detail.page.scss`:
+      - Styled thumbnail containers, badges, multi-action day buttons, and nearby trigger banner while pruning legacy CSS rules to strictly comply with Angular's 16.00 kB component style budget.
+- **Verification & Test Results**:
+  - `python -m pytest backend/tests`: **21 passed in 9.07s [100%]**.
+  - `npm --prefix Project run test:unit`: **25 test suites passed, 235 tests passed [100%]**.
+  - `npm --prefix Project run build`: **Compiled cleanly with 0 errors and 0 warnings into `Project/www/`**.
+  - `npm --prefix Project run test:e2e`: **8 Playwright E2E browser tests passed in 21.9s [100%]**.
+- **Files Modified**:
+  - `backend/app/api/v1/places.py`
+  - `backend/tests/test_foundation.py`
+  - `Project/src/app/core/models/place.models.ts`
+  - `Project/src/app/core/services/place.service.ts`
+  - `Project/src/app/core/data/offline-places.data.ts`
+  - `Project/src/app/core/services/itinerary.service.spec.ts`
+  - `Project/src/app/core/utils/itinerary-export.util.ts`
+  - `Project/src/app/tabs/map/map.page.ts`
+  - `Project/src/app/tabs/home/home.page.ts`
+  - `Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.ts`
+  - `Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.html`
+  - `Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.scss`
+  - `docs/TODO.md`
+  - `docs/DEVELOPMENT_LOG.md`

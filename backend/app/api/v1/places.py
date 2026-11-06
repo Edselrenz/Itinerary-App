@@ -2,7 +2,7 @@
 
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
-from sqlalchemy import func, or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session, joinedload
 from app.core.config import settings
 from app.core.database import get_db
@@ -112,6 +112,8 @@ def list_places(
     q: str | None = Query(default=None, max_length=100),
     categories: list[str] | None = Query(default=None),
     municipality_id: uuid.UUID | None = Query(default=None),
+    municipality_name: str | None = Query(default=None, max_length=100),
+    price_tier: str | None = Query(default=None),
     featured: bool | None = Query(default=None),
     min_lat: float | None = Query(default=None),
     max_lat: float | None = Query(default=None),
@@ -157,6 +159,29 @@ def list_places(
 
     if municipality_id is not None:
         stmt = stmt.where(Place.municipality_id == municipality_id)
+
+    if municipality_name and municipality_name.strip():
+        safe_muni = escape_like(municipality_name.strip())
+        stmt = stmt.where(Municipality.name.ilike(f"%{safe_muni}%"))
+
+    if price_tier and price_tier.strip():
+        tier = price_tier.strip().lower()
+        if tier == "free":
+            stmt = stmt.where(Place.estimated_cost_min == 0, Place.estimated_cost_max == 0)
+        elif tier == "budget":
+            stmt = stmt.where(
+                or_(
+                    Place.estimated_cost_max <= 500,
+                    and_(Place.estimated_cost_min == 0, Place.estimated_cost_max.is_(None)),
+                )
+            )
+        elif tier == "mid":
+            stmt = stmt.where(
+                or_(
+                    Place.estimated_cost_max > 500,
+                    Place.estimated_cost_min > 500,
+                )
+            )
 
     if featured is not None:
         stmt = stmt.where(Place.is_featured.is_(featured))

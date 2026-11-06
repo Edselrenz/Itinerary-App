@@ -1,66 +1,62 @@
 <ion-header class="ion-no-border app-header">
   <ion-toolbar class="itinerary-toolbar">
-    <div class="toolbar-nav-row">
-      <span class="toolbar-brand-title">Saved Itineraries</span>
-      <button
-        type="button"
-        class="header-plus-btn"
-        routerLink="/custom-builder"
-        aria-label="Create new itinerary"
-      >
-        <ion-icon name="add-outline"></ion-icon>
-      </button>
+    <div class="sub-header-bar">
+      <div class="sub-header-left">
+        <button
+          type="button"
+          class="back-arrow-btn"
+          (click)="isEditMode ? cancelEdit() : onBack()"
+          aria-label="Go back"
+        >
+          <ion-icon name="arrow-back"></ion-icon>
+        </button>
+        <h1 class="sub-header-title">
+          {{ isEditMode ? (editForm.title || 'Edit Trip') : (itinerary?.title || 'Trip Details') }}
+        </h1>
+      </div>
+
+      <div class="sub-header-right">
+        @if (!isEditMode) {
+        <button
+          type="button"
+          class="header-share-btn"
+          (click)="openShareModal()"
+          title="Share or Export Trip"
+          aria-label="Share or Export Trip"
+        >
+          <ion-icon name="share-social-outline"></ion-icon>
+        </button>
+        <button
+          type="button"
+          class="edit-action-btn"
+          (click)="toggleEditMode()"
+          aria-label="Edit itinerary"
+        >
+          Edit
+        </button>
+        } @else {
+        <div class="edit-btn-group">
+          <button
+            type="button"
+            class="save-changes-btn"
+            (click)="saveChanges()"
+            aria-label="Save changes"
+          >
+            Save Changes
+          </button>
+          <button
+            type="button"
+            class="cancel-edit-btn"
+            (click)="cancelEdit()"
+            aria-label="Cancel editing"
+          >
+            Cancel
+          </button>
+        </div>
+        }
+      </div>
     </div>
   </ion-toolbar>
-
-  <!-- Sub-header bar -->
-  <div class="sub-header-bar">
-    <div class="sub-header-left">
-      <button
-        type="button"
-        class="back-arrow-btn"
-        (click)="isEditMode ? cancelEdit() : onBack()"
-        aria-label="Go back"
-      >
-        <ion-icon name="arrow-back"></ion-icon>
-      </button>
-      <h1 class="sub-header-title">
-        {{ isEditMode ? (editForm.title || 'Edit Trip') : (itinerary?.title || 'Trip Details') }}
-      </h1>
-    </div>
-
-    <div class="sub-header-right">
-      @if (!isEditMode) {
-      <button
-        type="button"
-        class="edit-action-btn"
-        (click)="toggleEditMode()"
-        aria-label="Edit itinerary"
-      >
-        Edit
-      </button>
-      } @else {
-      <div class="edit-btn-group">
-        <button
-          type="button"
-          class="save-changes-btn"
-          (click)="saveChanges()"
-          aria-label="Save changes"
-        >
-          Save Changes
-        </button>
-        <button
-          type="button"
-          class="cancel-edit-btn"
-          (click)="cancelEdit()"
-          aria-label="Cancel editing"
-        >
-          Cancel
-        </button>
-      </div>
-      }
-    </div>
-  </div>
 </ion-header>
 
 <ion-content class="itinerary-content" [fullscreen]="true">
@@ -83,6 +79,14 @@
       @if (viewMode === 'nearby') {
         <!-- Nearby Places View -->
         <div class="nearby-places-container">
+          <div class="nearby-nav-header">
+            <button type="button" class="nearby-back-btn" (click)="closeNearbyPlaces()">
+              <ion-icon name="arrow-back"></ion-icon>
+              <span>Back to Itinerary</span>
+            </button>
+            <h3 class="nearby-nav-title">Nearby Places in {{ getDayLocation(currentDay) }}</h3>
+          </div>
+
           <div class="nearby-tabs-capsule">
             <button
               type="button"
@@ -118,10 +122,10 @@
                   <p class="nearby-meta">{{ place.municipality }} &bull; {{ place.openingHours }}</p>
                 </div>
                 <div class="nearby-actions">
-                  <button type="button" class="nearby-map-btn" (click)="openNearbyInMaps(place)">
+                  <button type="button" class="nearby-map-btn" (click)="openNearbyInMaps(place)" title="View in Google Maps">
                     <ion-icon name="navigate-outline"></ion-icon>
                   </button>
-                  <button type="button" class="nearby-add-btn" (click)="addNearbyPlaceToActiveDay(place)">
+                  <button type="button" class="nearby-add-btn" (click)="addNearbyPlaceToActiveDay(place)" title="Add to Active Day">
                     <ion-icon name="add-circle-outline"></ion-icon>
                   </button>
                 </div>
@@ -154,12 +158,11 @@
 
             <div class="td-dates-row">
               <ion-icon name="calendar" class="td-cal-icon"></ion-icon>
-              <span class="td-date-range">{{ itinerary.start_date }} &nbsp;&nbsp;&nbsp;&nbsp; {{ itinerary.end_date }}</span>
+              <span class="td-date-range">{{ formattedDateSpan || (itinerary.start_date + ' to ' + itinerary.end_date) }}</span>
             </div>
 
             <div class="td-card-footer">
               <span class="days-nights-badge">{{ getDaysNightsLabel(itinerary) }}</span>
-              <ion-icon name="arrow-forward" class="td-arrow-forward"></ion-icon>
             </div>
           </div>
 
@@ -204,10 +207,20 @@
                       type="button"
                       class="day-nav-cta-btn"
                       (click)="startNavigationForActiveDay(); $event.stopPropagation()"
-                      title="Navigate Day Route"
+                      title="Navigate Day Route In-App"
                     >
                       <ion-icon name="navigate-outline"></ion-icon>
-                      <span>Navigate</span>
+                      <span>In-App Nav</span>
+                    </button>
+                    <button
+                      *ngIf="dIdx === activeDayIndex"
+                      type="button"
+                      class="day-gmaps-cta-btn"
+                      (click)="startDayRouteInGoogleMaps(day); $event.stopPropagation()"
+                      title="Open multi-stop day route in Google Maps"
+                    >
+                      <ion-icon name="open-outline"></ion-icon>
+                      <span>Google Maps</span>
                     </button>
                   </div>
                 </div>
@@ -277,28 +290,57 @@
                     </div>
 
                     <div class="activity-view-card" (click)="openStopDetail(stop)">
-                      <div class="act-title-row">
-                        <div class="act-title-left">
+                      <div class="act-card-main">
+                        <div class="act-thumb-container">
+                          <img
+                            [src]="getStopImage(stop)"
+                            [alt]="getStopTitle(stop)"
+                            class="act-thumb-img"
+                            loading="lazy"
+                          />
                           <span class="act-stop-badge">{{ sIdx + 1 }}</span>
-                          <h4 class="act-name">{{ getStopTitle(stop) }}</h4>
                         </div>
-                        <span class="act-time">{{ formatTimingHour(stop) }}</span>
+                        <div class="act-info-body">
+                          <div class="act-title-row">
+                            <h4 class="act-name">{{ getStopTitle(stop) }}</h4>
+                            <span class="act-time">{{ getTimingTime(stop, sIdx) }}</span>
+                          </div>
+
+                          <div class="act-meta-row">
+                            <span class="act-category-pill">{{ getStopCategory(stop) }}</span>
+                            <span class="act-meta-dot">&bull;</span>
+                            <span class="act-duration">{{ getTimingDuration(stop) }}</span>
+                            <span class="act-meta-dot">&bull;</span>
+                            <span class="act-cost">{{ getStopEstimatedCost(stop) }}</span>
+                          </div>
+
+                          <p class="act-description">{{ getStopDescription(stop) }}</p>
+
+                          @if (stop.notes) {
+                            <p class="act-notes-line">
+                              <span class="notes-bold">Notes:</span> {{ stop.notes }}
+                            </p>
+                          }
+                        </div>
                       </div>
-
-                      <div class="act-meta-row">
-                        <span>{{ formatDurationHours(stop) }} · Est. ₱{{ getStopEstimatedCost(stop) }}</span>
-                      </div>
-
-                      <p class="act-description">{{ getStopDescription(stop) }}</p>
-
-                      @if (stop.notes) {
-                        <p class="act-notes-line">
-                          <span class="notes-bold">My notes:</span> {{ stop.notes }}
-                        </p>
-                      }
                     </div>
                   }
                 </div>
+
+                <!-- Nearby Places Quick-Add Banner -->
+                <button
+                  type="button"
+                  class="nearby-places-trigger-banner"
+                  (click)="openNearbyPlaces()"
+                  aria-label="Explore and add nearby places"
+                >
+                  <ion-icon name="storefront-outline"></ion-icon>
+                  <div class="banner-text">
+                    <span class="banner-title">Explore Nearby Places</span>
+                    <span class="banner-subtitle">Add local dining, clinics, or convenience stores</span>
+                  </div>
+                  <ion-icon name="arrow-forward-outline" class="banner-arrow"></ion-icon>
+                </button>
               </div>
             }
           </div>
@@ -307,9 +349,15 @@
           <div class="activity-expenses-card">
             <div class="expenses-header-row">
               <span class="expenses-label">Estimated activity expenses</span>
-              <span class="expenses-amount">₱{{ calculateTotalActivityExpenses() | number }}</span>
+              <span class="expenses-amount">
+                @if (calculateTotalActivityExpenses() > 0) {
+                  ₱{{ calculateTotalActivityExpenses() | number }}
+                } @else {
+                  Flexible / Unpriced
+                }
+              </span>
             </div>
-            <p class="expenses-subtext">Estimates are editable and may change during your trip.</p>
+            <p class="expenses-subtext">Verified fees from listed destinations. Estimates are editable.</p>
           </div>
         </div>
       } @else {

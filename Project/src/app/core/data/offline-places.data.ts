@@ -446,37 +446,41 @@ export interface DayClusterPreset {
 }
 
 /**
- * Clustered day presets for ItineraryService (DEF-03: strictly chronological).
+ * Clustered day presets for ItineraryService (DEF-03, ROUTE-02: geographic corridor clustering).
+ * Day 1: East Corridor (Bongabon 1.5 km)
+ * Day 2: North Corridor (San Jose & Pantabangan 13.8 km)
+ * Day 3: South Corridor (Cabanatuan, General Tinio & Gapan City 45.5 km)
  */
 export function getOfflineDayClusterPresets(curatedPool: OfflineCuratedPlace[]): DayClusterPreset[] {
   return [
     {
       municipality: 'Bongabon',
-      subtitle: 'Food spots, local culture, and historic sites!',
+      subtitle: 'East Corridor · Heritage museums, local artisan coffee, and mountain dining (1.5 km)',
       places: [
         curatedPool.find((p: OfflineCuratedPlace) => p.id === 'dest-rohi-paperflower')!,   // 12:00 PM - 2:00 PM
         curatedPool.find((p: OfflineCuratedPlace) => p.id === 'dest-museo-bongabon')!,     // 2:00 PM - 5:00 PM
         curatedPool.find((p: OfflineCuratedPlace) => p.id === 'dest-thornes-samgyupsal')!, // 5:00 PM - 7:00 PM
         curatedPool.find((p: OfflineCuratedPlace) => p.id === 'dest-la-casa-prime')!,      // Overnight Stay
-      ],
+      ].filter(Boolean),
     },
     {
-      municipality: 'Cabanatuan City',
-      subtitle: 'Heritage art crafts, authentic dining, and countryside leisure!',
+      municipality: 'San Jose & Pantabangan',
+      subtitle: 'North Corridor · Flower agro-tourism, lakeside panoramas, and Balinese villas (13.8 km)',
       places: [
         curatedPool.find((p: OfflineCuratedPlace) => p.id === 'dest-farm-villaronte')!,    // 09:00 - 10:30 AM
-        curatedPool.find((p: OfflineCuratedPlace) => p.id === 'dest-casa-batik')!,         // 11:00 AM - 12:30 PM
-        curatedPool.find((p: OfflineCuratedPlace) => p.id === 'dest-pavillion-farm')!,     // 11:30
-      ],
+        curatedPool.find((p: OfflineCuratedPlace) => p.id === 'dest-george-point')!,       // 12:00 PM - 1:30 PM
+        curatedPool.find((p: OfflineCuratedPlace) => p.id === 'dest-pantabangan-lake')!,   // 1:30 PM - 3:30 PM
+        curatedPool.find((p: OfflineCuratedPlace) => p.id === 'dest-highland-bali')!,      // 3:30 PM - 6:00 PM
+      ].filter(Boolean),
     },
     {
-      municipality: 'Gapan City',
-      subtitle: 'Historic Spanish streetscapes, night food stalls, and scenic river adventures!',
+      municipality: 'General Tinio & Gapan',
+      subtitle: 'South Corridor · Artisan textiles, limestone river canyon, and colonial nightwalk (45.5 km)',
       places: [
-        curatedPool.find((p: OfflineCuratedPlace) => p.id === 'dest-minalungao')!,         // 09:00
-        curatedPool.find((p: OfflineCuratedPlace) => p.id === 'dest-pantabangan-lake')!,   // 13:00
-        curatedPool.find((p: OfflineCuratedPlace) => p.id === 'dest-tagpuan-gapan')!,      // 17:00
-      ],
+        curatedPool.find((p: OfflineCuratedPlace) => p.id === 'dest-casa-batik')!,         // 10:00 AM - 11:30 AM
+        curatedPool.find((p: OfflineCuratedPlace) => p.id === 'dest-minalungao')!,         // 12:30 PM - 3:30 PM
+        curatedPool.find((p: OfflineCuratedPlace) => p.id === 'dest-tagpuan-gapan')!,      // 5:00 PM - 7:00 PM
+      ].filter(Boolean),
     },
   ];
 }

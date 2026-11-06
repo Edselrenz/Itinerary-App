@@ -127,6 +127,12 @@ export class PlaceService {
       if (params.municipality_id) {
         httpParams = httpParams.set('municipality_id', params.municipality_id);
       }
+      if (params.municipality_name?.trim()) {
+        httpParams = httpParams.set('municipality_name', params.municipality_name.trim());
+      }
+      if (params.price_tier && params.price_tier !== 'all') {
+        httpParams = httpParams.set('price_tier', params.price_tier);
+      }
       if (params.featured !== undefined) {
         httpParams = httpParams.set('featured', String(params.featured));
       }
@@ -189,6 +195,33 @@ export class PlaceService {
 
     if (params?.municipality_id) {
       items = items.filter((p) => p.municipality_id === params.municipality_id);
+    }
+
+    if (params?.municipality_name?.trim()) {
+      const muniQuery = params.municipality_name.trim().toLowerCase();
+      items = items.filter(
+        (p) => p.municipality_name && p.municipality_name.toLowerCase().includes(muniQuery)
+      );
+    }
+
+    if (params?.price_tier && params.price_tier !== 'all') {
+      if (params.price_tier === 'free') {
+        items = items.filter(
+          (p) => p.estimated_cost_min === 0 && p.estimated_cost_max === 0
+        );
+      } else if (params.price_tier === 'budget') {
+        items = items.filter(
+          (p) =>
+            (p.estimated_cost_max != null && p.estimated_cost_max <= 500) ||
+            (p.estimated_cost_min === 0 && p.estimated_cost_max == null)
+        );
+      } else if (params.price_tier === 'mid') {
+        items = items.filter(
+          (p) =>
+            (p.estimated_cost_max != null && p.estimated_cost_max > 500) ||
+            (p.estimated_cost_min != null && p.estimated_cost_min > 500)
+        );
+      }
     }
 
     if (params?.featured !== undefined) {

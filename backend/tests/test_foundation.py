@@ -91,6 +91,20 @@ def test_health_and_featured_places_pipeline():
     for place in cat_res.json()["items"]:
         assert place["category"] in {"cafe", "restaurant"}
 
+    # 6b. Verify municipality_name and price_tier filters
+    muni_res = client.get("/api/v1/places?municipality_name=Bongabon")
+    assert muni_res.status_code == 200
+    assert len(muni_res.json()["items"]) >= 4
+    for p in muni_res.json()["items"]:
+        assert p["municipality_name"] == "Bongabon"
+
+    price_res = client.get("/api/v1/places?price_tier=budget")
+    assert price_res.status_code == 200
+    for p in price_res.json()["items"]:
+        cost = p["estimated_cost_max"] if p["estimated_cost_max"] is not None else p["estimated_cost_min"]
+        if cost is not None:
+            assert cost <= 500
+
     # 7. Verify idempotent OSM import & out-of-province rejection
     sample_osm = {
         "elements": [

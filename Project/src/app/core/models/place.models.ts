@@ -84,6 +84,8 @@ export interface PlaceSearchParams {
   q?: string;
   categories?: string[] | string;
   municipality_id?: string;
+  municipality_name?: string;
+  price_tier?: 'all' | 'free' | 'budget' | 'mid';
   featured?: boolean;
   min_lat?: number;
   max_lat?: number;

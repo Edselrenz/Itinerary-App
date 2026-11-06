@@ -10,7 +10,7 @@ import {
 } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import * as L from 'leaflet';
 import {
   AlertController,
@@ -82,6 +82,7 @@ import { decodePolyline } from '../../../core/utils/polyline.util';
 import { environment } from '../../../../environments/environment';
 import { CommuteInfo, getCommuteInfoForMunicipality } from '../../../core/data/commute-guide.data';
 import {
+  buildGoogleMapsDayRouteUrl,
   copyTextSummary,
   downloadIcsFile,
   shareNativeItinerary,
@@ -125,7 +126,6 @@ export interface EditableItineraryForm {
   imports: [
     CommonModule,
     FormsModule,
-    RouterLink,
     IonContent,
     IonHeader,
     IonToolbar,
@@ -562,12 +562,13 @@ export class ItineraryDetailPage implements OnInit, AfterViewInit, OnDestroy {
     return '2 hours';
   }
 
-  public getStopEstimatedCost(item: ItineraryItem): number | string {
+  public getStopEstimatedCost(item: ItineraryItem): string {
     const cost = item.estimated_cost_min ?? item.estimated_cost_max;
-    if (cost != null && cost > 0) {
-      return cost.toLocaleString();
+    if (cost != null) {
+      if (cost === 0) return 'Free Admission';
+      return `₱${cost.toLocaleString()}`;
     }
-    return '200';
+    return 'Fee not listed';
   }
 
   public getStopDescription(item: ItineraryItem): string {
@@ -577,7 +578,7 @@ export class ItineraryDetailPage implements OnInit, AfterViewInit, OnDestroy {
     if (item.notes) {
       return item.notes;
     }
-    return 'Explore the river and limestone formations. Enjoy sightseeing and take photos.';
+    return 'Explore the destination and local culture. Enjoy sightseeing and take photos.';
   }
 
   public calculateTotalActivityExpenses(): number {
@@ -585,8 +586,8 @@ export class ItineraryDetailPage implements OnInit, AfterViewInit, OnDestroy {
     let sum = 0;
     for (const day of this.itinerary.days) {
       for (const item of day.items || []) {
-        const cost = item.estimated_cost_min ?? item.estimated_cost_max ?? 200;
-        if (cost && !isNaN(Number(cost))) {
+        const cost = item.estimated_cost_min ?? item.estimated_cost_max;
+        if (cost != null && !isNaN(Number(cost))) {
           sum += Number(cost);
         }
       }
@@ -895,8 +896,14 @@ export class ItineraryDetailPage implements OnInit, AfterViewInit, OnDestroy {
       currentDay.items = [];
     }
 
-    const fallbackLat = currentDay.items[0]?.place?.latitude ?? 15.6315;
-    const fallbackLng = currentDay.items[0]?.place?.longitude ?? 121.1466;
+    const fallbackLat =
+      currentDay.items.find((it) => it.place?.latitude || it.custom_lat)?.place?.latitude ??
+      currentDay.items.find((it) => it.place?.latitude || it.custom_lat)?.custom_lat ??
+      15.58;
+    const fallbackLng =
+      currentDay.items.find((it) => it.place?.longitude || it.custom_lng)?.place?.longitude ??
+      currentDay.items.find((it) => it.place?.longitude || it.custom_lng)?.custom_lng ??
+      121.0;
 
     const newStop: ItineraryItem = {
       id: `nearby-added-${Date.now()}`,
@@ -924,6 +931,10 @@ export class ItineraryDetailPage implements OnInit, AfterViewInit, OnDestroy {
     currentDay.items.push(newStop);
     if (this.itinerary) {
       this.budgetSummary = this.itineraryService.calculateBudgetSummary(this.itinerary);
+      this.itineraryService.updateItinerary(this.itinerary.id, {
+        days: this.itinerary.days,
+      }).subscribe();
+      this.updatePreviewMap();
     }
 
     const toast = await this.toastController.create({
@@ -933,6 +944,13 @@ export class ItineraryDetailPage implements OnInit, AfterViewInit, OnDestroy {
       position: 'bottom',
     });
     await toast.present();
+  }
+
+  public startDayRouteInGoogleMaps(day: ItineraryDay): void {
+    const url = buildGoogleMapsDayRouteUrl(day.items || []);
+    if (url) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
   }
 
   public openShareModal(): void {

@@ -8,6 +8,36 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-11-06
+### Added
+- **Multi-Waypoint Route Navigation URL Builder (Phase 28.2 & ROUTE-04)**:
+  - Added `buildGoogleMapsDayRouteUrl(items: ItineraryItem[]): string | null` in `Project/src/app/core/utils/itinerary-export.util.ts`.
+  - Added primary "Google Maps" multi-stop route button in `itinerary-detail.page.html` day headers to launch complete sequential routes in a single tap.
+- **Corridor-Clustered Day Presets (ROUTE-02)**:
+  - Re-clustered offline day presets in `Project/src/app/core/data/offline-places.data.ts` into 3 geographic corridors: East (Bongabon 1.5 km), North (San Jose–Pantabangan 13.8 km), and South (Cabanatuan–Gen. Tinio–Gapan 45.5 km).
+  - Reduced straight-line cross-provincial transit distance by 66.3% (from 176.2 km to 59.4 km), eliminating the General Tinio $\rightarrow$ Pantabangan $\rightarrow$ Gapan zig-zag.
+- **Deep-Link Pin Auto-Selection & Bottom Sheet Display (MAP-03)**:
+  - Handled `placeId` in `MapPage` query parameters to resolve target POI and open `PlaceDetailSheetComponent`.
+  - Added `isProgrammaticFly` camera guard to suppress Leaflet `moveend` event overwrites during flight.
+- **Full-Stack Municipality & Price Tier Filtering (MAP-02)**:
+  - Added `municipality_name` and `price_tier` parameters to backend `GET /api/v1/places`, filtering SQL candidates before LIMIT.
+  - Mirrored filtering in `PlaceService.getFilteredLocalPlaces()` and passed filters from `MapPage.loadPlaces()`.
+
+### Changed
+- **Saved Itinerary Visual Flagship Alignment (Phase 28.1, UIUX-01 to UIUX-07)**:
+  - Restored 68×68px stop thumbnail photos, step numbering badges, category pills, and honest cost indicators on `.activity-view-card`.
+  - Replaced destructive regex in `formatTimingHour()` with `getTimingTime(stop, sIdx)` displaying complete 12-hour AM/PM time windows.
+  - Eliminated hardcoded `?? 200` cost fallbacks; displayed *Fee not listed* on unpriced stops and aligned totals with `budgetSummary`.
+  - Unified header chrome: eliminated redundant stacked `Saved Itineraries [+]` bar in favor of a clean single app toolbar (`← Trip Title | [Share] [Edit]`).
+  - Wired header Share button (`share-social-outline`) to `openShareModal()`.
+  - Restored interactive dashed *Explore Nearby Places* trigger banner in each day card calling `openNearbyPlaces()` with back navigation.
+  - Bound human-readable `formattedDateSpan` on trip details card and removed dead `→` arrow icon.
+  - Pruned legacy unused CSS in `itinerary-detail.page.scss` to strictly satisfy Angular's 16.00 kB component style budget.
+- **Leaflet MarkerCluster ESM Production Resilience (MAP-01)**:
+  - Attached unwrapped canonical Leaflet object to `window.L` at module top-level and added fallback to `L.layerGroup()` if `markerClusterGroup` is not found in production esbuild bundles.
+- **Nearby Places Persistence (ROUTE-03)**:
+  - Ensured added nearby places in `ItineraryDetailPage` resolve dynamic fallback coordinates from active day stops and persist via `this.itineraryService.updateItinerary()`.
+
 ## [0.21.0] - 2026-11-06
 ### Added
 - **Full Client-Side OpenStreetMap POI Dataset (`assets/data/osm_places.json`)**:
