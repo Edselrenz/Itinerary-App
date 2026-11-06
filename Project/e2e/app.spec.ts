@@ -90,4 +90,68 @@ test.describe('Nueva Ecija Travel Itinerary Planner E2E Journey', () => {
     await expect(page).toHaveURL(/\/custom-builder/);
     await expect(page.locator('.main-heading')).toContainText('Tell us your travel details');
   });
+
+  test('displays places on map and opens place detail sheet when tapped from list view', async ({ page }) => {
+    await page.goto('/tabs/map');
+    await expect(page).toHaveURL(/\/tabs\/map/);
+    await expect(page.locator('#leaflet-map')).toBeVisible();
+
+    // Verify POI list toggle button shows loaded destinations
+    const listPill = page.locator('.poi-list-toggle-pill');
+    await expect(listPill).toBeVisible();
+
+    // Capture screenshot of the map view with destinations
+    await page.screenshot({
+      path: 'C:/Users/Edward/.gemini/antigravity/brain/b414e2ac-5be5-4176-b1a9-9ec4a2178554/map_places_display.png',
+    });
+
+    // Open POI list drawer
+    await listPill.click();
+    const drawer = page.locator('.poi-list-drawer');
+    await expect(drawer).toBeVisible();
+
+    // Verify destinations exist in the list
+    const firstCard = drawer.locator('.drawer-place-card').first();
+    await expect(firstCard).toBeVisible();
+    const placeName = (await firstCard.locator('.drawer-card-name').textContent())?.trim();
+    expect(placeName).toBeTruthy();
+
+    // Tap place to open place detail sheet
+    await firstCard.click();
+
+    // Verify place detail sheet opens with correct venue details and action buttons
+    const detailSheet = page.locator('app-place-detail-sheet');
+    await expect(detailSheet).toBeVisible();
+    await expect(detailSheet.locator('.sheet-title')).toContainText(placeName!);
+    await expect(detailSheet.locator('.btn-suggested')).toBeVisible();
+    await expect(detailSheet.locator('.btn-directions')).toBeVisible();
+
+    // Capture screenshot of the opened place detail sheet
+    await page.screenshot({
+      path: 'C:/Users/Edward/.gemini/antigravity/brain/b414e2ac-5be5-4176-b1a9-9ec4a2178554/place_detail_sheet_open.png',
+    });
+
+    // Close detail sheet
+    await detailSheet.locator('.sheet-close-btn').click();
+    await expect(detailSheet).not.toBeVisible();
+  });
+
+  test('verifies Leaflet map markers and interaction on canvas', async ({ page }) => {
+    await page.goto('/tabs/map');
+    await expect(page.locator('#leaflet-map')).toBeVisible();
+
+    // Wait for Leaflet marker layer pane to attach to the map DOM
+    const markerPane = page.locator('.leaflet-marker-pane');
+    await expect(markerPane).toBeAttached();
+
+    // Verify at least one marker icon exists on the map
+    const marker = page.locator('.leaflet-marker-icon').first();
+    await expect(marker).toBeVisible({ timeout: 10000 });
+
+    // Click marker
+    await marker.click({ force: true });
+
+    // Verify map remains responsive and intact
+    await expect(page.locator('#leaflet-map')).toBeVisible();
+  });
 });
