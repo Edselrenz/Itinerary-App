@@ -3068,6 +3068,33 @@ This log records chronological development sessions, detailing objectives, execu
   - `docs/DEVELOPMENT_LOG.md`
 - **Status**: Completed Phase 30; All 5 Gaps (GAP-01 through GAP-05) resolved and 100% verified.
 
+---
+
+## Session 85: Ingestion & Formal Documentation of Suggested & Custom Itinerary Live Evaluation (Phase 31)
+- **Date & Time**: 2026-11-07 08:00:00 (Local)
+- **Objective**: Ingest, synthesize, and formally document `suggested_and_custom_itinerary_live_evaluation.pdf` (v4.0), recording live server audit findings on `edselrenz.github.io/Itinerary-App`, evaluating preference compliance (Test A vs. Test B), schedule time collisions (`10:00 AM – 12:00 PM`), destination input autofill friction, and staging Phase 31 in `docs/TODO.md`.
+- **Tasks Performed**:
+  - Extracted and analyzed all 7 pages of `suggested_and_custom_itinerary_live_evaluation.pdf`.
+  - Audited the live questionnaire form: identified missing autocomplete, horizontal chip clipping (`overflow-x: auto` slicing Gapan City to `"G..."`), and 6/32 LGU coverage.
+  - Documented controlled 3-day Pantabangan live experiment (Test A: Food+Culture+Resort vs. Test B: Nature Only):
+    - 0% preference turnover on Day 1 (Stops 1 & 2 100% identical).
+    - 100% time slot collisions (`10:00 AM – 12:00 PM` across all 3 stops on Day 1 and all 9 stops in Test B).
+    - Backwards time scheduling (Highland Bali Villas scheduled at 10:00 AM after a 1:00 PM stop).
+    - Cross-day duplicate entities (Pantabangan Dam repeated Day 2/3, George Point repeated Day 1/3).
+    - Extreme pacing in Nature & Parks (3 consecutive mountain hikes per day with 0 dining stops or rest breaks).
+  - Cataloged 6 Preference & Scheduling bugs (`PREF-01` to `PREF-06`) and 3 Custom Builder bugs (`CUST-01` to `CUST-03`).
+  - Authored master specification document [`docs/SUGGESTED_AND_CUSTOM_ITINERARY_LIVE_EVALUATION.md`](file:///c:/Users/Edward/Desktop/CaseStudy/docs/SUGGESTED_AND_CUSTOM_ITINERARY_LIVE_EVALUATION.md).
+  - Updated [`docs/TODO.md`](file:///c:/Users/Edward/Desktop/CaseStudy/docs/TODO.md) staging Phase 31 (Phases 31.1, 31.2, and 31.3).
+  - Updated [`docs/KNOWN_ISSUES.md`](file:///c:/Users/Edward/Desktop/CaseStudy/docs/KNOWN_ISSUES.md) adding Section 11 tracking `PREF-01` through `PREF-06` and `CUST-01` through `CUST-03` as staged.
+  - Updated [`docs/PROJECT_STATE.md`](file:///c:/Users/Edward/Desktop/CaseStudy/docs/PROJECT_STATE.md) linking Phase 31 as the active development roadmap.
+- **Files Created / Modified**:
+  - `docs/SUGGESTED_AND_CUSTOM_ITINERARY_LIVE_EVALUATION.md` (Created)
+  - `docs/TODO.md`
+  - `docs/KNOWN_ISSUES.md`
+  - `docs/DEVELOPMENT_LOG.md`
+  - `docs/PROJECT_STATE.md`
+- **Status**: Documented & Staged for Phased Implementation (Phase 31).
+
 
 
 

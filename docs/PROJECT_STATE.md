@@ -7,10 +7,10 @@ This document serves as the primary handoff reference for developers and coding 
 ## 1. Project Status Overview
 
 - **Application Name**: Nueva Ecija Travel Itinerary (MVP & GIS Architecture Upgrade)
-- **Current Development Phase**: **Phase 30 Completed & Verified (Live-Server Map & Suggested Itinerary Routing Upgrade)**
+- **Current Development Phase**: **Phase 30 Completed & Verified; Phase 31 (Suggested & Custom Itinerary Preference Engine, Destination Autofill & Catalog Browse Upgrade) Staged**
 - **Last Verified Working State**: **Phase 30 Completed & Verified** (27/27 test files and 272/272 frontend unit tests passing [100%], 21/21 backend Pytest cases [100%], clean Angular production build in `Project/www` with code 0 and 0 stylesheet budget warnings/overruns; resolved GAP-01 per-leg commute metrics and connector badges, GAP-02 isolated route focus mode on `MapPage` with floating route controls and stop carousel, GAP-03 pre-save draft persistence in `ItineraryService` preventing data loss on Full Map inspection, GAP-04 auto-clearing map tile error banner and resilient connectivity reconciliation, and GAP-05 bi-directional stop card pan & pulsing pin highlighting).
-- **Recent Audit & Roadmap Execution**: Fulfilled all objectives of `live_server_map_and_suggested_itinerary_proposal.pdf` ([LIVE_SERVER_MAP_AND_SUGGESTED_ITINERARY_PROPOSAL.md](./LIVE_SERVER_MAP_AND_SUGGESTED_ITINERARY_PROPOSAL.md)), resolving all 5 live-server gaps across Phases 30.1, 30.2, 30.3, and 30.4.
-- **Current Active Tasks**: All Phase 30 tasks completed; staging for next operational deployments or native packaging.
+- **Recent Audit & Roadmap Expansion**: Ingestion and formal documentation of `suggested_and_custom_itinerary_live_evaluation.pdf` ([SUGGESTED_AND_CUSTOM_ITINERARY_LIVE_EVALUATION.md](./SUGGESTED_AND_CUSTOM_ITINERARY_LIVE_EVALUATION.md)), auditing live server preference compliance (0% Day 1 turn, 100% 10:00 AM collisions, backwards time, duplicate cross-day venues, 3 mountain hikes/day), destination input friction (0 autofill, clipped chips), and Custom Builder 17-place default, staging **Phase 31** in `TODO.md` (Phases 31.1 to 31.3).
+- **Current Active Tasks**: Staged for execution of Phase 31.1 (P0: Destination Autofill Combobox, 32 LGUs & Wrapped Quick-Select Pills).
 - **Current Blockers**: **None**.
 
 ---
