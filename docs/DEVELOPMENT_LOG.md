@@ -3095,6 +3095,61 @@ This log records chronological development sessions, detailing objectives, execu
   - `docs/PROJECT_STATE.md`
 - **Status**: Documented & Staged for Phased Implementation (Phase 31).
 
+---
+
+## Session 86: Implementation & Verification of Phase 31 (Destination Autofill, Preference Engine & Custom Builder Catalog Upgrade)
+- **Date & Time**: 2026-11-07 08:45:00 (Local)
+- **Objective**: Execute and verify Phase 31 end-to-end to remediate all 6 preference scheduling defects (`PREF-01..06`) and 3 custom builder defects (`CUST-01..03`) identified in `suggested_and_custom_itinerary_live_evaluation.pdf`.
+- **Tasks Performed**:
+  - **Phase 31.1 (P0 Destination Autofill Combobox, 32 LGUs & Regional Explorer)**:
+    - Created standalone `<app-destination-autocomplete>` in `Project/src/app/shared/components/destination-autocomplete/destination-autocomplete.component.ts` (.html, .scss, .spec.ts).
+    - Indexed all 32 Nueva Ecija LGUs with district groupings (Central, North, South, East), POI counts, and curated highlight tags.
+    - Added curated landmarks (Minalungao National Park, Highland Bali Villas) with automatic parent municipality resolution and `anchor_place_id` assignment.
+    - Implemented Unicode NFD diacritic stripping (`normalizeText()`) enabling unaccented search ("munoz" matches "Science City of Muñoz", "penaranda" matches "Peñaranda").
+    - Replaced clipped single-row horizontal scroll with responsive 2-row wrapped pill grid (`.quick-dest-wrap`) and `🗺️ All 32 Towns` browse modal in both `suggested-wizard.page.html` and `custom-builder.page.html`.
+  - **Phase 31.2 (P0 Preference Category Mapping, Sequential Time Windows & Deduplication)**:
+    - Replaced broken `.includes(pr)` substring checks with canonical `PREFERENCE_CATEGORY_MAP` resolving `food`, `culture`, `nature`, `resort`, and `shopping`.
+    - Applied strict category gating on Day 1 activity slots within an expanding radius ($15 \to 30 \to 45$ km).
+    - Replaced hardcoded static `10:00 AM - 12:00 PM` timestamps with rolling sequential non-overlapping time slot windows (`09:30 AM – 11:30 AM`, `12:00 PM – 01:30 PM`, `03:00 PM – 05:00 PM`) calculating real inter-stop travel duration.
+    - Fixed backwards time ordering for overnight lodging (`isOvernightItem`).
+    - Implemented Smart Midday Lunch Anchor prioritizing dining venues in the noon slot.
+    - Added Activity Intensity Guard (`isMountainPeak` in TS and `is_mountain_peak` in Python) capping strenuous summit hikes to max 1 per day.
+    - Implemented cross-day fuzzy venue name normalization (`normalizeVenueName` / `normalize_venue_name`) and physical coordinate proximity deduplication ($< 200$m) in frontend and backend generators.
+    - Decoupled fast-path live discovery in `itinerary_generator.py` and increased HTTP timeout from 4s to 10s (`timeout(10000)`).
+  - **Phase 31.3 (P1 Custom Builder Catalog Browse & Preference Tab Sync)**:
+    - In `custom-builder.page.ts`, updated `loadBrowsePlaces()` to query `searchPlaces({ municipality_name: dest, limit: 100 })` pre-loading all local POIs for the chosen town across the 2,673 POI catalog.
+    - Fixed category mapping in `proceedToBuilder()` so selecting Culture maps to `'Culture & Heritage'` and Resort maps to `'Resorts & Stays'`.
+    - Added `'✨ Recommended for You'` tab combining multi-preference selections with canonical category filtering.
+    - Updated `calculateNextStopTime()` and `autoOptimizeDaySchedule()` with dynamic Haversine distance-based transit buffer calculation.
+  - **Verification & Testing**:
+    - Ran Angular Vitest unit test suite: 28/28 test suites passed, 286/286 unit tests passed (100% pass rate).
+    - Ran Python backend Pytest suite: 21/21 tests passed (100% pass rate).
+    - Ran Angular production build (`npm run build`): Generated cleanly with 0 errors, 0 warnings, and 0 budget threshold overruns.
+  - **Documentation & Tracking**:
+    - Checked off all items in `docs/TODO.md` (Phase 31.1, 31.2, 31.3).
+    - Updated `docs/KNOWN_ISSUES.md` marking `PREF-01..06` and `CUST-01..03` as RESOLVED.
+    - Updated `docs/PROJECT_STATE.md`.
+- **Files Created / Modified**:
+  - `Project/src/app/shared/components/destination-autocomplete/destination-autocomplete.component.ts` (Created)
+  - `Project/src/app/shared/components/destination-autocomplete/destination-autocomplete.component.html` (Created)
+  - `Project/src/app/shared/components/destination-autocomplete/destination-autocomplete.component.scss` (Created)
+  - `Project/src/app/shared/components/destination-autocomplete/destination-autocomplete.component.spec.ts` (Created)
+  - `Project/src/app/core/services/itinerary.service.ts`
+  - `Project/src/app/core/services/itinerary.service.spec.ts`
+  - `Project/src/app/features/itinerary/suggested-wizard/suggested-wizard.page.ts`
+  - `Project/src/app/features/itinerary/suggested-wizard/suggested-wizard.page.html`
+  - `Project/src/app/features/itinerary/suggested-wizard/suggested-wizard.page.scss`
+  - `Project/src/app/features/itinerary/custom-builder/custom-builder.page.ts`
+  - `Project/src/app/features/itinerary/custom-builder/custom-builder.page.html`
+  - `Project/src/app/features/itinerary/custom-builder/custom-builder.page.scss`
+  - `Project/src/app/features/itinerary/custom-builder/custom-builder.page.spec.ts`
+  - `backend/app/algorithms/itinerary_generator.py`
+  - `docs/TODO.md`
+  - `docs/KNOWN_ISSUES.md`
+  - `docs/PROJECT_STATE.md`
+  - `docs/DEVELOPMENT_LOG.md`
+- **Status**: Completed Phase 31; All 6 Preference Scheduling defects and 3 Custom Builder defects resolved and 100% verified.
+
 
 
 

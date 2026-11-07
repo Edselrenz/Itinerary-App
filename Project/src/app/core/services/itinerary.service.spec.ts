@@ -857,13 +857,13 @@ describe('ItineraryService', () => {
       const day2 = plan.days[1];
       expect(day2.items.length).toBe(4);
       expect(day2.items[0].custom_title).toBe('Farm Villaronte');
-      expect(day2.items[0].planned_time).toBe('09:00');
+      expect(day2.items[0].planned_time).toContain('09:30 AM');
       expect(day2.items[0].sort_order).toBe(1);
       expect(day2.items[1].custom_title).toBe('George Point');
-      expect(day2.items[1].planned_time).toBe('12:00');
+      expect(day2.items[1].planned_time).toContain('12:00 PM');
       expect(day2.items[1].sort_order).toBe(2);
       expect(day2.items[2].custom_title).toBe('Pantabangan Dam and Lake Viewpoint');
-      expect(day2.items[2].planned_time).toBe('13:00');
+      expect(day2.items[2].planned_time).toContain('03:00 PM');
       expect(day2.items[2].sort_order).toBe(3);
       expect(day2.items[3].custom_title).toBe('Highland Bali Villas Resort and Spa');
       expect(day2.items[3].sort_order).toBe(4);

@@ -747,42 +747,42 @@ This checklist tracks completed, active, and pending tasks across all developmen
 
 ---
 
-## Phase 31: Suggested & Custom Itinerary Preference Engine, Destination Autofill & Catalog Browse Upgrade
+## Phase 31: Suggested & Custom Itinerary Preference Engine, Destination Autofill & Catalog Browse Upgrade (COMPLETED)
 > Ref: [suggested_and_custom_itinerary_live_evaluation.pdf](file:///c:/Users/Edward/Desktop/CaseStudy/suggested_and_custom_itinerary_live_evaluation.pdf) & [SUGGESTED_AND_CUSTOM_ITINERARY_LIVE_EVALUATION.md](./SUGGESTED_AND_CUSTOM_ITINERARY_LIVE_EVALUATION.md)
 
-### Phase 31.1: P0 Destination Autofill Combobox, 32 LGUs & Wrapped Quick-Select Pills (STAGED)
-- [ ] **31.1.1 (Reusable Destination Autocomplete Component)**:
+### Phase 31.1: P0 Destination Autofill Combobox, 32 LGUs & Wrapped Quick-Select Pills (COMPLETED)
+- [x] **31.1.1 (Reusable Destination Autocomplete Component)**:
   - Create `<app-destination-autocomplete>` in `Project/src/app/shared/components/destination-autocomplete/destination-autocomplete.component.ts` (.html, .scss, .spec.ts).
   - Index all 32 Nueva Ecija municipalities/cities with district groupings, POI counts, and top highlight vibe tags.
   - Index loaded featured landmarks/attractions (e.g., Minalungao National Park, Highland Bali Villas) with automatic parent municipality resolution and `anchor_place_id` assignment.
   - Implement Unicode NFD diacritic stripping (`normalizeText()`) so unaccented typing (e.g. "munoz", "penaranda") correctly resolves to "Science City of Muñoz" and "Peñaranda".
   - Integrate combobox into both `suggested-wizard.page.html` and `custom-builder.page.html`.
-- [ ] **31.1.2 (Responsive 2-Row Wrapped Chips & Regional Explorer Modal)**:
+- [x] **31.1.2 (Responsive 2-Row Wrapped Chips & Regional Explorer Modal)**:
   - Replace clipped single-row horizontal scroll (`overflow-x: auto`) in `suggested-wizard.page.scss` with a responsive wrapped pill grid (`flex-wrap: wrap`) displaying the top 6 travel hubs without text truncation.
   - Add an interactive `🗺️ Browse All 32 Towns` trigger chip opening a categorized North / Central / South / East Nueva Ecija regional picker modal.
 
-### Phase 31.2: P0 Preference Category Mapping, Sequential Time Windows & Deduplication (STAGED)
-- [ ] **31.2.1 (PREF-02 & PREF-03: Canonical Preference Category Mapping & Strict Filtering)**:
+### Phase 31.2: P0 Preference Category Mapping, Sequential Time Windows & Deduplication (COMPLETED)
+- [x] **31.2.1 (PREF-02 & PREF-03: Canonical Preference Category Mapping & Strict Filtering)**:
   - In `Project/src/app/core/services/itinerary.service.ts`, replace broken `.includes(pr)` substring checks with canonical `PREFERENCE_CATEGORY_MAP` resolving `food` -> `['restaurant', 'cafe']`, `culture` -> `['museum_cultural', 'church_religious']`, `nature` -> `['nature_park', 'tourist_attraction']`, `resort` -> `['resort_swimming', 'hotel_accommodation']`, and `shopping` -> `['shopping_market', 'convenience_store']`.
   - Apply strict category gating on Day 1 activity slots within an expanding radius ($15\text{ km} \to 30\text{ km} \to 45\text{ km}$) so selecting "Nature & Parks ONLY" immediately updates Day 1 stops.
-- [ ] **31.2.2 (PREF-04: Sequential Rolling Time Slots with Transit Buffer)**:
+- [x] **31.2.2 (PREF-04: Sequential Rolling Time Slots with Transit Buffer)**:
   - Replace hardcoded static `10:00 AM - 12:00 PM` timestamps in `itinerary.service.ts` with sequential non-overlapping time slot windows (`09:30 AM – 11:30 AM`, `12:00 PM – 01:30 PM`, `03:00 PM – 05:00 PM`) calculating real inter-stop travel duration.
   - Fix backwards time ordering in `isOvernightItem()` so lodging is scheduled chronologically at end-of-day.
-- [ ] **31.2.3 (PREF-05: Pacing & Smart Dining Anchor)**:
+- [x] **31.2.3 (PREF-05: Pacing & Smart Dining Anchor)**:
   - Add lightweight Smart Dining toggle ("Include Daily Lunch Spot", default: ON) so single-category runs (e.g. Nature & Parks) always schedule 1 realistic midday dining stop (`12:00 PM – 01:30 PM`).
-  - Add activity intensity guard (`isMountainPeak`) capping strenuous mountain hikes to max 1 per day.
-- [ ] **31.2.4 (PREF-06: Cross-Day Fuzzy Venue Name & Coordinate Deduplication)**:
-  - Implement `normalizeVenueName()` stripping common venue suffixes (`viewdeck`, `resto`, `resort`, `villas`) and check physical proximity ($< 200\text{ m}$) preventing duplicate venues across different days.
-- [ ] **31.2.5 (PREF-01: Decoupled Fast-Path Generation & Increased Timeout)**:
+  - Add activity intensity guard (`isMountainPeak` / `is_mountain_peak`) capping strenuous mountain hikes to max 1 per day across frontend and backend generators.
+- [x] **31.2.4 (PREF-06: Cross-Day Fuzzy Venue Name & Coordinate Deduplication)**:
+  - Implement `normalizeVenueName()` / `normalize_venue_name()` stripping common venue suffixes (`viewdeck`, `resto`, `resort`, `villas`) and check physical proximity ($< 200\text{ m}$) preventing duplicate venues across different days.
+- [x] **31.2.5 (PREF-01: Decoupled Fast-Path Generation & Increased Timeout)**:
   - In `backend/app/algorithms/itinerary_generator.py`, default `include_live_places = False` when local database contains $\ge 15$ candidates in bounding box.
   - Increase HTTP timeout in `itinerary.service.ts:360` from 4s to 10s (`timeout(10000)`).
 
-### Phase 31.3: P1 Custom Builder Catalog Browse & Preference Tab Sync (STAGED)
-- [ ] **31.3.1 (CUST-01 & CUST-02: Full 2,673-POI Catalog Pre-Loading & Preference Filter Sync)**:
+### Phase 31.3: P1 Custom Builder Catalog Browse & Preference Tab Sync (COMPLETED)
+- [x] **31.3.1 (CUST-01 & CUST-02: Full 2,673-POI Catalog Pre-Loading & Preference Filter Sync)**:
   - In `custom-builder.page.ts:865–879`, query `searchPlaces({ municipality_name: dest, limit: 100 })` pre-loading all local POIs for the chosen town instead of restricting to 17 featured places.
   - Fix category mapping in `proceedToBuilder()` so selecting Culture & History or Resort in Step 1 maps to matching categories instead of a restricted `Tourist Spots` tab.
   - Add `✨ Recommended for You` tab combining all selected Step 1 preferences.
-- [ ] **31.3.2 (CUST-03: Timeline Auto-Schedule Inter-Stop Transit Buffer)**:
+- [x] **31.3.2 (CUST-03: Timeline Auto-Schedule Inter-Stop Transit Buffer)**:
   - In `custom-builder.page.ts:1165–1195`, update `autoOptimizeDaySchedule()` to incorporate inter-stop transit time between stops rather than scheduling back-to-back ($0\text{ min}$) transit.
 
 

@@ -357,7 +357,7 @@ export class ItineraryService {
     }
 
     return this.http.post<Itinerary>(`${this.baseUrl}/suggest`, request).pipe(
-      timeout(4000),
+      timeout(10000),
       tap((plan) => {
         if (request.save_immediately && plan.id) {
           if (this.authService.isAuthenticated()) {
@@ -782,6 +782,42 @@ export class ItineraryService {
     this.itinerariesSubject.next(list);
   }
 
+  public readonly PREFERENCE_CATEGORY_MAP: Record<string, string[]> = {
+    nature: ['nature_park', 'tourist_attraction', 'nature'],
+    food: ['restaurant', 'cafe', 'food'],
+    culture: ['museum_cultural', 'church_religious', 'historical', 'culture'],
+    shopping: ['shopping_market', 'convenience_store', 'shopping'],
+    resort: ['resort_swimming', 'hotel_accommodation', 'resort'],
+  };
+
+  public normalizeVenueName(name: string): string {
+    return (name || '')
+      .toLowerCase()
+      .replace(/\b(viewdeck|viewpoint|and|&|resto|restaurant|cafe|resort|spa|hotel|villas|park|shrine|memorial)\b/g, '')
+      .replace(/[^a-z0-9]/g, '');
+  }
+
+  public isMountainPeak(name: string): boolean {
+    return /^(\bmt\.?\b|\bmount\b)/i.test((name || '').trim());
+  }
+
+  public isDiningVenue(categoryKey: string): boolean {
+    const key = (categoryKey || '').toLowerCase();
+    return key === 'restaurant' || key === 'cafe' || key.includes('food');
+  }
+
+  public formatMinutesTo12Hr(minutes: number): string {
+    const wrapped = ((minutes % 1440) + 1440) % 1440;
+    let hours = Math.floor(wrapped / 60);
+    const mins = wrapped % 60;
+    const period = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    if (hours === 0) hours = 12;
+    const padH = hours < 10 ? `0${hours}` : `${hours}`;
+    const padM = mins < 10 ? `0${mins}` : `${mins}`;
+    return `${padH}:${padM} ${period}`;
+  }
+
   private parseTimeToMinutes(timeStr: string | null | undefined): number {
     if (!timeStr) return 9 * 60;
     const lower = timeStr.toLowerCase().trim();
@@ -920,7 +956,14 @@ export class ItineraryService {
       }
     }
 
-    // Sort by preferences and budget
+    // Build canonical allowed category set from user preferences (PREF-02)
+    const allowedCategories = new Set<string>();
+    for (const pr of prefs) {
+      const mapped = this.PREFERENCE_CATEGORY_MAP[pr] || [pr];
+      mapped.forEach((c) => allowedCategories.add(c.toLowerCase()));
+    }
+
+    // Sort by preferences and budget with strong preference weighting (PREF-02, PREF-03)
     matchedPool.sort((a, b) => {
       let aScore = 0;
       let bScore = 0;
@@ -931,13 +974,12 @@ export class ItineraryService {
       }
 
       if (prefs.length > 0) {
+        if (allowedCategories.has(a.categoryKey.toLowerCase())) aScore += 25;
+        if (allowedCategories.has(b.categoryKey.toLowerCase())) bScore += 25;
+
         for (const pr of prefs) {
-          if (a.categoryKey.toLowerCase().includes(pr) || a.tags.some((t) => t.toLowerCase().includes(pr))) {
-            aScore += 5;
-          }
-          if (b.categoryKey.toLowerCase().includes(pr) || b.tags.some((t) => t.toLowerCase().includes(pr))) {
-            bScore += 5;
-          }
+          if (a.tags.some((t) => t.toLowerCase().includes(pr))) aScore += 5;
+          if (b.tags.some((t) => t.toLowerCase().includes(pr))) bScore += 5;
         }
       }
 
@@ -960,7 +1002,33 @@ export class ItineraryService {
     const itineraryId = this.generateId();
     const days: ItineraryDay[] = [];
     const now = new Date().toISOString();
+
+    // Cross-day deduplication tracking (PREF-06: ID, fuzzy venue name, and coordinate proximity)
     const usedPlaceIds = new Set<string>();
+    const usedVenueNormNames = new Set<string>();
+    const usedCoords: Array<{ lat: number; lng: number }> = [];
+
+    const isPlaceDuplicate = (place: OfflineCuratedPlace): boolean => {
+      if (usedPlaceIds.has(place.id)) return true;
+      const norm = this.normalizeVenueName(place.name);
+      if (norm.length >= 4 && usedVenueNormNames.has(norm)) return true;
+      if (
+        usedCoords.some(
+          (c) =>
+            haversineDistanceMeters(place.lat, place.lng, c.lat, c.lng) < 200
+        )
+      ) {
+        return true;
+      }
+      return false;
+    };
+
+    const markPlaceUsed = (place: OfflineCuratedPlace): void => {
+      usedPlaceIds.add(place.id);
+      const norm = this.normalizeVenueName(place.name);
+      if (norm.length >= 4) usedVenueNormNames.add(norm);
+      usedCoords.push({ lat: place.lat, lng: place.lng });
+    };
 
     for (let d = 0; d < totalDays; d++) {
       const dayDate = addDaysLocal(start, d);
@@ -975,34 +1043,57 @@ export class ItineraryService {
 
       if (cluster) {
         dayPlaces = [...cluster.places];
+        dayPlaces.forEach((p) => markPlaceUsed(p));
       } else {
         // Dynamic assignment preventing cross-day repetition
         if (d === 0 && anchorPlace) {
           dayPlaces.push(anchorPlace);
-          usedPlaceIds.add(anchorPlace.id);
+          markPlaceUsed(anchorPlace);
         }
 
-        // Find unused candidates from matchedPool
-        let candidates = matchedPool.filter((p) => !usedPlaceIds.has(p.id));
+        // Find unused candidates from matchedPool using fuzzy deduplication (PREF-06)
+        let candidates = matchedPool.filter((p) => !isPlaceDuplicate(p));
         if (candidates.length < 3) {
-          // Fill from general curatedPool
+          // Fill from general curatedPool without duplicating venues
           const extra = curatedPool.filter(
-            (p) => !usedPlaceIds.has(p.id) && !candidates.some((c) => c.id === p.id)
+            (p) => !isPlaceDuplicate(p) && !candidates.some((c) => c.id === p.id)
           );
           candidates = [...candidates, ...extra];
         }
 
-        // If pool is completely exhausted, recycle from matchedPool
+        // Only if ALL unique venues across the entire province are exhausted do we allow recycling, but NEVER within the same day
         if (candidates.length < 3) {
-          candidates = [...candidates, ...matchedPool.filter((p) => !candidates.some((c) => c.id === p.id))];
+          const recyclable = curatedPool.filter((p) => !dayPlaces.some((dp) => dp.id === p.id));
+          candidates = [...candidates, ...recyclable];
         }
 
-        // Add places up to 3 stops per day
+        // Add places up to 3 stops per day with Smart Midday Dining Anchor (PREF-05) and Max 1 Hike/Day
         while (dayPlaces.length < 3 && candidates.length > 0) {
-          const next = candidates.shift()!;
-          if (!dayPlaces.some((p) => p.id === next.id)) {
+          const currentSlot = dayPlaces.length;
+
+          // Slot 1 (middle stop around noon): prioritize dining venue if available
+          if (currentSlot === 1 && candidates.some((c) => this.isDiningVenue(c.categoryKey))) {
+            const diningIdx = candidates.findIndex((c) => this.isDiningVenue(c.categoryKey));
+            if (diningIdx >= 0) {
+              const diningPlace = candidates.splice(diningIdx, 1)[0];
+              dayPlaces.push(diningPlace);
+              markPlaceUsed(diningPlace);
+              continue;
+            }
+          }
+
+          // Activity Intensity Guard: Max 1 mountain peak per day (PREF-05)
+          const hasMountainAlready = dayPlaces.some((p) => this.isMountainPeak(p.name));
+          let nextIdx = 0;
+          if (hasMountainAlready) {
+            nextIdx = candidates.findIndex((c) => !this.isMountainPeak(c.name));
+            if (nextIdx < 0) nextIdx = 0;
+          }
+
+          const next = candidates.splice(nextIdx, 1)[0];
+          if (next && !dayPlaces.some((p) => p.id === next.id)) {
             dayPlaces.push(next);
-            usedPlaceIds.add(next.id);
+            markPlaceUsed(next);
           }
         }
       }
@@ -1155,6 +1246,21 @@ export class ItineraryService {
           });
         }
       }
+
+      // Assign sequential, non-overlapping rolling time windows taking transit into account (PREF-04)
+      const DEFAULT_SLOT_STARTS = [9 * 60 + 30, 12 * 60 + 0, 15 * 60 + 0]; // 09:30 AM, 12:00 PM, 03:00 PM
+      let rollingMinutes = 9 * 60 + 30;
+
+      items.forEach((item, idx) => {
+        const dur = item.duration_minutes || (idx === 1 ? 90 : 120);
+        const travelMins = idx > 0 && item.travel_duration_seconds
+          ? Math.max(15, Math.round(item.travel_duration_seconds / 60))
+          : (idx > 0 ? 20 : 0);
+        const startMins = Math.max(DEFAULT_SLOT_STARTS[idx] ?? rollingMinutes, rollingMinutes + travelMins);
+        const endMins = startMins + dur;
+        item.planned_time = `${this.formatMinutesTo12Hr(startMins)} - ${this.formatMinutesTo12Hr(endMins)}`;
+        rollingMinutes = endMins;
+      });
 
       const primaryMuni =
         cluster?.municipality ||

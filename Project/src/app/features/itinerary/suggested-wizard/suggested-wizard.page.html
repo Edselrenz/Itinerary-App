@@ -25,22 +25,20 @@
     </div>
 
     <form [formGroup]="form" class="wizard-form">
-      <!-- Destination Field -->
-      <div class="form-group">
-        <label for="destination-input" class="group-label">Destination</label>
-        <div class="figma-input-box">
-          <ion-icon name="location-sharp" class="input-blue-icon"></ion-icon>
-          <input
-            id="destination-input"
-            type="text"
-            formControlName="destination"
-            class="core-input"
-            placeholder="Choose a destination"
-            aria-label="Destination"
-          />
-        </div>
-        <!-- Quick Destination Chips (UI-01) -->
-        <div class="quick-dest-row" role="group" aria-label="Quick destination suggestions">
+      <!-- Destination Field with Combobox & Wrapped Quick Chips -->
+      <div class="form-group destination-form-group">
+        <label for="suggested-dest-autocomplete-input" class="group-label">Destination</label>
+        <app-destination-autocomplete
+          #destinationAutocomplete
+          inputId="suggested-dest-autocomplete-input"
+          [destination]="form.get('destination')?.value || ''"
+          (destinationChange)="setDestination($event)"
+          (destinationSelected)="onDestinationSelected($event)"
+          placeholder="Choose a town, city, or landmark"
+        ></app-destination-autocomplete>
+
+        <!-- Quick Destination Wrapped Grid + All 32 Towns Trigger (UI-01 & Phase 31.1) -->
+        <div class="quick-dest-wrap" role="group" aria-label="Quick destination suggestions">
           @for (dest of quickDestinations; track dest) {
           <button
             type="button"
@@ -52,6 +50,14 @@
             <span>{{ dest }}</span>
           </button>
           }
+          <button
+            type="button"
+            class="browse-all-towns-chip"
+            (click)="destinationAutocomplete.openAllTownsModal($event)"
+          >
+            <ion-icon name="map-outline" class="dest-chip-icon"></ion-icon>
+            <span>🗺️ All 32 Towns</span>
+          </button>
         </div>
       </div>
 
@@ -350,7 +356,9 @@
               <div *ngIf="stop.place?.rating" class="stop-rating-pill">
                 <ion-icon name="star"></ion-icon>
                 <span>{{ stop.place.rating.toFixed(1) }}</span>
-                <span *ngIf="stop.place.user_rating_count" class="rating-count">({{ stop.place.user_rating_count }})</span>
+                <span *ngIf="stop.place.user_rating_count" class="rating-count"
+                  >({{ stop.place.user_rating_count }})</span
+                >
               </div>
             </div>
             <div class="stop-timing-block">
@@ -597,15 +605,15 @@
        STOP DETAILS SHEET (Powered by PlaceDetailSheetComponent)
        ======================================================== -->
   @if (isStopModalOpen && selectedStopPlace) {
-    <div class="bottom-sheet-backdrop" (click)="closeStopDetail()"></div>
-    <app-place-detail-sheet
-      class="poi-bottom-sheet"
-      [place]="selectedStopPlace"
-      [stopNotes]="selectedStop?.notes"
-      [commuteInfo]="selectedStopCommuteInfo"
-      [showAddToTripActions]="false"
-      [showNavigationAction]="true"
-      (closeSheet)="closeStopDetail()"
-    ></app-place-detail-sheet>
+  <div class="bottom-sheet-backdrop" (click)="closeStopDetail()"></div>
+  <app-place-detail-sheet
+    class="poi-bottom-sheet"
+    [place]="selectedStopPlace"
+    [stopNotes]="selectedStop?.notes"
+    [commuteInfo]="selectedStopCommuteInfo"
+    [showAddToTripActions]="false"
+    [showNavigationAction]="true"
+    (closeSheet)="closeStopDetail()"
+  ></app-place-detail-sheet>
   }
 </ion-content>

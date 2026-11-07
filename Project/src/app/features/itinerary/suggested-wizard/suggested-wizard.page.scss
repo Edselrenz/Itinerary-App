@@ -54,18 +54,17 @@
   color: #000000;
 }
 
-/* Quick Destination Chips (UI-01) */
-.quick-dest-row {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  padding: 4px 2px 6px;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
+.destination-form-group {
+  position: relative;
+  z-index: 25;
+}
 
-  &::-webkit-scrollbar {
-    display: none;
-  }
+/* Quick Destination Chips (UI-01 & Phase 31.1) */
+.quick-dest-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 2px 4px;
 }
 
 .quick-dest-chip {
@@ -103,6 +102,32 @@
     .dest-chip-icon {
       color: #ffffff;
     }
+  }
+}
+
+.browse-all-towns-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 9999px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: #eff6ff;
+  border: 1px solid #93c5fd;
+  color: #0084ff;
+
+  &:hover {
+    background: #dbeafe;
+    border-color: #60a5fa;
+  }
+
+  .dest-chip-icon {
+    font-size: 13px;
+    color: #0084ff;
   }
 }
 

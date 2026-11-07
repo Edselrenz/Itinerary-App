@@ -108,6 +108,24 @@ def is_accommodation_place(place: Place) -> bool:
     return False
 
 
+def normalize_venue_name(name: str | None) -> str:
+    """Normalizes venue names by stripping common stop words and generic venue suffixes (PREF-06)."""
+    if not name:
+        return ""
+    lowered = name.lower()
+    cleaned = re.sub(
+        r"\b(viewdeck|viewpoint|and|&|resto|restaurant|cafe|resort|spa|hotel|villas|park|shrine|memorial)\b",
+        "",
+        lowered,
+    )
+    return re.sub(r"[^a-z0-9]", "", cleaned)
+
+
+def is_mountain_peak(name: str | None) -> bool:
+    """Checks whether a venue is a mountain peak or strenuous summit hike (PREF-05)."""
+    return bool(re.search(r"\b(mt\.?|mount)\b", name or "", re.IGNORECASE))
+
+
 def bayesian_quality_score(
     rating: float | None,
     user_rating_count: int | None,
@@ -190,6 +208,7 @@ def score_place(
     current_day_categories: list[str],
     remaining_daily_budget: float,
     require_dining: bool = False,
+    day_has_mountain: bool = False,
     max_radius_km: float = 25.0,
     planned_time: time | None = None,
     target_weekday: int = 0,
@@ -203,6 +222,10 @@ def score_place(
             score = 10.0
     else:
         score = 50.0
+
+    # Activity intensity guard: limit strenuous mountain hikes to max 1 per day (PREF-05)
+    if day_has_mountain and is_mountain_peak(place.name):
+        score -= 60.0
 
     # Morning slot penalty for overnight accommodation (DEF-03)
     if not require_dining and is_accommodation_place(place):
@@ -317,8 +340,10 @@ def generate_suggested_itinerary_data(
         elif len(candidates) >= min(total_days * 2, 3):
             candidate_places = candidates
 
-    # Live discovery integration: fetch and upsert nearby Google Places if requested or catalog is sparse
-    if getattr(request, "include_live_places", False) or len(candidate_places) < total_days * 3:
+    # Live discovery fast-path (PREF-01): fetch live Google Places only if explicitly requested and local candidates are sparse
+    has_sufficient_local = len(candidate_places) >= max(total_days * 3, 15)
+    should_fetch_live = (getattr(request, "include_live_places", False) and not has_sufficient_local) or len(candidate_places) < total_days * 3
+    if should_fetch_live:
         if settings.google_maps_api_key:
             try:
                 live_places, _ = google_maps_service.search_places_nearby(
@@ -349,8 +374,28 @@ def generate_suggested_itinerary_data(
     if not candidate_places:
         raise ValueError("No active destinations found in Nueva Ecija database.")
 
-    # Track already scheduled places across the entire trip
+    # Track already scheduled places across the entire trip with fuzzy name and proximity deduplication (PREF-06)
     scheduled_place_ids: set[uuid.UUID] = set()
+    scheduled_venue_norms: set[str] = set()
+    scheduled_coords: list[tuple[float, float]] = []
+
+    def is_place_duplicate(p: Place) -> bool:
+        if p.id in scheduled_place_ids:
+            return True
+        norm = normalize_venue_name(p.name)
+        if len(norm) >= 4 and norm in scheduled_venue_norms:
+            return True
+        for lat, lng in scheduled_coords:
+            if haversine_distance_km(p.latitude, p.longitude, lat, lng) < 0.2:
+                return True
+        return False
+
+    def mark_place_scheduled(p: Place):
+        scheduled_place_ids.add(p.id)
+        norm = normalize_venue_name(p.name)
+        if len(norm) >= 4:
+            scheduled_venue_norms.add(norm)
+        scheduled_coords.append((p.latitude, p.longitude))
 
     # Track unverified stops for honest budget reporting
     unverified_cost_count = 0
@@ -363,6 +408,7 @@ def generate_suggested_itinerary_data(
     for day_idx, travel_date in enumerate(travel_dates):
         day_number = day_idx + 1
         day_categories: list[str] = []
+        day_place_names: list[str] = []
         day_items: list[dict[str, Any]] = []
         current_day_cost = 0.0
 
@@ -371,11 +417,12 @@ def generate_suggested_itinerary_data(
 
         for slot_idx, slot in enumerate(available_slots):
             is_dining_slot = slot["slot_type"] == "lunch_dining"
+            day_has_mountain = any(is_mountain_peak(n) for n in day_place_names)
 
-            # Filter remaining candidates
-            eligible = [p for p in candidate_places if p.id not in scheduled_place_ids]
+            # Filter remaining candidates using fuzzy cross-day deduplication
+            eligible = [p for p in candidate_places if not is_place_duplicate(p)]
             if not eligible:
-                # If we exhausted places, allow non-duplicate re-use only if strictly necessary
+                # If we exhausted unique places across the province, allow non-duplicate re-use only if strictly necessary, never within the same day
                 eligible = [
                     p for p in candidate_places 
                     if p.id not in [it["place_id"] for it in day_items]
@@ -401,6 +448,7 @@ def generate_suggested_itinerary_data(
                     current_day_categories=day_categories,
                     remaining_daily_budget=remaining_daily_budget,
                     require_dining=is_dining_slot,
+                    day_has_mountain=day_has_mountain,
                     max_radius_km=cluster_radius_km,
                     planned_time=slot["planned_time"],
                     target_weekday=travel_date.weekday(),
@@ -410,8 +458,9 @@ def generate_suggested_itinerary_data(
             scored_candidates.sort(key=lambda x: x[0], reverse=True)
             best_score, chosen_place = scored_candidates[0]
 
-            scheduled_place_ids.add(chosen_place.id)
+            mark_place_scheduled(chosen_place)
             day_categories.append(chosen_place.category)
+            day_place_names.append(chosen_place.name)
 
             # Track cumulative daily expenditure
             raw_item_cost = (

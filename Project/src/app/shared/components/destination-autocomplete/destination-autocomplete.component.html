@@ -1,0 +1,243 @@
+<div class="destination-autocomplete-container">
+  <!-- Core Input Box -->
+  <div class="figma-input-box" [class.is-focused]="isOpen">
+    <ion-icon name="location-sharp" class="input-blue-icon" aria-hidden="true"></ion-icon>
+    <input
+      [id]="inputId"
+      type="text"
+      class="core-input"
+      [placeholder]="placeholder"
+      [(ngModel)]="query"
+      [ngModelOptions]="{standalone: true}"
+      (focus)="onInputFocus()"
+      (input)="onInputChange()"
+      [attr.aria-label]="ariaLabel"
+      autocomplete="off"
+    />
+    @if (query) {
+      <button
+        type="button"
+        class="clear-input-btn"
+        (click)="clearInput($event)"
+        aria-label="Clear destination"
+      >
+        <ion-icon name="close-circle"></ion-icon>
+      </button>
+    }
+  </div>
+
+  <!-- Floating Combobox Dropdown Menu -->
+  @if (isOpen) {
+    <div class="dropdown-panel shadow-elevation" role="listbox">
+      <!-- Section 1: Province-Wide -->
+      @if (filteredProvince.length > 0) {
+        <div class="dropdown-section">
+          <div class="section-label">Province-Wide Corridor</div>
+          @for (item of filteredProvince; track item.label) {
+            <button
+              type="button"
+              class="suggestion-item province-item"
+              (click)="selectSuggestion(item)"
+              role="option"
+            >
+              <div class="item-icon-wrapper province-icon">
+                <ion-icon name="globe-outline"></ion-icon>
+              </div>
+              <div class="item-details">
+                <div class="item-primary">
+                  <span class="item-title">{{ item.label }}</span>
+                  <span class="item-badge count-badge">2,673 Places</span>
+                </div>
+                <div class="item-subtitle">{{ item.subtitle }}</div>
+              </div>
+            </button>
+          }
+        </div>
+      }
+
+      <!-- Section 2: Municipalities & Cities -->
+      @if (filteredMunicipalities.length > 0) {
+        <div class="dropdown-section">
+          <div class="section-label">
+            <span>Cities & Municipalities</span>
+            <span class="match-count">{{ filteredMunicipalities.length }} matching</span>
+          </div>
+          <div class="suggestion-list">
+            @for (muni of filteredMunicipalities; track muni.label) {
+              <button
+                type="button"
+                class="suggestion-item"
+                (click)="selectSuggestion(muni)"
+                role="option"
+              >
+                <div class="item-icon-wrapper" [class.is-city]="muni.isCity">
+                  <ion-icon name="location-outline"></ion-icon>
+                </div>
+                <div class="item-details">
+                  <div class="item-primary">
+                    <span class="item-title">{{ muni.label }}</span>
+                    @if (muni.isCity) {
+                      <span class="item-badge city-badge">City</span>
+                    }
+                    @if (muni.district) {
+                      <span class="item-badge district-badge">{{ muni.district }}</span>
+                    }
+                    @if (muni.poiCount) {
+                      <span class="item-badge count-badge">{{ muni.poiCount }} POIs</span>
+                    }
+                  </div>
+                  <div class="item-subtitle">{{ muni.subtitle }}</div>
+                </div>
+              </button>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Section 3: Landmarks & Direct Anchors -->
+      @if (filteredLandmarks.length > 0) {
+        <div class="dropdown-section">
+          <div class="section-label">
+            <span>Landmarks & Top Attractions</span>
+            <span class="match-count">{{ filteredLandmarks.length }}</span>
+          </div>
+          <div class="suggestion-list">
+            @for (lm of filteredLandmarks; track lm.label) {
+              <button
+                type="button"
+                class="suggestion-item landmark-item"
+                (click)="selectSuggestion(lm)"
+                role="option"
+              >
+                <div class="item-icon-wrapper landmark-icon">
+                  <ion-icon name="star"></ion-icon>
+                </div>
+                <div class="item-details">
+                  <div class="item-primary">
+                    <span class="item-title">{{ lm.label }}</span>
+                    <span class="item-badge landmark-badge">⭐ Anchor</span>
+                  </div>
+                  <div class="item-subtitle">{{ lm.subtitle }}</div>
+                </div>
+              </button>
+            }
+          </div>
+        </div>
+      }
+
+      @if (filteredProvince.length === 0 && filteredMunicipalities.length === 0 && filteredLandmarks.length === 0) {
+        <div class="no-matches-box">
+          <p>No exact municipality or landmark found for "<strong>{{ query }}</strong>".</p>
+          <button type="button" class="use-custom-btn" (click)="selectTownFromModal(query)">
+            Use "{{ query }}" as custom search
+          </button>
+        </div>
+      }
+
+      <!-- Dropdown Footer Trigger for All 32 Towns -->
+      <div class="dropdown-footer">
+        <button
+          type="button"
+          class="browse-all-towns-btn"
+          (click)="openAllTownsModal($event)"
+        >
+          <ion-icon name="map-outline"></ion-icon>
+          <span>Browse All 32 Nueva Ecija Towns & Cities</span>
+          <ion-icon name="chevron-forward-outline" class="trailing-icon"></ion-icon>
+        </button>
+      </div>
+    </div>
+  }
+</div>
+
+<!-- Regional Explorer Modal: All 32 LGUs -->
+@if (showAllTownsModal) {
+  <div class="modal-backdrop" (click)="closeAllTownsModal()">
+    <div class="modal-card" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <ion-icon name="map-outline" class="modal-header-icon"></ion-icon>
+          <h3>All 32 Towns & Cities of Nueva Ecija</h3>
+        </div>
+        <button type="button" class="close-modal-btn" (click)="closeAllTownsModal()" aria-label="Close modal">
+          <ion-icon name="close-outline"></ion-icon>
+        </button>
+      </div>
+
+      <!-- District Filter Tabs -->
+      <div class="district-tabs">
+        <button
+          type="button"
+          class="district-tab-btn"
+          [class.active]="activeDistrictTab === 'All'"
+          (click)="setDistrictTab('All')"
+        >
+          All (32)
+        </button>
+        <button
+          type="button"
+          class="district-tab-btn"
+          [class.active]="activeDistrictTab === 'Central'"
+          (click)="setDistrictTab('Central')"
+        >
+          Central
+        </button>
+        <button
+          type="button"
+          class="district-tab-btn"
+          [class.active]="activeDistrictTab === 'North'"
+          (click)="setDistrictTab('North')"
+        >
+          North
+        </button>
+        <button
+          type="button"
+          class="district-tab-btn"
+          [class.active]="activeDistrictTab === 'South'"
+          (click)="setDistrictTab('South')"
+        >
+          South
+        </button>
+        <button
+          type="button"
+          class="district-tab-btn"
+          [class.active]="activeDistrictTab === 'East'"
+          (click)="setDistrictTab('East')"
+        >
+          East
+        </button>
+      </div>
+
+      <!-- Scrollable Grid of Towns -->
+      <div class="towns-grid">
+        @for (town of getModalTowns(); track town.name) {
+          <button
+            type="button"
+            class="town-card-btn"
+            [class.is-selected]="destination === town.name"
+            (click)="selectTownFromModal(town.name)"
+          >
+            <div class="town-card-top">
+              <span class="town-name">{{ town.name }}</span>
+              @if (town.isCity) {
+                <span class="town-city-pill">City</span>
+              }
+            </div>
+            <div class="town-district-line">{{ town.district }} District</div>
+            <div class="town-highlights">{{ town.highlights }}</div>
+            @if (town.poiCount) {
+              <div class="town-poi-count">{{ town.poiCount }} Destinations</div>
+            }
+          </button>
+        }
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="select-entire-province-btn" (click)="selectTownFromModal('Nueva Ecija')">
+          <ion-icon name="globe-outline"></ion-icon>
+          <span>Select Entire Province (Nueva Ecija Corridor)</span>
+        </button>
+      </div>
+    </div>
+  </div>
+}

@@ -5,7 +5,7 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { of, throwError } from 'rxjs';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { AlertController, ToastController } from '@ionic/angular';
-import { CustomBuilderPage } from './custom-builder.page';
+import { CustomBuilderPage, BuilderStop } from './custom-builder.page';
 import { ItineraryService } from '../../../core/services/itinerary.service';
 import { PlaceService } from '../../../core/services/place.service';
 import { Place } from '../../../core/models/place.models';
@@ -548,5 +548,70 @@ describe('CustomBuilderPage', () => {
     // Stop 1 is 60m duration + 30m buffer = 90m -> 10:30 AM
     expect(cur.items[1].planned_time).toBe('10:30 AM');
     expect(component.hasUnsavedChanges).toBe(true);
+  });
+
+  it('CUST-01: maps culture and resort preferences to canonical categories and multi-preferences to Recommended tab', () => {
+    // Culture single preference
+    component.selectedPreferences.clear();
+    component.togglePreference('culture');
+    component.proceedToBuilder();
+    expect(component.selectedCategory).toBe('Culture & Heritage');
+
+    // Resort single preference
+    component.selectedPreferences.clear();
+    component.togglePreference('resort');
+    component.proceedToBuilder();
+    expect(component.selectedCategory).toBe('Resorts & Stays');
+
+    // Multi-preference
+    component.selectedPreferences.clear();
+    component.togglePreference('food');
+    component.togglePreference('culture');
+    component.proceedToBuilder();
+    expect(component.selectedCategory).toBe('✨ Recommended for You');
+    expect(component.activeBrowseCategories).toContain('✨ Recommended for You');
+  });
+
+  it('CUST-02: queries municipality-specific places across the catalog when destination is selected', () => {
+    component.form.patchValue({ destination: 'Gabaldon' });
+    component.loadBrowsePlaces();
+    expect(mockPlaceService.searchPlaces).toHaveBeenCalledWith({
+      municipality_name: 'Gabaldon',
+      limit: 100,
+    });
+  });
+
+  it('CUST-03: computes dynamic inter-stop transit buffer based on coordinate distance', () => {
+    const stop1: BuilderStop = {
+      id: 's1',
+      name: 'Stop 1',
+      category: 'Nature',
+      municipality: 'General Tinio',
+      image: '',
+      sort_order: 1,
+      duration_minutes: 60,
+      planned_time: '09:00 AM',
+      custom_lat: 15.35,
+      custom_lng: 121.05,
+      isCustomVenue: false,
+    };
+    const stop2: BuilderStop = {
+      id: 's2',
+      name: 'Stop 2',
+      category: 'Food',
+      municipality: 'General Tinio',
+      image: '',
+      sort_order: 2,
+      duration_minutes: 60,
+      planned_time: '10:00 AM',
+      // Approx 15 km away
+      custom_lat: 15.48,
+      custom_lng: 121.05,
+      isCustomVenue: false,
+    };
+
+    const nextTime = component.calculateNextStopTime([stop1], stop2);
+    // Stop 1 ends at 10:00 AM, distance ~14.4 km driving is ~22 min + 10 min buffer = ~32 min transit buffer -> ~10:32 AM
+    expect(nextTime).toMatch(/10:3\d AM/);
   });
 });

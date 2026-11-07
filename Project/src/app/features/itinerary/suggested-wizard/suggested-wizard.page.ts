@@ -54,6 +54,7 @@ import { NearbyPlaceItem, PlaceService } from '../../../core/services/place.serv
 import { CommuteInfo, getCommuteInfoForMunicipality } from '../../../core/data/commute-guide.data';
 import { PlaceDetailSheetComponent } from '../../../shared/components/place-detail-sheet/place-detail-sheet.component';
 import { ItineraryRouteMapComponent } from '../../../shared/components/itinerary-route-map/itinerary-route-map.component';
+import { DestinationAutocompleteComponent } from '../../../shared/components/destination-autocomplete/destination-autocomplete.component';
 
 export interface PreferenceOption {
   key: string;
@@ -76,6 +77,7 @@ export interface PreferenceOption {
     IonSpinner,
     PlaceDetailSheetComponent,
     ItineraryRouteMapComponent,
+    DestinationAutocompleteComponent,
   ],
 })
 export class SuggestedWizardPage implements OnInit {
@@ -226,6 +228,19 @@ export class SuggestedWizardPage implements OnInit {
 
   public setDestination(dest: string): void {
     this.form.patchValue({ destination: dest });
+  }
+
+  public onDestinationSelected(event: {
+    destination: string;
+    placeId?: string;
+    type: 'province' | 'municipality' | 'landmark';
+  }): void {
+    this.setDestination(event.destination);
+    if (event.placeId) {
+      this.anchorPlaceId = event.placeId;
+    } else if (event.type === 'municipality') {
+      this.anchorPlaceId = undefined;
+    }
   }
 
   public setBudgetPreset(budget: number): void {

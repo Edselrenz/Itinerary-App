@@ -36,15 +36,17 @@ import {
   sparkles,
   timeOutline,
   trashOutline, checkmarkOutline } from 'ionicons/icons';
-import { Subject, Subscription, debounceTime, distinctUntilChanged, merge } from 'rxjs';
+import { Observable, Subject, Subscription, debounceTime, distinctUntilChanged, map, merge } from 'rxjs';
 import { Itinerary, ItineraryDay, ItineraryItem } from '../../../core/models/itinerary.models';
 import { addDaysLocal, diffDaysLocal, formatDateRange, parseLocalIsoDate, toLocalIsoDate } from '../../../core/utils/date.utils';
+import { haversineDistanceMeters } from '../../../core/utils/polyline.util';
 import { Place } from '../../../core/models/place.models';
 import { ItineraryBudgetSummary, ItineraryService } from '../../../core/services/itinerary.service';
 import { PlaceService } from '../../../core/services/place.service';
 import { ComponentCanDeactivate } from '../../../core/guards/pending-changes.guard';
 import { ItineraryRouteMapComponent } from '../../../shared/components/itinerary-route-map/itinerary-route-map.component';
 import { PlaceDetailSheetComponent } from '../../../shared/components/place-detail-sheet/place-detail-sheet.component';
+import { DestinationAutocompleteComponent } from '../../../shared/components/destination-autocomplete/destination-autocomplete.component';
 
 export interface BuilderStop {
   id: string;
@@ -93,6 +95,7 @@ export interface BuilderDay {
     IonSpinner,
     ItineraryRouteMapComponent,
     PlaceDetailSheetComponent,
+    DestinationAutocompleteComponent,
   ],
 })
 export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactivate {
@@ -145,6 +148,14 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
     'Transit & Essentials',
     'Other',
   ];
+
+  public get activeBrowseCategories(): string[] {
+    if (this.selectedPreferences.size > 0) {
+      return ['All', '✨ Recommended for You', ...this.browseCategories.filter((c) => c !== 'All')];
+    }
+    return this.browseCategories;
+  }
+
   public selectedCategory = 'All';
   public browseSearchTerm = '';
   public allCuratedPlaces: Place[] = [];
@@ -355,6 +366,14 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
     this.form.patchValue({ destination: dest });
   }
 
+  public onDestinationSelected(event: {
+    destination: string;
+    placeId?: string;
+    type: 'province' | 'municipality' | 'landmark';
+  }): void {
+    this.setDestination(event.destination);
+  }
+
   public setBudgetPreset(budget: number): void {
     this.form.patchValue({ daily_budget: budget });
   }
@@ -547,21 +566,26 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
       this.activeDayIndex = Math.min(this.activeDayIndex, this.days.length - 1);
     }
 
-    // Pre-filter places if preferences are selected
-    if (this.selectedPreferences.size > 0) {
+    // Pre-filter places if preferences are selected (CUST-01)
+    if (this.selectedPreferences.size > 1) {
+      this.selectedCategory = '✨ Recommended for You';
+    } else if (this.selectedPreferences.size === 1) {
       if (this.selectedPreferences.has('food')) {
         this.selectedCategory = 'Food';
-      } else if (
-        this.selectedPreferences.has('nature') ||
-        this.selectedPreferences.has('culture') ||
-        this.selectedPreferences.has('resort')
-      ) {
+      } else if (this.selectedPreferences.has('culture')) {
+        this.selectedCategory = 'Culture & Heritage';
+      } else if (this.selectedPreferences.has('resort')) {
+        this.selectedCategory = 'Resorts & Stays';
+      } else if (this.selectedPreferences.has('nature')) {
         this.selectedCategory = 'Tourist Spots';
       } else if (this.selectedPreferences.has('shopping')) {
         this.selectedCategory = 'Shopping';
       }
-      this.applyBrowseFilter();
+    } else {
+      this.selectedCategory = 'All';
     }
+
+    this.loadBrowsePlaces();
     this.applyBrowseFilter();
 
     this.activeView = 'browse';
@@ -864,16 +888,38 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
 
   public loadBrowsePlaces(): void {
     this.isBrowseLoading = true;
-    this.placeService.getFeaturedPlaces(50).subscribe({
-      next: (places) => {
+    const dest = this.form?.get('destination')?.value?.trim();
+    const isSpecificMuni =
+      dest &&
+      dest !== 'Nueva Ecija' &&
+      dest !== 'All of Nueva Ecija' &&
+      !dest.startsWith('🌏');
+
+    const searchObs: Observable<Place[]> = isSpecificMuni
+      ? this.placeService
+          .searchPlaces({ municipality_name: dest, limit: 100 })
+          .pipe(map((res) => res?.items || []))
+      : this.placeService.getFeaturedPlaces(50);
+
+    searchObs.subscribe({
+      next: (places: Place[]) => {
         this.allCuratedPlaces = places;
         this.applyBrowseFilter();
         this.isBrowseLoading = false;
       },
       error: () => {
-        this.allCuratedPlaces = [];
-        this.displayedPlaces = [];
-        this.isBrowseLoading = false;
+        this.placeService.getFeaturedPlaces(50).subscribe({
+          next: (places) => {
+            this.allCuratedPlaces = places;
+            this.applyBrowseFilter();
+            this.isBrowseLoading = false;
+          },
+          error: () => {
+            this.allCuratedPlaces = [];
+            this.displayedPlaces = [];
+            this.isBrowseLoading = false;
+          },
+        });
       },
     });
   }
@@ -926,37 +972,53 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
     }
 
     if (this.selectedCategory !== 'All') {
-      const catMap: Record<string, string[]> = {
-        'Tourist Spots': ['tourist_attraction', 'nature_park', 'attraction'],
-        Food: ['restaurant', 'cafe', 'fast_food', 'bar'],
-        'Resorts & Stays': ['hotel_accommodation', 'resort_swimming', 'motel', 'guest_house'],
-        'Culture & Heritage': ['church_religious', 'museum_cultural', 'place_of_worship'],
-        Shopping: ['shopping_market', 'supermarket', 'convenience_store'],
-        'Transit & Essentials': [
-          'bus_station',
-          'transport_terminal',
-          'hospital_clinic',
-          'pharmacy',
-          'gas_station',
-          'bank_atm',
-        ],
-        Other: [
-          'hotel_accommodation',
-          'resort_swimming',
-          'church_religious',
-          'museum_cultural',
-          'bus_station',
-          'transport_terminal',
-          'hospital_clinic',
-          'pharmacy',
-          'gas_station',
-          'bank_atm',
-          'convenience_store',
-          'supermarket',
-        ],
-      };
-      const allowed = catMap[this.selectedCategory] || [];
-      list = list.filter((p) => allowed.includes(p.category));
+      if (this.selectedCategory === '✨ Recommended for You') {
+        const prefMap: Record<string, string[]> = {
+          food: ['restaurant', 'cafe', 'fast_food', 'bar'],
+          nature: ['tourist_attraction', 'nature_park', 'attraction'],
+          culture: ['church_religious', 'museum_cultural', 'place_of_worship'],
+          resort: ['hotel_accommodation', 'resort_swimming', 'motel', 'guest_house'],
+          shopping: ['shopping_market', 'supermarket', 'convenience_store'],
+        };
+        const allowed = Array.from(this.selectedPreferences).flatMap(
+          (p) => prefMap[p] || []
+        );
+        if (allowed.length > 0) {
+          list = list.filter((p) => allowed.includes(p.category));
+        }
+      } else {
+        const catMap: Record<string, string[]> = {
+          'Tourist Spots': ['tourist_attraction', 'nature_park', 'attraction'],
+          Food: ['restaurant', 'cafe', 'fast_food', 'bar'],
+          'Resorts & Stays': ['hotel_accommodation', 'resort_swimming', 'motel', 'guest_house'],
+          'Culture & Heritage': ['church_religious', 'museum_cultural', 'place_of_worship'],
+          Shopping: ['shopping_market', 'supermarket', 'convenience_store'],
+          'Transit & Essentials': [
+            'bus_station',
+            'transport_terminal',
+            'hospital_clinic',
+            'pharmacy',
+            'gas_station',
+            'bank_atm',
+          ],
+          Other: [
+            'hotel_accommodation',
+            'resort_swimming',
+            'church_religious',
+            'museum_cultural',
+            'bus_station',
+            'transport_terminal',
+            'hospital_clinic',
+            'pharmacy',
+            'gas_station',
+            'bank_atm',
+            'convenience_store',
+            'supermarket',
+          ],
+        };
+        const allowed = catMap[this.selectedCategory] || [];
+        list = list.filter((p) => allowed.includes(p.category));
+      }
     }
 
     // Prioritize places matching chosen destination from Step 1 (C-BUG-03)
@@ -1121,7 +1183,7 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
     this.closePlacePicker();
   }
 
-  public calculateNextStopTime(items: BuilderStop[]): string {
+  public calculateNextStopTime(items: BuilderStop[], nextStop?: BuilderStop): string {
     if (!items || items.length === 0) {
       return '09:00 AM';
     }
@@ -1141,7 +1203,26 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
     if (meridiem === 'AM' && hours === 12) hours = 0;
 
     const duration = lastItem.duration_minutes || 90;
-    const transitBuffer = 30; // 30-min transit buffer
+
+    // Dynamic inter-stop transit calculation (CUST-03)
+    let transitBuffer = 30; // default 30 min buffer
+    if (
+      lastItem.custom_lat &&
+      lastItem.custom_lng &&
+      nextStop?.custom_lat &&
+      nextStop?.custom_lng
+    ) {
+      const distMeters = haversineDistanceMeters(
+        lastItem.custom_lat,
+        lastItem.custom_lng,
+        nextStop.custom_lat,
+        nextStop.custom_lng
+      );
+      // Assume average driving speed of 40 km/h (11.1 m/s) with 10 min parking/staging buffer
+      const drivingMinutes = Math.round((distMeters / 1000 / 40) * 60);
+      transitBuffer = Math.max(15, Math.min(120, drivingMinutes + 10));
+    }
+
     const totalMinutes = hours * 60 + minutes + duration + transitBuffer;
 
     const newHours24 = Math.floor(totalMinutes / 60) % 24;
@@ -1162,7 +1243,7 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
     const chainedItems: BuilderStop[] = [];
     for (let i = 0; i < day.items.length; i++) {
       const item = day.items[i];
-      item.planned_time = this.calculateNextStopTime(chainedItems);
+      item.planned_time = this.calculateNextStopTime(chainedItems, item);
       item.sort_order = i + 1;
       chainedItems.push(item);
     }
@@ -1188,7 +1269,10 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
     const cur = this.currentDay;
     if (!cur) return;
 
-    const plannedTime = this.calculateNextStopTime(cur.items);
+    const plannedTime = this.calculateNextStopTime(cur.items, {
+      custom_lat: place.latitude,
+      custom_lng: place.longitude,
+    } as BuilderStop);
     const stop: BuilderStop = {
       id: this.generateTempId(),
       place_id: place.id,
