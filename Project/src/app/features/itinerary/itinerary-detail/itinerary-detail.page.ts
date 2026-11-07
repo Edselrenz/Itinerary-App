@@ -1304,6 +1304,7 @@ export class ItineraryDetailPage implements OnInit, AfterViewInit, OnDestroy, Co
   }
 
   public onBack(): void {
+    this.routeTrackingService.stopTracking();
     if (this.viewMode === 'nearby') {
       this.closeNearbyPlaces();
     } else if (typeof window !== 'undefined' && window.history.length > 1) {

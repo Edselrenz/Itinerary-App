@@ -3150,6 +3150,39 @@ This log records chronological development sessions, detailing objectives, execu
   - `docs/DEVELOPMENT_LOG.md`
 - **Status**: Completed Phase 31; All 6 Preference Scheduling defects and 3 Custom Builder defects resolved and 100% verified.
 
+---
+
+## Session 87: Fix Persistent In-App Route Navigation & Restore General Discovery Map
+- **Date & Time**: 2026-11-07 09:15:00 (Local)
+- **Objective**: Fix defect where tapping the "Map" button on the bottom app navigation bar retains persistent in-app route navigation mode, route tracking HUD, and hides the general POI discovery map after leaving or creating a saved itinerary.
+- **Root Cause Analysis**:
+  1. **Ionic Tab State Caching**: In Ionic Angular, tab switching preserves DOM components and their last visited URL query parameters (`/tabs/map?followRoute=true...`).
+  2. **Singleton `RouteTrackingService` Lifecycle**: `RouteTrackingService` is `providedIn: 'root'`. When `startTracking(day)` was called from the itinerary, `isTracking: true` stayed permanently active in the background because `stopTracking()` was never triggered upon leaving the itinerary. Returning to `MapPage` caused `routeTrackingService.state$` to immediately redraw the active polyline and show the route tracking HUD.
+  3. **Missing Lifecycle Hook in `MapPage`**: `MapPage` lacked `ionViewWillEnter()` to inspect incoming route parameters and tear down leftover in-app route states when arriving at the discovery map directly from the bottom tab button.
+- **Tasks Performed**:
+  - **`Project/src/app/tabs/map/map.page.ts`**:
+    - Implemented `exitFollowRouteModeCleanly()`: resets `isFollowRouteMode = false`, `activeRouteMode = 'browse'`, clears `activeRouteDayStops`, resets `activeTrackingState`, stops GPS tracking (`this.routeTrackingService.stopTracking()`), clears route polyline/stops from map, reattaches `this.markerCluster`, updates markers if needed, and strips `followRoute`, `dayNumber`, and `itineraryId` query parameters via `router.navigate`.
+    - Added `ionViewWillEnter()` lifecycle hook: checks `route.snapshot.queryParams['followRoute']`. If absent or not `'true'`, automatically invokes `exitFollowRouteModeCleanly()`, guaranteeing the traveler enters the standard discovery map. If `'true'`, initiates isolated route focus mode.
+    - Updated `ionViewDidEnter()` to ensure `markerCluster` is reattached to Leaflet if not currently present on the canvas.
+    - Updated `exitFollowRouteMode()` to execute `exitFollowRouteModeCleanly()` before redirecting to `/itinerary/:id` or `/suggested-wizard`.
+    - Updated `stopRouteTracking()` to execute `exitFollowRouteModeCleanly()`, transitioning the traveler immediately to discovery mode when tapping the red Stop button in the navigation HUD.
+  - **`Project/src/app/tabs/map/map.page.html` & `map.page.scss`**:
+    - Added `.route-exit-btn` ("Browse Map") alongside "Back to Plan" in the floating active route top bar. Travelers can now exit route mode and unlock general map exploration with a single tap directly on the map.
+    - Styled `.route-exit-btn` to match the design system with subtle contrast and clear iconography.
+  - **`Project/src/app/tabs/tabs.page.html` & `tabs.page.ts`**:
+    - Added `(click)="onMapTabClicked($event)"` to `<ion-tab-button tab="map">`.
+    - Implemented `onMapTabClicked()` in `TabsPage`: explicitly navigates to `['/tabs/map']` with `{ queryParams: {} }`, preventing Ionic from caching or restoring `followRoute` parameters.
+  - **`Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.ts`**:
+    - Added `this.routeTrackingService.stopTracking()` inside `onBack()` to ensure leaving a saved itinerary stops any background GPS watch tracking.
+  - **Unit Testing**:
+    - Updated `map.page.spec.ts` with 5 new tests covering `exitFollowRouteModeCleanly()`, `ionViewWillEnter()` teardown vs route loading, `stopRouteTracking()`, and navigation on plan exit.
+    - Updated `tabs.page.spec.ts` with test verifying `onMapTabClicked()` resets query parameters to empty.
+- **Verification & Testing**:
+  - **Angular Unit Tests**: `npm --prefix Project run test:unit` -> **28 passed (28 suites), 293 passed (293 tests)**, 100% pass rate.
+  - **Backend Pytest**: `python -m pytest backend/tests/ -v` -> **21 passed**, 100% pass rate.
+  - **Angular Production Build**: `npm --prefix Project run build` -> Completed cleanly in 7.5s, 0 errors, 0 warnings, 0 budget overruns.
+- **Status**: Completed; persistent in-app navigation resolved, map tab consistently resets to discovery view.
+
 
 
 

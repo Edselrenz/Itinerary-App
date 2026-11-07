@@ -3,15 +3,28 @@
     <!-- Floating Active Route Control Bar (Phase 30.2 GAP-02) -->
     <div class="active-route-top-bar" *ngIf="isFollowRouteMode">
       <div class="route-bar-lead">
-        <button
-          type="button"
-          class="route-back-btn"
-          (click)="exitFollowRouteMode()"
-          aria-label="Back to Itinerary Plan"
-        >
-          <ion-icon name="arrow-back-outline"></ion-icon>
-          <span>Back to Plan</span>
-        </button>
+        <div class="route-lead-actions">
+          <button
+            type="button"
+            class="route-back-btn"
+            (click)="exitFollowRouteMode()"
+            aria-label="Back to Itinerary Plan"
+          >
+            <ion-icon name="arrow-back-outline"></ion-icon>
+            <span>Back to Plan</span>
+          </button>
+
+          <button
+            type="button"
+            class="route-exit-btn"
+            (click)="exitFollowRouteModeCleanly()"
+            aria-label="Exit Route & Browse All Places"
+            title="Exit Route & Browse Map"
+          >
+            <ion-icon name="map-outline"></ion-icon>
+            <span>Browse Map</span>
+          </button>
+        </div>
 
         <div class="route-title-cluster" *ngIf="activeItineraryPlan">
           <span class="route-title-text">{{ activeItineraryPlan.destination || 'Nueva Ecija' }}</span>

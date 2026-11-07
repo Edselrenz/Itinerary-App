@@ -347,12 +347,8 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
           const itineraryId = params['itineraryId'] || undefined;
           this.loadFollowRoute(itineraryId, dayNumber);
         } else {
-          if (this.isFollowRouteMode) {
-            this.isFollowRouteMode = false;
-            this.clearRouteFromMap();
-            if (this.markerCluster && this.map && !this.map.hasLayer(this.markerCluster as any)) {
-              this.map.addLayer(this.markerCluster as any);
-            }
+          if (this.isFollowRouteMode || this.activeTrackingState?.isTracking || this.routePolylineLayer) {
+            this.exitFollowRouteModeCleanly();
           }
         }
 
@@ -378,6 +374,19 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
+  public ionViewWillEnter(): void {
+    const isFollowParam = this.route.snapshot.queryParams['followRoute'] === 'true';
+    if (!isFollowParam) {
+      if (this.isFollowRouteMode || this.activeTrackingState?.isTracking || this.routePolylineLayer) {
+        this.exitFollowRouteModeCleanly();
+      }
+    } else {
+      const dayNumber = Number(this.route.snapshot.queryParams['dayNumber'] || 1);
+      const itineraryId = this.route.snapshot.queryParams['itineraryId'] || undefined;
+      this.loadFollowRoute(itineraryId, dayNumber);
+    }
+  }
+
   public ionViewDidEnter(): void {
     if (this.isBrowser) {
       if (!this.map) {
@@ -385,6 +394,9 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
       } else {
         setTimeout(() => {
           this.map?.invalidateSize();
+          if (!this.isFollowRouteMode && this.markerCluster && !this.map?.hasLayer(this.markerCluster as any)) {
+            this.map?.addLayer(this.markerCluster as any);
+          }
           if (this.pendingTarget?.lat !== undefined && this.pendingTarget?.lng !== undefined) {
             this.flyToTarget(this.pendingTarget.lat, this.pendingTarget.lng);
           } else if (this.pendingTarget?.destination || this.pendingTarget?.municipality) {
@@ -403,7 +415,9 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
       this.viewportDebounceTimer = null;
     }
     if (this.markerCluster) {
-      this.markerCluster.clearLayers();
+      if (typeof this.markerCluster.clearLayers === 'function') {
+        this.markerCluster.clearLayers();
+      }
       this.markerCluster = null;
     }
     if (this.map) {
@@ -1199,10 +1213,7 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   public stopRouteTracking(): void {
-    this.routeTrackingService.stopTracking();
-    this.clearRouteFromMap();
-    this.activeRouteMode = 'browse';
-    this.cdr.detectChanges();
+    this.exitFollowRouteModeCleanly();
   }
 
   public renderRouteOnMap(day: ItineraryDay): void {
@@ -1362,14 +1373,43 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  public exitFollowRouteMode(): void {
+  public exitFollowRouteModeCleanly(): void {
     this.isFollowRouteMode = false;
+    this.activeRouteMode = 'browse';
+    this.activeRouteDayStops = [];
+    this.activeItineraryPlan = null;
+    this.activeRouteStopIndex = 0;
+    this.showBackgroundPoisInRouteMode = false;
+    this.routeTrackingService.stopTracking();
+    this.activeTrackingState = null;
     this.clearRouteFromMap();
     if (this.markerCluster && this.map && !this.map.hasLayer(this.markerCluster as any)) {
       this.map.addLayer(this.markerCluster as any);
     }
-    if (this.activeItineraryPlan?.id && this.activeItineraryPlan.id !== 'draft') {
-      this.router.navigate(['/itinerary', this.activeItineraryPlan.id]);
+    if (
+      this.markerCluster &&
+      (this.markerCluster as any).getLayers &&
+      (this.markerCluster as any).getLayers().length === 0 &&
+      this.places.length > 0
+    ) {
+      this.updateMarkers();
+    }
+    if (this.route.snapshot.queryParams['followRoute'] || this.route.snapshot.queryParams['itineraryId']) {
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { followRoute: null, dayNumber: null, itineraryId: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
+      });
+    }
+    this.cdr.detectChanges();
+  }
+
+  public exitFollowRouteMode(): void {
+    const planId = this.activeItineraryPlan?.id;
+    this.exitFollowRouteModeCleanly();
+    if (planId && planId !== 'draft') {
+      this.router.navigate(['/itinerary', planId]);
     } else {
       this.router.navigate(['/suggested-wizard']);
     }

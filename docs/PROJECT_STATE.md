@@ -7,10 +7,10 @@ This document serves as the primary handoff reference for developers and coding 
 ## 1. Project Status Overview
 
 - **Application Name**: Nueva Ecija Travel Itinerary (MVP & GIS Architecture Upgrade)
-- **Current Development Phase**: **Phase 31 Completed & Verified (Suggested & Custom Itinerary Preference Engine, Destination Autofill & Catalog Browse Upgrade)**
-- **Last Verified Working State**: **Phase 31 Completed & Verified** (28/28 test files and 286/286 frontend unit tests passing [100%], 21/21 backend Pytest cases [100%], clean Angular production build in `Project/www` with code 0 and 0 stylesheet budget warnings/overruns; resolved PREF-01..06 and CUST-01..03: Reusable `<app-destination-autocomplete>` with all 32 LGUs and diacritic normalization, wrapped 2-row destination pills + Regional Explorer Modal, canonical category mapping with Day 1 preference enforcement, rolling non-overlapping time slots with transit calculations, smart midday lunch anchor, max 1 mountain hike/day intensity guard, cross-day fuzzy venue name and coordinate deduplication, Custom Builder destination-specific catalog loading across 2,673 POIs, and dynamic inter-stop transit buffer).
-- **Recent Audit & Roadmap Expansion**: Ingestion and formal documentation of `suggested_and_custom_itinerary_live_evaluation.pdf` ([SUGGESTED_AND_CUSTOM_ITINERARY_LIVE_EVALUATION.md](./SUGGESTED_AND_CUSTOM_ITINERARY_LIVE_EVALUATION.md)), resolving all 6 preference scheduling defects (`PREF-01..06`) and 3 custom builder defects (`CUST-01..03`).
-- **Current Active Tasks**: Complete Phase 31 verification and prepare for user demo/staging rollout.
+- **Current Development Phase**: **Phase 31 Completed & In-App Navigation State Teardown Verified**
+- **Last Verified Working State**: **Phase 31 & Map Tab Teardown Verified** (28/28 test files and 293/293 frontend unit tests passing [100%], 21/21 backend Pytest cases [100%], clean Angular production build in `Project/www` with code 0 and 0 stylesheet budget warnings/overruns; resolved persistent in-app navigation on tab switch, PREF-01..06, and CUST-01..03: Clean route navigation exit teardown with `exitFollowRouteModeCleanly()`, `ionViewWillEnter()` lifecycle check, bottom navigation tab query param reset via `onMapTabClicked()`, floating top bar "Browse Map" action button, and GPS tracking teardown on `onBack()`).
+- **Recent Audit & Roadmap Expansion**: Ingestion and formal documentation of `suggested_and_custom_itinerary_live_evaluation.pdf` ([SUGGESTED_AND_CUSTOM_ITINERARY_LIVE_EVALUATION.md](./SUGGESTED_AND_CUSTOM_ITINERARY_LIVE_EVALUATION.md)), resolving all 6 preference scheduling defects (`PREF-01..06`), 3 custom builder defects (`CUST-01..03`), and persistent in-app route map caching.
+- **Current Active Tasks**: User live validation and staging rollout.
 - **Current Blockers**: **None**.
 
 ---

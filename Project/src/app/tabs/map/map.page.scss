@@ -611,7 +611,14 @@
     justify-content: space-between;
     gap: 0.5rem;
 
-    .route-back-btn {
+    .route-lead-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .route-back-btn,
+    .route-exit-btn {
       display: inline-flex;
       align-items: center;
       gap: 0.35rem;
@@ -623,13 +630,24 @@
       padding: 0.3rem 0.65rem;
       border-radius: 8px;
       cursor: pointer;
-      transition: background 0.15s ease;
+      transition: background 0.15s ease, color 0.15s ease;
 
       &:hover {
         background: #dbeafe;
       }
       ion-icon {
         font-size: 0.95rem;
+      }
+    }
+
+    .route-exit-btn {
+      background: #f8fafc;
+      border-color: #cbd5e1;
+      color: #334155;
+
+      &:hover {
+        background: #f1f5f9;
+        color: #0f172a;
       }
     }
 

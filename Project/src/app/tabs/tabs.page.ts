@@ -1,4 +1,5 @@
 import { Component, EnvironmentInjector, inject } from '@angular/core';
+import { Router } from '@angular/router';
 import {
   IonIcon,
   IonLabel,
@@ -24,6 +25,7 @@ import {
 })
 export class TabsPage {
   public environmentInjector = inject(EnvironmentInjector);
+  private router = inject(Router);
 
   constructor() {
     addIcons({
@@ -33,5 +35,10 @@ export class TabsPage {
       timeOutline,
       personCircleOutline,
     });
+  }
+
+  public onMapTabClicked(event?: Event): void {
+    // Explicitly navigate without query parameters so map tab always resets to general discovery mode
+    this.router.navigate(['/tabs/map'], { queryParams: {} });
   }
 }

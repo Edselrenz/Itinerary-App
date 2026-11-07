@@ -65,11 +65,17 @@ describe('MapPage', () => {
     setActiveDraftItinerary: vi.fn(),
   };
 
+  const mockActivatedRoute = {
+    queryParams: of({}),
+    snapshot: { queryParams: {} as Record<string, string> },
+  };
+
   const mockToast = { present: vi.fn().mockResolvedValue(undefined) };
   const mockToastController = { create: vi.fn().mockResolvedValue(mockToast) };
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    mockActivatedRoute.snapshot.queryParams = {};
     mockItineraryService.getItineraryOrDraftById.mockReturnValue(of(null));
     mockItineraryService.getActiveDraftItinerary.mockReturnValue(null);
     mockPlaceService.searchPlaces.mockReturnValue(
@@ -91,12 +97,7 @@ describe('MapPage', () => {
         { provide: ItineraryService, useValue: mockItineraryService },
         { provide: Router, useValue: mockRouter },
         { provide: ToastController, useValue: mockToastController },
-        {
-          provide: ActivatedRoute,
-          useValue: {
-            queryParams: of({}),
-          },
-        },
+        { provide: ActivatedRoute, useValue: mockActivatedRoute },
       ],
     }).compileComponents();
 
@@ -496,5 +497,75 @@ describe('MapPage', () => {
     });
     expect(component.places.some((p) => p.id === 'osm-node-999')).toBe(true);
     expect(component.liveOsmMessage).toContain('Loaded 1 OpenStreetMap live places');
+  });
+
+  // --- Persistent In-App Route Navigation Cleanup ---
+
+  it('should cleanly exit follow route mode, stop tracking, clear layers, and restore cluster pins', () => {
+    const stopTrackingSpy = vi.spyOn(component.routeTrackingService, 'stopTracking');
+    const mockLMap = {
+      addLayer: vi.fn(),
+      removeLayer: vi.fn(),
+      hasLayer: vi.fn().mockReturnValue(false),
+    } as unknown as L.Map;
+    component.map = mockLMap;
+    component.markerCluster = {
+      getLayers: () => [{}],
+      clearLayers: vi.fn(),
+    } as any;
+
+    component.isFollowRouteMode = true;
+    component.activeRouteMode = 'follow';
+    component.activeRouteDayStops = [{ id: 's1', sort_order: 1 } as any];
+    mockActivatedRoute.snapshot.queryParams = { followRoute: 'true', dayNumber: '1' };
+
+    component.exitFollowRouteModeCleanly();
+
+    expect(component.isFollowRouteMode).toBe(false);
+    expect(component.activeRouteMode).toBe('browse');
+    expect(component.activeRouteDayStops.length).toBe(0);
+    expect(stopTrackingSpy).toHaveBeenCalled();
+    expect(mockLMap.addLayer).toHaveBeenCalledWith(component.markerCluster);
+    expect(mockRouter.navigate).toHaveBeenCalledWith([], {
+      relativeTo: mockActivatedRoute,
+      queryParams: { followRoute: null, dayNumber: null, itineraryId: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  });
+
+  it('should dismantle follow route mode in ionViewWillEnter if followRoute queryParam is absent', () => {
+    const exitSpy = vi.spyOn(component, 'exitFollowRouteModeCleanly');
+    component.isFollowRouteMode = true;
+    mockActivatedRoute.snapshot.queryParams = {};
+
+    component.ionViewWillEnter();
+
+    expect(exitSpy).toHaveBeenCalled();
+  });
+
+  it('should load follow route in ionViewWillEnter if followRoute queryParam is true', () => {
+    const loadSpy = vi.spyOn(component, 'loadFollowRoute');
+    mockActivatedRoute.snapshot.queryParams = { followRoute: 'true', dayNumber: '2', itineraryId: 'itin-123' };
+
+    component.ionViewWillEnter();
+
+    expect(loadSpy).toHaveBeenCalledWith('itin-123', 2);
+  });
+
+  it('should stop route tracking and cleanly exit when stopRouteTracking is called', () => {
+    const exitSpy = vi.spyOn(component, 'exitFollowRouteModeCleanly');
+    component.stopRouteTracking();
+    expect(exitSpy).toHaveBeenCalled();
+  });
+
+  it('should navigate to itinerary plan on exitFollowRouteMode', () => {
+    const exitSpy = vi.spyOn(component, 'exitFollowRouteModeCleanly');
+    component.activeItineraryPlan = { id: 'saved-plan-99' } as any;
+
+    component.exitFollowRouteMode();
+
+    expect(exitSpy).toHaveBeenCalled();
+    expect(mockRouter.navigate).toHaveBeenCalledWith(['/itinerary', 'saved-plan-99']);
   });
 });
