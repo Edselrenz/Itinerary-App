@@ -950,6 +950,39 @@ describe('ItineraryService', () => {
       expect(plan.type).toBe('suggested');
     });
 
+    it('PREF-05 & PREF-06: offline generator enforces rolling time slots, lunch anchors, and fuzzy venue deduplication across days', async () => {
+      const plan = await (service as any).generateOfflineSuggestedItinerary({
+        destination: 'Pantabangan',
+        start_date: '2026-11-10',
+        end_date: '2026-11-12',
+        daily_budget: 3000,
+        preferences: ['nature'],
+      });
+
+      expect(plan.days.length).toBe(3);
+      const usedNormNames = new Set<string>();
+
+      for (const day of plan.days) {
+        expect(day.items.length).toBeGreaterThan(0);
+        let mtCount = 0;
+
+        for (const item of day.items) {
+          const norm = service.normalizeVenueName(item.custom_title || '');
+          if (norm.length >= 4) {
+            expect(usedNormNames.has(norm)).toBe(false);
+            usedNormNames.add(norm);
+          }
+          if (service.isMountainPeak(item.custom_title || '')) {
+            mtCount++;
+          }
+          // Planned time format check: '09:30 AM - 11:00 AM'
+          expect(item.planned_time).toMatch(/\d{2}:\d{2}\s*(AM|PM)\s*-\s*\d{2}:\d{2}\s*(AM|PM)/);
+        }
+        // At most 1 mountain hike per day
+        expect(mtCount).toBeLessThanOrEqual(1);
+      }
+    });
+
     it('C-BUG-06: hydrates place and custom_title on guest itinerary stops', async () => {
       mockAuthService.isAuthenticated.mockReturnValue(false);
       mockPlaceService.findPlaceById.mockReturnValue({

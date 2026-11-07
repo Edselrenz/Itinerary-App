@@ -340,8 +340,6 @@ def generate_suggested_itinerary_data(
         elif len(candidates) >= min(total_days * 2, 3):
             candidate_places = candidates
 
-    # Live discovery integration: fetch and upsert nearby Google Places if requested or catalog is sparse
-    if getattr(request, "include_live_places", False) or len(candidate_places) < total_days * 3:
     # Live discovery fast-path (PREF-01): fetch live Google Places only if explicitly requested and local candidates are sparse
     has_sufficient_local = len(candidate_places) >= max(total_days * 3, 15)
     should_fetch_live = (getattr(request, "include_live_places", False) and not has_sufficient_local) or len(candidate_places) < total_days * 3
