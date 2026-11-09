@@ -211,7 +211,7 @@
     }
   </div>
 
-  <!-- Destination Detail Modal Sheet -->
+  <!-- Destination Detail Modal Sheet (QA-10) -->
   <ion-modal
     [isOpen]="isDetailModalOpen"
     (didDismiss)="closeDestinationDetail()"
@@ -220,81 +220,14 @@
     [breakpoints]="[0, 0.85, 1.0]"
   >
     <ng-template>
-      @if (selectedDestination) {
-        <div class="modal-detail-content">
-          <div class="modal-handle-bar"></div>
-          
-          <div class="modal-image-wrap">
-            <img [src]="selectedDestination.image" [alt]="selectedDestination.name" class="modal-hero-img" />
-            <button type="button" class="modal-close-btn" (click)="closeDestinationDetail()" aria-label="Close modal">
-              <ion-icon name="close-outline"></ion-icon>
-            </button>
-            <span class="modal-category-badge">{{ selectedDestination.category }}</span>
-          </div>
-
-          <div class="modal-body-content">
-            <div class="modal-muni-tag">
-              <ion-icon name="location-outline"></ion-icon>
-              <span>{{ selectedDestination.municipality }}, Nueva Ecija</span>
-            </div>
-            
-            <h2 class="modal-title">{{ selectedDestination.name }}</h2>
-
-            <!-- Meta details: Hours & Cost -->
-            <div class="modal-meta-grid">
-              @if (selectedDestination.openingHours) {
-                <div class="modal-meta-item">
-                  <ion-icon name="time-outline"></ion-icon>
-                  <span>{{ selectedDestination.openingHours }}</span>
-                </div>
-              }
-              <div class="modal-meta-item">
-                <ion-icon name="cash-outline"></ion-icon>
-                <span>{{ selectedDestination.costDisplay }}</span>
-              </div>
-            </div>
-
-            <p class="modal-full-desc">{{ selectedDestination.description }}</p>
-
-            <div class="modal-tags-row">
-              @for (tag of selectedDestination.tags; track tag) {
-                <span class="tag-chip">{{ tag }}</span>
-              }
-            </div>
-
-            <div class="modal-actions-grid">
-              <ion-button
-                expand="block"
-                class="plan-with-dest-btn"
-                (click)="startPlanningWithDestination(selectedDestination)"
-              >
-                <ion-icon name="sparkles" slot="start"></ion-icon>
-                <span>Build Itinerary Here</span>
-              </ion-button>
-
-              <div class="secondary-actions-row">
-                <button
-                  type="button"
-                  class="secondary-action-btn"
-                  (click)="viewDestinationOnMap(selectedDestination)"
-                >
-                  <ion-icon name="map-outline"></ion-icon>
-                  <span>View Pin on Map</span>
-                </button>
-
-                <button
-                  type="button"
-                  class="secondary-action-btn"
-                  (click)="openInGoogleMaps(selectedDestination)"
-                >
-                  <ion-icon name="open-outline"></ion-icon>
-                  <span>Google Maps</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      }
+      <app-place-detail-sheet
+        [place]="selectedPlace"
+        [showAddToTripActions]="true"
+        [showNavigationAction]="true"
+        (closeSheet)="closeDestinationDetail()"
+        (startTripHere)="onStartTripFromSheet($event)"
+        (addToCustomTrip)="onAddToCustomTripFromSheet($event)"
+      ></app-place-detail-sheet>
     </ng-template>
   </ion-modal>
 

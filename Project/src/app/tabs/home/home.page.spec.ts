@@ -1,14 +1,18 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter, Router } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { TestBed } from '@angular/core/testing';
+import type { ComponentFixture} from '@angular/core/testing';
+import { provideRouter, Router } from '@angular/router';
 import { BehaviorSubject, of } from 'rxjs';
 import { vi } from 'vitest';
-import { HomePage } from './home.page';
-import { PlaceService } from '../../core/services/place.service';
-import { GuestItinerary, GuestStorageService } from '../../core/services/guest-storage.service';
-import { Place } from '../../core/models/place.models';
+
+import type { Place } from '../../core/models/place.models';
+import type { GuestItinerary} from '../../core/services/guest-storage.service';
+import { GuestStorageService } from '../../core/services/guest-storage.service';
 import { ItineraryService } from '../../core/services/itinerary.service';
+import { PlaceService } from '../../core/services/place.service';
+
+import { HomePage } from './home.page';
 
 describe('HomePage', () => {
   let component: HomePage;
@@ -51,6 +55,7 @@ describe('HomePage', () => {
   const mockPlaceService = {
     getFeaturedPlaces: vi.fn().mockReturnValue(of([mockPlace])),
     searchPlaces: vi.fn().mockReturnValue(of({ total: 1, limit: 20, offset: 0, items: [mockPlace] })),
+    getPlaceById: vi.fn().mockReturnValue(of(mockPlace)),
     getPlaceImage: vi.fn().mockReturnValue('assets/images/minalungao.png'),
     formatCategoryName: vi.fn().mockReturnValue('Nature & Adventure'),
   };

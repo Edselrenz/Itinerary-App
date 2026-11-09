@@ -75,7 +75,8 @@ describe('AppComponent', () => {
 
   it('skips splash screen if already seen in current session (UI-05)', () => {
     sessionStorage.setItem('ne_splash_seen_v1', 'true');
-    const newComponent = new AppComponent(mockConnectivityService as any, mockToastController as any);
+    const newFixture = TestBed.createComponent(AppComponent);
+    const newComponent = newFixture.componentInstance;
     newComponent.ngOnInit();
     expect(newComponent.showSplashScreen).toBe(false);
   });

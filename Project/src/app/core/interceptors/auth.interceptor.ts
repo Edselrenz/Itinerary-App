@@ -1,9 +1,10 @@
-import { HttpErrorResponse, HttpInterceptorFn, HttpResponse } from '@angular/common/http';
+import { HttpResponse, type HttpErrorResponse, type HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { BehaviorSubject, catchError, filter, switchMap, take, tap, throwError } from 'rxjs';
+
+import { environment } from '../../../environments/environment';
 import { AuthService } from '../services/auth.service';
 import { ConnectivityService } from '../services/connectivity.service';
-import { environment } from '../../../environments/environment';
 
 let isRefreshing = false;
 const refreshTokenSubject = new BehaviorSubject<string | null>(null);
@@ -14,7 +15,9 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const token = authService.getAccessToken();
 
   let authReq = req;
-  const isApiRequest = req.url.startsWith(environment.apiBaseUrl);
+  const activeBaseUrl = connectivityService.activeApiBaseUrl;
+  const isApiRequest =
+    req.url.startsWith(activeBaseUrl) || req.url.startsWith(environment.apiBaseUrl);
 
   // CR-012: Attach Bearer token strictly to requests matching apiBaseUrl
   // ngrok: Set 'ngrok-skip-browser-warning': 'true' to bypass interstitial page on free tunnels
@@ -59,6 +62,10 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
           'Pilot backend is currently unreachable (host laptop or tunnel may be offline). Local guest data remains accessible.'
         );
         connectivityService.setHostOffline(true);
+        // Asynchronously check host health on gateway error to reconcile state without blocking user (QA-01)
+        if (typeof connectivityService.checkHostHealth === 'function') {
+          connectivityService.checkHostHealth().subscribe({ error: () => {} });
+        }
         return throwError(() => error);
       }
 

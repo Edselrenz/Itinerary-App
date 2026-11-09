@@ -3183,6 +3183,279 @@ This log records chronological development sessions, detailing objectives, execu
   - **Angular Production Build**: `npm --prefix Project run build` -> Completed cleanly in 7.5s, 0 errors, 0 warnings, 0 budget overruns.
 - **Status**: Completed; persistent in-app navigation resolved, map tab consistently resets to discovery view.
 
+---
+
+## Session 88: Full-Website QA Audit Ingestion, PostgreSQL in Docker Restoration, Schema Migration (`0003_widen_phone_column`), and 2,673 POI Ingestion
+- **Date & Time**: 2026-11-09 13:00:00 (Local)
+- **Objective**: Ingest and analyze `full_website_qa_audit_and_proposal.pdf`, restore PostgreSQL container in Docker as the primary database, resolve schema string truncation on phone numbers, populate all 2,673 places, verify test suites on PostgreSQL, and establish Phase 32 documentation.
+- **Tasks Performed**:
+  - **QA Audit Analysis & Cross-Referencing**:
+    - Extracted all text and tables from `full_website_qa_audit_and_proposal.pdf` (5 pages, 64 test cases, 8 modules).
+    - Cross-referenced audit baseline (`81fcc8d7`) against current codebase (`HEAD` at `cd7cd37` / `1a090a1`).
+    - Identified that 8 critical/high findings (`QA-03`, `QA-04`, `QA-05`, `QA-06`, `QA-07`, `QA-12`, `QA-13`, `MAP-TAB`) were already remediated in Phase 31 and Session 87.
+    - Categorized the 8 remaining active findings (`QA-01`, `QA-02`, `QA-08`, `QA-09`, `QA-10`, `QA-11`, `QA-14A`, `QA-14B`, `QA-14C`) into **Phase 32** with a two-sprint execution plan.
+    - Created comprehensive documentation file `docs/FULL_WEBSITE_QA_AUDIT_AND_PROPOSAL.md`.
+  - **PostgreSQL in Docker Re-Activation**:
+    - Investigated why Docker was not up: `.env` had previously been configured with `DATABASE_URL=sqlite:///./nueva_ecija_travel.db`, causing `scripts/start_server.ps1` to detect SQLite configuration and bypass starting Docker.
+    - Restored `.env` to: `DATABASE_URL=postgresql+psycopg://ne_travel_user:change_me_local_only@127.0.0.1:5432/nueva_ecija_travel`.
+    - Executed `docker compose up -d` to launch container `ne_postgres` on port `5432`.
+  - **Schema Migration (`0003_widen_phone_column`) & Data Pipeline Hardening**:
+    - During OSM place ingestion (`scripts/import_osm.py`), encountered `psycopg.errors.StringDataRightTruncation: value too long for type character varying(64)` caused by semicolon-delimited multi-number telephone strings in OpenStreetMap data (max length 77 characters).
+    - Widened `places.phone` column from `VARCHAR(64)` to `VARCHAR(255)` in `backend/app/models/entities.py`.
+    - Created Alembic revision `0003_widen_phone_column.py` in `backend/alembic/versions/`.
+    - Applied schema migration to PostgreSQL: `ALTER TABLE places ALTER COLUMN phone TYPE VARCHAR(255);`.
+    - Hardened `scripts/import_osm.py` with defensive string truncation: `name[:255]`, `category[:64]`, `phone[:255]`, `website[:512]`, and `opening_hours[:255]`.
+  - **Database Ingestion & Population**:
+    - Ran `python scripts/import_osm.py data/raw/nueva_ecija_osm.json`: successfully imported 2,656 OSM places into PostgreSQL.
+    - Ran `python scripts/seed_featured_places.py`: seeded 12 municipalities and 17 curated places.
+    - Verified live PostgreSQL table metrics:
+      - `places`: 2,673 rows
+      - `municipalities`: 12 rows
+      - `users`: 4 rows
+      - `itineraries`: 5 rows
+      - `itinerary_days`: 13 rows
+      - `itinerary_items`: 31 rows
+      - `geospatial_cache`: 3 rows
+  - **Testing & Quality Gates**:
+    - Executed backend Pytest test suite: `python -m pytest backend/tests/ -v` -> **21 passed in 4.90s [100%]** running directly against PostgreSQL.
+    - Executed frontend Angular Vitest test suite: `npm --prefix Project run test:unit` -> **28 passed (28 suites), 293 passed (293 tests)** [100%].
+  - **Documentation & Tracking**:
+    - Created `docs/FULL_WEBSITE_QA_AUDIT_AND_PROPOSAL.md`.
+    - Updated `docs/TODO.md` with Phase 32 remediation plan.
+    - Updated `docs/KNOWN_ISSUES.md` with Section 12 (QA-01..14) and PostgreSQL container status.
+    - Updated `docs/DATABASE_MANAGEMENT_GUIDE.md` recording migration 0003 and table metrics.
+    - Updated `docs/PROJECT_STATE.md` with current phase, database engine status, and Phase 32 roadmap.
+- **Files Created / Modified**:
+  - `backend/app/models/entities.py` (Widened `places.phone` to `VARCHAR(255)`)
+  - `backend/alembic/versions/0003_widen_phone_column.py` (Created)
+  - `scripts/import_osm.py` (Defensive string truncation)
+  - `.env` (Configured PostgreSQL Docker connection string)
+  - `docs/FULL_WEBSITE_QA_AUDIT_AND_PROPOSAL.md` (Created)
+  - `docs/TODO.md`
+  - `docs/KNOWN_ISSUES.md`
+  - `docs/DATABASE_MANAGEMENT_GUIDE.md`
+  - `docs/PROJECT_STATE.md`
+  - `docs/DEVELOPMENT_LOG.md`
+- **Status**: Completed; PostgreSQL 16 container running in Docker with all 2,673 places, schema migration applied, tests 100% passing, and documentation synchronized.
+
+---
+
+## Session 89: Implementation & Full Verification of Phase 32 (QA Remediation, Connectivity Resilience & Polish)
+- **Date & Time**: 2026-11-09 14:10:00 (Local)
+- **Objective**: Implement and verify Phase 32.1 (P0/P1 connectivity resilience, map merging, and dynamic base URL) and Phase 32.2 (P2 UI polish, settings sync, and lifecycle teardown) adhering to `coding-and-system-development` and `MASTER_CONTINUOUS_DOCUMENTATION_INSTRUCTIONS.md`.
+- **Tasks Performed**:
+  - **Phase 32.1 (P0/P1 Connectivity Resilience, Map Merging & Dynamic URL)**:
+    - `QA-01 (Offline Banner Resilience)`: Added `consecutiveErrors` counter (threshold $\ge 2$) and `reportGatewayError()` in `ConnectivityService`. Updated `authInterceptor` to increment consecutive errors and trigger background `checkHostHealth()` reconciliation without interrupting traveler UI.
+    - `QA-02 (Map Pan/Zoom 2,673-POI Merging)`: Added `mergePlacesIntoCache()` in `PlaceService` to merge live bounded query results with in-memory `osmPlacesCache` by ID. Added `allLoadedPlaces` master collection in `MapPage.loadPlaces()`, ensuring zooming or panning into a specific area never purges the remaining 2,600+ places or Leaflet marker cluster pins.
+    - `QA-08 (Dynamic activeApiBaseUrl)`: Implemented `activeApiBaseUrl` getter in `ConnectivityService` respecting `localStorage.getItem('ne_custom_api_url')` with protocol verification. Injected dynamic URL across `PlaceService`, `ItineraryService`, `AuthService`, `authInterceptor`, and `PlaceDetailSheetComponent`.
+  - **Phase 32.2 (P2 UI Polish, Settings Sync & Lifecycle Cleanup)**:
+    - `QA-14C (App Boot Theme & Default Budget Hydration)`: Hydrated user dark mode preference on initial app startup from `localStorage.getItem('ne_theme_mode')` in `AppComponent.ngOnInit()`. Initialized `daily_budget` form control dynamically from `localStorage.getItem('ne_default_budget') || 3000` in `SuggestedWizardPage` and `CustomBuilderPage`.
+    - `QA-14B (Timezone-Safe Date Incrementation)`: Replaced UTC `new Date(lastDate).toISOString().split('T')[0]` in `ItineraryDetailPage.addDay()` with `toLocalIsoDate(addDaysLocal(parseLocalIsoDate(lastDate), 1))`.
+    - `QA-14A (Legacy Map Lifecycle Teardown)`: Completely removed legacy `previewMap`, `previewPolylineLayer`, `previewStopsLayer`, `initPreviewMap()`, `updatePreviewMap()`, and `previewMapElementRef` in `ItineraryDetailPage`, eliminating redundant DOM resize timers.
+    - `QA-09 (Forgot Password Modal UX)`: Removed duplicate warning toast on `login.page.ts:onForgotPassword()`, allowing the modal to cleanly display account recovery instructions and ticket dispatch status.
+    - `QA-10 (Home Destination Detail Modal Unification)`: Replaced legacy inline modal in `home.page.html` with shared `<app-place-detail-sheet [place]="selectedPlace">` with Google reviews, ratings, and navigation CTAs.
+    - `QA-11 (Public OSRM & Overpass Resilience)`: Verified 2.5s AbortController timeout, geodesic polyline fallback, and backend route caching.
+  - **Verification & Testing**:
+    - **Frontend Unit Tests**: Ran `npm --prefix Project run test:unit` -> **28/28 test suites passed, 293/293 unit tests passed (100% pass rate)**.
+    - **Backend Integration Tests**: Ran `python -m pytest backend/tests/ -v` -> **21/21 test cases passed (100% pass rate)** against live PostgreSQL 16 container.
+    - **Angular Production Build**: Ran `npm --prefix Project run build` -> **Compiled cleanly in 21.8s (0 errors, 0 warnings, 0 budget overruns)** with artifacts in `Project/www`.
+- **Files Created / Modified**:
+  - `Project/src/app/core/services/connectivity.service.ts`
+  - `Project/src/app/core/services/connectivity.service.spec.ts`
+  - `Project/src/app/core/interceptors/auth.interceptor.ts`
+  - `Project/src/app/core/interceptors/auth.interceptor.spec.ts`
+  - `Project/src/app/core/services/place.service.ts`
+  - `Project/src/app/core/services/itinerary.service.ts`
+  - `Project/src/app/core/services/auth.service.ts`
+  - `Project/src/app/shared/components/place-detail-sheet/place-detail-sheet.component.ts`
+  - `Project/src/app/tabs/map/map.page.ts`
+  - `Project/src/app/app.component.ts`
+  - `Project/src/app/features/itinerary/suggested-wizard/suggested-wizard.page.ts`
+  - `Project/src/app/features/itinerary/custom-builder/custom-builder.page.ts`
+  - `Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.ts`
+  - `Project/src/app/features/auth/login/login.page.ts`
+  - `Project/src/app/features/auth/login/login.page.spec.ts`
+  - `Project/src/app/tabs/home/home.page.ts`
+  - `Project/src/app/tabs/home/home.page.html`
+  - `Project/src/app/tabs/home/home.page.spec.ts`
+  - `docs/TODO.md`
+  - `docs/KNOWN_ISSUES.md`
+  - `docs/FULL_WEBSITE_QA_AUDIT_AND_PROPOSAL.md`
+  - `docs/PROJECT_STATE.md`
+  - `docs/DEVELOPMENT_LOG.md`
+- **Status**: Completed Phase 32; All 16 QA Audit findings resolved and 100% verified across frontend, backend, and production builds.
+
+```text
+DEVELOPMENT CHECKPOINT
+
+Task: Phase 32: Full-Website QA Remediation, Connectivity Hardening & Polish
+Status: COMPLETED & VERIFIED
+
+IMPLEMENTATION:
+- QA-01: Consecutive gateway error counter (threshold >= 2) and async health check reconciliation.
+- QA-02: Master in-memory POI dataset merging on pan/zoom, preserving all 2,673 cluster pins.
+- QA-08: Dynamic activeApiBaseUrl in HTTP services and interceptors reading custom tunnel URLs.
+- QA-14C: App boot theme hydration (dark mode) and dynamic daily_budget hydration from default budget.
+- QA-14B: Timezone-safe local ISO date incrementation via addDaysLocal() in ItineraryDetailPage.addDay().
+- QA-14A: Teardown of legacy previewMap properties and methods in ItineraryDetailPage.
+- QA-09: Removed duplicate warning toast on forgot password click; clean recovery ticket flow.
+- QA-10: Adopted shared <app-place-detail-sheet> on Home tab.
+- QA-11: Verified public routing resilience with 2.5s AbortController timeout and geodesic fallback.
+
+FILES MODIFIED:
+- Project/src/app/core/services/connectivity.service.ts
+- Project/src/app/core/services/connectivity.service.spec.ts
+- Project/src/app/core/interceptors/auth.interceptor.ts
+- Project/src/app/core/interceptors/auth.interceptor.spec.ts
+- Project/src/app/core/services/place.service.ts
+- Project/src/app/core/services/itinerary.service.ts
+- Project/src/app/core/services/auth.service.ts
+- Project/src/app/shared/components/place-detail-sheet/place-detail-sheet.component.ts
+- Project/src/app/tabs/map/map.page.ts
+- Project/src/app/app.component.ts
+- Project/src/app/features/itinerary/suggested-wizard/suggested-wizard.page.ts
+- Project/src/app/features/itinerary/custom-builder/custom-builder.page.ts
+- Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.ts
+- Project/src/app/features/auth/login/login.page.ts
+- Project/src/app/features/auth/login/login.page.spec.ts
+- Project/src/app/tabs/home/home.page.ts
+- Project/src/app/tabs/home/home.page.html
+- Project/src/app/tabs/home/home.page.spec.ts
+- docs/TODO.md
+- docs/KNOWN_ISSUES.md
+- docs/FULL_WEBSITE_QA_AUDIT_AND_PROPOSAL.md
+- docs/PROJECT_STATE.md
+- docs/DEVELOPMENT_LOG.md
+
+DEPENDENCIES:
+- No new packages added or changed.
+
+TESTING:
+- Frontend Unit Tests: 28/28 suites, 293/293 tests passed (100%).
+- Backend Integration Tests: 21/21 Pytest cases passed (100%) against PostgreSQL in Docker.
+- Production Compilation: ng build succeeded in 21.8s (0 errors, 0 warnings, 0 budget overruns).
+
+ISSUES:
+- None.
+
+DOCUMENTATION:
+- docs/TODO.md, docs/KNOWN_ISSUES.md, docs/FULL_WEBSITE_QA_AUDIT_AND_PROPOSAL.md, docs/PROJECT_STATE.md, docs/DEVELOPMENT_LOG.md updated.
+
+NEXT STEPS:
+- Optional: Native APK production signing with Android Studio / Capacitor.
+- Optional: Vector tile bundling (.mbtiles) for offline map panning.
+---
+
+## Session 90: Angular 18 `inject()` Refactoring, ESLint Zero-Defect Alignment & Full Suite Re-Verification
+- **Date & Time**: 2026-11-09 15:15:00 (Local)
+- **Objective**: Modernize all components and services modified during Phase 32 to use Angular 18's canonical `inject()` dependency injection pattern, resolve ESLint stylistic errors (`@angular-eslint/prefer-inject`, `@typescript-eslint/consistent-type-imports`, `import-x/order`), ensure test runner stability, and verify complete test suite and build integrity.
+- **Tasks Performed**:
+  - Modernized dependency injection across all Phase 32 files to use `inject()`:
+    - `AppComponent`: Refactored to `connectivityService = inject(ConnectivityService)` and `toastController = inject(ToastController)`. Updated `app.component.spec.ts` to instantiate component via `TestBed.createComponent(AppComponent)` with injected providers.
+    - `ConnectivityService`: Refactored to `http = inject(HttpClient)`.
+    - `PlaceService`: Refactored to `http = inject(HttpClient)` and `connectivityService = inject(ConnectivityService)`. Removed unused `environment` import.
+    - `ItineraryService`: Refactored to `http = inject(HttpClient)`, `authService = inject(AuthService)`, and `guestStorage = inject(GuestStorageService)`. Replaced forbidden `Array<T>` with `T[]` at lines 1010 and 1191.
+    - `AuthService`: Refactored to `http = inject(HttpClient)`, `guestStorage = inject(GuestStorageService)`, and `secureTokenStorage = inject(SecureTokenStorageService)`.
+    - `PlaceDetailSheetComponent`: Refactored to `placeService = inject(PlaceService)`.
+    - `HomePage`: Refactored to `guestStorage = inject(GuestStorageService)`, `itineraryService = inject(ItineraryService)`, `placeService = inject(PlaceService)`, `router = inject(Router)`, and `toastController = inject(ToastController)`. Removed unused `IonButton` and `GuestItinerary` imports.
+    - `MapPage`: Refactored to `placeService = inject(PlaceService)`, `osmOverpassService = inject(OsmOverpassService)`, `routeTrackingService = inject(RouteTrackingService)`, `itineraryService = inject(ItineraryService)`, `route = inject(ActivatedRoute)`, `router = inject(Router)`, `cdr = inject(ChangeDetectorRef)`, `toastController = inject(ToastController)`, and `platformId = inject(PLATFORM_ID)`.
+    - `SuggestedWizardPage`: Refactored to `fb = inject(FormBuilder)`, `router = inject(Router)`, `route = inject(ActivatedRoute)`, `itineraryService = inject(ItineraryService)`, `placeService = inject(PlaceService)`, and `toastController = inject(ToastController)`. Fixed unused parameter in `openNearbyPlaces(_stop)` and simplified `parseAssumption`.
+    - `CustomBuilderPage`: Refactored to `fb = inject(FormBuilder)`, `route = inject(ActivatedRoute)`, `router = inject(Router)`, `itineraryService = inject(ItineraryService)`, `placeService = inject(PlaceService)`, `alertController = inject(AlertController)`, and `toastController = inject(ToastController)`. Removed unused variables `end` and `startDate`.
+    - `ItineraryDetailPage`: Refactored to `route = inject(ActivatedRoute)`, `router = inject(Router)`, `itineraryService = inject(ItineraryService)`, `placeService = inject(PlaceService)`, `routeTrackingService = inject(RouteTrackingService)`, `alertController = inject(AlertController)`, `toastController = inject(ToastController)`, `location = inject(Location)`, and `platformId = inject(PLATFORM_ID)`. Removed unused `ElementRef`, `ViewChild`, `AfterViewInit`, `environment`, `getCommuteInfoForMunicipality`, and `decodePolyline`. Simplified `parseAssumption`.
+    - `LoginPage`: Refactored to `router = inject(Router)`, `authService = inject(AuthService)`, `guestMigrationService = inject(GuestMigrationService)`, and `toastController = inject(ToastController)`.
+    - `TabsPage`: Fixed unused parameter `_event?: Event` in `onMapTabClicked`.
+  - Audited ESLint across all 18 modified files using `npx eslint --fix`; confirmed 0 errors and 0 warnings.
+  - Executed full Vitest suite (`ng test --no-watch`): **28/28 test suites, 293/293 unit tests passed (100%)** in 53.57s.
+  - Executed backend integration suite (`pytest backend/tests -v`): **21/21 integration tests passed (100%)** in 24.87s against Docker PostgreSQL.
+  - Executed Playwright E2E TypeScript check (`npm run typecheck:e2e`): exited with code 0.
+  - Executed Angular production build (`ng build` with `BypassSandbox: true`): generated `Project/www` bundle in 22.82s with 0 errors, 0 warnings, and 0 stylesheet budget overruns.
+  - Synchronized Capacitor Android project (`npx cap sync android`): copied web assets and synced 6 native plugins in 1.67s with code 0.
+- **Files Modified**:
+  - `Project/src/app/app.component.ts`
+  - `Project/src/app/app.component.spec.ts`
+  - `Project/src/app/core/services/connectivity.service.ts`
+  - `Project/src/app/core/services/connectivity.service.spec.ts`
+  - `Project/src/app/core/interceptors/auth.interceptor.ts`
+  - `Project/src/app/core/interceptors/auth.interceptor.spec.ts`
+  - `Project/src/app/core/services/place.service.ts`
+  - `Project/src/app/core/services/itinerary.service.ts`
+  - `Project/src/app/core/services/auth.service.ts`
+  - `Project/src/app/shared/components/place-detail-sheet/place-detail-sheet.component.ts`
+  - `Project/src/app/tabs/home/home.page.ts`
+  - `Project/src/app/tabs/home/home.page.spec.ts`
+  - `Project/src/app/tabs/home/home.page.html`
+  - `Project/src/app/tabs/map/map.page.ts`
+  - `Project/src/app/tabs/tabs.page.ts`
+  - `Project/src/app/features/itinerary/suggested-wizard/suggested-wizard.page.ts`
+  - `Project/src/app/features/itinerary/custom-builder/custom-builder.page.ts`
+  - `Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.ts`
+  - `Project/src/app/features/auth/login/login.page.ts`
+  - `Project/src/app/features/auth/login/login.page.spec.ts`
+  - `docs/DEVELOPMENT_LOG.md`
+- **Verification Results**:
+  - `cd Project; npx eslint <18 modified files>`: Exit code 0 (0 problems, 0 warnings).
+  - `npm --prefix Project run test:unit`: 28 passed, 293 passed (100%), 0 failures.
+  - `python -m pytest backend/tests -v`: 21 passed (100%), 0 failures.
+  - `npm --prefix Project run typecheck:e2e`: Exit code 0.
+  - `npm --prefix Project run build`: Exit code 0 (Application bundle generation complete, 22.82s).
+  - `cd Project; npx cap sync android`: Exit code 0 (Sync finished in 1.674s).
+
+---
+
+```
+DEVELOPMENT CHECKPOINT: Session 90
+STATUS: PASSED
+TIMESTAMP: 2026-11-09 15:15:00
+
+COMPLETED:
+- Modernized all 18 Phase 32 components, services, and pages to Angular 18 inject() pattern.
+- Resolved all ESLint stylistic and type-import errors across modified files.
+- Full quality gates passing: Vitest (293/293), Pytest (21/21), typecheck:e2e (0 errors), ng build (code 0), cap sync android (code 0).
+
+FILES MODIFIED:
+- Project/src/app/app.component.ts
+- Project/src/app/app.component.spec.ts
+- Project/src/app/core/services/connectivity.service.ts
+- Project/src/app/core/services/connectivity.service.spec.ts
+- Project/src/app/core/interceptors/auth.interceptor.ts
+- Project/src/app/core/interceptors/auth.interceptor.spec.ts
+- Project/src/app/core/services/place.service.ts
+- Project/src/app/core/services/itinerary.service.ts
+- Project/src/app/core/services/auth.service.ts
+- Project/src/app/shared/components/place-detail-sheet/place-detail-sheet.component.ts
+- Project/src/app/tabs/home/home.page.ts
+- Project/src/app/tabs/home/home.page.spec.ts
+- Project/src/app/tabs/home/home.page.html
+- Project/src/app/tabs/map/map.page.ts
+- Project/src/app/tabs/tabs.page.ts
+- Project/src/app/features/itinerary/suggested-wizard/suggested-wizard.page.ts
+- Project/src/app/features/itinerary/custom-builder/custom-builder.page.ts
+- Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.ts
+- Project/src/app/features/auth/login/login.page.ts
+- Project/src/app/features/auth/login/login.page.spec.ts
+- docs/DEVELOPMENT_LOG.md
+
+DEPENDENCIES:
+- No new dependencies added.
+
+TESTING:
+- Frontend Unit Tests: 28/28 suites, 293/293 tests passed (100%).
+- Backend Integration Tests: 21/21 Pytest cases passed (100%) against PostgreSQL in Docker.
+- Production Compilation: ng build succeeded in 22.8s (0 errors, 0 warnings, 0 budget overruns).
+- Android Assets/Plugins: npx cap sync android succeeded in 1.67s.
+
+ISSUES:
+- None.
+
+DOCUMENTATION:
+- docs/DEVELOPMENT_LOG.md updated.
+
+NEXT STEPS:
+- Optional: Native APK production signing with Android Studio / Capacitor.
+- Optional: Vector tile bundling (.mbtiles) for offline map panning.
+```
+
+
 
 
 

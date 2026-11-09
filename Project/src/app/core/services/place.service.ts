@@ -1,28 +1,31 @@
-import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, catchError, map, of, shareReplay } from 'rxjs';
-import { environment } from '../../../environments/environment';
+import { Injectable, inject } from '@angular/core';
+import type { Observable } from 'rxjs';
+import { catchError, map, of, shareReplay, tap } from 'rxjs';
+
 import {
+  getOfflinePlacesAsPlaceEntities,
+  getOfflineNearbyPlaces,
+  type NearbyPlaceItem,
+} from '../data/offline-places.data';
+import type {
   Municipality,
   PaginatedPlaces,
   Place,
   PlaceSearchParams,
 } from '../models/place.models';
-import {
-  getOfflinePlacesAsPlaceEntities,
-  getOfflineNearbyPlaces,
-  NearbyPlaceItem,
-} from '../data/offline-places.data';
+
+import { ConnectivityService } from './connectivity.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class PlaceService {
   private get baseUrl(): string {
-    return `${environment.apiBaseUrl}/places`;
+    return `${this.connectivityService.activeApiBaseUrl}/places`;
   }
   private get municipalitiesUrl(): string {
-    return `${environment.apiBaseUrl}/municipalities`;
+    return `${this.connectivityService.activeApiBaseUrl}/municipalities`;
   }
 
   // Curated asset mapping for high-definition photography
@@ -73,7 +76,26 @@ export class PlaceService {
   private osmPlacesCache: Place[] = [];
   private osmLoading$: Observable<Place[]> | null = null;
 
-  constructor(private http: HttpClient) {}
+  private http = inject(HttpClient);
+  private connectivityService = inject(ConnectivityService);
+
+  constructor() {}
+
+  /**
+   * Merges incoming places into the in-memory OSM cache by ID without purging existing cached places (QA-02).
+   */
+  public mergePlacesIntoCache(newPlaces: Place[]): void {
+    if (!newPlaces || newPlaces.length === 0) return;
+    if (this.osmPlacesCache.length === 0) {
+      this.osmPlacesCache = [...newPlaces];
+      return;
+    }
+    const cacheMap = new Map<string, Place>(this.osmPlacesCache.map((p) => [String(p.id), p]));
+    for (const place of newPlaces) {
+      cacheMap.set(String(place.id), place);
+    }
+    this.osmPlacesCache = Array.from(cacheMap.values());
+  }
 
   /**
    * Loads the comprehensive bundled OpenStreetMap places dataset (assets/data/osm_places.json).
@@ -157,6 +179,11 @@ export class PlaceService {
     }
 
     return this.http.get<PaginatedPlaces>(this.baseUrl, { params: httpParams }).pipe(
+      tap((response) => {
+        if (response && response.items && response.items.length > 0) {
+          this.mergePlacesIntoCache(response.items);
+        }
+      }),
       catchError(() => {
         if (this.osmPlacesCache.length > 0) {
           return of(this.getFilteredLocalPlaces(this.osmPlacesCache, params));

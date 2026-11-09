@@ -1,11 +1,12 @@
+import { CommonModule } from '@angular/common';
 import {
   Component,
   EventEmitter,
   Input,
   Output,
   ChangeDetectionStrategy,
+  inject,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { IonIcon } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import {
@@ -28,10 +29,12 @@ import {
   starOutline,
   timeOutline,
 } from 'ionicons/icons';
-import { Place, PlacePhoto } from '../../../core/models/place.models';
-import { PlaceService } from '../../../core/services/place.service';
-import { CommuteInfo } from '../../../core/data/commute-guide.data';
+
 import { environment } from '../../../../environments/environment';
+import type { CommuteInfo } from '../../../core/data/commute-guide.data';
+import type { Place, PlacePhoto } from '../../../core/models/place.models';
+import { ConnectivityService } from '../../../core/services/connectivity.service';
+import { PlaceService } from '../../../core/services/place.service';
 
 @Component({
   selector: 'app-place-detail-sheet',
@@ -42,6 +45,8 @@ import { environment } from '../../../../environments/environment';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PlaceDetailSheetComponent {
+  private connectivityService = inject(ConnectivityService, { optional: true });
+
   @Input() public place: Place | null = null;
   @Input() public showAddToTripActions = true;
   @Input() public showNavigationAction = true;
@@ -56,8 +61,9 @@ export class PlaceDetailSheetComponent {
 
   public isHoursExpanded = false;
   public activePhotoIndex = 0;
+  public placeService = inject(PlaceService);
 
-  constructor(public placeService: PlaceService) {
+  constructor() {
     addIcons({
       addOutline,
       busOutline,
@@ -117,7 +123,8 @@ export class PlaceDetailSheetComponent {
     if (this.place.photos && this.place.photos.length > 0) {
       const active = this.place.photos[this.activePhotoIndex] || this.place.photos[0];
       if (active?.name) {
-        return `${environment.apiBaseUrl}/places/photos/${encodeURIComponent(active.name)}?max_width_px=800`;
+        const apiBase = this.connectivityService?.activeApiBaseUrl || environment.apiBaseUrl;
+        return `${apiBase}/places/photos/${encodeURIComponent(active.name)}?max_width_px=800`;
       }
     }
 
@@ -126,7 +133,8 @@ export class PlaceDetailSheetComponent {
 
   public getPhotoThumbnailUrl(photo: PlacePhoto): string {
     if (photo.name) {
-      return `${environment.apiBaseUrl}/places/photos/${encodeURIComponent(photo.name)}?max_width_px=200`;
+      const apiBase = this.connectivityService?.activeApiBaseUrl || environment.apiBaseUrl;
+      return `${apiBase}/places/photos/${encodeURIComponent(photo.name)}?max_width_px=200`;
     }
     return '';
   }

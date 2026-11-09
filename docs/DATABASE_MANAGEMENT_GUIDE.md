@@ -126,6 +126,7 @@ All structural changes to database tables are version-controlled with **Alembic*
 ### Current Migration History
 1. `0001_initial_schema`: Core 7 tables (`users`, `auth_identities`, `municipalities`, `places`, `itineraries`, `itinerary_days`, `itinerary_items`).
 2. `0002_google_places_and_routing`: GIS upgrade columns (Google Place ID, ratings, reviews, photos, operating hours, polylines, leg details) and the `geospatial_cache` table.
+3. `0003_widen_phone_column`: Widened `places.phone` column from `VARCHAR(64)` to `VARCHAR(255)` to accommodate semicolon-delimited multi-number telephone entries from OpenStreetMap data.
 
 ### Migration Commands
 Always run Alembic from inside the `backend/` directory:
@@ -186,9 +187,16 @@ Fetches and imports real-world geographic venues from the live Overpass API boun
    ```powershell
    python scripts/import_osm.py data/raw/nueva_ecija_osm.json
    ```
-   Filters out unmapped/out-of-bounds items, matches municipality centroids, and upserts ~2,650 verified real-world places into the `places` table.
+   Filters out unmapped/out-of-bounds items, matches municipality centroids, clips string attributes defensively, and upserts 2,656 verified real-world places into the `places` table (combined with 17 curated places for a total catalog of **2,673 places**).
 
-```
+- **Current Live Metrics (PostgreSQL Container `ne_postgres`)**:
+  - `places`: **2,673**
+  - `municipalities`: **12**
+  - `users`: **4**
+  - `itineraries`: **5**
+  - `itinerary_days`: **13**
+  - `itinerary_items`: **31**
+  - `geospatial_cache`: **3**
 - **Filters**: Maps raw OSM tags into 16 canonical categories (`cafe`, `restaurant`, `hotel`, `viewpoint`, `park`, `historic`, `museum`, `terminal`, etc.).
 - **Honesty Guard**: Venues without verified prices have `estimated_cost_min` and `estimated_cost_max` set to `NULL` to avoid misleading travelers.
 
@@ -276,4 +284,16 @@ Run the foundational pytest suite:
 python -m pytest backend/tests/test_foundation.py -v
 ```
 This tests database connectivity, municipality filtering, POI category queries, and out-of-province coordinate rejection.
+
+### Q5: What if an import fails with `psycopg.errors.StringDataRightTruncation`?
+**Cause**: OpenStreetMap records can contain multi-phone strings (semicolon-separated) or long URLs exceeding column limits.
+**Fix**:
+1. Alembic migration `0003_widen_phone_column.py` widens `places.phone` from `VARCHAR(64)` to `VARCHAR(255)`.
+2. `scripts/import_osm.py` enforces defensive clipping across all text columns:
+   - `name[:255]`
+   - `category[:64]`
+   - `phone[:255]`
+   - `website[:512]`
+   - `opening_hours[:255]`
+
 

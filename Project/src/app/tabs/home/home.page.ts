@@ -1,9 +1,9 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import type { OnDestroy, OnInit } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import {
-  IonButton,
   IonContent,
   IonIcon,
   IonModal,
@@ -32,15 +32,27 @@ import {
   shieldCheckmarkOutline,
   sparkles,
   timeOutline,
+  notificationsOutline,
 } from 'ionicons/icons';
-import { Subscription, catchError, debounceTime, distinctUntilChanged, finalize, of, switchMap, tap } from 'rxjs';
-import { GuestItinerary, GuestStorageService } from '../../core/services/guest-storage.service';
-import { PlaceService } from '../../core/services/place.service';
-import { Place } from '../../core/models/place.models';
-import { Itinerary } from '../../core/models/itinerary.models';
-import { ItineraryService } from '../../core/services/itinerary.service';
+import {
+  Subscription,
+  catchError,
+  debounceTime,
+  distinctUntilChanged,
+  finalize,
+  of,
+  switchMap,
+  tap,
+} from 'rxjs';
+
 import { getOfflineDestinationsForHome } from '../../core/data/offline-places.data';
+import type { Itinerary } from '../../core/models/itinerary.models';
+import type { Place } from '../../core/models/place.models';
+import { GuestStorageService } from '../../core/services/guest-storage.service';
+import { ItineraryService } from '../../core/services/itinerary.service';
+import { PlaceService } from '../../core/services/place.service';
 import { toLocalIsoDate } from '../../core/utils/date.utils';
+import { PlaceDetailSheetComponent } from '../../shared/components/place-detail-sheet/place-detail-sheet.component';
 
 export interface TravelNotification {
   id: string;
@@ -80,16 +92,17 @@ export interface DestinationItem {
     ReactiveFormsModule,
     RouterLink,
     IonContent,
-    IonButton,
     IonIcon,
     IonModal,
     IonSpinner,
+    PlaceDetailSheetComponent,
   ],
 })
 export class HomePage implements OnInit, OnDestroy {
   public isGuestMode = false;
   public searchControl = new FormControl('');
   public selectedDestination: DestinationItem | null = null;
+  public selectedPlace: Place | null = null;
   public isDetailModalOpen = false;
 
   public isPopularCatalogOpen = false;
@@ -118,34 +131,35 @@ export class HomePage implements OnInit, OnDestroy {
   // Curated fallback destinations from canonical offline places dataset (DEF-05)
   public destinations: DestinationItem[] = getOfflineDestinationsForHome();
 
-  constructor(
-    private guestStorage: GuestStorageService,
-    private itineraryService: ItineraryService,
-    private placeService: PlaceService,
-    private router: Router,
-    private toastController: ToastController
-  ) {
+  private guestStorage = inject(GuestStorageService);
+  private itineraryService = inject(ItineraryService);
+  private placeService = inject(PlaceService);
+  private router = inject(Router);
+  private toastController = inject(ToastController);
+
+  constructor() {
     addIcons({
-      arrowBackOutline,
       notifications,
+      closeCircle,
+      searchOutline,
+      locationOutline,
+      calendarOutline,
+      arrowForward,
+      arrowBackOutline,
+      timeOutline,
+      cashOutline,
+      checkmarkDoneOutline,
+      closeOutline,
+      notificationsOutline,
       personCircleOutline,
       informationCircle,
       sparkles,
       mapOutline,
-      arrowForward,
-      searchOutline,
-      closeCircle,
-      closeOutline,
-      locationOutline,
-      calendarOutline,
       compassOutline,
       navigateOutline,
       openOutline,
-      timeOutline,
-      cashOutline,
       leafOutline,
       shieldCheckmarkOutline,
-      checkmarkDoneOutline,
     });
   }
 
@@ -417,12 +431,79 @@ export class HomePage implements OnInit, OnDestroy {
 
   public openDestinationDetail(destination: DestinationItem): void {
     this.selectedDestination = destination;
+    this.selectedPlace = this.destinationToPlace(destination);
     this.isDetailModalOpen = true;
+
+    // Proactively hydrate complete place details with ratings, photos, hours (QA-10)
+    this.placeService.getPlaceById(destination.id).subscribe({
+      next: (fullPlace) => {
+        if (fullPlace) {
+          this.selectedPlace = fullPlace;
+        }
+      },
+      error: () => {
+        // Fallback already assigned via destinationToPlace
+      },
+    });
+  }
+
+  public destinationToPlace(destination: DestinationItem): Place {
+    let lat = 15.58;
+    let lng = 121.0;
+    if (destination.directionsUrl) {
+      const match = destination.directionsUrl.match(/destination=(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+      if (match) {
+        lat = parseFloat(match[1]);
+        lng = parseFloat(match[2]);
+      }
+    }
+    return {
+      id: destination.id,
+      name: destination.name,
+      category: destination.categoryKey || 'tourist_attraction',
+      latitude: lat,
+      longitude: lng,
+      municipality_name: destination.municipality,
+      address_text: `${destination.municipality}, Nueva Ecija`,
+      description: destination.description,
+      cost_currency: 'PHP',
+      source_name: 'HomeFeatured',
+      source_record_id: destination.id,
+      imported_at: new Date().toISOString(),
+      is_featured: true,
+      tags: destination.tags,
+      opening_hours: destination.openingHours || null,
+      image_url: destination.image,
+      directions_url: destination.directionsUrl,
+    } as Place;
+  }
+
+  public onStartTripFromSheet(place: Place): void {
+    this.closeDestinationDetail();
+    this.closePopularCatalog();
+    this.router.navigate(['/suggested-wizard'], {
+      queryParams: {
+        destination: place.municipality_name || 'Nueva Ecija',
+        placeId: String(place.id),
+      },
+    });
+  }
+
+  public onAddToCustomTripFromSheet(place: Place): void {
+    this.closeDestinationDetail();
+    this.closePopularCatalog();
+    this.router.navigate(['/custom-builder'], {
+      queryParams: {
+        destination: place.municipality_name || 'Nueva Ecija',
+        placeId: String(place.id),
+      },
+    });
   }
 
   public closeDestinationDetail(): void {
     this.isDetailModalOpen = false;
     this.selectedDestination = null;
+    this.selectedPlace = null;
   }
 
   public openInGoogleMaps(destination: DestinationItem): void {

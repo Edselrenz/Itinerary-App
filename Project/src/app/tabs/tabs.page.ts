@@ -37,7 +37,7 @@ export class TabsPage {
     });
   }
 
-  public onMapTabClicked(event?: Event): void {
+  public onMapTabClicked(_event?: Event): void {
     // Explicitly navigate without query parameters so map tab always resets to general discovery mode
     this.router.navigate(['/tabs/map'], { queryParams: {} });
   }

@@ -1,14 +1,16 @@
-import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, catchError, from, map, of, switchMap, tap, throwError, timeout } from 'rxjs';
-import { addDaysLocal, diffDaysLocal, parseLocalIsoDate, toLocalIsoDate } from '../utils/date.utils';
+import { Injectable, inject } from '@angular/core';
+import type { Observable} from 'rxjs';
+import { BehaviorSubject, catchError, from, map, of, tap, throwError, timeout } from 'rxjs';
+
+import { environment } from '../../../environments/environment';
+import type {
+  OfflineCuratedPlace} from '../data/offline-places.data';
 import {
   getOfflineCuratedPoolForItinerary,
-  getOfflineDayClusterPresets,
-  OfflineCuratedPlace,
+  getOfflineDayClusterPresets
 } from '../data/offline-places.data';
-import { environment } from '../../../environments/environment';
-import {
+import type {
   Itinerary,
   ItineraryCreatePayload,
   ItineraryDay,
@@ -20,10 +22,13 @@ import {
   SuggestedItineraryRequest,
   ItineraryBudgetSummary,
 } from '../models/itinerary.models';
+import { addDaysLocal, diffDaysLocal, parseLocalIsoDate, toLocalIsoDate } from '../utils/date.utils';
 import { encodePolyline, haversineDistanceMeters } from '../utils/polyline.util';
+
 import { AuthService } from './auth.service';
-import { GuestItinerary, GuestStorageService } from './guest-storage.service';
 import { ConnectivityService } from './connectivity.service';
+import type { GuestItinerary} from './guest-storage.service';
+import { GuestStorageService } from './guest-storage.service';
 import { PlaceService } from './place.service';
 
 export { ItineraryBudgetSummary } from '../models/itinerary.models';
@@ -36,7 +41,8 @@ export class ItineraryService {
   private placeService = inject(PlaceService, { optional: true });
 
   private get baseUrl(): string {
-    return `${environment.apiBaseUrl}/itineraries`;
+    const apiBase = this.connectivityService?.activeApiBaseUrl || environment.apiBaseUrl;
+    return `${apiBase}/itineraries`;
   }
 
   private readonly itinerariesSubject = new BehaviorSubject<Itinerary[]>([]);
@@ -107,11 +113,11 @@ export class ItineraryService {
     );
   }
 
-  constructor(
-    private http: HttpClient,
-    private authService: AuthService,
-    private guestStorage: GuestStorageService
-  ) {
+  private http = inject(HttpClient);
+  private authService = inject(AuthService);
+  private guestStorage = inject(GuestStorageService);
+
+  constructor() {
     this.refreshItineraries().subscribe({ error: () => {} });
   }
 
@@ -1006,7 +1012,7 @@ export class ItineraryService {
     // Cross-day deduplication tracking (PREF-06: ID, fuzzy venue name, and coordinate proximity)
     const usedPlaceIds = new Set<string>();
     const usedVenueNormNames = new Set<string>();
-    const usedCoords: Array<{ lat: number; lng: number }> = [];
+    const usedCoords: { lat: number; lng: number }[] = [];
 
     const isPlaceDuplicate = (place: OfflineCuratedPlace): boolean => {
       if (usedPlaceIds.has(place.id)) return true;
@@ -1187,7 +1193,7 @@ export class ItineraryService {
       });
 
       // Calculate offline routes, distances, and polylines
-      const coords: Array<[number, number]> = items
+      const coords: [number, number][] = items
         .filter((it) => it.place?.latitude && it.place?.longitude)
         .map((it) => [it.place!.latitude, it.place!.longitude]);
 

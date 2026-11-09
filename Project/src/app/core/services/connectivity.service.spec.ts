@@ -1,9 +1,11 @@
-import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { TestBed } from '@angular/core/testing';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { ConnectivityService } from './connectivity.service';
+
 import { environment } from '../../../environments/environment';
+
+import { ConnectivityService } from './connectivity.service';
 
 describe('ConnectivityService', () => {
   let service: ConnectivityService;
@@ -32,19 +34,32 @@ describe('ConnectivityService', () => {
     expect(isOffline).toBe(false);
   });
 
-  it('updates host offline status when setHostOffline is called', () => {
+  it('updates host offline status after consecutive error threshold (QA-01)', () => {
     let isOffline = false;
     service.isHostOffline$.subscribe((val) => (isOffline = val));
 
+    // First error increments counter to 1, offline stays false (gate prevents false positive)
     service.setHostOffline(true);
+    expect(service.consecutiveErrorCount).toBe(1);
+    expect(isOffline).toBe(false);
+
+    // Second consecutive error reaches threshold of 2, offline becomes true
+    service.setHostOffline(true);
+    expect(service.consecutiveErrorCount).toBe(2);
     expect(isOffline).toBe(true);
 
+    // Recovery resets consecutive errors to 0 and offline to false
     service.setHostOffline(false);
+    expect(service.consecutiveErrorCount).toBe(0);
     expect(isOffline).toBe(false);
+
+    // Direct force bypass sets offline immediately
+    service.setHostOffline(true, true);
+    expect(isOffline).toBe(true);
   });
 
   it('dismisses banner manually and prevents re-triggering until recovery', () => {
-    service.setHostOffline(true);
+    service.setHostOffline(true, true);
     let isOffline = false;
     service.isHostOffline$.subscribe((val) => (isOffline = val));
     expect(isOffline).toBe(true);
@@ -53,7 +68,7 @@ describe('ConnectivityService', () => {
     expect(isOffline).toBe(false);
 
     // Another offline notification while dismissed should stay hidden
-    service.setHostOffline(true);
+    service.setHostOffline(true, true);
     expect(isOffline).toBe(false);
 
     // Recovery clears manual dismissal
@@ -61,7 +76,7 @@ describe('ConnectivityService', () => {
     expect(isOffline).toBe(false);
 
     // Subsequent offline triggers banner again
-    service.setHostOffline(true);
+    service.setHostOffline(true, true);
     expect(isOffline).toBe(true);
   });
 

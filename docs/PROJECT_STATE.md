@@ -7,10 +7,19 @@ This document serves as the primary handoff reference for developers and coding 
 ## 1. Project Status Overview
 
 - **Application Name**: Nueva Ecija Travel Itinerary (MVP & GIS Architecture Upgrade)
-- **Current Development Phase**: **Phase 31 Completed & In-App Navigation State Teardown Verified**
-- **Last Verified Working State**: **Phase 31 & Map Tab Teardown Verified** (28/28 test files and 293/293 frontend unit tests passing [100%], 21/21 backend Pytest cases [100%], clean Angular production build in `Project/www` with code 0 and 0 stylesheet budget warnings/overruns; resolved persistent in-app navigation on tab switch, PREF-01..06, and CUST-01..03: Clean route navigation exit teardown with `exitFollowRouteModeCleanly()`, `ionViewWillEnter()` lifecycle check, bottom navigation tab query param reset via `onMapTabClicked()`, floating top bar "Browse Map" action button, and GPS tracking teardown on `onBack()`).
-- **Recent Audit & Roadmap Expansion**: Ingestion and formal documentation of `suggested_and_custom_itinerary_live_evaluation.pdf` ([SUGGESTED_AND_CUSTOM_ITINERARY_LIVE_EVALUATION.md](./SUGGESTED_AND_CUSTOM_ITINERARY_LIVE_EVALUATION.md)), resolving all 6 preference scheduling defects (`PREF-01..06`), 3 custom builder defects (`CUST-01..03`), and persistent in-app route map caching.
-- **Current Active Tasks**: User live validation and staging rollout.
+- **Current Development Phase**: **Phase 32 Completed & Verified — Full-Website QA Remediation & Hardening**
+- **Active Database Infrastructure**: **PostgreSQL 16 in Docker** (`ne_postgres` on port 5432) active and populated with the complete **2,673-place catalog** (2,656 OSM + 17 curated), 12 municipalities, 4 users, and 5 itineraries. Dual-engine SQLite fallback verified.
+- **Last Verified Working State**: **Phase 32 Verified on PostgreSQL** (28/28 frontend test files and 293/293 unit tests passing [100%], 21/21 backend Pytest cases [100%] executing against PostgreSQL in Docker, clean Angular production build in `Project/www` with code 0 and 0 stylesheet budget warnings/overruns). Remediated all 16 full-system audit items (`QA-01` through `QA-14C` + `MAP-TAB`):
+  - `QA-01`: Consecutive error gate ($\ge 2$) and async health reconciliation eliminating false-positive offline banners.
+  - `QA-02`: In-memory place cache merging (`mergePlacesIntoCache` & `allLoadedPlaces`), preserving all 2,673 marker cluster pins during pan/zoom.
+  - `QA-08`: Dynamic `activeApiBaseUrl` getter respecting custom tunnel URLs (`ne_custom_api_url`) across all HTTP services and interceptors.
+  - `QA-14C`: App boot hydration of `ne_theme_mode` dark mode and dynamic `ne_default_budget` hydration in wizard forms.
+  - `QA-14B`: Timezone-safe date arithmetic via `toLocalIsoDate(addDaysLocal(parseLocalIsoDate(lastDate), 1))` in `addDay()`.
+  - `QA-14A`: Deleted legacy `previewMap` lifecycle, variables, and methods, eliminating redundant DOM resize timers.
+  - `QA-09`: Removed duplicate warning toast on forgot password modal; clean recovery ticket flow.
+  - `QA-10`: Unified Home tab destination modal with shared `<app-place-detail-sheet>`.
+  - `QA-11`: Public routing resilience with 2.5s AbortController timeout and geodesic spline fallback.
+- **Current Active Tasks**: System operational. Next available opportunities: Native APK signing and vector tile bundling.
 - **Current Blockers**: **None**.
 
 ---
@@ -19,7 +28,10 @@ This document serves as the primary handoff reference for developers and coding 
 
 ### Backend (`backend/`)
 - [x] **Relational Schema**: 7 core SQLAlchemy 2.0 models (`User`, `AuthIdentity`, `Municipality`, `Place`, `Itinerary`, `ItineraryDay`, `ItineraryItem`) supporting both PostgreSQL and SQLite.
-- [x] **Alembic Migration**: `0001_initial_schema` with foreign key cascades and server-side timestamp defaults.
+- [x] **Alembic Migrations**:
+  - `0001_initial_schema`: Initial 7 core tables with foreign key cascades and server-side timestamp defaults.
+  - `0002_google_places_and_routing`: GIS upgrade columns (Google Place ID, ratings, reviews, photos, operating hours, polylines, leg details) and `geospatial_cache` table.
+  - `0003_widen_phone_column`: Widened `places.phone` from `VARCHAR(64)` to `VARCHAR(255)` to accommodate multi-number telephone entries from OpenStreetMap.
 - [x] **System Health Endpoint**: `GET /api/v1/health` verifying liveness and provincial scope.
 - [x] **Municipality & Places API**:
   - `GET /api/v1/municipalities` (fuzzy text search).
@@ -34,7 +46,7 @@ This document serves as the primary handoff reference for developers and coding 
   - `POST /api/v1/auth/oauth/apple` (truthful 501 gate).
 - [x] **Data Pipeline & OpenStreetMap Ingestion (`scripts/`)**:
   - `fetch_osm_places.py`: Overpass API fetcher querying live OSM servers for all nodes and ways in Nueva Ecija (`2,995` raw elements).
-  - `import_osm.py`: Batch validator and upsert pipeline with strict provincial bounding box (`15.15 <= lat <= 16.15`, `120.70 <= lng <= 121.40`) and 16 canonical categories (**2,673 total real-world places populated**).
+  - `import_osm.py`: Batch validator and upsert pipeline with strict provincial bounding box (`15.15 <= lat <= 16.15`, `120.70 <= lng <= 121.40`), defensive string length clipping, and 16 canonical categories (**2,673 total real-world places populated in PostgreSQL**).
   - `seed_featured_places.py`: Idempotent seeder for 12 municipalities and 17 curated destinations.
 
 ### Mobile Client (`Project/`)
@@ -264,7 +276,42 @@ All 16 audit findings from [CODE_REVIEW_AUDIT.md](file:///c:/Users/Edward/Deskto
 
 ---
 
-## 9. Next Recommended Opportunities
+## 9. Full-Website QA Audit Ingestion & Phase 32 Staging
+
+An enterprise full-system QA audit report (`full_website_qa_audit_and_proposal.pdf`) evaluated commit `81fcc8d7` across 64 test cases and 8 functional modules.
+
+### Audit Summary & Baseline Alignment
+- **Total Test Cases**: 64
+- **Passed (Verified Baseline)**: 45 (70.3%)
+- **Partial / UX Friction**: 12 (18.8%)
+- **Failed / High Defects**: 7 (10.9%)
+
+### Resolved Baseline Findings (Remediated in Phase 31 & Session 87)
+- **`QA-03` (P0 Destination Autofill)**: Replaced static text inputs with `<app-destination-autocomplete>` covering all 32 LGUs and curated landmarks with diacritic-insensitive search.
+- **`QA-04` (P0 Schedule Chronology & Overnight Ordering)**: Replaced 10:00 AM collisions with rolling sequential time windows (`09:30 AM`, `12:00 PM`, `03:00 PM`) and end-of-day lodging placement.
+- **`QA-05` (P0 Category Mapping, Lunch Anchor, Intensity Guard & Deduplication)**: Fixed broken substring matching with `PREFERENCE_CATEGORY_MAP`, added Smart Midday Lunch Anchor, capped mountain summits at 1/day, and added coordinate deduplication (<200m).
+- **`QA-06` (P1 Custom Builder Step 1 Category Masking)**: Corrected category mapping in Step 1 to 'Culture & Heritage' and 'Resorts & Stays', and introduced `'✨ Recommended for You'` tab.
+- **`QA-07` (P1 Custom Builder Step 2 17-Place Limit)**: Expanded browse query from 17 featured places to `searchPlaces({ municipality_name, limit: 100 })` querying all local POIs.
+- **`QA-12` (P1 Premature 4s Network Timeout)**: Increased HTTP timeout to 10s and decoupled fast-path discovery in backend generator.
+- **`QA-13` (P1 Auto-Schedule Inter-Stop Buffer)**: Added dynamic Haversine travel time buffers between stops in `autoOptimizeDaySchedule()`.
+- **`MAP-TAB` (P0 Persistent In-App Navigation on Tab Switch)**: Added `exitFollowRouteModeCleanly()`, `ionViewWillEnter()` teardown, `(click)="onMapTabClicked()"` query param reset, floating "Browse Map" action button, and GPS tracking stop on `onBack()`.
+
+### Remediated Phase 32 Findings (Completed & Verified)
+1. **Phase 32.1 (P0/P1 Critical Connectivity & Map Merging) — COMPLETED**:
+   - `QA-01`: Consecutive error counter ($\ge 2$) in `connectivity.service.ts` and async `checkHostHealth()` reconciliation in `auth.interceptor.ts`.
+   - `QA-02`: Bounded POI merging into in-memory `osmPlacesCache` by ID in `place.service.ts` and master `allLoadedPlaces` collection in `map.page.ts`.
+   - `QA-08`: Dynamic `activeApiBaseUrl` getter in `connectivity.service.ts` wired across `place.service.ts`, `itinerary.service.ts`, `auth.service.ts`, and `auth.interceptor.ts`.
+2. **Phase 32.2 (P2 UI Polish, Settings Sync & Lifecycle Cleanup) — COMPLETED**:
+   - `QA-14C`: Hydrated `ne_theme_mode` dark mode on app boot in `AppComponent`; initialized `daily_budget` from `ne_default_budget` in Suggested Wizard & Custom Builder.
+   - `QA-14B`: Timezone-safe `toLocalIsoDate(addDaysLocal(parseLocalIsoDate(lastDate), 1))` in `itinerary-detail.page.ts:addDay()`.
+   - `QA-14A`: Deleted legacy `previewMap` properties and methods in `ItineraryDetailPage`, eliminating redundant DOM resize timers.
+   - `QA-09`: Removed duplicate warning toast on `login.page.ts:onForgotPassword()`.
+   - `QA-10`: Replaced legacy inline modal in `home.page.html` with shared `<app-place-detail-sheet>`.
+   - `QA-11`: Public OSRM / Overpass routing resilience with 2.5s AbortController timeout and geodesic spline fallback.
+
+---
+
+## 10. Next Recommended Opportunities
 
 1. **Native APK Production Signing**:
    - Run `npx cap open android` to inspect the synchronized Android Studio project.

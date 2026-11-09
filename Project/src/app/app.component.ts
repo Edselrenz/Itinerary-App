@@ -1,8 +1,10 @@
-import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import type { OnDestroy, OnInit } from '@angular/core';
+import { Component, HostListener, inject } from '@angular/core';
 import { IonApp, IonIcon, IonRouterOutlet, IonSpinner, ToastController } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { closeOutline, cloudOfflineOutline, refreshOutline } from 'ionicons/icons';
+
 import { ConnectivityService } from './core/services/connectivity.service';
 
 @Component({
@@ -20,10 +22,10 @@ export class AppComponent implements OnInit, OnDestroy {
   private touchStartY = 0;
   private touchStartX = 0;
 
-  constructor(
-    public connectivityService: ConnectivityService,
-    private toastController: ToastController
-  ) {
+  public connectivityService = inject(ConnectivityService);
+  private toastController = inject(ToastController);
+
+  constructor() {
     addIcons({
       cloudOfflineOutline,
       refreshOutline,
@@ -32,6 +34,16 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   public ngOnInit(): void {
+    // QA-14C: Restore user theme mode preference on boot
+    if (typeof localStorage !== 'undefined' && typeof document !== 'undefined') {
+      const savedTheme = localStorage.getItem('ne_theme_mode');
+      if (savedTheme === 'dark') {
+        document.body.classList.add('dark');
+      } else if (savedTheme === 'light') {
+        document.body.classList.remove('dark');
+      }
+    }
+
     // Proactively verify server connectivity on application launch
     this.connectivityService.checkHostHealth().subscribe();
 

@@ -1,6 +1,8 @@
-import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, catchError, tap, throwError } from 'rxjs';
+import { Injectable, inject } from '@angular/core';
+import type { Observable } from 'rxjs';
+import { BehaviorSubject, catchError, tap, throwError } from 'rxjs';
+
 import { environment } from '../../../environments/environment';
 import type {
   AuthResponse,
@@ -9,6 +11,8 @@ import type {
   User,
   UserUpdateRequest,
 } from '../models/auth.models';
+
+import { ConnectivityService } from './connectivity.service';
 import { GuestStorageService } from './guest-storage.service';
 import { SecureTokenStorageService } from './secure-token-storage.service';
 
@@ -16,6 +20,12 @@ import { SecureTokenStorageService } from './secure-token-storage.service';
   providedIn: 'root',
 })
 export class AuthService {
+  private connectivityService = inject(ConnectivityService, { optional: true });
+
+  private get apiBaseUrl(): string {
+    return this.connectivityService?.activeApiBaseUrl || environment.apiBaseUrl;
+  }
+
   private static readonly ACCESS_TOKEN_KEY = 'ne_access_token';
   private static readonly REFRESH_TOKEN_KEY = 'ne_refresh_token';
   private static readonly USER_KEY = 'ne_user_profile';
@@ -23,11 +33,11 @@ export class AuthService {
   private readonly currentUserSubject = new BehaviorSubject<User | null>(null);
   public currentUser$: Observable<User | null> = this.currentUserSubject.asObservable();
 
-  constructor(
-    private http: HttpClient,
-    private guestStorage: GuestStorageService,
-    private secureTokenStorage: SecureTokenStorageService
-  ) {
+  private http = inject(HttpClient);
+  private guestStorage = inject(GuestStorageService);
+  private secureTokenStorage = inject(SecureTokenStorageService);
+
+  constructor() {
     this.secureTokenStorage.init();
     this.loadStoredUser();
   }
@@ -96,7 +106,7 @@ export class AuthService {
       return throwError(() => new Error('No refresh token available'));
     }
     return this.http
-      .post<AuthResponse>(`${environment.apiBaseUrl}/auth/refresh`, {
+      .post<AuthResponse>(`${this.apiBaseUrl}/auth/refresh`, {
         refresh_token: refreshToken,
       })
       .pipe(
@@ -112,13 +122,13 @@ export class AuthService {
 
   public register(payload: RegisterRequest): Observable<AuthResponse> {
     return this.http
-      .post<AuthResponse>(`${environment.apiBaseUrl}/auth/register`, payload)
+      .post<AuthResponse>(`${this.apiBaseUrl}/auth/register`, payload)
       .pipe(tap((res) => this.handleAuthSuccess(res, true)));
   }
 
   public login(payload: LoginRequest, rememberMe = true): Observable<AuthResponse> {
     return this.http
-      .post<AuthResponse>(`${environment.apiBaseUrl}/auth/login`, payload)
+      .post<AuthResponse>(`${this.apiBaseUrl}/auth/login`, payload)
       .pipe(tap((res) => this.handleAuthSuccess(res, rememberMe)));
   }
 
@@ -135,7 +145,7 @@ export class AuthService {
   }
 
   public getProfile(): Observable<User> {
-    return this.http.get<User>(`${environment.apiBaseUrl}/auth/me`).pipe(
+    return this.http.get<User>(`${this.apiBaseUrl}/auth/me`).pipe(
       tap((user) => {
         const storage = sessionStorage.getItem(AuthService.ACCESS_TOKEN_KEY)
           ? sessionStorage
@@ -147,7 +157,7 @@ export class AuthService {
   }
 
   public updateProfile(payload: UserUpdateRequest): Observable<User> {
-    return this.http.patch<User>(`${environment.apiBaseUrl}/auth/me`, payload).pipe(
+    return this.http.patch<User>(`${this.apiBaseUrl}/auth/me`, payload).pipe(
       tap((user) => {
         const storage = sessionStorage.getItem(AuthService.ACCESS_TOKEN_KEY)
           ? sessionStorage

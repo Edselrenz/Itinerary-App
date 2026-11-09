@@ -1,8 +1,7 @@
-import { Injectable } from '@angular/core';
-
 import { HttpClient } from '@angular/common/http';
-
-import { BehaviorSubject, Observable, catchError, map, of, tap, timeout } from 'rxjs';
+import { Injectable, inject } from '@angular/core';
+import type { Observable } from 'rxjs';
+import { BehaviorSubject, catchError, map, of, tap, timeout } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 
@@ -38,60 +37,77 @@ export class ConnectivityService {
 
   private isDismissedManually = false;
 
-  constructor(private http: HttpClient) {}
+  private consecutiveErrors = 0;
+  public readonly ERROR_THRESHOLD = 2;
+
+  public get consecutiveErrorCount(): number {
+    return this.consecutiveErrors;
+  }
+
+  private http = inject(HttpClient);
 
   /**
-
-   * Sets the host offline status. If dismissed manually, offline state will not re-display
-
-   * until a new offline event occurs.
-
+   * Reports a gateway or connection failure.
+   * Only transitions to offline state when consecutive errors reach the threshold (>= 2).
    */
-
-  public setHostOffline(isOffline: boolean): void {
-
-    if (isOffline) {
-
+  public reportGatewayError(): void {
+    this.consecutiveErrors++;
+    if (this.consecutiveErrors >= this.ERROR_THRESHOLD) {
       if (!this.isDismissedManually) {
-
         this.isHostOfflineSubject.next(true);
-
       }
-
-    } else {
-
-      this.isDismissedManually = false;
-
-      this.isHostOfflineSubject.next(false);
-
     }
-
   }
 
   /**
+   * Sets the host offline status. If dismissed manually, offline state will not re-display
+   * until a new offline event occurs.
+   * Consecutive errors are incremented on offline events and reset on recovery.
+   * Pass force=true to bypass the consecutive error threshold.
+   */
+  public setHostOffline(isOffline: boolean, force = false): void {
+    if (isOffline) {
+      if (force) {
+        this.consecutiveErrors = this.ERROR_THRESHOLD;
+        if (!this.isDismissedManually) {
+          this.isHostOfflineSubject.next(true);
+        }
+      } else {
+        this.reportGatewayError();
+      }
+    } else {
+      this.consecutiveErrors = 0;
+      this.isDismissedManually = false;
+      this.isHostOfflineSubject.next(false);
+    }
+  }
 
+  /**
    * Manually dismisses the offline banner for the current session.
-
    */
-
   public dismissBanner(): void {
-
     this.isDismissedManually = true;
-
     this.isHostOfflineSubject.next(false);
-
   }
 
   /**
-
-   * Returns current active API base URL.
-
+   * Returns current active API base URL, checking local storage override first.
    */
-
-  public get currentApiUrl(): string {
-
+  public get activeApiBaseUrl(): string {
+    if (typeof localStorage !== 'undefined') {
+      const customUrl = localStorage.getItem('ne_custom_api_url');
+      if (customUrl && this.isValidApiUrl(customUrl)) {
+        return customUrl;
+      }
+    }
     return environment.apiBaseUrl;
+  }
 
+  /**
+   * Returns current active API base URL.
+   */
+  public get currentApiUrl(): string {
+    return this.activeApiBaseUrl;
   }
 
   /**
@@ -172,7 +188,7 @@ export class ConnectivityService {
 
     this.isCheckingHealthSubject.next(true);
 
-    const healthUrl = `${environment.apiBaseUrl}/health`;
+    const healthUrl = `${this.activeApiBaseUrl}/health`;
 
     return this.http.get<HealthResponse>(healthUrl).pipe(
       timeout(5000),
@@ -191,6 +207,8 @@ export class ConnectivityService {
         this.isCheckingHealthSubject.next(false);
 
         this.isDismissedManually = false;
+
+        this.consecutiveErrors = this.ERROR_THRESHOLD;
 
         this.isHostOfflineSubject.next(true);
 

@@ -1,17 +1,15 @@
-import {
-  AfterViewInit,
-  Component,
-  ElementRef,
-  Inject,
+import { CommonModule, Location, isPlatformBrowser } from '@angular/common';
+import type {
   OnDestroy,
   OnInit,
-  PLATFORM_ID,
-  ViewChild,
 } from '@angular/core';
-import { CommonModule, isPlatformBrowser, Location } from '@angular/common';
+import {
+  Component,
+  PLATFORM_ID,
+  inject,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import * as L from 'leaflet';
 import {
   AlertController,
   IonContent,
@@ -65,27 +63,33 @@ import {
   trashOutline,
   walkOutline,
 } from 'ionicons/icons';
+import * as L from 'leaflet';
 import { of, Subscription, throwError } from 'rxjs';
 import { catchError, timeout } from 'rxjs/operators';
-import {
+
+import type {
+  CommuteInfo,
+  LegCommuteInfo,
+} from '../../../core/data/commute-guide.data';
+import { getLegCommuteInfo } from '../../../core/data/commute-guide.data';
+import type { ComponentCanDeactivate } from '../../../core/guards/pending-changes.guard';
+import type {
   Itinerary,
   ItineraryBudgetSummary,
   ItineraryDay,
   ItineraryItem,
 } from '../../../core/models/itinerary.models';
-import { Place } from '../../../core/models/place.models';
-import { formatDateRange } from '../../../core/utils/date.utils';
+import type { Place } from '../../../core/models/place.models';
 import { ItineraryService } from '../../../core/services/itinerary.service';
-import { NearbyPlaceItem, PlaceService } from '../../../core/services/place.service';
+import type { NearbyPlaceItem } from '../../../core/services/place.service';
+import { PlaceService } from '../../../core/services/place.service';
 import { RouteTrackingService } from '../../../core/services/route-tracking.service';
-import { decodePolyline, haversineDistanceMeters } from '../../../core/utils/polyline.util';
-import { environment } from '../../../../environments/environment';
 import {
-  CommuteInfo,
-  LegCommuteInfo,
-  getCommuteInfoForMunicipality,
-  getLegCommuteInfo,
-} from '../../../core/data/commute-guide.data';
+  addDaysLocal,
+  formatDateRange,
+  parseLocalIsoDate,
+  toLocalIsoDate,
+} from '../../../core/utils/date.utils';
 import {
   buildGoogleMapsDayRouteUrl,
   copyTextSummary,
@@ -93,9 +97,9 @@ import {
   shareNativeItinerary,
   triggerPrintItinerary,
 } from '../../../core/utils/itinerary-export.util';
-import { PlaceDetailSheetComponent } from '../../../shared/components/place-detail-sheet/place-detail-sheet.component';
+import { haversineDistanceMeters } from '../../../core/utils/polyline.util';
 import { ItineraryRouteMapComponent } from '../../../shared/components/itinerary-route-map/itinerary-route-map.component';
-import { ComponentCanDeactivate } from '../../../core/guards/pending-changes.guard';
+import { PlaceDetailSheetComponent } from '../../../shared/components/place-detail-sheet/place-detail-sheet.component';
 
 export interface EditableActivityItem {
   id: string;
@@ -145,7 +149,7 @@ export interface EditableItineraryForm {
     ItineraryRouteMapComponent,
   ],
 })
-export class ItineraryDetailPage implements OnInit, AfterViewInit, OnDestroy, ComponentCanDeactivate {
+export class ItineraryDetailPage implements OnInit, OnDestroy, ComponentCanDeactivate {
   public itineraryId: string | null = null;
   public itinerary: Itinerary | null = null;
   public isLoading = true;
@@ -153,11 +157,7 @@ export class ItineraryDetailPage implements OnInit, AfterViewInit, OnDestroy, Co
   public activeStopIndex: number | null = null;
   public budgetSummary: ItineraryBudgetSummary | null = null;
 
-  // Embedded Day Route Preview Map (Phase 25.3)
-  @ViewChild('previewMapElement', { static: false }) private previewMapElementRef?: ElementRef<HTMLDivElement>;
-  public previewMap: L.Map | null = null;
-  public previewPolylineLayer: L.Polyline | null = null;
-  public previewStopsLayer: L.LayerGroup | null = null;
+  // Embedded Day Route Preview Map State
   public isPreviewMapExpanded = true;
   private isBrowser = false;
 
@@ -185,17 +185,17 @@ export class ItineraryDetailPage implements OnInit, AfterViewInit, OnDestroy, Co
 
   private subscriptions = new Subscription();
 
-  constructor(
-    private route: ActivatedRoute,
-    private router: Router,
-    private itineraryService: ItineraryService,
-    public placeService: PlaceService,
-    public routeTrackingService: RouteTrackingService,
-    private alertController: AlertController,
-    private toastController: ToastController,
-    private location: Location,
-    @Inject(PLATFORM_ID) private platformId: object
-  ) {
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private itineraryService = inject(ItineraryService);
+  public placeService = inject(PlaceService);
+  public routeTrackingService = inject(RouteTrackingService);
+  private alertController = inject(AlertController);
+  private toastController = inject(ToastController);
+  private location = inject(Location);
+  private platformId = inject(PLATFORM_ID);
+
+  constructor() {
     this.isBrowser = isPlatformBrowser(this.platformId);
     if (this.isBrowser && typeof window !== 'undefined' && !(window as any).L) {
       (window as unknown as { L: unknown }).L = (L as unknown as { default?: unknown }).default ?? L;
@@ -253,29 +253,12 @@ export class ItineraryDetailPage implements OnInit, AfterViewInit, OnDestroy, Co
     }
   }
 
-  public ngAfterViewInit(): void {
-    if (this.isBrowser) {
-      setTimeout(() => {
-        this.initPreviewMap();
-      }, 300);
-    }
-  }
-
   public ionViewDidEnter(): void {
-    if (this.isBrowser && this.previewMap) {
-      setTimeout(() => {
-        this.previewMap?.invalidateSize();
-        this.updatePreviewMap();
-      }, 150);
-    }
+    // Lifecycle handled by <app-itinerary-route-map>
   }
 
   public ngOnDestroy(): void {
     this.subscriptions.unsubscribe();
-    if (this.previewMap) {
-      this.previewMap.remove();
-      this.previewMap = null;
-    }
   }
 
   /**
@@ -319,7 +302,6 @@ export class ItineraryDetailPage implements OnInit, AfterViewInit, OnDestroy, Co
       this.budgetSummary = this.itineraryService.calculateBudgetSummary(cached);
       this.refreshNearbyPlaces();
       this.isLoading = false;
-      setTimeout(() => this.updatePreviewMap(), 100);
     } else {
       this.isLoading = true;
     }
@@ -343,7 +325,6 @@ export class ItineraryDetailPage implements OnInit, AfterViewInit, OnDestroy, Co
             this.budgetSummary = this.itineraryService.calculateBudgetSummary(itin);
             this.refreshNearbyPlaces();
             this.isLoading = false;
-            setTimeout(() => this.updatePreviewMap(), 100);
           },
           error: () => {
             this.isLoading = false;
@@ -397,12 +378,10 @@ export class ItineraryDetailPage implements OnInit, AfterViewInit, OnDestroy, Co
     if (this.editForm.days.length > 0) {
       const lastDate = this.editForm.days[this.editForm.days.length - 1].travel_date;
       if (lastDate) {
-        const d = new Date(lastDate);
-        d.setDate(d.getDate() + 1);
-        nextDate = d.toISOString().split('T')[0];
+        nextDate = toLocalIsoDate(addDaysLocal(parseLocalIsoDate(lastDate), 1));
       }
     } else {
-      nextDate = this.editForm.start_date || new Date().toISOString().split('T')[0];
+      nextDate = this.editForm.start_date || toLocalIsoDate(new Date());
     }
 
     this.editForm.days.push({
@@ -644,7 +623,6 @@ export class ItineraryDetailPage implements OnInit, AfterViewInit, OnDestroy, Co
   public selectDay(index: number): void {
     this.activeDayIndex = index;
     this.refreshNearbyPlaces();
-    this.updatePreviewMap();
     if (this.isBrowser && typeof document !== 'undefined') {
       setTimeout(() => {
         const el = document.getElementById(`day-card-${index}`);
@@ -661,7 +639,7 @@ export class ItineraryDetailPage implements OnInit, AfterViewInit, OnDestroy, Co
     this.nearbyPlacesList = this.placeService.getNearbyPlaces(muni);
   }
 
-  public openNearbyPlaces(stop?: any): void {
+  public openNearbyPlaces(_stop?: unknown): void {
     this.viewMode = 'nearby';
   }
 
@@ -768,16 +746,8 @@ export class ItineraryDetailPage implements OnInit, AfterViewInit, OnDestroy, Co
       return { tag: 'Tip', title: 'Travel Note', description: '', icon: 'compass-outline' };
     }
     const match = note.match(/^([A-Za-z\s&/]{2,30}):\s+(.+)$/);
-    let title = '';
-    let description = '';
-
-    if (match) {
-      title = match[1].trim();
-      description = match[2].trim();
-    } else {
-      title = '';
-      description = note.trim();
-    }
+    const title = match ? match[1].trim() : '';
+    const description = match ? match[2].trim() : note.trim();
 
     const lower = (title + ' ' + description).toLowerCase();
     let icon = 'compass-outline';
@@ -1055,7 +1025,6 @@ export class ItineraryDetailPage implements OnInit, AfterViewInit, OnDestroy, Co
       this.itineraryService.updateItinerary(this.itinerary.id, {
         days: this.itinerary.days,
       }).subscribe();
-      this.updatePreviewMap();
     }
 
     const toast = await this.toastController.create({
@@ -1166,105 +1135,10 @@ export class ItineraryDetailPage implements OnInit, AfterViewInit, OnDestroy, Co
     await alert.present();
   }
 
-  // --- Embedded Leaflet Day Route Preview & Turn Tracking (Phase 25.3) ---
-
-  public initPreviewMap(): void {
-    const el =
-      this.previewMapElementRef?.nativeElement ||
-      document.getElementById('route-preview-map');
-    if (!el || this.previewMap || !this.isBrowser) return;
-
-    this.previewMap = L.map(el, {
-      center: [15.58, 121.0],
-      zoom: 11,
-      zoomControl: false,
-      attributionControl: false,
-    });
-
-    const tileUrl =
-      environment.tileUrlTemplate ||
-      'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
-    L.tileLayer(tileUrl, { maxZoom: 19 }).addTo(this.previewMap);
-
-    this.previewStopsLayer = L.layerGroup().addTo(this.previewMap);
-    this.updatePreviewMap();
-  }
-
-  public updatePreviewMap(): void {
-    if (!this.previewMap || !this.isBrowser) return;
-
-    if (this.previewPolylineLayer) {
-      this.previewMap.removeLayer(this.previewPolylineLayer);
-      this.previewPolylineLayer = null;
-    }
-    if (this.previewStopsLayer) {
-      this.previewStopsLayer.clearLayers();
-    } else {
-      this.previewStopsLayer = L.layerGroup().addTo(this.previewMap);
-    }
-
-    const day = this.currentDay;
-    if (!day) return;
-
-    const items = day.items || [];
-    const stopCoords: Array<[number, number]> = [];
-
-    items.forEach((item, idx) => {
-      const lat = item.place?.latitude ?? item.custom_lat;
-      const lng = item.place?.longitude ?? item.custom_lng;
-      if (lat != null && lng != null) {
-        stopCoords.push([lat, lng]);
-        const pinIcon = L.divIcon({
-          className: 'preview-stop-marker-container',
-          html: `<div class="preview-stop-pin"><div class="pin-badge">${idx + 1}</div></div>`,
-          iconSize: [26, 26],
-          iconAnchor: [13, 13],
-        });
-        const marker = L.marker([lat, lng], { icon: pinIcon });
-        marker.on('click', () => {
-          this.openStopDetail(item);
-        });
-        this.previewStopsLayer?.addLayer(marker);
-      }
-    });
-
-    if (day.day_overview_polyline) {
-      const latlngs = decodePolyline(day.day_overview_polyline);
-      this.previewPolylineLayer = L.polyline(latlngs, {
-        color: '#2563eb',
-        weight: 4,
-        opacity: 0.88,
-        lineJoin: 'round',
-      }).addTo(this.previewMap);
-      this.previewMap.fitBounds(this.previewPolylineLayer.getBounds(), {
-        padding: [25, 25],
-      });
-    } else if (stopCoords.length > 1) {
-      this.previewPolylineLayer = L.polyline(stopCoords, {
-        color: '#94a3b8',
-        weight: 3,
-        dashArray: '6, 6',
-      }).addTo(this.previewMap);
-      this.previewMap.fitBounds(this.previewPolylineLayer.getBounds(), {
-        padding: [25, 25],
-      });
-    } else if (stopCoords.length === 1) {
-      this.previewMap.setView(stopCoords[0], 13);
-    }
-
-    setTimeout(() => {
-      this.previewMap?.invalidateSize();
-    }, 100);
-  }
+  // --- Route Preview Map UI Toggle (QA-14A) ---
 
   public togglePreviewMap(): void {
     this.isPreviewMapExpanded = !this.isPreviewMapExpanded;
-    if (this.isPreviewMapExpanded) {
-      setTimeout(() => {
-        this.previewMap?.invalidateSize();
-        this.updatePreviewMap();
-      }, 150);
-    }
   }
 
   public startNavigationForActiveDay(): void {

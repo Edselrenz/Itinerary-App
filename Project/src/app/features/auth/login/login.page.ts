@@ -1,5 +1,5 @@
-import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, inject } from '@angular/core';
 import {
   FormControl,
   FormGroup,
@@ -27,6 +27,7 @@ import {
   mailOutline,
   shieldCheckmarkOutline,
 } from 'ionicons/icons';
+
 import { AuthService } from '../../../core/services/auth.service';
 import { GuestMigrationService } from '../../../core/services/guest-migration.service';
 
@@ -60,12 +61,12 @@ export class LoginPage {
     rememberMe: new FormControl(false),
   });
 
-  constructor(
-    private router: Router,
-    private authService: AuthService,
-    private guestMigrationService: GuestMigrationService,
-    private toastController: ToastController
-  ) {
+  private router = inject(Router);
+  private authService = inject(AuthService);
+  private guestMigrationService = inject(GuestMigrationService);
+  private toastController = inject(ToastController);
+
+  constructor() {
     addIcons({
       arrowBackOutline,
       mailOutline,
@@ -162,27 +163,11 @@ export class LoginPage {
     await toast.present();
   }
 
-  public async onForgotPassword(): Promise<void> {
+  public onForgotPassword(): void {
     const emailControl = this.loginForm.get('email');
-    if (!emailControl || emailControl.invalid || !emailControl.value) {
-      this.openForgotPasswordModal();
-      const toast = await this.toastController.create({
-        message: 'Please enter a valid email address first.',
-        duration: 3000,
-        position: 'top',
-        color: 'warning',
-      });
-      await toast.present();
-      return;
+    if (emailControl && emailControl.value && emailControl.valid) {
+      this.recoveryEmail = String(emailControl.value).trim();
     }
-
-    const email = String(emailControl.value).trim();
     this.openForgotPasswordModal();
-    const toast = await this.toastController.create({
-      message: `Self-service password reset is disabled in this pilot build. Please contact your administrator to reset credentials for ${email}.`,
-      duration: 4000,
-      position: 'top',
-    });
-    await toast.present();
   }
 }

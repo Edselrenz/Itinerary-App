@@ -1,18 +1,19 @@
-import {
+import { CommonModule, isPlatformBrowser } from '@angular/common';
+import type {
   AfterViewInit,
-  ChangeDetectorRef,
-  Component,
   ElementRef,
-  Inject,
   OnDestroy,
   OnInit,
+} from '@angular/core';
+import {
+  ChangeDetectorRef,
+  Component,
   PLATFORM_ID,
   ViewChild,
+  inject,
 } from '@angular/core';
-import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Subject, Subscription, debounceTime, distinctUntilChanged } from 'rxjs';
 import {
   IonContent,
   IonIcon,
@@ -70,7 +71,21 @@ import {
   globeOutline,
 } from 'ionicons/icons';
 import * as L from 'leaflet';
+import { Subject, Subscription, debounceTime, distinctUntilChanged } from 'rxjs';
 import 'leaflet.markercluster';
+
+import { environment } from '../../../environments/environment';
+import type { Itinerary, ItineraryDay, ItineraryItem } from '../../core/models/itinerary.models';
+import type { Municipality, Place } from '../../core/models/place.models';
+import { ItineraryService } from '../../core/services/itinerary.service';
+import { OsmOverpassService } from '../../core/services/osm-overpass.service';
+import { PlaceService } from '../../core/services/place.service';
+import {
+  RouteTrackingService,
+  type RouteTrackingState,
+} from '../../core/services/route-tracking.service';
+import { decodePolyline } from '../../core/utils/polyline.util';
+import { PlaceDetailSheetComponent } from '../../shared/components/place-detail-sheet/place-detail-sheet.component';
 
 const LeafletLib: any =
   (typeof window !== 'undefined' && (window as any).L) ||
@@ -79,19 +94,6 @@ const LeafletLib: any =
 if (typeof window !== 'undefined' && !(window as any).L) {
   (window as any).L = LeafletLib;
 }
-
-import { Municipality, Place } from '../../core/models/place.models';
-import { PlaceService } from '../../core/services/place.service';
-import { OsmOverpassService } from '../../core/services/osm-overpass.service';
-import {
-  RouteTrackingService,
-  RouteTrackingState,
-} from '../../core/services/route-tracking.service';
-import { PlaceDetailSheetComponent } from '../../shared/components/place-detail-sheet/place-detail-sheet.component';
-import { Itinerary, ItineraryDay, ItineraryItem } from '../../core/models/itinerary.models';
-import { ItineraryService } from '../../core/services/itinerary.service';
-import { decodePolyline } from '../../core/utils/polyline.util';
-import { environment } from '../../../environments/environment';
 
 export interface CategoryFilterItem {
   key: string | null;
@@ -154,6 +156,7 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
   public map: L.Map | null = null;
   public markerCluster: L.MarkerClusterGroup | null = null;
   public places: Place[] = [];
+  public allLoadedPlaces: Place[] = [];
   public selectedPlace: Place | null = null;
   public selectedCategory: string | null = null;
   public isLoading = false;
@@ -206,17 +209,17 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
 
   private isBrowser = false;
 
-  constructor(
-    private placeService: PlaceService,
-    private osmOverpassService: OsmOverpassService,
-    public routeTrackingService: RouteTrackingService,
-    private itineraryService: ItineraryService,
-    private route: ActivatedRoute,
-    private router: Router,
-    private cdr: ChangeDetectorRef,
-    private toastController: ToastController,
-    @Inject(PLATFORM_ID) private platformId: object
-  ) {
+  private placeService = inject(PlaceService);
+  private osmOverpassService = inject(OsmOverpassService);
+  public routeTrackingService = inject(RouteTrackingService);
+  private itineraryService = inject(ItineraryService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private cdr = inject(ChangeDetectorRef);
+  private toastController = inject(ToastController);
+  private platformId = inject(PLATFORM_ID);
+
+  constructor() {
     this.isBrowser = isPlatformBrowser(this.platformId);
     if (this.isBrowser && typeof window !== 'undefined' && !(window as any).L) {
       (window as unknown as { L: unknown }).L = LeafletLib;
@@ -622,7 +625,17 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
     this.placeService.searchPlaces(searchParams).subscribe({
       next: (result) => {
         const items = result.items || [];
-        this.places = this.applyLocalFilters(items);
+        if (bounds && this.allLoadedPlaces.length > 0) {
+          // QA-02: Merge bounded live places into master dataset by ID instead of discarding unseen places
+          const mapById = new Map<string, Place>(this.allLoadedPlaces.map((p) => [String(p.id), p]));
+          for (const item of items) {
+            mapById.set(String(item.id), item);
+          }
+          this.allLoadedPlaces = Array.from(mapById.values());
+        } else {
+          this.allLoadedPlaces = items;
+        }
+        this.places = this.applyLocalFilters(this.allLoadedPlaces);
         this.isLoading = false;
         this.updateMarkers();
         if (this.pendingTarget?.placeId) {
@@ -644,21 +657,8 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
         // Fallback to full OSM places dataset if local server is unreachable
         this.placeService.loadOsmPlaces().subscribe({
           next: (allOsmPlaces) => {
-            let items = allOsmPlaces;
-            if (this.selectedCategories.size > 0) {
-              items = items.filter((p) => this.selectedCategories.has(p.category));
-            } else if (this.selectedCategory) {
-              items = items.filter((p) => p.category === this.selectedCategory);
-            }
-            if (this.searchQuery && this.searchQuery.trim()) {
-              const q = this.searchQuery.trim().toLowerCase();
-              items = items.filter(
-                (p) =>
-                  p.name.toLowerCase().includes(q) ||
-                  (p.municipality_name && p.municipality_name.toLowerCase().includes(q))
-              );
-            }
-            this.places = this.applyLocalFilters(items);
+            this.allLoadedPlaces = allOsmPlaces;
+            this.places = this.applyLocalFilters(this.allLoadedPlaces);
             this.isLoading = false;
             this.updateMarkers();
             this.cdr.detectChanges();
@@ -706,6 +706,7 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
             const coordKey = `${lp.latitude.toFixed(4)},${lp.longitude.toFixed(4)}`;
             if (!existingIds.has(lp.id) && !existingCoords.has(coordKey)) {
               this.places.push(lp);
+              this.allLoadedPlaces.push(lp);
               existingIds.add(lp.id);
               existingCoords.add(coordKey);
               added++;
@@ -1230,8 +1231,8 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
     this.itineraryStopsLayer = L.layerGroup().addTo(this.map);
 
     const items = day.items || [];
-    const stopCoords: Array<[number, number]> = [];
-    const fullRoutePoints: Array<[number, number]> = [];
+    const stopCoords: [number, number][] = [];
+    const fullRoutePoints: [number, number][] = [];
 
     items.forEach((item, idx) => {
       const lat = item.place?.latitude ?? item.custom_lat;

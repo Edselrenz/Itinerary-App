@@ -1,6 +1,8 @@
-import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import type { OnInit } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import type { FormGroup } from '@angular/forms';
+import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
   IonContent,
@@ -45,16 +47,19 @@ import {
   timeOutline,
   walkOutline,
 } from 'ionicons/icons';
-import { Itinerary, ItineraryBudgetSummary, ItineraryDay, ItineraryItem, SuggestedItineraryRequest } from '../../../core/models/itinerary.models';
-import { Place } from '../../../core/models/place.models';
+
+import type { CommuteInfo} from '../../../core/data/commute-guide.data';
+import { getCommuteInfoForMunicipality } from '../../../core/data/commute-guide.data';
+import type { Itinerary, ItineraryBudgetSummary, ItineraryDay, ItineraryItem, SuggestedItineraryRequest } from '../../../core/models/itinerary.models';
+import type { Place } from '../../../core/models/place.models';
+import { ItineraryService } from '../../../core/services/itinerary.service';
+import type { NearbyPlaceItem } from '../../../core/services/place.service';
+import { PlaceService } from '../../../core/services/place.service';
 import { addDaysLocal, diffDaysLocal, formatDateRange, parseLocalIsoDate, toLocalIsoDate } from '../../../core/utils/date.utils';
 import { haversineDistanceMeters } from '../../../core/utils/polyline.util';
-import { ItineraryService } from '../../../core/services/itinerary.service';
-import { NearbyPlaceItem, PlaceService } from '../../../core/services/place.service';
-import { CommuteInfo, getCommuteInfoForMunicipality } from '../../../core/data/commute-guide.data';
-import { PlaceDetailSheetComponent } from '../../../shared/components/place-detail-sheet/place-detail-sheet.component';
-import { ItineraryRouteMapComponent } from '../../../shared/components/itinerary-route-map/itinerary-route-map.component';
 import { DestinationAutocompleteComponent } from '../../../shared/components/destination-autocomplete/destination-autocomplete.component';
+import { ItineraryRouteMapComponent } from '../../../shared/components/itinerary-route-map/itinerary-route-map.component';
+import { PlaceDetailSheetComponent } from '../../../shared/components/place-detail-sheet/place-detail-sheet.component';
 
 export interface PreferenceOption {
   key: string;
@@ -143,14 +148,14 @@ export class SuggestedWizardPage implements OnInit {
   public isAssumptionsExpanded = false;
   public anchorPlaceId?: string;
 
-  constructor(
-    private fb: FormBuilder,
-    private router: Router,
-    private route: ActivatedRoute,
-    private itineraryService: ItineraryService,
-    public placeService: PlaceService,
-    private toastController: ToastController
-  ) {
+  private fb = inject(FormBuilder);
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
+  private itineraryService = inject(ItineraryService);
+  public placeService = inject(PlaceService);
+  private toastController = inject(ToastController);
+
+  constructor() {
     addIcons({
       addCircleOutline,
       arrowBack,
@@ -188,12 +193,14 @@ export class SuggestedWizardPage implements OnInit {
 
     const today = new Date();
     const endDay = addDaysLocal(today, 2); // 3 days, 2 nights default
+    const savedBudget = typeof localStorage !== 'undefined' ? Number(localStorage.getItem('ne_default_budget')) : 0;
+    const defaultBudget = savedBudget > 0 ? savedBudget : 3000;
 
     this.form = this.fb.group({
       destination: ['Nueva Ecija', [Validators.required]],
       start_date: [toLocalIsoDate(today), [Validators.required]],
       end_date: [toLocalIsoDate(endDay), [Validators.required]],
-      daily_budget: [3000, [Validators.required, Validators.min(0)]],
+      daily_budget: [defaultBudget, [Validators.required, Validators.min(0)]],
     });
   }
 
@@ -587,7 +594,7 @@ export class SuggestedWizardPage implements OnInit {
     return `${hrs}h ${remMins}m`;
   }
 
-  public openNearbyPlaces(stop?: any): void {
+  public openNearbyPlaces(_stop?: unknown): void {
     this.viewMode = 'nearby';
   }
 
@@ -788,16 +795,8 @@ export class SuggestedWizardPage implements OnInit {
       return { tag: 'Tip', title: 'Travel Note', description: '', icon: 'compass-outline' };
     }
     const match = note.match(/^([A-Za-z\s&/]{2,30}):\s+(.+)$/);
-    let title = '';
-    let description = '';
-
-    if (match) {
-      title = match[1].trim();
-      description = match[2].trim();
-    } else {
-      title = '';
-      description = note.trim();
-    }
+    const title = match ? match[1].trim() : '';
+    const description = match ? match[2].trim() : note.trim();
 
     const lower = (title + ' ' + description).toLowerCase();
     let icon = 'compass-outline';

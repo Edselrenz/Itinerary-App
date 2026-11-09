@@ -1,6 +1,8 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import type { OnDestroy, OnInit } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import type { FormGroup } from '@angular/forms';
+import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
   AlertController,
@@ -36,17 +38,20 @@ import {
   sparkles,
   timeOutline,
   trashOutline, checkmarkOutline } from 'ionicons/icons';
-import { Observable, Subject, Subscription, debounceTime, distinctUntilChanged, map, merge } from 'rxjs';
-import { Itinerary, ItineraryDay, ItineraryItem } from '../../../core/models/itinerary.models';
+import type { Observable} from 'rxjs';
+import { Subject, Subscription, debounceTime, distinctUntilChanged, map, merge } from 'rxjs';
+
+import type { ComponentCanDeactivate } from '../../../core/guards/pending-changes.guard';
+import type { Itinerary, ItineraryDay, ItineraryItem } from '../../../core/models/itinerary.models';
+import type { Place } from '../../../core/models/place.models';
+import type { ItineraryBudgetSummary } from '../../../core/services/itinerary.service';
+import { ItineraryService } from '../../../core/services/itinerary.service';
+import { PlaceService } from '../../../core/services/place.service';
 import { addDaysLocal, diffDaysLocal, formatDateRange, parseLocalIsoDate, toLocalIsoDate } from '../../../core/utils/date.utils';
 import { haversineDistanceMeters } from '../../../core/utils/polyline.util';
-import { Place } from '../../../core/models/place.models';
-import { ItineraryBudgetSummary, ItineraryService } from '../../../core/services/itinerary.service';
-import { PlaceService } from '../../../core/services/place.service';
-import { ComponentCanDeactivate } from '../../../core/guards/pending-changes.guard';
+import { DestinationAutocompleteComponent } from '../../../shared/components/destination-autocomplete/destination-autocomplete.component';
 import { ItineraryRouteMapComponent } from '../../../shared/components/itinerary-route-map/itinerary-route-map.component';
 import { PlaceDetailSheetComponent } from '../../../shared/components/place-detail-sheet/place-detail-sheet.component';
-import { DestinationAutocompleteComponent } from '../../../shared/components/destination-autocomplete/destination-autocomplete.component';
 
 export interface BuilderStop {
   id: string;
@@ -204,26 +209,28 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
 
   private subscriptions = new Subscription();
 
-  constructor(
-    private fb: FormBuilder,
-    private route: ActivatedRoute,
-    private router: Router,
-    private itineraryService: ItineraryService,
-    public placeService: PlaceService,
-    private alertController: AlertController,
-    private toastController: ToastController
-  ) {
+  private fb = inject(FormBuilder);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private itineraryService = inject(ItineraryService);
+  public placeService = inject(PlaceService);
+  private alertController = inject(AlertController);
+  private toastController = inject(ToastController);
+
+  constructor() {
     addIcons({arrowBack,checkmarkCircle,addOutline,calendarOutline,createOutline,locationSharp,locationOutline,cashOutline,searchOutline,closeOutline,checkmark,arrowForwardOutline,trashOutline,arrowUpOutline,arrowDownOutline,businessOutline,saveOutline,checkmarkOutline,timeOutline,alertCircleOutline,sparkles,});
 
     const today = new Date();
     const tomorrow = addDaysLocal(today, 1);
+    const savedBudget = typeof localStorage !== 'undefined' ? Number(localStorage.getItem('ne_default_budget')) : 0;
+    const defaultBudget = savedBudget > 0 ? savedBudget : 3000;
 
     this.form = this.fb.group({
       title: ['Nueva Ecija Getaway', [Validators.required, Validators.minLength(3)]],
       destination: ['Nueva Ecija', [Validators.required]],
       start_date: [toLocalIsoDate(today), [Validators.required]],
       end_date: [toLocalIsoDate(tomorrow), [Validators.required]],
-      daily_budget: [3000, [Validators.required, Validators.min(0)]],
+      daily_budget: [defaultBudget, [Validators.required, Validators.min(0)]],
     });
   }
 
@@ -343,7 +350,6 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
     const endDate = this.form.get('end_date')?.value || startDate;
 
     const start = parseLocalIsoDate(startDate);
-    const end = parseLocalIsoDate(endDate);
     const diffDays = Math.max(1, diffDaysLocal(startDate, endDate));
 
     this.days = [];
@@ -545,7 +551,6 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
     // Sync days array with selected dates
     const targetDays = this.computedTripDays;
     const startDateStr = this.form.get('start_date')?.value;
-    const startDate = startDateStr ? new Date(startDateStr) : new Date();
     this.syncDaysWithDateRange();
 
     if (this.days.length !== targetDays) {

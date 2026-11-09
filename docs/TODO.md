@@ -785,6 +785,38 @@ This checklist tracks completed, active, and pending tasks across all developmen
 - [x] **31.3.2 (CUST-03: Timeline Auto-Schedule Inter-Stop Transit Buffer)**:
   - In `custom-builder.page.ts:1165–1195`, update `autoOptimizeDaySchedule()` to incorporate inter-stop transit time between stops rather than scheduling back-to-back ($0\text{ min}$) transit.
 
+---
+
+## Phase 32: Full-Website QA Remediation, Connectivity Hardening & Polish (COMPLETED)
+> Ref: [full_website_qa_audit_and_proposal.pdf](file:///c:/Users/Edward/Desktop/CaseStudy/full_website_qa_audit_and_proposal.pdf) & [FULL_WEBSITE_QA_AUDIT_AND_PROPOSAL.md](./FULL_WEBSITE_QA_AUDIT_AND_PROPOSAL.md)
+
+### Phase 32.1: P0/P1 Connectivity Resilience, Map Merging & Dynamic URL (COMPLETED)
+- [x] **32.1.1 (QA-01: Resilient Offline Banner Gate)**:
+  - In `connectivity.service.ts`, implemented consecutive error counter (`consecutiveErrors`, threshold $\ge 2$) and `reportGatewayError()` before setting `isHostOffline = true`.
+  - In `auth.interceptor.ts`, integrated `reportGatewayError()` and asynchronous background `checkHostHealth()` reconciliation on gateway/offline errors without interrupting traveler UX.
+- [x] **32.1.2 (QA-02: Viewport Bounding-Box POI Dataset Merging)**:
+  - In `place.service.ts:searchPlaces()`, added `mergePlacesIntoCache()` merging live bounded API responses with in-memory `osmPlacesCache` by ID rather than replacing the complete 2,673-POI catalog.
+  - In `map.page.ts:loadPlaces()`, added `allLoadedPlaces` master collection merging live bounded places into memory on pan/zoom, preserving all marker cluster pins across Nueva Ecija.
+- [x] **32.1.3 (QA-08: Dynamic activeApiBaseUrl in HTTP Services & Interceptors)**:
+  - In `connectivity.service.ts`, added dynamic getter `activeApiBaseUrl` reading `localStorage.getItem('ne_custom_api_url')` with secure protocol validation (`isValidApiUrl`) and fallback to `environment.apiBaseUrl`.
+  - In `place.service.ts`, `itinerary.service.ts`, `auth.service.ts`, `auth.interceptor.ts`, and `place-detail-sheet.component.ts`, replaced static `environment.apiBaseUrl` with dynamic `activeApiBaseUrl`.
+
+### Phase 32.2: P2 UI Polish, Global Settings & Lifecycle Cleanup (COMPLETED)
+- [x] **32.2.1 (QA-14C: Restore ne_theme_mode on App Boot & ne_default_budget in Wizards)**:
+  - In `app.component.ts:ngOnInit()`, hydrated user dark mode preference on initial app startup from `localStorage.getItem('ne_theme_mode')`.
+  - In `suggested-wizard.page.ts` and `custom-builder.page.ts`, initialized `daily_budget` form control dynamically from `Number(localStorage.getItem('ne_default_budget')) || 3000`.
+- [x] **32.2.2 (QA-14B: Timezone-Safe Date Incrementation in Itinerary Detail)**:
+  - In `itinerary-detail.page.ts:addDay()`, replaced UTC `new Date(lastDate).toISOString().split('T')[0]` with `toLocalIsoDate(addDaysLocal(parseLocalIsoDate(lastDate), 1))`.
+- [x] **32.2.3 (QA-14A: Teardown Legacy previewMap Lifecycle in ItineraryDetailPage)**:
+  - In `itinerary-detail.page.ts`, removed legacy `previewMap`, `previewPolylineLayer`, `previewStopsLayer`, `initPreviewMap()`, `updatePreviewMap()`, and `previewMapElementRef` to eliminate redundant DOM resize timers.
+- [x] **32.2.4 (QA-09: Remove Duplicate Toast on Forgot Password Modal)**:
+  - In `login.page.ts:onForgotPassword()`, removed redundant warning toast when opening the password recovery modal, allowing the modal to cleanly display account recovery instructions.
+- [x] **32.2.5 (QA-10: Adopt Shared PlaceDetailSheet on Home Tab)**:
+  - In `home.page.html`, replaced legacy inline modal markup with shared `<app-place-detail-sheet [place]="selectedPlace">`, wiring `onStartTripFromSheet` and `onAddToCustomTripFromSheet`.
+- [x] **32.2.6 (QA-11: Public OSRM & Overpass Routing Resilience)**:
+  - Verified and guarded `fetchOsrmRoute()` with immediate geodesic polyline fallback and backend caching via `geospatial_cache`.
+
+
 
 
 

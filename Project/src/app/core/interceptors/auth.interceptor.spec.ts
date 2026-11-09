@@ -1,11 +1,15 @@
-import { TestBed } from '@angular/core/testing';
-import { HttpClient, HttpErrorResponse, provideHttpClient, withInterceptors } from '@angular/common/http';
+import type { HttpErrorResponse} from '@angular/common/http';
+import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { TestBed } from '@angular/core/testing';
+import { of } from 'rxjs';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { authInterceptor } from './auth.interceptor';
+
+import { environment } from '../../../environments/environment';
 import { AuthService } from '../services/auth.service';
 import { ConnectivityService } from '../services/connectivity.service';
-import { environment } from '../../../environments/environment';
+
+import { authInterceptor } from './auth.interceptor';
 
 describe('authInterceptor (GAP-04)', () => {
   let http: HttpClient;
@@ -19,6 +23,8 @@ describe('authInterceptor (GAP-04)', () => {
   };
   let connectivityServiceMock: {
     setHostOffline: ReturnType<typeof vi.fn>;
+    checkHostHealth: ReturnType<typeof vi.fn>;
+    activeApiBaseUrl: string;
   };
 
   beforeEach(() => {
@@ -32,6 +38,8 @@ describe('authInterceptor (GAP-04)', () => {
 
     connectivityServiceMock = {
       setHostOffline: vi.fn(),
+      checkHostHealth: vi.fn().mockReturnValue(of(true)),
+      activeApiBaseUrl: environment.apiBaseUrl,
     };
 
     TestBed.configureTestingModule({
