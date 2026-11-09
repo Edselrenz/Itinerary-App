@@ -116,7 +116,7 @@ class Place(Base):
     )
     address_text: Mapped[str | None] = mapped_column(String(255), nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    phone: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    phone: Mapped[str | None] = mapped_column(String(255), nullable=True)
     website: Mapped[str | None] = mapped_column(String(255), nullable=True)
     opening_hours: Mapped[str | None] = mapped_column(String(255), nullable=True)
     estimated_cost_min: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
