@@ -816,6 +816,81 @@ This checklist tracks completed, active, and pending tasks across all developmen
 - [x] **32.2.6 (QA-11: Public OSRM & Overpass Routing Resilience)**:
   - Verified and guarded `fetchOsrmRoute()` with immediate geodesic polyline fallback and backend caching via `geospatial_cache`.
 
+---
+
+## Phase 33: Exhaustive QA/QC Audit Assessment & Production Polish
+> Ref: [itinerary_app_exhaustive_qa_qc_report.pdf](file:///c:/Users/Edward/Desktop/CaseStudy/itinerary_app_exhaustive_qa_qc_report.pdf)
+> Audit Baseline: Commit `81fcc8d7` (evaluated 75 test cases across 12 modules; 56 Passed, 14 Defects, 5 Blocked/Deferred).
+> Cross-Reference: 12 of the 14 reported defects (`BUG-01` to `BUG-10`, `BUG-12`, and `BUG-13`) were resolved and verified in Phase 30, 31, and 32. Phase 33 tracks the audit verification matrix, addresses remaining open defects (`BUG-14`), and stages production cloud deployment (`BUG-11`).
+
+### Phase 33.1: Audit Verification & Regression Matrix (RESOLVED & VERIFIED)
+- [x] **33.1.1 (BUG-01 / TASK-01 - MOD-10 / TC-067: Offline Circuit Breaker & Exponential Backoff)**:
+  - Addressed in Phase 32.1 (`32.1.1`).
+  - Added consecutive error counter (`consecutiveErrors >= 2`) and async `checkHostHealth()` reconciliation in `connectivity.service.ts` and `auth.interceptor.ts`.
+  - Eliminates infinite retry toast/banner loops when the backend host is offline.
+- [x] **33.1.2 (BUG-02 / TASK-02 - MOD-05 / TC-032 & TC-034: Destination Autocomplete & Responsive Wrapped Chips)**:
+  - Addressed in Phase 31.1 (`31.1.1` & `31.1.2`).
+  - Implemented `<app-destination-autocomplete>` combobox indexing all 32 Nueva Ecija LGUs and landmarks with Unicode diacritic stripping.
+  - Replaced clipped single-row horizontal scroll in `suggested-wizard.page.scss` with responsive wrapped pill grid (`flex-wrap: wrap`) and regional modal.
+- [x] **33.1.3 (BUG-03 / TASK-03 - MOD-05 / TC-036 & TC-038: Sequential Time Window Scheduling & Overnight Lodging Order)**:
+  - Addressed in Phase 31.2 (`31.2.2`).
+  - Replaced hardcoded static `10:00 AM - 12:00 PM` slots with dynamic rolling time windows (`09:30 AM – 11:30 AM`, `12:00 PM – 01:30 PM`, `03:00 PM – 05:00 PM`) calculating transit buffers.
+  - Fixed backwards overnight lodging sequencing in `isOvernightItem()` to ensure accommodations are scheduled at the end of the day.
+- [x] **33.1.4 (BUG-04 / TASK-04 - MOD-05 / TC-035 & TC-037: Canonical Preference Mapping, Smart Dining & Venue Deduplication)**:
+  - Addressed in Phase 31.2 (`31.2.1`, `31.2.3`, `31.2.4`).
+  - Replaced broken string matching with canonical `PREFERENCE_CATEGORY_MAP` resolving user preferences to backend categories.
+  - Added Smart Dining toggle for midday lunch spots (`12:00 PM – 01:30 PM`).
+  - Implemented `normalizeVenueName()` and cross-day coordinate proximity checks (<200m) preventing duplicate stops across days.
+- [x] **33.1.5 (BUG-05 & BUG-06 / TASK-05 - MOD-06 / TC-042 & TC-043: Custom Builder Full-Catalog Ingestion & Step-1 Preference Tab Sync)**:
+  - Addressed in Phase 31.3 (`31.3.1`).
+  - Replaced 17-place restricted browse pool in `custom-builder.page.ts` with `searchPlaces({ municipality_name: dest, limit: 100 })` querying all 2,673 POIs.
+  - Corrected category mapping in `proceedToBuilder()` and added `✨ Recommended for You` tab combining selected preferences.
+- [x] **33.1.6 (BUG-07 & BUG-08 / TASK-06 - MOD-09 / TC-063 & TC-064: App-Boot Theme Hydration & Default Budget Preference Binding)**:
+  - Addressed in Phase 32.2 (`32.2.1`).
+  - Hydrated `ne_theme_mode` dark mode in `app.component.ts:ngOnInit()` on app startup.
+  - Hydrated `ne_default_budget` dynamically into `daily_budget` form controls in `suggested-wizard.page.ts` and `custom-builder.page.ts`.
+- [x] **33.1.7 (BUG-09 / TASK-08 - MOD-04 / TC-024 & TC-025: Additive POI Bounding-Box Cache Merging on Map Pan/Zoom)**:
+  - Addressed in Phase 32.1 (`32.1.2`).
+  - Implemented `mergePlacesIntoCache()` in `place.service.ts` and `allLoadedPlaces` master collection in `map.page.ts`.
+  - Merges live bounded API query results with existing in-memory places by ID without purging provincial markers.
+- [x] **33.1.8 (BUG-10 / TASK-09 - MOD-07 / TC-050: Dynamic Itinerary Subtitle Counter & Place Detail Sheet Adoption)**:
+  - Addressed in Phase 32.2 (`32.2.5`) and verified in `itinerary-detail.page.ts`.
+  - Replaced hardcoded "Estimated activities" with dynamic `getItinerarySubtitle()` calculating total stops and day counts.
+  - Unified Home tab modal with `<app-place-detail-sheet>`.
+- [x] **33.1.9 (BUG-12 / TASK-10 - MOD-03 / TC-017: Card Width Token Standardization & Responsive Clamp)**:
+  - Addressed in Phase 30/31 (`home.page.scss`).
+  - Increased popular destination card `min-width` from cramped 120px to 160px with `clamp()` responsiveness.
+- [x] **33.1.10 (BUG-13 / TASK-11 - MOD-11 / TC-071 & TC-073: Asset Pruning, .VSCodeCounter Exclusion & Build Budgets)**:
+  - Addressed in Phase 32.
+  - Pruned unused assets down to 21 active production image assets; excluded `.VSCodeCounter/` via `.gitignore`.
+  - Verified production build budgets (<10kB per component style).
+
+### Phase 33.2: Open Actionable Remediation (TASK-12 / BUG-14 & TASK-07 / BUG-11)
+- [x] **33.2.1 (BUG-14 / TASK-12 - MOD-12 / TC-074: Production SEO Meta & Open Graph Sharing Tags)**:
+  - In `Project/src/index.html`:
+    - Replaced generic `<title>Ionic App</title>` with `<title>Nueva Ecija Travel Itinerary | Trip mo, trip ko</title>`.
+    - Added meta description: `"Discover Nueva Ecija destinations, plan budget-aware multi-day itineraries, explore 2,673 local attractions, and navigate provincial transit."`.
+    - Added Open Graph tags: `og:title`, `og:description`, `og:image`, `og:url`, `og:type`.
+    - Added Twitter Card tags: `twitter:card`, `twitter:title`, `twitter:description`, `twitter:image`.
+    - Set mobile status bar `theme-color` to brand `#0084ff`.
+    - Added inline pre-boot theme hydration script to prevent flash of unstyled theme on startup.
+- [x] **33.2.2 (BUG-14 / TASK-12 - MOD-12 / TC-075: Route Alias Redirect /tabs/saved -> /tabs/history)**:
+  - In `Project/src/app/tabs/tabs.routes.ts`:
+    - Added `{ path: 'saved', redirectTo: 'history', pathMatch: 'full' }` alias route to gracefully handle legacy bookmarks, external deep links, and user expectations.
+  - In `Project/src/app/app.routes.ts`:
+    - Added `{ path: 'saved', redirectTo: '/tabs/history', pathMatch: 'full' }` top-level redirect.
+  - Created automated regression test in `Project/src/app/tabs/tabs.routes.spec.ts` (3 tests passing).
+- [x] **33.2.3 (Quality Gate Verification & Regression Checks)**:
+  - Executed Vitest unit test suite (`npm --prefix Project run test:unit`): **29/29 suites, 296/296 tests passing [100%]**.
+  - Executed TypeScript strict typechecks (`npm --prefix Project run typecheck:e2e`): **Exit code 0**.
+  - Executed ESLint formatting check on modified files: **Exit code 0, 0 errors, 0 warnings**.
+  - Executed production Angular build (`npm --prefix Project run build`): **Exit code 0, 0 budget overruns**.
+  - Executed Capacitor Android asset synchronization (`npx cap sync android`): **Exit code 0**.
+- [ ] **33.2.4 (BUG-11 / TASK-07 - MOD-02 / TC-007: Cloud Backend Deployment Roadmap)**:
+  - Phase 32 mitigated via Cloudflare Worker proxy (`https://ne-itinerary-api.edselrenz0.workers.dev/api/v1`) and fail-fast JWT validation in `config.py`.
+  - Complete containerized cloud deployment (e.g. Railway, Render, Fly.io) with persistent PostgreSQL database and managed SSL to fully decommission local ngrok tunnel.
+
+
 
 
 

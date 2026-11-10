@@ -7,19 +7,12 @@ This document serves as the primary handoff reference for developers and coding 
 ## 1. Project Status Overview
 
 - **Application Name**: Nueva Ecija Travel Itinerary (MVP & GIS Architecture Upgrade)
-- **Current Development Phase**: **Phase 32 Completed & Verified — Full-Website QA Remediation & Hardening**
+- **Current Development Phase**: **Phase 33 Completed & Verified — Exhaustive QA/QC Audit Remediation & Final Polish**
 - **Active Database Infrastructure**: **PostgreSQL 16 in Docker** (`ne_postgres` on port 5432) active and populated with the complete **2,673-place catalog** (2,656 OSM + 17 curated), 12 municipalities, 4 users, and 5 itineraries. Dual-engine SQLite fallback verified.
-- **Last Verified Working State**: **Phase 32 Verified on PostgreSQL** (28/28 frontend test files and 293/293 unit tests passing [100%], 21/21 backend Pytest cases [100%] executing against PostgreSQL in Docker, clean Angular production build in `Project/www` with code 0 and 0 stylesheet budget warnings/overruns). Remediated all 16 full-system audit items (`QA-01` through `QA-14C` + `MAP-TAB`):
-  - `QA-01`: Consecutive error gate ($\ge 2$) and async health reconciliation eliminating false-positive offline banners.
-  - `QA-02`: In-memory place cache merging (`mergePlacesIntoCache` & `allLoadedPlaces`), preserving all 2,673 marker cluster pins during pan/zoom.
-  - `QA-08`: Dynamic `activeApiBaseUrl` getter respecting custom tunnel URLs (`ne_custom_api_url`) across all HTTP services and interceptors.
-  - `QA-14C`: App boot hydration of `ne_theme_mode` dark mode and dynamic `ne_default_budget` hydration in wizard forms.
-  - `QA-14B`: Timezone-safe date arithmetic via `toLocalIsoDate(addDaysLocal(parseLocalIsoDate(lastDate), 1))` in `addDay()`.
-  - `QA-14A`: Deleted legacy `previewMap` lifecycle, variables, and methods, eliminating redundant DOM resize timers.
-  - `QA-09`: Removed duplicate warning toast on forgot password modal; clean recovery ticket flow.
-  - `QA-10`: Unified Home tab destination modal with shared `<app-place-detail-sheet>`.
-  - `QA-11`: Public routing resilience with 2.5s AbortController timeout and geodesic spline fallback.
-- **Current Active Tasks**: System operational. Next available opportunities: Native APK signing and vector tile bundling.
+- **Last Verified Working State**: **Phase 33 Verified** (29/29 frontend test suites and 296/296 unit tests passing [100%], 21/21 backend Pytest cases [100%], TypeScript strict typecheck exit code 0, ESLint exit code 0 with 0 errors/0 warnings, clean Angular production build in `Project/www` with code 0 and 0 stylesheet budget warnings/overruns in 12.2s, Capacitor Android sync in 0.5s). Remediated all audit items from `itinerary_app_exhaustive_qa_qc_report.pdf`:
+  - `BUG-14` / `TASK-12`: Production SEO meta, title, Open Graph tags, Twitter card tags, mobile theme-color, pre-boot dark mode hydration, `/tabs/saved` and `/saved` redirects to `/tabs/history`.
+  - All 12 earlier defects (`BUG-01` to `BUG-10`, `BUG-12`, `BUG-13`) verified resolved and regression-tested.
+- **Current Active Tasks**: System 100% verified and operational. Next available opportunities: Push to GitHub remote, Native APK signing, or containerized cloud backend deployment.
 - **Current Blockers**: **None**.
 
 ---
@@ -311,15 +304,20 @@ An enterprise full-system QA audit report (`full_website_qa_audit_and_proposal.p
 
 ---
 
-## 10. Next Recommended Opportunities
+## 10. Immediate Priorities & Next Recommended Opportunities
 
-1. **Native APK Production Signing**:
+1. **Phase 33 Immediate Priorities (TASK-12 / BUG-14)**:
+   - **SEO Metadata & Open Graph Tags**: Add `<title>Nueva Ecija Travel Itinerary | Trip mo, trip ko</title>`, meta description, mobile theme-color, and Open Graph tags (`og:title`, `og:description`, `og:image`, `og:url`, `og:type`) to `Project/src/index.html`.
+   - **Route Alias Redirect**: Add `{ path: 'saved', redirectTo: 'history', pathMatch: 'full' }` to `Project/src/app/tabs/tabs.routes.ts`.
+   - **Quality Gate Execution**: Run unit tests (293+ passing), Angular production build, and Capacitor Android sync.
+2. **Phase 33 Cloud Hosting Roadmap (TASK-07 / BUG-11)**:
+   - Cloud container deployment (e.g. Railway, Render, Fly.io) with managed PostgreSQL and SSL certificates, superseding local ngrok tunnel.
+3. **Native APK Production Signing**:
    - Run `npx cap open android` to inspect the synchronized Android Studio project.
    - Generate a signed release APK or Android App Bundle (AAB) using Java 17/21 and production keystore.
-2. **Offline MBTiles Vector Tiles**:
+4. **Offline MBTiles Vector Tiles**:
    - Optional future enhancement to package a pre-rendered offline vector tile package (`.mbtiles`) of Central Luzon for 100% offline map panning without raster tile caching.
-3. **Crowdsourced User Reviews & Community Photos**:
-   - Optional future capability allowing authenticated travelers to upload local photos and submit verified reviews.
+
 
 
 

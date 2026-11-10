@@ -1,4 +1,5 @@
 import type { Routes } from '@angular/router';
+
 import { pendingChangesGuard } from './core/guards/pending-changes.guard';
 
 export const routes: Routes = [
@@ -56,6 +57,11 @@ export const routes: Routes = [
   {
     path: 'tabs',
     loadChildren: () => import('./tabs/tabs.routes').then((m) => m.routes),
+  },
+  {
+    path: 'saved',
+    redirectTo: '/tabs/history',
+    pathMatch: 'full',
   },
   {
     path: '',

@@ -2,11 +2,16 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Ionic App</title>
+    <title>Nueva Ecija Travel Itinerary | Trip mo, trip ko</title>
 
     <base href="/" />
 
+    <meta
+      name="description"
+      content="Discover Nueva Ecija destinations, plan budget-aware multi-day itineraries, explore 2,673 local attractions, and navigate provincial transit."
+    />
     <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#0084ff" />
     <meta
       name="viewport"
       content="viewport-fit=cover, width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no"
@@ -14,11 +19,48 @@
     <meta name="format-detection" content="telephone=no" />
     <meta name="msapplication-tap-highlight" content="no" />
 
+    <!-- Open Graph / Social Sharing Meta -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Nueva Ecija Travel Itinerary | Trip mo, trip ko" />
+    <meta
+      property="og:description"
+      content="Discover Nueva Ecija destinations, plan budget-aware multi-day itineraries, explore 2,673 local attractions, and navigate provincial transit."
+    />
+    <meta property="og:image" content="assets/images/loading_screen.jpg" />
+    <meta property="og:url" content="https://edselrenz.github.io/Itinerary-App/" />
+
+    <!-- Twitter Card Meta -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Nueva Ecija Travel Itinerary | Trip mo, trip ko" />
+    <meta
+      name="twitter:description"
+      content="Discover Nueva Ecija destinations, plan budget-aware multi-day itineraries, explore 2,673 local attractions, and navigate provincial transit."
+    />
+    <meta name="twitter:image" content="assets/images/loading_screen.jpg" />
+
     <link rel="icon" type="image/png" href="assets/icon/favicon.png" />
 
     <!-- add to homescreen for ios -->
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <!-- Pre-boot Theme Hydration to prevent flash of unstyled theme -->
+    <script>
+      (function () {
+        try {
+          if (localStorage.getItem('ne_theme_mode') === 'dark') {
+            document.documentElement.classList.add('dark');
+            if (document.body) {
+              document.body.classList.add('dark');
+            } else {
+              document.addEventListener('DOMContentLoaded', function () {
+                document.body.classList.add('dark');
+              });
+            }
+          }
+        } catch (_) {}
+      })();
+    </script>
   </head>
 
   <body>

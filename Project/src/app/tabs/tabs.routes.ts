@@ -1,4 +1,5 @@
 import type { Routes } from '@angular/router';
+
 import { TabsPage } from './tabs.page';
 
 export const routes: Routes = [
@@ -17,6 +18,11 @@ export const routes: Routes = [
       {
         path: 'history',
         loadComponent: () => import('./history/history.page').then((m) => m.HistoryPage),
+      },
+      {
+        path: 'saved',
+        redirectTo: 'history',
+        pathMatch: 'full',
       },
       {
         path: 'profile',
