@@ -886,9 +886,11 @@ This checklist tracks completed, active, and pending tasks across all developmen
   - Executed ESLint formatting check on modified files: **Exit code 0, 0 errors, 0 warnings**.
   - Executed production Angular build (`npm --prefix Project run build`): **Exit code 0, 0 budget overruns**.
   - Executed Capacitor Android asset synchronization (`npx cap sync android`): **Exit code 0**.
-- [ ] **33.2.4 (BUG-11 / TASK-07 - MOD-02 / TC-007: Cloud Backend Deployment Roadmap)**:
-  - Phase 32 mitigated via Cloudflare Worker proxy (`https://ne-itinerary-api.edselrenz0.workers.dev/api/v1`) and fail-fast JWT validation in `config.py`.
-  - Complete containerized cloud deployment (e.g. Railway, Render, Fly.io) with persistent PostgreSQL database and managed SSL to fully decommission local ngrok tunnel.
+- [x] **33.2.4 (BUG-11 / TASK-07 - MOD-02 / TC-007: Cloud Backend Deployment Roadmap)**:
+  - Mitigated via Cloudflare Worker proxy (`https://ne-itinerary-api.edselrenz0.workers.dev/api/v1`) in `environment.prod.ts` and `environment.example.ts`.
+  - Added fail-fast Pydantic JWT secret validation in `backend/app/core/config.py` rejecting default keys when `APP_ENV != 'development'`.
+  - Created multi-stage production container `backend/Dockerfile` with healthcheck endpoint and slim runtime.
+  - Created `docker-compose.prod.yml` configuring production PostgreSQL 16 and FastAPI container orchestration.
 
 
 

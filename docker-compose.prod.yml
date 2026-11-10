@@ -1,0 +1,45 @@
+# Production multi-container composition for Nueva Ecija Travel Backend + PostgreSQL
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ne_postgres_prod
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ne_travel_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me_local_only}
+      POSTGRES_DB: ${POSTGRES_DB:-nueva_ecija_travel}
+    volumes:
+      - ne_postgres_prod_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ne_travel_user} -d ${POSTGRES_DB:-nueva_ecija_travel}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: ne_api_prod
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      APP_ENV: production
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-ne_travel_user}:${POSTGRES_PASSWORD:-change_me_local_only}@postgres:5432/${POSTGRES_DB:-nueva_ecija_travel}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-dev_only_replace_before_pilot_with_openssl_rand_hex_32}
+      CORS_ORIGINS: '["https://edselrenz.github.io","capacitor://localhost","http://localhost:8100"]'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  ne_postgres_prod_data:
+    driver: local

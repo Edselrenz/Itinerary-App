@@ -49,29 +49,42 @@ The project employs a multi-tiered verification strategy designed to prevent reg
   6. Stop deletion (status `200 OK`) and cascade itinerary deletion (status `204 No Content`).
 
 ### 2.4 Mobile Client Unit Test Suite
-- **Core Utilities**:
+- **Core Utilities & Data**:
   - `date.utils.spec.ts`: 5 passing tests (calendar formatting, parsing, cross-timezone stability).
-  - `polyline.util.spec.ts`: 15 passing tests (polyline encoding/decoding, haversine distance, segment projection, perpendicular distance, and remaining distance).
-- **Services**:
-  - `connectivity.service.spec.ts`: 5 passing tests (health checks, offline banners, custom tunnel URL).
-  - `place.service.spec.ts`: 13 passing tests (search, category filtering, caching, nearby lookups).
-  - `itinerary.service.spec.ts`: 16 passing tests (CRUD, offline generator with polyline routes, budget math).
-  - `guest-migration.service.spec.ts`: 5 passing tests (guest trip migration on login/register).
-  - `route-tracking.service.spec.ts`: 6 passing tests (Capacitor Geolocation watch, 10m throttle, 100m off-route event dispatch, 50m stop arrival detection, dynamic ETA).
-  - `secure-token-storage.service.spec.ts`: 4 passing tests (Capacitor secure storage vs web storage).
+  - `polyline.util.spec.ts`: 5 passing tests (polyline encoding/decoding, haversine distance, segment projection).
+  - `itinerary-export.util.spec.ts`: 9 passing tests (RFC 5545 .ics calendar export, print summary, clipboard copy).
+  - `commute-guide.data.spec.ts`: 9 passing tests (walking hops, tricycle routes, arterial highway corridor hops).
+- **Core Services & Interceptors**:
+  - `connectivity.service.spec.ts`: 6 passing tests (health checks, 2-strike offline gate, custom tunnel URL).
+  - `auth.interceptor.spec.ts`: 5 passing tests (Bearer token injection, gateway error reporting, async health probes).
+  - `auth.service.spec.ts`: 4 passing tests (reactive currentUser$, JWT storage, login, logout).
+  - `place.service.spec.ts`: 15 passing tests (search, category filtering, caching, nearby lookups, cache merging).
+  - `itinerary.service.spec.ts`: 25 passing tests (CRUD, suggested wizard engine, sequential rolling windows, pacing, budget math).
+  - `guest-migration.service.spec.ts`: 5 passing tests (guest trip detection, account migration).
+  - `route-tracking.service.spec.ts`: 6 passing tests (Capacitor Geolocation watch, 10m throttle, off-route dispatch, arrival detection).
+  - `secure-token-storage.service.spec.ts`: 5 passing tests (Capacitor secure storage vs web storage).
+  - `osm-overpass.service.spec.ts`: 3 passing tests (bounding box filter, query construction).
+- **Guards & Routing**:
+  - `pending-changes.guard.spec.ts`: 3 passing tests (dirty form guard, confirmation dialog).
+  - `tabs.routes.spec.ts`: 3 passing tests (/tabs/saved -> history redirect, root /saved redirect, primary tab paths).
 - **Components & Modals**:
-  - `place-detail-sheet.component.spec.ts`: 7 passing tests (hero photo, tags, open/closed badges, photo thumbnails, schedule accordion, reviews snippet, personal notes, commute guide, action button emissions).
-  - `app.component.spec.ts`: 5 passing tests (splash screen lifecycle, retry connectivity).
+  - `place-detail-sheet.component.spec.ts`: 8 passing tests (photo gallery, schedule, reviews, commute guide, action button emissions).
+  - `destination-autocomplete.component.spec.ts`: 11 passing tests (32 LGU indexing, diacritic normalization, fuzzy filtering).
+  - `itinerary-route-map.component.spec.ts`: 8 passing tests (Leaflet route map, numbered stop pins, polyline rendering, full map handoff).
+  - `app.component.spec.ts`: 8 passing tests (splash screen lifecycle, dark mode boot hydration, connectivity retry).
 - **Tabs & Pages**:
-  - `home.page.spec.ts`: 9 passing tests (debounced search, popular carousel, suggested/custom entry).
-  - `map.page.spec.ts`: 24 passing tests (Leaflet clustering, unclustered route layer, numbered stop pins, pulsing user beacon, navigation HUD, bottom sheet).
-  - `history.page.spec.ts`: 4 passing tests (saved cards, search, segment filtering, delete).
-  - `profile.page.spec.ts`: 5 passing tests (guest status, edit profile, settings, logout confirmation).
-  - `tabs.page.spec.ts`: 1 passing test (bottom tab navigation).
-  - `custom-builder.page.spec.ts`: 10 passing tests (multi-day timeline, stop addition/reordering/edit, duplicate guards, save).
-  - `suggested-wizard.page.spec.ts`: 12 passing tests (destination chips, travel mode, minimum rating, budget selection, stop card ratings, route connectors, sheet consolidation).
-  - `itinerary-detail.page.spec.ts`: 30 passing tests (day selection, interactive route map preview, navigate CTA, leg travel badges, sheet consolidation, stop edit/delete/move).
-- **Total Unit Test Coverage**: 24 test files, 230 unit tests passing (100%).
+  - `welcome.page.spec.ts`: Visual and navigation tests.
+  - `login.page.spec.ts`: 7 passing tests (form validation, password recovery modal, login flow).
+  - `signup.page.spec.ts`: 5 passing tests (form validation, matching passwords, username generation).
+  - `home.page.spec.ts`: 14 passing tests (debounced search, popular carousel, category pills, shared sheet adoption).
+  - `map.page.spec.ts`: 32 passing tests (Leaflet clustering, route focus mode, numbered pins, category filters, tile error resilience).
+  - `history.page.spec.ts`: 7 passing tests (saved cards, search, segment filtering, trip deletion).
+  - `profile.page.spec.ts`: 9 passing tests (guest status, edit profile, settings, dark theme toggle, default budget).
+  - `tabs.page.spec.ts`: 2 passing tests (bottom tab navigation, map query param reset).
+  - `custom-builder.page.spec.ts`: 24 passing tests (multi-day timeline, stop addition/reordering/edit, catalog browse, duplicate guards).
+  - `suggested-wizard.page.spec.ts`: 21 passing tests (destination chips, budget selection, preference mapping, route connectors, sheet consolidation).
+  - `itinerary-detail.page.spec.ts`: 32 passing tests (day selection, interactive route map preview, navigate CTA, leg travel badges, dynamic subtitles).
+- **Total Unit Test Coverage**: 29 test files, 296 unit tests passing (100%).
 
 ### 2.5 End-to-End Browser Journey Suite (Playwright)
 - **`Project/e2e/app.spec.ts`**: 5 comprehensive browser journeys running across Chromium headless shell:
@@ -95,28 +108,39 @@ The project employs a multi-tiered verification strategy designed to prevent reg
 ```text
  RUN  v5.0.5 C:/Users/Edward/Desktop/CaseStudy/Project
 
- ✓  app  src/app/core/utils/date.utils.spec.ts (5 tests)
- ✓  app  src/app/core/utils/polyline.util.spec.ts (15 tests)
- ✓  app  src/app/core/services/connectivity.service.spec.ts (5 tests)
- ✓  app  src/app/core/services/place.service.spec.ts (13 tests)
- ✓  app  src/app/core/services/itinerary.service.spec.ts (16 tests)
- ✓  app  src/app/core/services/guest-migration.service.spec.ts (5 tests)
+ ✓  app  src/app/core/services/place.service.spec.ts (15 tests)
  ✓  app  src/app/core/services/route-tracking.service.spec.ts (6 tests)
- ✓  app  src/app/core/services/secure-token-storage.service.spec.ts (4 tests)
- ✓  app  src/app/shared/components/place-detail-sheet/place-detail-sheet.component.spec.ts (7 tests)
- ✓  app  src/app/tabs/tabs.page.spec.ts (1 test)
- ✓  app  src/app/tabs/profile/profile.page.spec.ts (5 tests)
- ✓  app  src/app/app.component.spec.ts (5 tests)
- ✓  app  src/app/tabs/history/history.page.spec.ts (4 tests)
- ✓  app  src/app/tabs/home/home.page.spec.ts (9 tests)
- ✓  app  src/app/features/itinerary/itinerary-detail/itinerary-detail.page.spec.ts (30 tests)
- ✓  app  src/app/features/itinerary/suggested-wizard/suggested-wizard.page.spec.ts (12 tests)
- ✓  app  src/app/features/itinerary/custom-builder/custom-builder.page.spec.ts (10 tests)
- ✓  app  src/app/tabs/map/map.page.spec.ts (24 tests)
+ ✓  app  src/app/core/services/secure-token-storage.service.spec.ts (5 tests)
+ ✓  app  src/app/core/services/osm-overpass.service.spec.ts (3 tests)
+ ✓  app  src/app/core/services/itinerary.service.spec.ts (25 tests)
+ ✓  app  src/app/core/utils/polyline.util.spec.ts (5 tests)
+ ✓  app  src/app/core/utils/date.utils.spec.ts (5 tests)
+ ✓  app  src/app/core/services/connectivity.service.spec.ts (6 tests)
+ ✓  app  src/app/core/interceptors/auth.interceptor.spec.ts (5 tests)
+ ✓  app  src/app/core/services/auth.service.spec.ts (4 tests)
+ ✓  app  src/app/core/utils/itinerary-export.util.spec.ts (9 tests)
+ ✓  app  src/app/core/data/commute-guide.data.spec.ts (9 tests)
+ ✓  app  src/app/core/services/guest-migration.service.spec.ts (5 tests)
+ ✓  app  src/app/tabs/tabs.routes.spec.ts (3 tests)
+ ✓  app  src/app/core/guards/pending-changes.guard.spec.ts (3 tests)
+ ✓  app  src/app/tabs/tabs.page.spec.ts (2 tests)
+ ✓  app  src/app/shared/components/itinerary-route-map/itinerary-route-map.component.spec.ts (8 tests)
+ ✓  app  src/app/app.component.spec.ts (8 tests)
+ ✓  app  src/app/shared/components/destination-autocomplete/destination-autocomplete.component.spec.ts (11 tests)
+ ✓  app  src/app/features/auth/signup/signup.page.spec.ts (5 tests)
+ ✓  app  src/app/features/auth/login/login.page.spec.ts (7 tests)
+ ✓  app  src/app/tabs/history/history.page.spec.ts (7 tests)
+ ✓  app  src/app/shared/components/place-detail-sheet/place-detail-sheet.component.spec.ts (8 tests)
+ ✓  app  src/app/tabs/profile/profile.page.spec.ts (9 tests)
+ ✓  app  src/app/tabs/home/home.page.spec.ts (14 tests)
+ ✓  app  src/app/features/itinerary/suggested-wizard/suggested-wizard.page.spec.ts (21 tests)
+ ✓  app  src/app/features/itinerary/custom-builder/custom-builder.page.spec.ts (24 tests)
+ ✓  app  src/app/features/itinerary/itinerary-detail/itinerary-detail.page.spec.ts (32 tests)
+ ✓  app  src/app/tabs/map/map.page.spec.ts (32 tests)
 
- Test Files  24 passed (24)
-      Tests  230 passed (230)
-   Duration  16.60s
+ Test Files  29 passed (29)
+      Tests  296 passed (296)
+   Duration  33.28s
 ```
 
 ### 3.2 Backend Pytest Run (`python -m pytest backend/tests/ -v`)

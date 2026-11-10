@@ -8,6 +8,72 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [0.33.0] - 2026-11-10
+### Added
+- **SEO Metadata & Open Graph Social Sharing Tags (`BUG-14` / `TASK-12`)**:
+  - Configured descriptive page title: `Nueva Ecija Travel Itinerary | Trip mo, trip ko`.
+  - Added meta description detailing trip planning, provincial transit, and 2,673 attractions.
+  - Added Open Graph tags (`og:type`, `og:title`, `og:description`, `og:image`, `og:url`).
+  - Added Twitter Card metadata (`summary_large_image`).
+  - Added mobile status bar `theme-color` (`#0084ff`).
+  - Added inline pre-boot dark theme hydration script in `index.html` preventing light-mode flash on startup.
+- **Deep Link & Route Alias Redirects (`BUG-14` / `TASK-12`)**:
+  - Added `{ path: 'saved', redirectTo: 'history', pathMatch: 'full' }` under `/tabs` in `Project/src/app/tabs/tabs.routes.ts`.
+  - Added `{ path: 'saved', redirectTo: '/tabs/history', pathMatch: 'full' }` in `Project/src/app/app.routes.ts`.
+- **Route Gate Unit Test Suite**:
+  - Created `Project/src/app/tabs/tabs.routes.spec.ts` testing route redirects and tab definitions (3/3 passing).
+
+### Changed
+- Ingested 57-page `itinerary_app_exhaustive_qa_qc_report.pdf` into repository root and updated `docs/TODO.md` with complete Phase 33 defect resolution matrix.
+
+## [0.32.0] - 2026-11-09
+### Fixed
+- **Resilient Connectivity Circuit Breaker (`QA-01` / Phase 32.1)**:
+  - Added consecutive error counter ($\ge 2$) and async `checkHostHealth()` reconciliation in `connectivity.service.ts` and `auth.interceptor.ts`, eliminating false-offline banner loops.
+- **In-Memory POI Catalog Merging (`QA-02` / Phase 32.1)**:
+  - Added `mergePlacesIntoCache()` in `place.service.ts` and `allLoadedPlaces` in `map.page.ts`, preserving 2,673 POIs and cluster pins across pan/zoom operations.
+- **Dynamic API Base URL (`QA-08` / Phase 32.1)**:
+  - Implemented dynamic `activeApiBaseUrl` getter in `connectivity.service.ts` wired across all HTTP services and interceptors.
+- **App Boot Dark Mode & Wizard Budget Hydration (`QA-14C` / Phase 32.2)**:
+  - Restored `ne_theme_mode` dark mode in `AppComponent.ngOnInit()` on initial boot.
+  - Hydrated `daily_budget` controls from `localStorage.getItem('ne_default_budget')` in both Suggested Wizard and Custom Builder.
+- **Timezone-Safe Date Incrementation (`QA-14B` / Phase 32.2)**:
+  - Replaced UTC `toISOString().split('T')[0]` with `toLocalIsoDate(addDaysLocal(parseLocalIsoDate(lastDate), 1))` in `itinerary-detail.page.ts:addDay()`.
+- **Teardown Legacy Preview Map Lifecycle (`QA-14A` / Phase 32.2)**:
+  - Removed legacy preview map and resize intervals in `ItineraryDetailPage`.
+- **Shared Place Detail Sheet Adoption (`QA-10` / Phase 32.2)**:
+  - Refactored `home.page.html` to adopt shared `<app-place-detail-sheet>`.
+
+## [0.31.0] - 2026-11-08
+### Added
+- **Reusable Destination Autocomplete Combobox (`PREF-01` / Phase 31.1)**:
+  - Implemented `<app-destination-autocomplete>` indexing all 32 Nueva Ecija LGUs and landmarks with Unicode NFD diacritic folding.
+  - Replaced clipped single-row horizontal scroll in `suggested-wizard.page.scss` with responsive wrapped chip grid (`flex-wrap: wrap`).
+  - Added `🗺️ Browse All 32 Towns` regional explorer modal.
+- **Canonical Preference Mapping & Pacing Engine (`PREF-02` to `PREF-06` / Phase 31.2)**:
+  - Replaced substring matching with canonical `PREFERENCE_CATEGORY_MAP` in `itinerary.service.ts`.
+  - Implemented rolling sequential non-overlapping time windows (`09:30 AM`, `12:00 PM`, `03:00 PM`) and end-of-day overnight lodging.
+  - Added Smart Dining toggle for daily lunch spots and activity intensity guard (max 1 mountain hike/day).
+  - Added `normalizeVenueName()` and cross-day coordinate proximity deduplication (<200m).
+- **Custom Builder Full-Catalog Ingestion (`CUST-01` to `CUST-03` / Phase 31.3)**:
+  - Replaced 17-place restricted browse with full 2,673 POI catalog query in `custom-builder.page.ts`.
+  - Added `✨ Recommended for You` multi-preference tab.
+  - Added Haversine inter-stop transit buffer in `autoOptimizeDaySchedule()`.
+
+## [0.30.0] - 2026-11-07
+### Added
+- **Isolated Route Focus Mode on MapPage (`GAP-02` / Phase 30.2)**:
+  - Added `isFollowRouteMode`: isolates active day's stops and route polyline, hiding background discovery markers.
+  - Added floating Active Route Control Bar, day switcher chips, and bottom route carousel.
+- **Pre-Save Draft Persistence (`GAP-03` / Phase 30.2)**:
+  - Added `activeDraftItinerary$` caching in `itinerary.service.ts`, preserving wizard state when viewing full map.
+- **Road-Snapped Commute Badges & Pin Highlighting (`GAP-01` & `GAP-05` / Phase 30.3)**:
+  - Added arterial circuity distance (`straight_km * 1.28`) and commute pills between stop cards.
+  - Added bi-directional pin-to-card synchronization in `ItineraryRouteMapComponent`.
+- **Spatial Indexing & Canvas Clustering (`Phase 30.4`)**:
+  - Configured `preferCanvas: true` on `MapPage` Leaflet options.
+  - Added composite index `ix_places_lat_lng_active` on `Place` model.
+
 ## [0.26.0] - 2026-11-06
 ### Fixed
 - **Custom Itinerary Metadata Retention in Guest/Offline Saves (`C-BUG-06` / Phase 29.1)**:

@@ -426,3 +426,47 @@ The bottom navigation bar implements all 4 planned primary tabs (`/tabs/home`, `
 - [x] **25.4: Unified PlaceDetailSheetComponent & UI Polish**
   - **Target Files**: `Project/src/app/shared/components/place-detail-sheet/`, `Project/src/app/features/itinerary/suggested-wizard/`, `Project/src/app/features/itinerary/itinerary-detail/`
   - **Implementation**: Consolidated duplicate modal markup across all pages with `<app-place-detail-sheet>`, added traveler annotations and public transit commute guide, added Travel Mode and Minimum Rating controls to Suggested Wizard, and added inter-stop road travel leg connectors.
+
+#### Milestone 26: Map-Routing Architecture Refactoring & Geo-Spatial Caching (COMPLETED)
+- [x] **26.1: Public OSRM Road Routing & Geodesic Spline Arcs**: Zero-cost arterial routing via OSRM with 2.5s AbortController and geodesic spline fallback.
+- [x] **26.2: OpenStreetMap Raster Tiles Standard**: Switched to OpenStreetMap raster tiles, eliminating watermark notices.
+- [x] **26.3: Geospatial Caching Layer**: In-database route and POI caching via `geospatial_cache` table.
+
+#### Milestone 27: Road-Routing Overhaul, Commute Engine & True Geolocation (COMPLETED)
+- [x] **27.1: True GPS Geolocation**: High-accuracy `watchPosition` tracking with 10m movement throttle and pulsing beacon.
+- [x] **27.2: Leg-Aware Provincial Commute Engine**: Integrated walking, tricycle, and highway bus corridor commute pills (`commute-guide.data.ts`).
+- [x] **27.3: URL Query Parameter State**: Two-way filter synchronization to browser URL parameters.
+
+#### Milestone 28: Live Full-Map Routing, Marker Clustering & In-App Navigation (COMPLETED)
+- [x] **28.1: Leaflet MarkerCluster Production Hardening**: Guarded `window.L` with non-destructive property descriptor setter in `main.ts` (`MAP-01`).
+- [x] **28.2: In-App Turn Navigation HUD**: Real-time stop guidance with off-route recalculation.
+- [x] **28.3: Stop Detail Sheet Parity**: Dynamic price propagation and WCAG 2.2 focus accessibility.
+
+#### Milestone 29: Wizard Offline Engine & Custom Builder Deep Alignment (COMPLETED)
+- [x] **29.1: Offline Suggested Generator Slicing**: Dynamic destination matching and budget substitutions in `ItineraryService`.
+- [x] **29.2: 0ms Offline Short-Circuit**: Immediate fallback when `isHostOfflineSnapshot` is true.
+- [x] **29.3: Router State Handoff**: Draft persistence via router navigation state without duplicate saves.
+
+#### Milestone 30: Live-Server Map & Suggested Itinerary Routing Upgrade (COMPLETED)
+- [x] **30.1: False-Offline Banner Clearance**: Auto-reset on tile load and 3-strike threshold (`GAP-04`).
+- [x] **30.2: Isolated Route Focus Mode**: `isFollowRouteMode` on `MapPage` isolating active route and hiding background markers (`GAP-02`).
+- [x] **30.3: Pre-Save Draft Persistence**: `activeDraftItinerary$` caching across map handoffs (`GAP-03`).
+- [x] **30.4: Spatial Indexing & Canvas Clustering**: `preferCanvas: true` and composite spatial index on `Place` model.
+
+#### Milestone 31: Suggested & Custom Itinerary Preference Engine, Destination Autofill & Catalog Browse Upgrade (COMPLETED)
+- [x] **31.1: Reusable Destination Autocomplete Combobox**: `<app-destination-autocomplete>` covering 32 LGUs and landmarks with NFD diacritic folding (`PREF-01`).
+- [x] **31.2: Canonical Preference Mapping & Pacing Engine**: `PREFERENCE_CATEGORY_MAP`, sequential rolling time windows, midday dining anchor, and coordinate deduplication (`PREF-02` to `PREF-06`).
+- [x] **31.3: Custom Builder Full-Catalog Ingestion**: Replaced 17-place cap with 2,673 POI catalog query and `✨ Recommended for You` tab (`CUST-01` to `CUST-03`).
+
+#### Milestone 32: Full-Website QA Remediation, Connectivity Hardening & Polish (COMPLETED)
+- [x] **32.1: Resilient Connectivity Circuit Breaker**: Consecutive error threshold ($\ge 2$) and async host health probes (`QA-01`).
+- [x] **32.2: Additive In-Memory POI Cache Merging**: `mergePlacesIntoCache` in `PlaceService` and `allLoadedPlaces` in `MapPage` (`QA-02`).
+- [x] **32.3: Dynamic API Base URL**: Injected `activeApiBaseUrl` across all HTTP services (`QA-08`).
+- [x] **32.4: App-Boot Theme Hydration & Settings Sync**: Hydrated dark mode on boot and default budget into wizards (`QA-14C`).
+- [x] **32.5: Timezone-Safe Date Arithmetic**: Replaced UTC date parsing with `toLocalIsoDate` (`QA-14B`).
+
+#### Milestone 33: Exhaustive QA/QC Audit Assessment & Production Polish (COMPLETED)
+- [x] **33.1: Audit Defect Ingestion**: Ingested and mapped 75 test cases and 14 defects from `itinerary_app_exhaustive_qa_qc_report.pdf`.
+- [x] **33.2: Production SEO Meta & Open Graph Sharing Tags (`BUG-14` / `TASK-12`)**: Configured descriptive page title, meta description, Open Graph tags, Twitter card tags, theme color, and pre-boot dark theme hydration in `Project/src/index.html`.
+- [x] **33.3: Route Alias Redirects (`BUG-14` / `TASK-12`)**: Implemented `/tabs/saved` -> `history` in `tabs.routes.ts` and `/saved` -> `/tabs/history` in `app.routes.ts`.
+- [x] **33.4: Automated Test Gate**: Authored `tabs.routes.spec.ts` bringing total unit test coverage to 296 tests across 29 test files (100% passing).
