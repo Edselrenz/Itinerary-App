@@ -6,7 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
-## [Unreleased]
+## [0.36.0] - 2026-11-10
+### Fixed
+- **Permanent Splash Screen Freeze (`QA-BUG-CRIT-01`)**:
+  - Injected `ChangeDetectorRef` in `Project/src/app/app.component.ts`.
+  - Added `this.cdr.detectChanges()` inside `dismissSplash()` within the 500ms fade callback to force Angular change detection and reliably remove the splash overlay on first-time visits and clean sessions.
+- **Async Event Change Detection & Debounced View Updates (`QA-ARCH-DEF-01`)**:
+  - Configured `provideZoneChangeDetection({ eventCoalescing: true })` in `Project/src/main.ts`.
+  - Injected `ChangeDetectorRef` in `Project/src/app/tabs/home/home.page.ts` and added explicit `this.cdr.markForCheck()` on RxJS debounced search results and featured destination loads.
+- **Log Out Modal Pointer Event Interception (`QA-UI-DEF-01`)**:
+  - Removed `display: flex; align-items: center; justify-content: center;` from `.figma-logout-modal` in `Project/src/app/tabs/profile/profile.page.scss`.
+  - Configured `--height: auto;` so that Ionic's default `.overlay-hidden { display: none; }` unmounts the closed modal, preventing it from intercepting pointer clicks destined for the Log Out row.
+- **Acceptance Gate Check #15 Codebase Drift (`QA-AUDIT-DEF-01`)**:
+  - Updated Check #15 in `scripts/verify_acceptance_gate.py` to inspect `Project/src/app/shared/components/place-detail-sheet/place-detail-sheet.component.ts` and verify `'Admission: Check on arrival'`.
+  - Elevated acceptance gate pass rate to **24/24 passed (100.0%)**.
+- **Runtime Dependency Injection Token Protection (`QA-LINT-DEF-01`)**:
+  - Guarded Angular dependency injection constructor tokens against automated `import type` conversion, preserving runtime classes and preventing Angular NG2003 compilation failures.
+
+### Changed
+- Added `QA-REPORT/` to master `.gitignore` to prevent committing local QA and user acceptance audit reports.
 
 ## [0.35.0] - 2026-11-10
 ### Added

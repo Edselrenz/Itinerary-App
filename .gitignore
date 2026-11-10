@@ -77,6 +77,7 @@ htmlcov/
 .nox/
 test-results/
 playwright-report/
+QA-REPORT/
 
 # --- Databases, Docker & Local State ---
 *.db

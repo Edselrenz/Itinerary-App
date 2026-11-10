@@ -280,3 +280,22 @@ Exit Code: 0
     8. Deep-linking to map coordinates (`/tabs/map?lat=15.4859&lng=120.9669&zoom=15`) with verified floating navigation controls and valid Google Maps directions routing URLs (`https://www.google.com/maps/dir/?api=1&destination=...`).
 
 
+
+## 7. QA Remediation & Release Gate Verification (Session 97)
+
+- [x] **Acceptance Gate Verification (`scripts/verify_acceptance_gate.py`)**:
+  - Executed full 24-point acceptance gate: **24/24 checks passed (100.0%)**.
+  - Pass Breakdown:
+    - Auth & Guest Mode Checks (7 criteria): 7/7 PASSED.
+    - Home & Places Checks (3 criteria): 3/3 PASSED.
+    - Map Tab Checks (7 criteria): 7/7 PASSED.
+    - Itineraries & Operations Checks (7 criteria): 7/7 PASSED.
+- [x] **Vitest Mobile Unit Test Suite (`npm --prefix Project run test:unit`)**:
+  - **30/30 test files passed (100%)**.
+  - **310/310 unit tests passed (100%)**.
+  - All feature modules covered: Auth, Welcome, Home, Map, Custom Builder, Suggested Wizard, Itinerary Detail, History, Profile.
+- [x] **Angular Production Build (`npm --prefix Project run build`)**:
+  - Exit code 0, 0 compilation errors.
+  - All component stylesheet bundles strictly under the 16 kB warning budget.
+- [x] **Capacitor Android Native Sync (`npx cap sync android`)**:
+  - Exit code 0, 6 plugins synchronized in 0.627s (`@capacitor/app`, `@capacitor/geolocation`, `@capacitor/haptics`, `@capacitor/keyboard`, `@capacitor/status-bar`, `capacitor-secure-storage-plugin`).

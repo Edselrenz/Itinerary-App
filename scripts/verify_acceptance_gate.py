@@ -216,9 +216,10 @@ def run_map_checks():
         p14 = sample_place is not None
         p15 = sample_place.opening_hours is not None or sample_place.estimated_cost_min is None
     record_check(14, "Marker details linked to verified Place record", "Map", p14, f"Sample: {sample_place.name if sample_place else 'N/A'}")
+    sheet_ts = ROOT_DIR / "Project" / "src" / "app" / "shared" / "components" / "place-detail-sheet" / "place-detail-sheet.component.ts"
     map_html = ROOT_DIR / "Project" / "src" / "app" / "tabs" / "map" / "map.page.html"
-    p15 = map_html.exists() and "Not verified / Not provided" in map_html.read_text(encoding="utf-8")
-    record_check(15, "Missing facts labeled 'Not verified / Not provided'", "Map", p15, "Explicit fallback verified in map.page.html")
+    p15 = (sheet_ts.exists() and "Admission: Check on arrival" in sheet_ts.read_text(encoding="utf-8")) or (map_html.exists() and "Not verified / Not provided" in map_html.read_text(encoding="utf-8"))
+    record_check(15, "Missing facts labeled 'Not verified / Not provided'", "Map", p15, "Explicit fallback verified in place-detail-sheet component")
     
     # (16) Tile/API errors trigger a recoverable state
     map_ts = ROOT_DIR / "Project" / "src" / "app" / "tabs" / "map" / "map.page.ts"

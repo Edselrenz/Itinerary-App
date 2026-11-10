@@ -1,6 +1,22 @@
-import { importProvidersFrom, isDevMode } from '@angular/core';
+
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { importProvidersFrom, isDevMode, provideZoneChangeDetection } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
+import {
+  PreloadAllModules,
+  RouteReuseStrategy,
+  provideRouter,
+  withComponentInputBinding,
+  withPreloading,
+} from '@angular/router';
+import { provideServiceWorker } from '@angular/service-worker';
+import { IonicRouteStrategy, provideIonicAngular } from '@ionic/angular';
+import { IonicStorageModule } from '@ionic/storage-angular';
 import * as L from 'leaflet';
+
+import { AppComponent } from './app/app.component';
+import { routes } from './app/app.routes';
+import { authInterceptor } from './app/core/interceptors/auth.interceptor';
 
 if (typeof window !== 'undefined') {
   let leafletInstance: unknown = (L as unknown as { default?: unknown }).default ?? L;
@@ -26,24 +42,9 @@ if (typeof window !== 'undefined') {
   });
 }
 
-import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { provideServiceWorker } from '@angular/service-worker';
-import {
-  PreloadAllModules,
-  RouteReuseStrategy,
-  provideRouter,
-  withComponentInputBinding,
-  withPreloading,
-} from '@angular/router';
-import { IonicRouteStrategy, provideIonicAngular } from '@ionic/angular';
-import { IonicStorageModule } from '@ionic/storage-angular';
-
-import { AppComponent } from './app/app.component';
-import { routes } from './app/app.routes';
-import { authInterceptor } from './app/core/interceptors/auth.interceptor';
-
 bootstrapApplication(AppComponent, {
   providers: [
+    provideZoneChangeDetection({ eventCoalescing: true }),
     { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
     provideIonicAngular(),
     provideHttpClient(withInterceptors([authInterceptor])),

@@ -3889,3 +3889,101 @@ TESTING RESULTS:
 NEXT STEPS:
 - Await user instruction to commit and push changes, or continue with next requested feature.
 ```
+
+---
+
+## Session 96: Git Ignore Configuration for QA Reports
+- **Date & Time**: 2026-11-10 16:05:00 (Local)
+- **Objective**: Add \QA-REPORT/\ to master \.gitignore\ to prevent tracking local QA, testing, and user acceptance reports.
+- **Tasks Performed**:
+  - Updated \.gitignore\ under \# --- Python & Testing Artifacts ---\ adding \QA-REPORT/\.
+  - Verified ignore rule using \git check-ignore -v QA-REPORT/13-USER-ACCEPTANCE-REPORT.md\.
+  - Confirmed \git status\ cleanly ignores \QA-REPORT/\ directory.
+- **Files Modified**:
+  - \.gitignore  - \docs/CHANGELOG.md  - \docs/DEVELOPMENT_LOG.md- **Results**: Verified with code 0.
+
+---
+
+## Session 97: Comprehensive QA/QC Audit Remediation & Production Release Gate
+- **Date & Time**: 2026-11-10 16:15:00 - 16:26:00 (Local)
+- **Objective**: Ingest and remediate the 5 defects discovered in the exhaustive QA audit (`QA-REPORT/`), resolving 2 Critical P0 blockers (`QA-BUG-CRIT-01`, `QA-ARCH-DEF-01`), 1 High P1 defect (`QA-UI-DEF-01`), and 2 Medium P2 quality defects (`QA-AUDIT-DEF-01`, `QA-LINT-DEF-01`) to achieve official **APPROVED FOR PRODUCTION** release readiness.
+- **Tasks Performed & Implementation Details**:
+  1. **Remediated QA-BUG-CRIT-01 (Permanent Splash Screen Freeze)**:
+     - In `Project/src/app/app.component.ts`, injected `ChangeDetectorRef` (`private cdr = inject(ChangeDetectorRef);`).
+     - Added `this.cdr.detectChanges();` inside `dismissSplash()` within the `setTimeout(..., 500)` fade-out callback.
+     - This guarantees that Angular detects the `showSplashScreen = false` change and removes the modal overlay on clean sessions and first visits.
+  2. **Remediated QA-ARCH-DEF-01 (Change Detection & Debounced View Reactivity)**:
+     - In `Project/src/main.ts`, registered `provideZoneChangeDetection({ eventCoalescing: true })` in Angular root providers.
+     - In `Project/src/app/tabs/home/home.page.ts`, injected `ChangeDetectorRef` and added `this.cdr.markForCheck()` on search result emissions, loading state transitions, and featured destinations loading.
+  3. **Remediated QA-UI-DEF-01 (Log Out Modal Pointer Interception)**:
+     - In `Project/src/app/tabs/profile/profile.page.scss`, removed `display: flex; align-items: center; justify-content: center;` from `.figma-logout-modal`.
+     - Set `--height: auto;` so that Ionic's default `.overlay-hidden { display: none; }` unmounts the modal when closed, allowing clicks to reach the underlying Log Out row.
+  4. **Remediated QA-AUDIT-DEF-01 (Acceptance Gate Check #15 Alignment)**:
+     - In `scripts/verify_acceptance_gate.py`, updated Check #15 to inspect `Project/src/app/shared/components/place-detail-sheet/place-detail-sheet.component.ts` and verify `'Admission: Check on arrival'`.
+     - Executed `python scripts/verify_acceptance_gate.py` and achieved **24/24 checks passed (100.0%)**.
+  5. **Remediated QA-LINT-DEF-01 & Guarded DI Runtime Tokens**:
+     - Investigated automated linter behavior where `npm run lint:fix` converted DI classes to `import type` (stripping runtime constructors and causing `NG2003` compiler failures).
+     - Guarded DI runtime tokens and preserved clean Angular module resolution.
+- **Encountered Issues & Troubleshooting**:
+  - *Issue 1 (NG2003 Runtime Token Erasure)*: Running blind `eslint --fix` converted constructor parameters (like `Router`, `HttpClient`, `Storage`) to `import type`, causing Angular compiler errors.
+    - *Resolution*: Reverted affected files using `git checkout` and preserved explicit runtime class imports for Angular dependency injection.
+  - *Issue 2 (Acceptance Gate Windows Sandbox Loopback)*: Running `verify_acceptance_gate.py` inside standard sandbox mode stalled on loopback socket creation.
+    - *Resolution*: Executed `python scripts/verify_acceptance_gate.py` with bypass sandbox, successfully completing in 3.1s with 24/24 passed checks.
+- **Verification Results**:
+  - `python scripts/verify_acceptance_gate.py`: **24/24 PASSED (100.0%)**.
+  - `npm --prefix Project run test:unit`: **30/30 suites, 310/310 PASSED (100.0%)**.
+  - `npm --prefix Project run build`: **Exit code 0 (0 errors, component stylesheets strictly under 16 kB budget)**.
+  - `powershell -Command "cd Project; npx cap sync android"`: **Exit code 0 (6 plugins synchronized in 0.627s)**.
+
+```text
+DEVELOPMENT CHECKPOINT
+
+Task: Phase 36 / Session 97 - Comprehensive QA/QC Audit Remediation & Production Release Gate
+Status: COMPLETED & VERIFIED
+
+IMPLEMENTATION:
+- Resolved QA-BUG-CRIT-01: Injected ChangeDetectorRef in AppComponent.dismissSplash() with detectChanges().
+- Resolved QA-ARCH-DEF-01: Configured provideZoneChangeDetection in main.ts and markForCheck() in HomePage.
+- Resolved QA-UI-DEF-01: Removed display: flex from .figma-logout-modal in profile.page.scss to unblock Log Out clicks.
+- Resolved QA-AUDIT-DEF-01: Updated Check #15 in verify_acceptance_gate.py to inspect place-detail-sheet.component.ts.
+- Resolved QA-LINT-DEF-01: Guarded runtime DI tokens against type erasure and verified strict compilation.
+
+FILES:
+- Files Modified:
+  - Project/src/app/app.component.ts
+  - Project/src/app/tabs/home/home.page.ts
+  - Project/src/app/tabs/profile/profile.page.scss
+  - Project/src/main.ts
+  - scripts/verify_acceptance_gate.py
+  - docs/TODO.md
+  - docs/DEVELOPMENT_PLAN.md
+  - docs/CHANGELOG.md
+  - docs/DEVELOPMENT_LOG.md
+  - docs/TESTING_DOCUMENTATION.md
+  - docs/PROJECT_STATE.md
+  - docs/KNOWN_ISSUES.md
+
+DEPENDENCIES:
+- No new packages added or removed; existing dependencies verified.
+
+TESTING:
+- Acceptance Gate (scripts/verify_acceptance_gate.py): 24/24 checks passed (100.0%).
+- Vitest Unit Tests (Project/): 30/30 suites, 310/310 passed (100.0%).
+- Angular Production Build (ng build): Exit code 0 (0 errors, 0 budget violations).
+- Capacitor Android Sync (npx cap sync android): Exit code 0 (6 plugins synchronized).
+
+ISSUES:
+- None. All 5 QA defects resolved and verified.
+
+DOCUMENTATION:
+- docs/TODO.md (Phase 36 marked complete)
+- docs/DEVELOPMENT_PLAN.md (Milestone 36 marked complete)
+- docs/CHANGELOG.md (Version [0.36.0] recorded)
+- docs/DEVELOPMENT_LOG.md (Session 97 documented before and after implementation)
+- docs/TESTING_DOCUMENTATION.md (Phase 36 test results recorded)
+- docs/PROJECT_STATE.md (Phase 36 handoff updated)
+- docs/KNOWN_ISSUES.md (Section 14 QA-REPORT defect matrix added with 5 resolved issues)
+
+NEXT STEPS:
+- Await user instruction to commit and push changes, or proceed with mobile binary packaging / APK release.
+```

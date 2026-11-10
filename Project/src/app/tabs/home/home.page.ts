@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import type { OnDestroy, OnInit } from '@angular/core';
-import { Component, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, inject } from '@angular/core';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import {
@@ -136,6 +136,7 @@ export class HomePage implements OnInit, OnDestroy {
   private placeService = inject(PlaceService);
   private router = inject(Router);
   private toastController = inject(ToastController);
+  private cdr = inject(ChangeDetectorRef);
 
   constructor() {
     addIcons({
@@ -195,6 +196,7 @@ export class HomePage implements OnInit, OnDestroy {
       next: (places) => {
         if (places && places.length > 0) {
           this.destinations = places.map((p) => this.mapPlaceToDestination(p));
+          this.cdr.markForCheck();
         }
       },
       error: () => {
@@ -215,6 +217,7 @@ export class HomePage implements OnInit, OnDestroy {
             this.searchResults = [];
             this.searchLoading = false;
           }
+          this.cdr.markForCheck();
         }),
         switchMap((term) => {
           const trimmed = (term || '').trim();
@@ -222,6 +225,7 @@ export class HomePage implements OnInit, OnDestroy {
             return of(null);
           }
           this.searchLoading = true;
+          this.cdr.markForCheck();
           return this.placeService.searchPlaces({ q: trimmed, limit: 20 }).pipe(
             catchError(() => {
               // Graceful local search fallback for offline resilience
@@ -268,6 +272,7 @@ export class HomePage implements OnInit, OnDestroy {
             }),
             finalize(() => {
               this.searchLoading = false;
+              this.cdr.markForCheck();
             })
           );
         })
@@ -275,6 +280,7 @@ export class HomePage implements OnInit, OnDestroy {
       .subscribe((response) => {
         if (response) {
           this.searchResults = response.items.map((p) => this.mapPlaceToDestination(p));
+          this.cdr.markForCheck();
         }
       });
 

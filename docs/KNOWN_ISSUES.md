@@ -343,3 +343,17 @@ Because the audit was performed against Commit `81fcc8d7` (Phase 30 baseline), 1
 
 
 
+
+---
+
+## 14. QA-REPORT Defect Register & Remediation Matrix (`QA-REPORT/16-BUG-REGISTER.md`)
+
+An exhaustive QA audit was documented in `QA-REPORT/`, recording 5 defects across core application behavior. All 5 defects were remediated and verified in **Phase 36**:
+
+| Defect ID | Severity | Module / Location | Defect Description | Resolution | Resolution Status |
+| :--- | :---: | :--- | :--- | :--- | :---: |
+| **QA-BUG-CRIT-01** | **P0 (CRITICAL)** | `app.component.ts` | **Permanent Splash Screen Freeze**. `dismissSplash()` lacked explicit change detection trigger; on clean sessions, the 500ms fade timeout completed without DOM unmounting. | Injected `ChangeDetectorRef` in `AppComponent` and added `this.cdr.detectChanges()` inside the fade callback. | **RESOLVED (Phase 36)** |
+| **QA-ARCH-DEF-01** | **P0 (CRITICAL)** | `main.ts`<br>`home.page.ts` | **Stale View Updates on Async Events**. Background tasks (RxJS search debouncing, HTTP observables) did not reliably trigger change detection without manual interaction. | Configured `provideZoneChangeDetection({ eventCoalescing: true })` in `main.ts` and added `this.cdr.markForCheck()` in `HomePage`. | **RESOLVED (Phase 36)** |
+| **QA-UI-DEF-01** | **P1 (HIGH)** | `profile.page.scss` | **Log Out Modal Pointer Interception**. Host selector `.figma-logout-modal` had `display: flex; align-items: center; justify-content: center;`, intercepting pointer events when closed. | Removed `display: flex` and configured `--height: auto;` so Ionic's `.overlay-hidden { display: none; }` unmounts the modal. | **RESOLVED (Phase 36)** |
+| **QA-AUDIT-DEF-01** | **P2 (MEDIUM)** | `verify_acceptance_gate.py` | **Acceptance Gate Check #15 Codebase Drift**. Check #15 expected `'Not verified / Not provided'` in `map.page.html`, but modern place sheet uses `'Admission: Check on arrival'`. | Updated Check #15 in `verify_acceptance_gate.py` to inspect `place-detail-sheet.component.ts` and verify `'Admission: Check on arrival'`. | **RESOLVED (Phase 36)** |
+| **QA-LINT-DEF-01** | **P2 (MEDIUM)** | Angular Components & Services | **Linter Type Erasure on Runtime DI Tokens**. Running aggressive `lint:fix` converted Angular dependency injection classes to `import type`, causing NG2003 compilation failures. | Guarded DI tokens as runtime classes; verified strict TypeScript compilation and 0 budget errors. | **RESOLVED (Phase 36)** |

@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import type { OnDestroy, OnInit } from '@angular/core';
-import { Component, HostListener, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, HostListener, inject } from '@angular/core';
 import { IonApp, IonIcon, IonRouterOutlet, IonSpinner, ToastController } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { closeOutline, cloudOfflineOutline, refreshOutline } from 'ionicons/icons';
@@ -24,6 +24,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
   public connectivityService = inject(ConnectivityService);
   private toastController = inject(ToastController);
+  private cdr = inject(ChangeDetectorRef);
 
   constructor() {
     addIcons({
@@ -128,6 +129,7 @@ export class AppComponent implements OnInit, OnDestroy {
     setTimeout(() => {
       this.showSplashScreen = false;
       this.isFadingOut = false;
+      this.cdr.detectChanges();
     }, 500);
   }
 

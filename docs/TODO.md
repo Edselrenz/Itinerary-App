@@ -999,3 +999,27 @@ This checklist tracks completed, active, and pending tasks across all developmen
 g build): **Exit code 0** (component styles strictly under 16 kB budget).
   - Capacitor Android sync (
 px cap sync android): **Exit code 0 (6 plugins synchronized)**.
+
+---
+
+## Phase 36: Comprehensive QA/QC Audit Remediation (QA-REPORT/ Release Gate)
+- [x] **36.1 (Fix QA-BUG-CRIT-01 - P0 Critical: Permanent Splash Screen Freeze)**:
+  - Injected `ChangeDetectorRef` in `Project/src/app/app.component.ts`.
+  - Invoked `this.cdr.detectChanges()` inside the 500ms fade-out callback in `dismissSplash()` to guarantee DOM unmounting on first-time visits and clean sessions.
+- [x] **36.2 (Fix QA-ARCH-DEF-01 - P0 Critical: Zone.js & Async Change Detection)**:
+  - Configured `provideZoneChangeDetection({ eventCoalescing: true })` in `Project/src/main.ts`.
+  - Injected `ChangeDetectorRef` in `Project/src/app/tabs/home/home.page.ts` and added explicit `this.cdr.markForCheck()` on debounced search updates and featured place stream responses.
+- [x] **36.3 (Fix QA-UI-DEF-01 - P1 High: Log Out Modal Pointer Interception)**:
+  - In `Project/src/app/tabs/profile/profile.page.scss`, removed `display: flex; align-items: center; justify-content: center;` from `.figma-logout-modal` host selector.
+  - Set `--height: auto;` so Ionic's `.overlay-hidden { display: none; }` unmounts the closed modal element and allows clicks to reach the underlying Log Out row.
+- [x] **36.4 (Fix QA-AUDIT-DEF-01 - P2 Medium: Acceptance Gate Check #15 Alignment)**:
+  - Updated `scripts/verify_acceptance_gate.py` Check #15 to inspect `Project/src/app/shared/components/place-detail-sheet/place-detail-sheet.component.ts` and verify canonical fallback label `'Admission: Check on arrival'`.
+  - Verified acceptance gate reaches **24/24 checks passed (100.0%)**.
+- [x] **36.5 (Fix QA-LINT-DEF-01 - P2 Medium: Automated Lint & Code Quality Remediation)**:
+  - Inspected lint rules; guarded runtime dependency injection tokens against `import type` erasure (preventing Angular NG2003 runtime compiler errors).
+  - Maintained zero lint regressions and verified strict TypeScript compilation.
+- [x] **36.6 (Verification & Production Readiness Gate)**:
+  - Vitest Unit Tests: **310/310 passed across 30 test files (100%)**.
+  - Acceptance Gate: **24/24 checks passed (100.0%)**.
+  - Production Angular Build (`ng build`): **Exit code 0** (0 budget errors, <16 kB component styles).
+  - Capacitor Android Sync (`npx cap sync android`): **Exit code 0** (6 plugins synchronized in 0.627s).
