@@ -1023,3 +1023,8 @@ px cap sync android): **Exit code 0 (6 plugins synchronized)**.
   - Acceptance Gate: **24/24 checks passed (100.0%)**.
   - Production Angular Build (`ng build`): **Exit code 0** (0 budget errors, <16 kB component styles).
   - Capacitor Android Sync (`npx cap sync android`): **Exit code 0** (6 plugins synchronized in 0.627s).
+- [x] **36.7 (GitHub Pages CI/CD Workflow Fix)**:
+  - Decoupled single-job `build-and-deploy` in `.github/workflows/deploy.yml` into official GitHub two-job pipeline (`build` and `deploy` with `needs: build`).
+  - Fixed artifact indexing race condition (`Found 0 artifact(s)` / `No artifacts named "github-pages" were found`).
+  - Set `concurrency.cancel-in-progress: false` to protect in-flight Pages deployments.
+  - Upgraded Pages configuration to `actions/configure-pages@v5` and stabilized Node.js runtime to `node-version: 22`.

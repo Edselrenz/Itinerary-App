@@ -3987,3 +3987,25 @@ DOCUMENTATION:
 NEXT STEPS:
 - Await user instruction to commit and push changes, or proceed with mobile binary packaging / APK release.
 ```
+
+---
+
+## Session 98: GitHub Pages CI/CD Workflow Fix
+- **Date & Time**: 2026-11-10 16:38:00 (Local)
+- **Objective**: Diagnose and resolve GitHub Actions deployment failure in `.github/workflows/deploy.yml` (`Error: No artifacts named "github-pages" were found for this workflow run`).
+- **Root Cause Analysis**:
+  - The workflow combined build, test, artifact upload (`actions/upload-pages-artifact@v3`), and deployment (`actions/deploy-pages@v4`) into a single monolithic job `build-and-deploy`.
+  - When `deploy-pages` runs in the same job immediately following `upload-pages-artifact`, it hits an API race condition where GitHub's internal artifact indexing has not finalized, returning `Found 0 artifact(s)`.
+  - Additionally, `concurrency.cancel-in-progress: true` risked aborting in-flight Pages deployments.
+- **Tasks Performed & Implementation Details**:
+  - Refactored `.github/workflows/deploy.yml` into official GitHub two-job pipeline:
+    1. `build`: Executes checkout, Python tests, Node 22 setup, Angular build with `--base-href /Itinerary-App/`, SPA routing prep (`.nojekyll`, `404.html`), and `actions/upload-pages-artifact@v3`.
+    2. `deploy`: Depends on `needs: build`, sets `environment: github-pages`, and runs `actions/deploy-pages@v4`.
+  - Configured `concurrency.cancel-in-progress: false` to protect active deployments.
+  - Upgraded to `actions/configure-pages@v5`.
+- **Files Modified**:
+  - `.github/workflows/deploy.yml`
+  - `docs/TODO.md`
+  - `docs/CHANGELOG.md`
+  - `docs/DEVELOPMENT_LOG.md`
+- **Results**: Workflow file syntactically verified and aligned with official GitHub Pages actions architecture.

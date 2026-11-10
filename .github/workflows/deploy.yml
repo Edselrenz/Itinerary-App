@@ -13,13 +13,10 @@ permissions:
 
 concurrency:
   group: 'pages'
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
-  build-and-deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -41,7 +38,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 22
           cache: 'npm'
           cache-dependency-path: Project/package-lock.json
 
@@ -60,6 +57,9 @@ jobs:
             cp src/environments/environment.example.ts src/environments/environment.prod.ts || cp src/environments/environment.ts src/environments/environment.prod.ts
           fi
 
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
       - name: Build Ionic Angular frontend
         working-directory: Project
         run: npm run build -- --base-href /Itinerary-App/
@@ -69,14 +69,18 @@ jobs:
           touch Project/www/.nojekyll
           cp Project/www/index.html Project/www/404.html
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: Project/www
 
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

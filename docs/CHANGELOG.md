@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [0.36.1] - 2026-11-10
+### Fixed
+- **GitHub Pages CI/CD Pipeline Deployment Race Condition**:
+  - Resolved `Error: No artifacts named "github-pages" were found for this workflow run` in `.github/workflows/deploy.yml`.
+  - Decoupled single-job `build-and-deploy` into the officially required two-job architecture (`build` and `deploy` with `needs: build`), allowing GitHub's artifact storage API to finalize artifact indexing before `actions/deploy-pages@v4` queries metadata.
+  - Set `concurrency.cancel-in-progress: false` to prevent in-flight Pages deployments from being canceled mid-run.
+  - Upgraded Pages configuration to `actions/configure-pages@v5` and pinned Node.js runtime to LTS `22`.
+
 ## [0.36.0] - 2026-11-10
 ### Fixed
 - **Permanent Splash Screen Freeze (`QA-BUG-CRIT-01`)**:
