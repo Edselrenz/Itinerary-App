@@ -7,6 +7,7 @@ import {
   RouteReuseStrategy,
   provideRouter,
   withComponentInputBinding,
+  withHashLocation,
   withPreloading,
 } from '@angular/router';
 import { provideServiceWorker } from '@angular/service-worker';
@@ -49,7 +50,12 @@ bootstrapApplication(AppComponent, {
     provideIonicAngular(),
     provideHttpClient(withInterceptors([authInterceptor])),
     importProvidersFrom(IonicStorageModule.forRoot()),
-    provideRouter(routes, withPreloading(PreloadAllModules), withComponentInputBinding()),
+    provideRouter(
+      routes,
+      withHashLocation(),
+      withPreloading(PreloadAllModules),
+      withComponentInputBinding()
+    ),
     provideServiceWorker('ngsw-worker.js', {
       enabled: !isDevMode(),
       registrationStrategy: 'registerWhenStable:30000',

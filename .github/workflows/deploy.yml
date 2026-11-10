@@ -67,7 +67,7 @@ jobs:
       - name: Prepare SPA routing for GitHub Pages
         run: |
           touch Project/www/.nojekyll
-          cp Project/www/index.html Project/www/404.html
+          cp Project/src/404.html Project/www/404.html
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

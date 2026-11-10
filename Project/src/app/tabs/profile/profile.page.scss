@@ -72,6 +72,21 @@
   background: #f1f5f9;
 }
 
+.guest-avatar-frame {
+  background: #e0f2fe;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.guest-avatar-icon {
+  font-size: 38px;
+  color: var(--pf-blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .avatar-img {
   width: 100%;
   height: 100%;
@@ -118,9 +133,21 @@
   margin-top: 6px;
   outline: none;
   transition: all 0.15s ease;
+  position: relative;
+  z-index: 2;
 
   &:active {
     background: rgba(0, 136, 255, 0.08);
+  }
+
+  &.guest-auth-pill {
+    background: var(--pf-blue);
+    color: #ffffff;
+    border-color: var(--pf-blue);
+
+    &:active {
+      background: var(--pf-blue-hover);
+    }
   }
 }
 
@@ -183,6 +210,9 @@
   text-align: left;
   cursor: pointer;
   transition: background 0.15s ease;
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
 
   &:active {
     background: rgba(0, 0, 0, 0.03);
@@ -224,6 +254,10 @@
 
 .text-red {
   color: var(--pf-red);
+}
+
+.text-blue {
+  color: var(--pf-blue);
 }
 
 .item-desc {

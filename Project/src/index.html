@@ -61,6 +61,26 @@
         } catch (_) {}
       })();
     </script>
+
+    <!-- Single Page Apps for GitHub Pages Hash Redirect Receiver -->
+    <script>
+      (function (l) {
+        if (l.search[1] === '/' || (l.search.indexOf('?p=/') === 0 || l.search.indexOf('&p=/') >= 0)) {
+          var params = {};
+          var query = l.search.slice(1).split('&');
+          for (var i = 0; i < query.length; i++) {
+            var pair = query[i].split('=');
+            if (pair.length === 2) {
+              params[pair[0]] = decodeURIComponent(pair[1]);
+            }
+          }
+          if (params.p !== undefined) {
+            var targetHash = '#' + params.p + (params.q ? '?' + params.q.replace(/~and~/g, '&') : '');
+            window.location.replace(l.pathname + targetHash);
+          }
+        }
+      })(window.location);
+    </script>
   </head>
 
   <body>

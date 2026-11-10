@@ -284,6 +284,24 @@ describe('ProfilePage', () => {
     expect(mockRouter.navigate).toHaveBeenCalledWith(['/signup']);
   });
 
+  it('handles guest mode gracefully without displaying mockup persona or opening edit profile', () => {
+    component.currentUser = null;
+    component.loadProfileExtra();
+    fixture.detectChanges();
+
+    expect(component.profileExtra.avatar_url).toBe('');
+    expect(component.profileExtra.phone_number).toBe('');
+
+    // Calling openEditProfile in guest mode redirects to login instead of opening modal
+    component.openEditProfile();
+    expect(component.isEditProfileOpen).toBe(false);
+    expect(mockRouter.navigate).toHaveBeenCalledWith(['/login']);
+
+    // Calling exitGuestMode redirects to /welcome
+    component.exitGuestMode();
+    expect(mockRouter.navigate).toHaveBeenCalledWith(['/welcome']);
+  });
+
   it('should clean up subscription on destroy without error', () => {
     expect(() => component.ngOnDestroy()).not.toThrow();
   });

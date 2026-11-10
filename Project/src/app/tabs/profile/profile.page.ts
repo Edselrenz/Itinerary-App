@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import type { OnDestroy, OnInit } from '@angular/core';
-import { Component, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, inject } from '@angular/core';
 import type { FormGroup } from '@angular/forms';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -90,11 +90,11 @@ export class ProfilePage implements OnInit, OnDestroy {
 
   // Extended Profile Extra Information matching Figma design
   public profileExtra: TravelerProfileExtra = {
-    middle_initial: 'N/A',
-    phone_number: '+66 81 234 5678',
-    birthday: 'May 23, 2000',
-    gender: 'Female',
-    avatar_url: 'assets/images/pattranite_avatar.jpg',
+    middle_initial: '',
+    phone_number: '',
+    birthday: '',
+    gender: '',
+    avatar_url: '',
   };
 
   // Edit Profile Sub-Window
@@ -132,6 +132,7 @@ export class ProfilePage implements OnInit, OnDestroy {
   private connectivityService = inject(ConnectivityService);
   private alertController = inject(AlertController);
   private toastController = inject(ToastController);
+  private cdr = inject(ChangeDetectorRef);
   private subscriptions = new Subscription();
 
   constructor() {
@@ -242,7 +243,19 @@ export class ProfilePage implements OnInit, OnDestroy {
   }
 
   public loadProfileExtra(): void {
-    const userId = this.currentUser?.id || 'guest';
+    if (!this.currentUser) {
+      this.profileExtra = {
+        middle_initial: '',
+        phone_number: '',
+        birthday: '',
+        gender: '',
+        avatar_url: '',
+      };
+      this.cdr.markForCheck();
+      return;
+    }
+
+    const userId = this.currentUser.id;
     const storageKey = `ne_profile_extra_${userId}`;
     const raw = localStorage.getItem(storageKey);
     if (raw) {
@@ -265,6 +278,7 @@ export class ProfilePage implements OnInit, OnDestroy {
         this.profileExtra.phone_number = '+66 81 234 5678';
       }
     }
+    this.cdr.markForCheck();
   }
 
   public saveProfileExtraToStorage(): void {
@@ -314,6 +328,10 @@ export class ProfilePage implements OnInit, OnDestroy {
 
   // Edit Profile Methods
   public openEditProfile(): void {
+    if (!this.currentUser) {
+      this.goToLogin();
+      return;
+    }
     this.editProfileError = '';
     this.showCurrentPassword = false;
     this.showNewPassword = false;
@@ -330,11 +348,13 @@ export class ProfilePage implements OnInit, OnDestroy {
       new_password: '',
     });
     this.isEditProfileOpen = true;
+    this.cdr.markForCheck();
   }
 
   public closeEditProfile(): void {
     this.isEditProfileOpen = false;
     this.editProfileError = '';
+    this.cdr.markForCheck();
   }
 
   public toggleCurrentPasswordVisibility(): void {
@@ -431,10 +451,12 @@ export class ProfilePage implements OnInit, OnDestroy {
   public openSettings(): void {
     this.loadSettingsPreferences();
     this.isSettingsOpen = true;
+    this.cdr.markForCheck();
   }
 
   public closeSettings(): void {
     this.isSettingsOpen = false;
+    this.cdr.markForCheck();
   }
 
   public openAccountInfo(): void {
@@ -514,32 +536,43 @@ export class ProfilePage implements OnInit, OnDestroy {
   // Help & Support Methods
   public openHelpSupport(): void {
     this.isHelpSupportOpen = true;
+    this.cdr.markForCheck();
   }
 
   public closeHelpSupport(): void {
     this.isHelpSupportOpen = false;
+    this.cdr.markForCheck();
   }
 
   public toggleFaq(index: number): void {
     this.activeFaqIndex = this.activeFaqIndex === index ? null : index;
+    this.cdr.markForCheck();
   }
 
   // About Methods
   public openAbout(): void {
     this.isAboutOpen = true;
+    this.cdr.markForCheck();
   }
 
   public closeAbout(): void {
     this.isAboutOpen = false;
+    this.cdr.markForCheck();
   }
 
   // Log Out Confirmation Dialog
   public openLogoutConfirm(): void {
     this.isLogoutConfirmOpen = true;
+    this.cdr.markForCheck();
   }
 
   public closeLogoutConfirm(): void {
     this.isLogoutConfirmOpen = false;
+    this.cdr.markForCheck();
+  }
+
+  public exitGuestMode(): void {
+    this.router.navigate(['/welcome']);
   }
 
   public async executeLogout(): Promise<void> {

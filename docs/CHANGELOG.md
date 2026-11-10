@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [0.36.2] - 2026-11-10
+### Fixed
+- **GitHub Pages SPA Hard Refresh (Ctrl+F5) Support**:
+  - Configured `withHashLocation()` in `Project/src/main.ts`, ensuring that browser hard refreshes on any sub-route (`#/tabs/home`, `#/tabs/profile`, etc.) request `index.html` directly from GitHub Pages without triggering server-side 404s.
+  - Added dedicated `Project/src/404.html` using the standard `spa-github-pages` redirect protocol to automatically rewrite incoming non-hash deep links to the hash route.
+  - Added hash redirect receiver in `Project/src/index.html` `<head>` for seamless deep-link state restoration.
+- **Profile Tab Interactivity & Pointer Event Interception**:
+  - Injected `ChangeDetectorRef` into `ProfilePage` (`profile.page.ts`) and added explicit `this.cdr.markForCheck()` calls to all modal trigger and dismissal handlers.
+  - Relocated all 5 `<ion-modal>` elements outside `<ion-content>` and wrapped each in Angular `@if` conditional rendering blocks, guaranteeing that closed overlays never exist in the DOM or intercept pointer events from the scroll container.
+  - Added explicit pointer events and z-index ordering to `.card-item-row` and `.edit-profile-pill`.
+- **Guest Mode Profile Identity & Actions**:
+  - Replaced the hardcoded Pattranite Limpatiyakorn mockup persona in Guest Mode with an authentic "Guest Explorer" state (`guest-avatar-frame` icon, `Guest Explorer` title, and `Browsing in Guest Mode (Offline)` subtitle).
+  - Wired "Log In / Sign Up" pill button navigating guests to `/login`.
+  - Replaced the "Log Out" row for guests with an intuitive "Exit Guest Mode" button that safely navigates back to `/welcome`.
+
 ## [0.36.1] - 2026-11-10
 ### Fixed
 - **GitHub Pages CI/CD Pipeline Deployment Race Condition**:

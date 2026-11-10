@@ -4009,3 +4009,44 @@ NEXT STEPS:
   - `docs/CHANGELOG.md`
   - `docs/DEVELOPMENT_LOG.md`
 - **Results**: Workflow file syntactically verified and aligned with official GitHub Pages actions architecture.
+
+---
+
+## Session 99: GitHub Pages Hard Refresh (Ctrl+F5) Support & Profile Page Remediation
+- **Date & Time**: 2026-11-10 16:55:00 - 17:14:00 (Local)
+- **Objective**:
+  1. Fix SPA routing failure on GitHub Pages upon hard refresh (Ctrl+F5).
+  2. Fix Profile page click interception and guest mode identity bug (showing mockup user Pattranite Limpatiyakorn and fake email for guests).
+- **Tasks Performed & Implementation Details**:
+  1. **GitHub Pages Hard Refresh Resolution**:
+     - Configured `withHashLocation()` in `Project/src/main.ts` so route paths are held in the hash fragment (`#/tabs/home`, `#/tabs/profile`). Hard refreshing in the browser requests `https://edselrenz.github.io/Itinerary-App/` directly, completely avoiding server-side 404s.
+     - Added standard `spa-github-pages` redirect script in `Project/src/404.html` and history receiver in `Project/src/index.html` so legacy or non-hash deep links rewrite cleanly to hash routes.
+     - Updated `.github/workflows/deploy.yml` to copy `Project/src/404.html` into `Project/www/404.html`.
+  2. **Profile Tab Pointer Event & Interactivity Remediation**:
+     - Injected `ChangeDetectorRef` into `ProfilePage` (`profile.page.ts`) and invoked `this.cdr.markForCheck()` on all modal triggers (`openSettings`, `openEditProfile`, `openLogoutConfirm`, `openHelpSupport`, `openAbout`) and their dismissals.
+     - Relocated all 5 `<ion-modal>` elements in `profile.page.html` outside `<ion-content>` and wrapped each in `@if` conditional blocks. This ensures that closed modals never exist in the DOM, preventing overlay elements from capturing pointer events.
+     - Added `position: relative; z-index: 1; pointer-events: auto;` to `.card-item-row` and `edit-profile-pill` in `profile.page.scss`.
+  3. **Guest Mode Profile Identity & Actions**:
+     - Built authentic Guest Explorer state:
+       - Avatar: Neutral silhouette in `guest-avatar-frame` container.
+       - Display Name: `Guest Explorer`.
+       - Subtitle: `Browsing in Guest Mode (Offline)`.
+       - Action Button: `Log In / Sign Up` pill button routing to `/login`.
+       - Row 5: `Exit Guest Mode` with description `Return to welcome screen to log in or register.`, navigating to `/welcome`.
+     - In `openEditProfile()`, added guard redirecting guests to `/login` rather than opening an edit form for Pattranite Limpatiyakorn.
+  4. **Verification**:
+     - Vitest Unit Tests: **311/311 passed across 30 test files (100%)**.
+     - Acceptance Gate: **24/24 passed (100%)**.
+     - Angular Production Build: **Exit code 0, 0 budget violations**.
+- **Files Modified**:
+  - `Project/src/main.ts`
+  - `Project/src/index.html`
+  - `Project/src/404.html`
+  - `.github/workflows/deploy.yml`
+  - `Project/src/app/tabs/profile/profile.page.ts`
+  - `Project/src/app/tabs/profile/profile.page.html`
+  - `Project/src/app/tabs/profile/profile.page.scss`
+  - `Project/src/app/tabs/profile/profile.page.spec.ts`
+  - `docs/CHANGELOG.md`
+  - `docs/TODO.md`
+  - `docs/DEVELOPMENT_LOG.md`

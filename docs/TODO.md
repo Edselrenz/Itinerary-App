@@ -1028,3 +1028,10 @@ px cap sync android): **Exit code 0 (6 plugins synchronized)**.
   - Fixed artifact indexing race condition (`Found 0 artifact(s)` / `No artifacts named "github-pages" were found`).
   - Set `concurrency.cancel-in-progress: false` to protect in-flight Pages deployments.
   - Upgraded Pages configuration to `actions/configure-pages@v5` and stabilized Node.js runtime to `node-version: 22`.
+- [x] **36.8 (GitHub Pages SPA Hard Refresh Ctrl+F5 Support)**:
+  - Enabled `withHashLocation()` in `Project/src/main.ts` so routes use hash fragments immune to server-side 404s.
+  - Added `Project/src/404.html` and history receiver in `Project/src/index.html` via standard `spa-github-pages` redirect protocol.
+- [x] **36.9 (Profile Tab Interactivity & Guest State Remediation)**:
+  - Relocated all 5 `<ion-modal>` overlay components outside `<ion-content>` and wrapped in `@if` conditional rendering so closed modals never exist in the DOM or intercept pointer clicks.
+  - Injected `ChangeDetectorRef` in `ProfilePage` with `markForCheck()` on all modal triggers and dismissals.
+  - Implemented authentic Guest Mode profile state (neutral avatar, "Guest Explorer", "Browsing in Guest Mode", "Log In / Sign Up" button, and "Exit Guest Mode" row).
