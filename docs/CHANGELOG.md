@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [0.36.3] - 2026-11-10
+### Fixed
+- **Blank White Screen & Zone.js Runtime Bootstrap Failure (`NG0908`)**:
+  - Replaced `provideZoneChangeDetection({ eventCoalescing: true })` with native `provideZonelessChangeDetection()` in `Project/src/main.ts`.
+  - Resolved `RuntimeError: NG0908: In this configuration Angular requires Zone.js` which caused the application to fail during `bootstrapApplication()` and render a blank white screen on `http://localhost:8100/` and GitHub Pages.
+  - Verified local and production application bootstrapping: `Current URL: http://localhost:8100/#/welcome`, full DOM tree hydrated with zero console errors.
+
 ## [0.36.2] - 2026-11-10
 ### Fixed
 - **GitHub Pages SPA Hard Refresh (Ctrl+F5) Support**:

@@ -4050,3 +4050,33 @@ NEXT STEPS:
   - `docs/CHANGELOG.md`
   - `docs/TODO.md`
   - `docs/DEVELOPMENT_LOG.md`
+
+---
+
+## Session 100: Blank White Screen & NG0908 Zone.js Bootstrap Remediation
+- **Date & Time**: 2026-11-10 17:45:00 - 17:52:00 (Local)
+- **Objective**: Diagnose and resolve blank white screen on both `ionic serve` (`http://localhost:8100/`) and GitHub Pages (`https://edselrenz.github.io/Itinerary-App/`).
+- **Root Cause Analysis**:
+  - When inspecting the running instance on `http://localhost:8100/` via headless Playwright browser automation, the browser reported runtime error:
+    `PAGE ERROR: NG0908: In this configuration Angular requires Zone.js RuntimeError: NG0908: In this configuration Angular requires Zone.js at new NgZone ... at bootstrapApplication`.
+  - In commit `480c950`, `provideZoneChangeDetection({ eventCoalescing: true })` was added to `Project/src/main.ts`. However, `zone.js` was neither listed in `package.json` nor configured in `"polyfills"` in `Project/angular.json`.
+  - Calling `provideZoneChangeDetection` without `zone.js` runtime throws `NG0908` at the very beginning of application initialization, halting `bootstrapApplication()` and leaving the DOM completely empty (a blank white screen).
+- **Tasks Performed & Implementation Details**:
+  - Replaced `provideZoneChangeDetection` with `provideZonelessChangeDetection()` from `@angular/core` in `Project/src/main.ts`.
+  - In modern Angular (v19/v22), `provideZonelessChangeDetection()` enables native signal and zoneless scheduling without requiring `zone.js` polyfills or overhead.
+  - Verified headless browser bootstrap on `http://localhost:8100/`:
+    `PAGE LOG: log Angular is running in development mode.`
+    `Current URL: http://localhost:8100/#/welcome`
+    `Body length: 20955`
+    `App root HTML: <ion-app ...><ion-router-outlet ...><app-welcome ...><h1 class="brand-title">Trip mo, trip ko</h1>...`
+    Full DOM tree mounted successfully with zero console errors.
+- **Verification**:
+  - Headless browser verification: **HTTP 200 OK, full Welcome page DOM rendered**.
+  - Vitest Unit Tests: **30/30 suites, 311/311 tests passed (100.0%) in 54.81s**.
+  - Angular Production Build (`ng build --base-href /Itinerary-App/`): **Exit code 0, 0 budget violations**.
+  - Acceptance Gate (`verify_acceptance_gate.py`): **24/24 passed (100.0%)**.
+- **Files Modified**:
+  - `Project/src/main.ts`
+  - `docs/TODO.md`
+  - `docs/CHANGELOG.md`
+  - `docs/DEVELOPMENT_LOG.md`

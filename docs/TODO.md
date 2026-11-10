@@ -1035,3 +1035,7 @@ px cap sync android): **Exit code 0 (6 plugins synchronized)**.
   - Relocated all 5 `<ion-modal>` overlay components outside `<ion-content>` and wrapped in `@if` conditional rendering so closed modals never exist in the DOM or intercept pointer clicks.
   - Injected `ChangeDetectorRef` in `ProfilePage` with `markForCheck()` on all modal triggers and dismissals.
   - Implemented authentic Guest Mode profile state (neutral avatar, "Guest Explorer", "Browsing in Guest Mode", "Log In / Sign Up" button, and "Exit Guest Mode" row).
+- [x] **36.10 (Fix Blank White Screen & NG0908 Zone.js Runtime Error)**:
+  - Replaced `provideZoneChangeDetection` with native `provideZonelessChangeDetection()` in `Project/src/main.ts`.
+  - Resolved `RuntimeError: NG0908: In this configuration Angular requires Zone.js` which caused the application to fail during `bootstrapApplication()` and render a blank white screen on `http://localhost:8100/` and GitHub Pages.
+  - Verified application bootstrapping: `Current URL: http://localhost:8100/#/welcome`, full DOM tree hydrated with zero console errors.

@@ -1,6 +1,6 @@
 
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { importProvidersFrom, isDevMode, provideZoneChangeDetection } from '@angular/core';
+import { importProvidersFrom, isDevMode, provideZonelessChangeDetection } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
 import {
   PreloadAllModules,
@@ -45,7 +45,7 @@ if (typeof window !== 'undefined') {
 
 bootstrapApplication(AppComponent, {
   providers: [
-    provideZoneChangeDetection({ eventCoalescing: true }),
+    provideZonelessChangeDetection(),
     { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
     provideIonicAngular(),
     provideHttpClient(withInterceptors([authInterceptor])),
