@@ -8,6 +8,37 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [0.34.0] - 2026-11-10
+### Added
+- **Figma-Aligned Profile Tab Redesign (`Travel Itinerary App.fig`)**:
+  - Parsed Kiwi decompressed binary canvas and reconstructed 4 primary design frames: `Profile`, `Edit Profile`, `Settings`, `Help & Support`, `About`, and `Log Out Confirmation`.
+  - Rebuilt `ProfilePage` (`profile.page.html` and `profile.page.scss`) following `/anti-generic-frontend-design` rules.
+  - Implemented high-fidelity Identity Card featuring circular avatar with photo support, traveler full name, username/email handle, verified traveler badge, and "Edit Profile" pill action button.
+  - Implemented 5 structured Figma navigation menu items:
+    1. **Favorites**: "Your favorite places, all saved in one place." with heart icon -> routes directly to `/tabs/history`.
+    2. **Settings**: "Manage your account and customize your app experience." with gear icon -> opens Settings subwindow.
+    3. **Help & Support**: "Get assistance and find answers to common questions." with help icon -> opens Help & Support subwindow.
+    4. **About**: "Version 1.0.0." with info icon -> opens About subwindow.
+    5. **Log Out**: "Sign out of your account." with red exit icon -> triggers Figma-styled Log Out confirmation dialog.
+  - Added **Help & Support** subwindow modal with interactive FAQ accordion tailored to Nueva Ecija travel (suggested routing engine, offline usage, transit fares, natural landmarks) and provincial emergency hotlines (PDRRMO, PNP, Provincial Tourism).
+  - Added **About** subwindow modal with Version 1.0.0 details, 32 municipalities & 5 component cities scope, OpenStreetMap ODbL attribution, OSRM routing attribution, and Ionic framework credits.
+  - Added **Figma-styled Log Out Confirmation Dialog** with red exit circle icon, clear warning message, and safety check for unsynced local guest trips.
+  - Enhanced **Edit Profile** subwindow modal with circular avatar camera overlay badge, photo upload preview, first name, middle initial, last name, username, email, phone number, birthday, gender, and security/password change fields.
+  - Enhanced **Settings** subwindow modal with account summary, dark mode toggle, language selector (English / Filipino), notifications toggle, daily budget presets, live Cloudflare proxy connectivity status, and clear local cache action.
+  - Created guest traveler view with clear onboarding banner, local unsynced trip migration trigger, and accessible preferences.
+
+### Changed
+- Refactored `profile.page.ts` to adopt modern Angular `inject()` function pattern and expanded automated unit test suite from 9 to 17 tests (all passing).
+- Optimized `profile.page.scss` using CSS custom properties (`--pf-card-bg`, `--pf-card-border`, `--pf-text-primary`, `--pf-text-secondary`, `--pf-subtle-bg`), reducing compiled component stylesheet size to 18.1 kB and strictly meeting Angular production build budgets (<24 kB).
+
+### Tested
+- Automated unit test suite: **304/304 passing [100%] across 29 test files**.
+- Backend integration test suite: **21/21 passing [100%] across 5 test suites**.
+- TypeScript strict typecheck (`tsconfig.e2e.json`): **Exit code 0**.
+- ESLint static analysis: **Exit code 0 (0 errors, 0 warnings)**.
+- Angular production build (`ng build`): **Exit code 0 (0 budget errors)**.
+- Capacitor Android native sync (`npx cap sync android`): **Exit code 0 (6 plugins synchronized)**.
+
 ## [0.33.0] - 2026-11-10
 ### Added
 - **SEO Metadata & Open Graph Social Sharing Tags (`BUG-14` / `TASK-12`)**:

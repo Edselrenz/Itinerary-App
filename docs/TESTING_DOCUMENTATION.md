@@ -79,12 +79,12 @@ The project employs a multi-tiered verification strategy designed to prevent reg
   - `home.page.spec.ts`: 14 passing tests (debounced search, popular carousel, category pills, shared sheet adoption).
   - `map.page.spec.ts`: 32 passing tests (Leaflet clustering, route focus mode, numbered pins, category filters, tile error resilience).
   - `history.page.spec.ts`: 7 passing tests (saved cards, search, segment filtering, trip deletion).
-  - `profile.page.spec.ts`: 9 passing tests (guest status, edit profile, settings, dark theme toggle, default budget).
+  - `profile.page.spec.ts`: 17 passing tests (authenticated state, guest status, favorites navigation, edit profile form with avatar preview & extra details, settings preferences, dark theme toggle, language selection, notifications, default budget, clear cache, Help & Support FAQs, About modal, and Figma-styled logout dialog with unsynced trip guards).
   - `tabs.page.spec.ts`: 2 passing tests (bottom tab navigation, map query param reset).
   - `custom-builder.page.spec.ts`: 24 passing tests (multi-day timeline, stop addition/reordering/edit, catalog browse, duplicate guards).
   - `suggested-wizard.page.spec.ts`: 21 passing tests (destination chips, budget selection, preference mapping, route connectors, sheet consolidation).
   - `itinerary-detail.page.spec.ts`: 32 passing tests (day selection, interactive route map preview, navigate CTA, leg travel badges, dynamic subtitles).
-- **Total Unit Test Coverage**: 29 test files, 296 unit tests passing (100%).
+- **Total Unit Test Coverage**: 29 test files, 304 unit tests passing (100%).
 
 ### 2.5 End-to-End Browser Journey Suite (Playwright)
 - **`Project/e2e/app.spec.ts`**: 5 comprehensive browser journeys running across Chromium headless shell:

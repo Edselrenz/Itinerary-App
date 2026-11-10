@@ -892,6 +892,52 @@ This checklist tracks completed, active, and pending tasks across all developmen
   - Created multi-stage production container `backend/Dockerfile` with healthcheck endpoint and slim runtime.
   - Created `docker-compose.prod.yml` configuring production PostgreSQL 16 and FastAPI container orchestration.
 
+---
+
+## Phase 34: Figma-Aligned Profile Tab Implementation (`Travel Itinerary App.fig`)
+- [x] **34.1 (Figma Design Extraction & Design System Alignment)**:
+  - Decompressed and parsed `Travel Itinerary App.fig` Kiwi nodes, typography, color palettes, and frame hierarchies.
+  - Mapped frames: `Profile`, `Edit Profile`, `Settings`, `Help & Support`, `About`, and `Log Out Confirmation`.
+  - Aligned with `/anti-generic-frontend-design`: deliberate styling, no AI cliches, WCAG 2.2 AA contrast, 44px touch targets.
+- [x] **34.2 (High-Fidelity Profile Main Screen & Navigation Architecture)**:
+  - User identity card: Circular avatar (support photo URL & initials), traveler full name, username/email, verified badge, "Edit Profile" pill button.
+  - 5 structured menu items matching Figma:
+    1. **Favorites**: "Your favorite places, all saved in one place." with heart icon -> `/tabs/history`.
+    2. **Settings**: "Manage your account and customize your app experience." with gear icon -> Settings subwindow.
+    3. **Help & Support**: "Get assistance and find answers to common questions." with help icon -> Help & Support subwindow.
+    4. **About**: "Version 1.0.0." with info icon -> About subwindow.
+    5. **Log Out**: "Sign out of your account." with red exit icon -> Figma-styled Log Out modal.
+  - Guest traveler mode: clear onboarding banner, local unsynced trip migration trigger, accessible preferences.
+- [x] **34.3 (Figma-Aligned Edit Profile Sub-Window Modal)**:
+  - Modal with back button, title "Edit Profile".
+  - Circular avatar with camera overlay badge (`andrsrxn:camera`) and "Change Photo" action.
+  - Form fields matching Figma: First Name, Middle Initial (if applicable), Last Name, Username, Email Address, Phone Number, Birthday, Gender, and Change Password section.
+  - Reactive form validation and "Save Changes" primary action button with loading spinner.
+- [x] **34.4 (Figma-Aligned Settings Sub-Window Modal)**:
+  - Account Information summary.
+  - Display & Appearance: Light/Dark theme switch with immediate DOM hydration.
+  - Language selector: English / Filipino (Tagalog).
+  - Push Notifications toggle switch.
+  - Trip Planning Defaults: Daily budget preset chips (₱1,500 / ₱2,500 / ₱3,000 / ₱5,000).
+  - Connection & Cloud Sync status with live indicator.
+  - Device Storage: Clear local cache ("Free up storage space") action.
+- [x] **34.5 (Help & Support and About Sub-Window Modals)**:
+  - Help & Support: Nueva Ecija travel FAQs, provincial transit guidelines, emergency hotlines (PDRRMO, PNP, Provincial Tourism).
+  - About: Version 1.0.0, Nueva Ecija Provincial Travel companion mission, OpenStreetMap & OSRM credits.
+- [x] **34.6 (Figma-Aligned Log Out Confirmation Dialog)**:
+  - Modal with red exit icon, title "Log Out?", description "You will be signed out of your account. You can always log back in anytime.", Cancel and Log Out buttons.
+  - Safety check for unsynced local guest trips before logout.
+- [x] **34.7 (Automated Test Suite Expansion)**:
+  - Updated `profile.page.spec.ts` with comprehensive unit tests for all menu items, modals, forms, and workflows (17 tests passing).
+- [x] **34.8 (Quality Gate Verification & Documentation Sync)**:
+  - Vitest unit tests: **304/304 passing [100%] across 29 test files**.
+  - Backend integration tests: **21/21 passing [100%] across 5 test suites**.
+  - TypeScript strict typecheck: **Exit code 0**.
+  - ESLint static analysis: **Exit code 0, 0 errors, 0 warnings**.
+  - Angular production build: **Exit code 0, 0 budget errors**.
+  - Capacitor Android sync: **Exit code 0 (6 plugins synced)**.
+
+
 
 
 

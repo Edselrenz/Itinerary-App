@@ -1,6 +1,8 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import type { OnDestroy, OnInit } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import type { FormGroup } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import {
   AlertController,
@@ -17,17 +19,27 @@ import {
 import { addIcons } from 'ionicons';
 import {
   alertCircleOutline,
+  arrowBackOutline,
   calendarOutline,
+  callOutline,
+  cameraOutline,
   cashOutline,
   checkmarkCircle,
+  chevronForwardOutline,
   closeOutline,
   cloudOfflineOutline,
   cloudUploadOutline,
   createOutline,
   eyeOffOutline,
   eyeOutline,
+  globeOutline,
+  heart,
+  heartOutline,
+  helpCircleOutline,
+  informationCircleOutline,
   logOutOutline,
   moonOutline,
+  notificationsOutline,
   person,
   personOutline,
   settingsOutline,
@@ -37,10 +49,19 @@ import {
   trashOutline,
 } from 'ionicons/icons';
 import { Subscription } from 'rxjs';
-import { User, UserUpdateRequest } from '../../core/models/auth.models';
+
+import type { User, UserUpdateRequest } from '../../core/models/auth.models';
 import { AuthService } from '../../core/services/auth.service';
 import { ConnectivityService } from '../../core/services/connectivity.service';
 import { GuestMigrationService } from '../../core/services/guest-migration.service';
+
+export interface TravelerProfileExtra {
+  middle_initial?: string;
+  phone_number?: string;
+  birthday?: string;
+  gender?: string;
+  avatar_url?: string;
+}
 
 @Component({
   selector: 'app-profile',
@@ -66,6 +87,15 @@ export class ProfilePage implements OnInit, OnDestroy {
   public guestItineraryCount = 0;
   public isMigrating = false;
 
+  // Extended Profile Extra Information (phone, birthday, gender, middle initial, avatar)
+  public profileExtra: TravelerProfileExtra = {
+    middle_initial: '',
+    phone_number: '',
+    birthday: '',
+    gender: 'Prefer not to say',
+    avatar_url: '',
+  };
+
   // Edit Profile Sub-Window
   public isEditProfileOpen = false;
   public isSavingProfile = false;
@@ -77,21 +107,33 @@ export class ProfilePage implements OnInit, OnDestroy {
   // App Settings Sub-Window
   public isSettingsOpen = false;
   public isDarkMode = false;
+  public currentLanguage = 'en';
+  public notificationsEnabled = true;
   public defaultBudget = 3000;
   public budgetPresets = [1500, 2500, 3000, 5000];
   public isHostOffline = false;
 
+  // Help & Support Sub-Window
+  public isHelpSupportOpen = false;
+  public activeFaqIndex: number | null = 0;
+
+  // About Sub-Window
+  public isAboutOpen = false;
+  public readonly appVersion = '1.0.0';
+
+  // Log Out Confirmation Dialog
+  public isLogoutConfirmOpen = false;
+
+  private router = inject(Router);
+  private fb = inject(FormBuilder);
+  private authService = inject(AuthService);
+  private guestMigrationService = inject(GuestMigrationService);
+  private connectivityService = inject(ConnectivityService);
+  private alertController = inject(AlertController);
+  private toastController = inject(ToastController);
   private subscriptions = new Subscription();
 
-  constructor(
-    private router: Router,
-    private fb: FormBuilder,
-    private authService: AuthService,
-    private guestMigrationService: GuestMigrationService,
-    private connectivityService: ConnectivityService,
-    private alertController: AlertController,
-    private toastController: ToastController
-  ) {
+  constructor() {
     addIcons({
       person,
       personOutline,
@@ -112,12 +154,27 @@ export class ProfilePage implements OnInit, OnDestroy {
       eyeOffOutline,
       shieldCheckmarkOutline,
       alertCircleOutline,
+      heart,
+      heartOutline,
+      helpCircleOutline,
+      informationCircleOutline,
+      chevronForwardOutline,
+      cameraOutline,
+      globeOutline,
+      notificationsOutline,
+      callOutline,
+      arrowBackOutline,
     });
 
     this.editForm = this.fb.group({
       first_name: ['', [Validators.required, Validators.maxLength(80)]],
+      middle_initial: ['', [Validators.maxLength(10)]],
       last_name: ['', [Validators.required, Validators.maxLength(80)]],
       username: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(50)]],
+      phone_number: ['', [Validators.maxLength(25)]],
+      birthday: [''],
+      gender: ['Female'],
+      avatar_url: [''],
       current_password: [''],
       new_password: ['', [Validators.minLength(8), Validators.maxLength(128)]],
     });
@@ -127,6 +184,7 @@ export class ProfilePage implements OnInit, OnDestroy {
     this.subscriptions.add(
       this.authService.currentUser$.subscribe((user) => {
         this.currentUser = user;
+        this.loadProfileExtra();
         this.refreshGuestCount();
       })
     );
@@ -138,6 +196,7 @@ export class ProfilePage implements OnInit, OnDestroy {
     );
 
     this.loadSettingsPreferences();
+    this.loadProfileExtra();
   }
 
   public ngOnDestroy(): void {
@@ -147,6 +206,7 @@ export class ProfilePage implements OnInit, OnDestroy {
   public ionViewWillEnter(): void {
     this.refreshGuestCount();
     this.loadSettingsPreferences();
+    this.loadProfileExtra();
   }
 
   public loadSettingsPreferences(): void {
@@ -154,14 +214,45 @@ export class ProfilePage implements OnInit, OnDestroy {
     this.isDarkMode = savedTheme === 'dark';
     if (this.isDarkMode) {
       document.body.classList.add('dark');
+      document.documentElement.classList.add('dark');
     } else {
       document.body.classList.remove('dark');
+      document.documentElement.classList.remove('dark');
     }
 
     const savedBudget = localStorage.getItem('ne_default_budget');
     if (savedBudget) {
       this.defaultBudget = parseInt(savedBudget, 10) || 3000;
     }
+
+    const savedLang = localStorage.getItem('ne_language');
+    if (savedLang) {
+      this.currentLanguage = savedLang;
+    }
+
+    const savedNotifs = localStorage.getItem('ne_notifications');
+    if (savedNotifs !== null) {
+      this.notificationsEnabled = savedNotifs === 'true';
+    }
+  }
+
+  public loadProfileExtra(): void {
+    const userId = this.currentUser?.id || 'guest';
+    const storageKey = `ne_profile_extra_${userId}`;
+    const raw = localStorage.getItem(storageKey);
+    if (raw) {
+      try {
+        this.profileExtra = { ...this.profileExtra, ...JSON.parse(raw) };
+      } catch {
+        // Fallback to default
+      }
+    }
+  }
+
+  public saveProfileExtraToStorage(): void {
+    const userId = this.currentUser?.id || 'guest';
+    const storageKey = `ne_profile_extra_${userId}`;
+    localStorage.setItem(storageKey, JSON.stringify(this.profileExtra));
   }
 
   public async refreshGuestCount(): Promise<void> {
@@ -198,6 +289,11 @@ export class ProfilePage implements OnInit, OnDestroy {
     }
   }
 
+  // Navigation from Profile Menu
+  public openFavorites(): void {
+    this.router.navigate(['/tabs/history']);
+  }
+
   // Edit Profile Methods
   public openEditProfile(): void {
     if (!this.currentUser) return;
@@ -205,9 +301,14 @@ export class ProfilePage implements OnInit, OnDestroy {
     this.showCurrentPassword = false;
     this.showNewPassword = false;
     this.editForm.reset({
-      first_name: this.currentUser.first_name,
-      last_name: this.currentUser.last_name,
-      username: this.currentUser.username_normalized,
+      first_name: this.currentUser.first_name || '',
+      middle_initial: this.profileExtra.middle_initial || '',
+      last_name: this.currentUser.last_name || '',
+      username: this.currentUser.username_normalized || '',
+      phone_number: this.profileExtra.phone_number || '',
+      birthday: this.profileExtra.birthday || '',
+      gender: this.profileExtra.gender || 'Female',
+      avatar_url: this.profileExtra.avatar_url || '',
       current_password: '',
       new_password: '',
     });
@@ -225,6 +326,19 @@ export class ProfilePage implements OnInit, OnDestroy {
 
   public toggleNewPasswordVisibility(): void {
     this.showNewPassword = !this.showNewPassword;
+  }
+
+  public onAvatarSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files[0]) {
+      const file = input.files[0];
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const base64 = e.target?.result as string;
+        this.editForm.patchValue({ avatar_url: base64 });
+      };
+      reader.readAsDataURL(file);
+    }
   }
 
   public async saveProfile(): Promise<void> {
@@ -251,6 +365,16 @@ export class ProfilePage implements OnInit, OnDestroy {
 
     this.isSavingProfile = true;
     this.editProfileError = '';
+
+    // Update extended profile data locally
+    this.profileExtra = {
+      middle_initial: formVal.middle_initial?.trim() || '',
+      phone_number: formVal.phone_number?.trim() || '',
+      birthday: formVal.birthday || '',
+      gender: formVal.gender || 'Prefer not to say',
+      avatar_url: formVal.avatar_url || this.profileExtra.avatar_url || '',
+    };
+    this.saveProfileExtraToStorage();
 
     this.authService.updateProfile(updatePayload).subscribe({
       next: async (updatedUser) => {
@@ -288,9 +412,21 @@ export class ProfilePage implements OnInit, OnDestroy {
     localStorage.setItem('ne_theme_mode', enabled ? 'dark' : 'light');
     if (enabled) {
       document.body.classList.add('dark');
+      document.documentElement.classList.add('dark');
     } else {
       document.body.classList.remove('dark');
+      document.documentElement.classList.remove('dark');
     }
+  }
+
+  public setLanguage(lang: string): void {
+    this.currentLanguage = lang;
+    localStorage.setItem('ne_language', lang);
+  }
+
+  public toggleNotifications(enabled: boolean): void {
+    this.notificationsEnabled = enabled;
+    localStorage.setItem('ne_notifications', String(enabled));
   }
 
   public setDefaultBudget(budget: number): void {
@@ -302,7 +438,7 @@ export class ProfilePage implements OnInit, OnDestroy {
     const alert = await this.alertController.create({
       header: 'Clear Cache & Offline Data',
       message:
-        'This will clear locally stored search caches and reset offline destination references. Your created itineraries will not be deleted.',
+        'This will clear locally stored search queries, map tiles, and offline place caches to free up storage space. Your created itineraries and account credentials will not be deleted.',
       buttons: [
         { text: 'Cancel', role: 'cancel' },
         {
@@ -324,8 +460,40 @@ export class ProfilePage implements OnInit, OnDestroy {
     await alert.present();
   }
 
-  // Logout with Unsynced Trips Alert
-  public async onLogout(): Promise<void> {
+  // Help & Support Methods
+  public openHelpSupport(): void {
+    this.isHelpSupportOpen = true;
+  }
+
+  public closeHelpSupport(): void {
+    this.isHelpSupportOpen = false;
+  }
+
+  public toggleFaq(index: number): void {
+    this.activeFaqIndex = this.activeFaqIndex === index ? null : index;
+  }
+
+  // About Methods
+  public openAbout(): void {
+    this.isAboutOpen = true;
+  }
+
+  public closeAbout(): void {
+    this.isAboutOpen = false;
+  }
+
+  // Log Out Confirmation Dialog
+  public openLogoutConfirm(): void {
+    this.isLogoutConfirmOpen = true;
+  }
+
+  public closeLogoutConfirm(): void {
+    this.isLogoutConfirmOpen = false;
+  }
+
+  public async executeLogout(): Promise<void> {
+    this.isLogoutConfirmOpen = false;
+
     if (this.guestItineraryCount > 0) {
       const alert = await this.alertController.create({
         header: 'Unsynced Local Trips',
@@ -346,22 +514,12 @@ export class ProfilePage implements OnInit, OnDestroy {
       return;
     }
 
-    const alert = await this.alertController.create({
-      header: 'Log Out',
-      message: 'Are you sure you want to log out of your Nueva Ecija Travel account?',
-      buttons: [
-        { text: 'Cancel', role: 'cancel' },
-        {
-          text: 'Log Out',
-          role: 'destructive',
-          handler: async () => {
-            await this.authService.logout();
-            this.router.navigate(['/welcome']);
-          },
-        },
-      ],
-    });
-    await alert.present();
+    await this.authService.logout();
+    this.router.navigate(['/welcome']);
+  }
+
+  public onLogout(): void {
+    this.openLogoutConfirm();
   }
 
   public goToLogin(): void {
