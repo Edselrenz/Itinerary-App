@@ -1,15 +1,6 @@
 <ion-header class="ion-no-border">
   <ion-toolbar class="profile-toolbar">
     <ion-title class="profile-title">Profile</ion-title>
-    <ion-button
-      slot="end"
-      fill="clear"
-      class="header-settings-btn"
-      (click)="openSettings()"
-      aria-label="App Settings"
-    >
-      <ion-icon name="settings-outline" slot="icon-only"></ion-icon>
-    </ion-button>
   </ion-toolbar>
 </ion-header>
 
@@ -17,471 +8,405 @@
   <div class="profile-container">
 
     <!-- ==========================================
-         AUTHENTICATED USER VIEW
+         IDENTITY HEADER SECTION (FIGMA MATCHING)
          ========================================== -->
-    @if (currentUser) {
-      <!-- User Identity Card -->
-      <section class="identity-card" aria-label="Traveler Identity">
-        <div class="avatar-wrapper">
-          @if (profileExtra.avatar_url) {
-            <img [src]="profileExtra.avatar_url" [alt]="currentUser.first_name + ' avatar'" class="avatar-photo" />
-          } @else {
-            <div class="avatar-placeholder">
-              <ion-icon name="person"></ion-icon>
-            </div>
-          }
+    <section class="identity-section" aria-label="Traveler Identity">
+      <div class="identity-row">
+        <!-- Left: Circular Avatar Photo -->
+        <div class="avatar-frame">
+          <img
+            [src]="profileExtra.avatar_url || 'assets/images/pattranite_avatar.jpg'"
+            [alt]="(currentUser?.first_name || 'Pattranite') + ' avatar'"
+            class="avatar-img"
+          />
         </div>
 
-        <h2 class="user-display-name">
-          {{ currentUser.first_name }}
-          @if (profileExtra.middle_initial) {
-            <span class="user-middle-initial">{{ profileExtra.middle_initial }}.</span>
-          }
-          {{ currentUser.last_name }}
-        </h2>
-
-        <div class="user-meta-row">
-          <span class="user-handle">&#64;{{ currentUser.username_normalized }}</span>
-          <span class="meta-dot" aria-hidden="true">•</span>
-          <span class="user-email-text">{{ currentUser.email_normalized }}</span>
-        </div>
-
-        <div class="badge-row">
-          <span class="verified-pill">
-            <ion-icon name="checkmark-circle"></ion-icon>
-            <span>Verified Traveler</span>
-          </span>
-          @if (profileExtra.gender && profileExtra.gender !== 'Prefer not to say') {
-            <span class="gender-pill">{{ profileExtra.gender }}</span>
-          }
-        </div>
-
-        <button type="button" class="edit-profile-action-btn" (click)="openEditProfile()">
-          <ion-icon name="create-outline"></ion-icon>
-          <span>Edit Profile</span>
-        </button>
-      </section>
-
-      <!-- Unsynced Local Guest Trips Migration Prompt -->
-      @if (guestItineraryCount > 0) {
-        <section class="sync-prompt-card" aria-label="Unsynced local trips">
-          <div class="sync-prompt-header">
-            <div class="sync-icon-circle">
-              <ion-icon name="cloud-upload-outline"></ion-icon>
-            </div>
-            <div class="sync-prompt-copy">
-              <h4 class="sync-prompt-title">Local Guest Trips Detected</h4>
-              <p class="sync-prompt-desc">
-                Found {{ guestItineraryCount }} {{ guestItineraryCount === 1 ? 'itinerary' : 'itineraries' }} saved on this device. Sync now to protect your travel plans with cloud backup.
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            class="sync-action-btn"
-            [disabled]="isMigrating"
-            (click)="syncGuestTrips()"
-          >
-            @if (isMigrating) {
-              <ion-spinner name="crescent"></ion-spinner>
-              <span>Syncing Trips...</span>
-            } @else {
-              <ion-icon name="sync-outline"></ion-icon>
-              <span>Sync to Account Now</span>
+        <!-- Right: Name, Handle/Email, and Edit Profile Outline Pill -->
+        <div class="identity-info">
+          <h2 class="user-fullname">
+            {{ currentUser?.first_name || 'Pattranite' }}
+            @if (profileExtra.middle_initial && profileExtra.middle_initial !== 'N/A') {
+              <span class="user-middle">{{ profileExtra.middle_initial }}.</span>
             }
+            {{ currentUser?.last_name || 'Limpatiyakorn' }}
+          </h2>
+
+          <p class="user-email-handle">
+            &#64;{{ currentUser?.username_normalized || 'loverrukk' }}&#64;gmail.com
+          </p>
+
+          <button type="button" class="edit-profile-pill" (click)="openEditProfile()">
+            Edit Profile
           </button>
-        </section>
-      }
-
-      <!-- Figma-Aligned Profile Menu Items -->
-      <section class="profile-menu-section" aria-label="Account and App Navigation">
-        <!-- 1. Favorites -->
-        <button type="button" class="menu-item-card" (click)="openFavorites()">
-          <div class="menu-icon-circle icon-heart">
-            <ion-icon name="heart"></ion-icon>
-          </div>
-          <div class="menu-text-col">
-            <span class="menu-title">Favorites</span>
-            <span class="menu-subtitle">Your favorite places, all saved in one place. Find them whenever you're ready to explore.</span>
-          </div>
-          <ion-icon name="chevron-forward-outline" class="menu-chevron"></ion-icon>
-        </button>
-
-        <div class="menu-divider" role="separator"></div>
-
-        <!-- 2. Settings -->
-        <button type="button" class="menu-item-card" (click)="openSettings()">
-          <div class="menu-icon-circle icon-settings">
-            <ion-icon name="settings-outline"></ion-icon>
-          </div>
-          <div class="menu-text-col">
-            <span class="menu-title">Settings</span>
-            <span class="menu-subtitle">Manage your account and customize your app experience.</span>
-          </div>
-          <ion-icon name="chevron-forward-outline" class="menu-chevron"></ion-icon>
-        </button>
-
-        <div class="menu-divider" role="separator"></div>
-
-        <!-- 3. Help & Support -->
-        <button type="button" class="menu-item-card" (click)="openHelpSupport()">
-          <div class="menu-icon-circle icon-help">
-            <ion-icon name="help-circle-outline"></ion-icon>
-          </div>
-          <div class="menu-text-col">
-            <span class="menu-title">Help & Support</span>
-            <span class="menu-subtitle">Get assistance and find answers to common questions.</span>
-          </div>
-          <ion-icon name="chevron-forward-outline" class="menu-chevron"></ion-icon>
-        </button>
-
-        <div class="menu-divider" role="separator"></div>
-
-        <!-- 4. About -->
-        <button type="button" class="menu-item-card" (click)="openAbout()">
-          <div class="menu-icon-circle icon-about">
-            <ion-icon name="information-circle-outline"></ion-icon>
-          </div>
-          <div class="menu-text-col">
-            <span class="menu-title">About</span>
-            <span class="menu-subtitle">Version {{ appVersion }}. Provincial guide details and credits.</span>
-          </div>
-          <ion-icon name="chevron-forward-outline" class="menu-chevron"></ion-icon>
-        </button>
-
-        <div class="menu-divider" role="separator"></div>
-
-        <!-- 5. Log Out -->
-        <button type="button" class="menu-item-card menu-item-logout" (click)="openLogoutConfirm()">
-          <div class="menu-icon-circle icon-logout">
-            <ion-icon name="log-out-outline"></ion-icon>
-          </div>
-          <div class="menu-text-col">
-            <span class="menu-title logout-text">Log Out</span>
-            <span class="menu-subtitle">Sign out of your account.</span>
-          </div>
-          <ion-icon name="chevron-forward-outline" class="menu-chevron"></ion-icon>
-        </button>
-      </section>
-
-      <!-- Account Summary Footnote -->
-      <div class="account-footnote">
-        <div class="footnote-item">
-          <ion-icon name="calendar-outline"></ion-icon>
-          <span>Traveler since {{ currentUser.created_at | date:'mediumDate' }}</span>
-        </div>
-        <div class="footnote-item">
-          <ion-icon name="shield-checkmark-outline"></ion-icon>
-          <span>Cloud sync {{ isHostOffline ? 'offline' : 'connected' }}</span>
         </div>
       </div>
-    } @else {
-      <!-- ==========================================
-           GUEST TRAVELER VIEW
-           ========================================== -->
-      <section class="guest-identity-card" aria-label="Guest Session">
-        <div class="guest-avatar-wrapper">
-          <ion-icon name="person-outline"></ion-icon>
-        </div>
+    </section>
 
-        <h2 class="guest-title">Guest Traveler</h2>
-        <p class="guest-desc">
-          You are currently planning trips in <strong>Guest Mode</strong>.
-          @if (guestItineraryCount > 0) {
-            You have <strong>{{ guestItineraryCount }} {{ guestItineraryCount === 1 ? 'itinerary' : 'itineraries' }}</strong> stored on this device.
+    <!-- Optional: Subtle Unsynced Local Guest Trips Migration Prompt -->
+    @if (guestItineraryCount > 0) {
+      <section class="sync-banner" aria-label="Unsynced local trips">
+        <div class="sync-banner-text">
+          <ion-icon name="cloud-upload-outline"></ion-icon>
+          <span>{{ guestItineraryCount }} local {{ guestItineraryCount === 1 ? 'trip' : 'trips' }} not synced</span>
+        </div>
+        <button
+          type="button"
+          class="sync-banner-btn"
+          [disabled]="isMigrating"
+          (click)="syncGuestTrips()"
+        >
+          @if (isMigrating) {
+            <ion-spinner name="crescent"></ion-spinner>
           } @else {
-            Your preferences and draft plans are saved locally.
+            <span>Sync</span>
           }
-        </p>
-
-        <div class="guest-auth-buttons">
-          <ion-button expand="block" class="primary-btn" (click)="goToLogin()">
-            Log In to Sync Trips
-          </ion-button>
-          <ion-button expand="block" fill="outline" class="outline-btn" (click)="goToSignup()">
-            Create Free Account
-          </ion-button>
-        </div>
-      </section>
-
-      <!-- Guest Accessible Menu Items -->
-      <section class="profile-menu-section" aria-label="App Navigation">
-        <!-- Favorites -->
-        <button type="button" class="menu-item-card" (click)="openFavorites()">
-          <div class="menu-icon-circle icon-heart">
-            <ion-icon name="heart"></ion-icon>
-          </div>
-          <div class="menu-text-col">
-            <span class="menu-title">Saved Itineraries</span>
-            <span class="menu-subtitle">Access your offline trips and favorite destinations.</span>
-          </div>
-          <ion-icon name="chevron-forward-outline" class="menu-chevron"></ion-icon>
-        </button>
-
-        <div class="menu-divider" role="separator"></div>
-
-        <!-- Settings -->
-        <button type="button" class="menu-item-card" (click)="openSettings()">
-          <div class="menu-icon-circle icon-settings">
-            <ion-icon name="settings-outline"></ion-icon>
-          </div>
-          <div class="menu-text-col">
-            <span class="menu-title">Settings & Preferences</span>
-            <span class="menu-subtitle">Manage appearance, daily budget defaults, and cache.</span>
-          </div>
-          <ion-icon name="chevron-forward-outline" class="menu-chevron"></ion-icon>
-        </button>
-
-        <div class="menu-divider" role="separator"></div>
-
-        <!-- Help & Support -->
-        <button type="button" class="menu-item-card" (click)="openHelpSupport()">
-          <div class="menu-icon-circle icon-help">
-            <ion-icon name="help-circle-outline"></ion-icon>
-          </div>
-          <div class="menu-text-col">
-            <span class="menu-title">Help & Support</span>
-            <span class="menu-subtitle">Nueva Ecija travel guidelines, FAQs, and tourist hotlines.</span>
-          </div>
-          <ion-icon name="chevron-forward-outline" class="menu-chevron"></ion-icon>
-        </button>
-
-        <div class="menu-divider" role="separator"></div>
-
-        <!-- About -->
-        <button type="button" class="menu-item-card" (click)="openAbout()">
-          <div class="menu-icon-circle icon-about">
-            <ion-icon name="information-circle-outline"></ion-icon>
-          </div>
-          <div class="menu-text-col">
-            <span class="menu-title">About</span>
-            <span class="menu-subtitle">Version {{ appVersion }}. Provincial guide details and credits.</span>
-          </div>
-          <ion-icon name="chevron-forward-outline" class="menu-chevron"></ion-icon>
         </button>
       </section>
     }
+
+    <!-- ==========================================
+         FIGMA-ALIGNED PROFILE MENU CARD
+         Single rounded white card containing 5 items
+         ========================================== -->
+    <section class="profile-card" aria-label="Profile navigation options">
+      <!-- 1. Settings -->
+      <button type="button" class="card-item-row" (click)="openSettings()">
+        <div class="item-icon-wrap icon-blue">
+          <ion-icon name="settings-outline"></ion-icon>
+        </div>
+        <div class="item-text-wrap">
+          <h3 class="item-title">Settings</h3>
+          <p class="item-desc">Manage your account and customize your app experience.</p>
+        </div>
+      </button>
+
+      <div class="card-item-divider" role="separator"></div>
+
+      <!-- 2. Favorites -->
+      <button type="button" class="card-item-row" (click)="openFavorites()">
+        <div class="item-icon-wrap icon-blue">
+          <ion-icon name="heart"></ion-icon>
+        </div>
+        <div class="item-text-wrap">
+          <h3 class="item-title">Favorites</h3>
+          <p class="item-desc">Your favorite places, all saved in one place. Find them whenever you're ready to explore.</p>
+        </div>
+      </button>
+
+      <div class="card-item-divider" role="separator"></div>
+
+      <!-- 3. Help & Support -->
+      <button type="button" class="card-item-row" (click)="openHelpSupport()">
+        <div class="item-icon-wrap icon-blue">
+          <ion-icon name="help-circle"></ion-icon>
+        </div>
+        <div class="item-text-wrap">
+          <h3 class="item-title">Help & Support</h3>
+          <p class="item-desc">Get assistance and find answers to common questions.</p>
+        </div>
+      </button>
+
+      <div class="card-item-divider" role="separator"></div>
+
+      <!-- 4. About -->
+      <button type="button" class="card-item-row" (click)="openAbout()">
+        <div class="item-icon-wrap icon-blue">
+          <ion-icon name="information-circle"></ion-icon>
+        </div>
+        <div class="item-text-wrap">
+          <h3 class="item-title">About</h3>
+          <p class="item-desc">Version {{ appVersion }}.</p>
+        </div>
+      </button>
+
+      <div class="card-item-divider" role="separator"></div>
+
+      <!-- 5. Log Out -->
+      <button type="button" class="card-item-row item-logout" (click)="openLogoutConfirm()">
+        <div class="item-icon-wrap icon-red">
+          <ion-icon name="log-out-outline"></ion-icon>
+        </div>
+        <div class="item-text-wrap">
+          <h3 class="item-title text-red">Log Out</h3>
+          <p class="item-desc">Sign out of your account.</p>
+        </div>
+      </button>
+    </section>
+
   </div>
 
   <!-- ========================================================
-       MODAL 1: FIGMA-ALIGNED EDIT PROFILE SUB-WINDOW
+       MODAL 1: SETTINGS SUB-WINDOW (FIGMA SCREEN 1 - LEFT)
        ======================================================== -->
-  <ion-modal [isOpen]="isEditProfileOpen" (didDismiss)="closeEditProfile()" class="profile-subwindow-modal">
+  <ion-modal [isOpen]="isSettingsOpen" (didDismiss)="closeSettings()" class="figma-settings-modal">
     <ng-template>
-      <div class="subwindow-container">
-        <!-- Subwindow Header with Back Button -->
-        <div class="subwindow-header">
-          <button type="button" class="subwindow-back-btn" (click)="closeEditProfile()" aria-label="Go back">
+      <div class="settings-view-container">
+        <!-- Settings Header: Blue Arrow + Settings -->
+        <div class="settings-view-header">
+          <button type="button" class="back-arrow-btn" (click)="closeSettings()" aria-label="Back">
             <ion-icon name="arrow-back-outline"></ion-icon>
           </button>
-          <div class="subwindow-title-col">
-            <h3 class="subwindow-title">Edit Profile</h3>
-            <p class="subwindow-subtitle">Update your personal traveler details</p>
-          </div>
-          <button type="button" class="subwindow-close-btn" (click)="closeEditProfile()" aria-label="Close modal">
-            <ion-icon name="close-outline"></ion-icon>
-          </button>
+          <h2 class="view-header-title">Settings</h2>
         </div>
 
-        <div class="subwindow-body">
+        <div class="settings-view-body">
+          <!-- Single Rounded Container Card enclosing 6 rows -->
+          <div class="settings-card-container">
+            <!-- Row 1: Account Information -->
+            <div class="settings-card-row" (click)="openAccountInfo()" role="button" tabindex="0">
+              <div class="row-left">
+                <ion-icon name="person-outline" class="row-icon-blue"></ion-icon>
+                <span class="row-title">Account Information</span>
+              </div>
+            </div>
+
+            <div class="row-divider"></div>
+
+            <!-- Row 2: Notifications -->
+            <div class="settings-card-row">
+              <div class="row-left">
+                <ion-icon name="notifications" class="row-icon-blue"></ion-icon>
+                <span class="row-title">Notifications</span>
+              </div>
+              <label class="ios-switch" aria-label="Toggle notifications">
+                <input
+                  type="checkbox"
+                  [checked]="notificationsEnabled"
+                  (change)="toggleNotifications(!notificationsEnabled)"
+                />
+                <span class="ios-slider"></span>
+              </label>
+            </div>
+
+            <div class="row-divider"></div>
+
+            <!-- Row 3: Privacy & Security -->
+            <div class="settings-card-row" (click)="openPrivacySecurity()" role="button" tabindex="0">
+              <div class="row-left">
+                <ion-icon name="lock-closed" class="row-icon-blue"></ion-icon>
+                <span class="row-title">Privacy & Security</span>
+              </div>
+            </div>
+
+            <div class="row-divider"></div>
+
+            <!-- Row 4: Language -->
+            <div class="settings-card-row" (click)="toggleLanguage()" role="button" tabindex="0">
+              <div class="row-left">
+                <ion-icon name="globe-outline" class="row-icon-blue"></ion-icon>
+                <span class="row-title">Language</span>
+              </div>
+              <span class="row-end-text">{{ currentLanguage === 'fil' ? 'Filipino' : 'English' }}</span>
+            </div>
+
+            <div class="row-divider"></div>
+
+            <!-- Row 5: App Appearance -->
+            <div class="settings-card-row" (click)="toggleDarkMode(!isDarkMode)" role="button" tabindex="0">
+              <div class="row-left">
+                <ion-icon [name]="isDarkMode ? 'moon-outline' : 'sunny-outline'" class="row-icon-blue"></ion-icon>
+                <span class="row-title">App Appearance</span>
+              </div>
+              <span class="row-end-text">{{ isDarkMode ? 'Dark' : 'Light' }}</span>
+            </div>
+
+            <div class="row-divider"></div>
+
+            <!-- Row 6: Clear Cache -->
+            <div class="settings-card-row" (click)="clearLocalCache()" role="button" tabindex="0">
+              <div class="row-left">
+                <ion-icon name="trash-outline" class="row-icon-blue"></ion-icon>
+                <div class="row-title-stack">
+                  <span class="row-title">Clear Cache</span>
+                  <span class="row-subtitle">Free up storage space</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </ng-template>
+  </ion-modal>
+
+  <!-- ========================================================
+       MODAL 2: LOG OUT CONFIRMATION MODAL (FIGMA SCREEN 1 - RIGHT)
+       ======================================================== -->
+  <ion-modal [isOpen]="isLogoutConfirmOpen" (didDismiss)="closeLogoutConfirm()" class="figma-logout-modal">
+    <ng-template>
+      <div class="logout-card-container" role="dialog" aria-labelledby="logout-title" aria-describedby="logout-desc">
+        <!-- Top Triple Dots Indicator -->
+        <div class="logout-triple-dots" aria-hidden="true">
+          <span></span><span></span><span></span>
+        </div>
+
+        <!-- Prominent Blue Exit Door Icon -->
+        <div class="logout-icon-box">
+          <ion-icon name="log-out-outline" class="logout-blue-door"></ion-icon>
+        </div>
+
+        <h3 id="logout-title" class="logout-heading">Log Out?</h3>
+        <p id="logout-desc" class="logout-body-text">
+          You will be signed out of your account. You can always log back in anytime.
+        </p>
+
+        <!-- Two Stacked Solid Blue Buttons -->
+        <div class="logout-btns-stack">
+          <button type="button" class="logout-action-blue-btn" (click)="executeLogout()">
+            Log Out
+          </button>
+          <button type="button" class="logout-action-blue-btn" (click)="closeLogoutConfirm()">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </ng-template>
+  </ion-modal>
+
+  <!-- ========================================================
+       MODAL 3: EDIT PROFILE SUB-WINDOW (FIGMA SCREEN 2)
+       ======================================================== -->
+  <ion-modal [isOpen]="isEditProfileOpen" (didDismiss)="closeEditProfile()" class="figma-edit-modal">
+    <ng-template>
+      <div class="edit-view-container">
+        <!-- Edit Profile Header: Blue Arrow + Edit Profile -->
+        <div class="edit-view-header">
+          <button type="button" class="back-arrow-btn" (click)="closeEditProfile()" aria-label="Go back">
+            <ion-icon name="arrow-back-outline"></ion-icon>
+          </button>
+          <h2 class="view-header-title">Edit Profile</h2>
+        </div>
+
+        <div class="edit-view-body">
+          <!-- Centered Avatar with Camera Badge Overlay & Change Photo Pill -->
+          <div class="edit-avatar-section">
+            <div class="edit-avatar-circle">
+              <img
+                [src]="editForm.get('avatar_url')?.value || profileExtra.avatar_url || 'assets/images/pattranite_avatar.jpg'"
+                alt="Traveler avatar preview"
+                class="edit-avatar-img"
+              />
+              <label for="edit-avatar-file" class="camera-badge-btn" aria-label="Upload photo">
+                <ion-icon name="camera-outline"></ion-icon>
+              </label>
+              <input
+                id="edit-avatar-file"
+                type="file"
+                accept="image/*"
+                class="hidden-file-picker"
+                (change)="onAvatarSelected($event)"
+              />
+            </div>
+            <label for="edit-avatar-file" class="change-photo-pill">
+              Change Photo
+            </label>
+          </div>
+
           @if (editProfileError) {
-            <div class="subwindow-error-banner" role="alert">
+            <div class="edit-error-banner" role="alert">
               <ion-icon name="alert-circle-outline"></ion-icon>
               <span>{{ editProfileError }}</span>
             </div>
           }
 
-          <form [formGroup]="editForm" (ngSubmit)="saveProfile()" class="subwindow-form">
-            <!-- Avatar Upload Row -->
-            <div class="avatar-edit-section">
-              <div class="avatar-edit-frame">
-                @if (editForm.get('avatar_url')?.value) {
-                  <img [src]="editForm.get('avatar_url')?.value" alt="Traveler avatar preview" class="avatar-preview-img" />
-                } @else {
-                  <div class="avatar-preview-placeholder">
-                    <ion-icon name="person"></ion-icon>
-                  </div>
-                }
-                <label for="avatar-upload-input" class="camera-badge-btn" aria-label="Upload photo">
-                  <ion-icon name="camera-outline"></ion-icon>
-                </label>
-                <input
-                  id="avatar-upload-input"
-                  type="file"
-                  accept="image/*"
-                  class="visually-hidden-file-input"
-                  (change)="onAvatarSelected($event)"
-                />
-              </div>
-              <label for="avatar-upload-input" class="change-photo-text-btn">
-                Change Photo
-              </label>
+          <!-- Form Fields Stack in Exact Figma Order -->
+          <form [formGroup]="editForm" (ngSubmit)="saveProfile()" class="edit-form-container">
+            <!-- 1. First Name -->
+            <div class="edit-field-group">
+              <label class="edit-field-label" for="edit-first-name">First Name</label>
+              <input
+                id="edit-first-name"
+                type="text"
+                formControlName="first_name"
+                class="edit-field-input"
+                placeholder="Pattranite"
+              />
             </div>
 
-            <!-- Form Row: First Name & Middle Initial -->
-            <div class="form-row-2col">
-              <div class="field-group">
-                <label class="field-label" for="edit-first-name">First Name <span class="required">*</span></label>
-                <input
-                  id="edit-first-name"
-                  type="text"
-                  formControlName="first_name"
-                  class="field-input"
-                  placeholder="e.g. Pattranite"
-                />
-              </div>
-              <div class="field-group flex-shrink-mi">
-                <label class="field-label" for="edit-middle-initial">M.I.</label>
-                <input
-                  id="edit-middle-initial"
-                  type="text"
-                  formControlName="middle_initial"
-                  class="field-input"
-                  placeholder="e.g. L"
-                  maxlength="5"
-                />
-              </div>
+            <!-- 2. Middle Initial (if applicable) -->
+            <div class="edit-field-group">
+              <label class="edit-field-label" for="edit-middle-initial">Middle Initial (if applicable)</label>
+              <input
+                id="edit-middle-initial"
+                type="text"
+                formControlName="middle_initial"
+                class="edit-field-input"
+                placeholder="N/A"
+              />
             </div>
 
-            <!-- Form Field: Last Name -->
-            <div class="field-group">
-              <label class="field-label" for="edit-last-name">Last Name <span class="required">*</span></label>
+            <!-- 3. Last Name -->
+            <div class="edit-field-group">
+              <label class="edit-field-label" for="edit-last-name">Last Name</label>
               <input
                 id="edit-last-name"
                 type="text"
                 formControlName="last_name"
-                class="field-input"
-                placeholder="e.g. Limpatayakorn"
+                class="edit-field-input"
+                placeholder="Limpatayakorn"
               />
             </div>
 
-            <!-- Form Field: Username -->
-            <div class="field-group">
-              <label class="field-label" for="edit-username">Username <span class="required">*</span></label>
-              <div class="input-prefix-wrapper">
-                <span class="input-prefix">&#64;</span>
-                <input
-                  id="edit-username"
-                  type="text"
-                  formControlName="username"
-                  class="field-input with-prefix"
-                  placeholder="username"
-                />
-              </div>
-            </div>
-
-            <!-- Form Field: Email Address (Read-only representation) -->
-            <div class="field-group">
-              <label class="field-label">Email Address</label>
+            <!-- 4. Birthday -->
+            <div class="edit-field-group">
+              <label class="edit-field-label" for="edit-birthday">Birthday</label>
               <input
+                id="edit-birthday"
                 type="text"
-                [value]="currentUser?.email_normalized || ''"
-                class="field-input readonly-input"
-                disabled
+                formControlName="birthday"
+                class="edit-field-input"
+                placeholder="May 23, 2000"
               />
-              <span class="field-hint">Email address is permanently bound to your account credentials.</span>
             </div>
 
-            <!-- Form Field: Phone Number -->
-            <div class="field-group">
-              <label class="field-label" for="edit-phone">Phone Number</label>
-              <div class="input-prefix-wrapper">
-                <span class="input-prefix"><ion-icon name="call-outline"></ion-icon></span>
-                <input
-                  id="edit-phone"
-                  type="tel"
-                  formControlName="phone_number"
-                  class="field-input with-prefix"
-                  placeholder="+63 912 345 6789"
-                />
-              </div>
+            <!-- 5. Gender -->
+            <div class="edit-field-group">
+              <label class="edit-field-label" for="edit-gender">Gender</label>
+              <input
+                id="edit-gender"
+                type="text"
+                formControlName="gender"
+                class="edit-field-input"
+                placeholder="Female"
+              />
             </div>
 
-            <!-- Form Row: Birthday & Gender -->
-            <div class="form-row-2col">
-              <div class="field-group">
-                <label class="field-label" for="edit-birthday">Birthday</label>
-                <input
-                  id="edit-birthday"
-                  type="date"
-                  formControlName="birthday"
-                  class="field-input"
-                />
-              </div>
-
-              <div class="field-group">
-                <label class="field-label" for="edit-gender">Gender</label>
-                <select id="edit-gender" formControlName="gender" class="field-input field-select">
-                  <option value="Female">Female</option>
-                  <option value="Male">Male</option>
-                  <option value="Non-binary">Non-binary</option>
-                  <option value="Prefer not to say">Prefer not to say</option>
-                </select>
-              </div>
+            <!-- 6. Email Address -->
+            <div class="edit-field-group">
+              <label class="edit-field-label" for="edit-email">Email Address</label>
+              <input
+                id="edit-email"
+                type="text"
+                [value]="currentUser?.email_normalized || '@loverrukk@gmail.com'"
+                class="edit-field-input readonly-input"
+                readonly
+              />
             </div>
 
-            <!-- Password Change Section Divider -->
-            <div class="password-section-divider">
-              <span class="divider-text">Security & Password (Optional)</span>
+            <!-- 7. Phone Number -->
+            <div class="edit-field-group">
+              <label class="edit-field-label" for="edit-phone">Phone Number</label>
+              <input
+                id="edit-phone"
+                type="tel"
+                formControlName="phone_number"
+                class="edit-field-input"
+                placeholder="+66 81 234 5678"
+              />
             </div>
 
-            <div class="field-group">
-              <label class="field-label" for="edit-cur-password">Current Password</label>
-              <div class="input-suffix-wrapper">
-                <input
-                  id="edit-cur-password"
-                  [type]="showCurrentPassword ? 'text' : 'password'"
-                  formControlName="current_password"
-                  class="field-input"
-                  placeholder="Required only when changing password"
-                />
-                <button
-                  type="button"
-                  class="suffix-eye-btn"
-                  (click)="toggleCurrentPasswordVisibility()"
-                  aria-label="Toggle current password visibility"
-                >
-                  <ion-icon [name]="showCurrentPassword ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
-                </button>
-              </div>
-            </div>
-
-            <div class="field-group">
-              <label class="field-label" for="edit-new-password">New Password</label>
-              <div class="input-suffix-wrapper">
-                <input
-                  id="edit-new-password"
-                  [type]="showNewPassword ? 'text' : 'password'"
-                  formControlName="new_password"
-                  class="field-input"
-                  placeholder="Minimum 8 characters"
-                />
-                <button
-                  type="button"
-                  class="suffix-eye-btn"
-                  (click)="toggleNewPasswordVisibility()"
-                  aria-label="Toggle new password visibility"
-                >
-                  <ion-icon [name]="showNewPassword ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
-                </button>
-              </div>
-            </div>
-
-            <!-- Submit Button -->
-            <div class="subwindow-actions">
-              <button
-                type="submit"
-                class="subwindow-save-btn"
-                [disabled]="isSavingProfile || editForm.invalid"
-              >
-                @if (isSavingProfile) {
-                  <ion-spinner name="crescent"></ion-spinner>
-                  <span>Saving Changes...</span>
-                } @else {
-                  <span>Save Changes</span>
-                }
-              </button>
-            </div>
+            <!-- Solid Blue Save Changes Button -->
+            <button
+              type="submit"
+              class="save-changes-pill-btn"
+              [disabled]="isSavingProfile || editForm.invalid"
+            >
+              @if (isSavingProfile) {
+                <ion-spinner name="crescent"></ion-spinner>
+                <span>Saving Changes...</span>
+              } @else {
+                <span>Save Changes</span>
+              }
+            </button>
           </form>
         </div>
       </div>
@@ -489,324 +414,63 @@
   </ion-modal>
 
   <!-- ========================================================
-       MODAL 2: FIGMA-ALIGNED SETTINGS & PREFERENCES SUB-WINDOW
+       MODAL 4: HELP & SUPPORT SUB-WINDOW
        ======================================================== -->
-  <ion-modal [isOpen]="isSettingsOpen" (didDismiss)="closeSettings()" class="profile-subwindow-modal">
+  <ion-modal [isOpen]="isHelpSupportOpen" (didDismiss)="closeHelpSupport()" class="figma-settings-modal">
     <ng-template>
-      <div class="subwindow-container">
-        <!-- Subwindow Header with Back Button -->
-        <div class="subwindow-header">
-          <button type="button" class="subwindow-back-btn" (click)="closeSettings()" aria-label="Go back">
+      <div class="settings-view-container">
+        <div class="settings-view-header">
+          <button type="button" class="back-arrow-btn" (click)="closeHelpSupport()" aria-label="Back">
             <ion-icon name="arrow-back-outline"></ion-icon>
           </button>
-          <div class="subwindow-title-col">
-            <h3 class="subwindow-title">Settings</h3>
-            <p class="subwindow-subtitle">Customize application preferences and storage</p>
-          </div>
-          <button type="button" class="subwindow-close-btn" (click)="closeSettings()" aria-label="Close settings">
-            <ion-icon name="close-outline"></ion-icon>
-          </button>
+          <h2 class="view-header-title">Help & Support</h2>
         </div>
 
-        <div class="subwindow-body">
-          <!-- 1. Account Information Summary -->
-          @if (currentUser) {
-            <div class="settings-group">
-              <span class="settings-group-title">Account Information</span>
-              <div class="account-info-box">
-                <div class="account-info-row">
-                  <span class="info-label">Traveler Name</span>
-                  <span class="info-val">{{ currentUser.first_name }} {{ currentUser.last_name }}</span>
-                </div>
-                <div class="account-info-row">
-                  <span class="info-label">Username</span>
-                  <span class="info-val">&#64;{{ currentUser.username_normalized }}</span>
-                </div>
-                <div class="account-info-row">
-                  <span class="info-label">Account Status</span>
-                  <span class="info-badge green">Active & Verified</span>
-                </div>
-              </div>
-            </div>
-          }
+        <div class="settings-view-body">
+          <div class="settings-card-container p-16">
+            <div class="faq-group">
+              <h3 class="section-subheading">Frequently Asked Questions</h3>
 
-          <!-- 2. Display & Appearance -->
-          <div class="settings-group">
-            <span class="settings-group-title">App Appearance</span>
-            <div class="setting-item-row">
-              <div class="setting-left">
-                <div class="setting-icon-badge" [class.dark]="isDarkMode">
-                  <ion-icon [name]="isDarkMode ? 'moon-outline' : 'sunny-outline'"></ion-icon>
-                </div>
-                <div class="setting-text-col">
-                  <span class="setting-label">Dark Theme</span>
-                  <span class="setting-desc">Switch between standard light and night travel theme</span>
-                </div>
-              </div>
-              <label class="theme-switch-toggle" aria-label="Toggle dark mode">
-                <input
-                  type="checkbox"
-                  [checked]="isDarkMode"
-                  (change)="toggleDarkMode(!isDarkMode)"
-                />
-                <span class="slider-round"></span>
-              </label>
-            </div>
-          </div>
-
-          <!-- 3. Language Selection -->
-          <div class="settings-group">
-            <span class="settings-group-title">Language</span>
-            <div class="setting-item-row">
-              <div class="setting-left">
-                <div class="setting-icon-badge blue">
-                  <ion-icon name="globe-outline"></ion-icon>
-                </div>
-                <div class="setting-text-col">
-                  <span class="setting-label">Display Language</span>
-                  <span class="setting-desc">App menus, instructions, and transit guides</span>
-                </div>
-              </div>
-              <div class="language-selector-pills">
-                <button
-                  type="button"
-                  class="lang-pill"
-                  [class.active]="currentLanguage === 'en'"
-                  (click)="setLanguage('en')"
-                >
-                  English
-                </button>
-                <button
-                  type="button"
-                  class="lang-pill"
-                  [class.active]="currentLanguage === 'fil'"
-                  (click)="setLanguage('fil')"
-                >
-                  Filipino
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- 4. Notifications -->
-          <div class="settings-group">
-            <span class="settings-group-title">Notifications</span>
-            <div class="setting-item-row">
-              <div class="setting-left">
-                <div class="setting-icon-badge amber">
-                  <ion-icon name="notifications-outline"></ion-icon>
-                </div>
-                <div class="setting-text-col">
-                  <span class="setting-label">Trip Alerts & Weather Updates</span>
-                  <span class="setting-desc">Notifications for itinerary changes and weather advisories</span>
-                </div>
-              </div>
-              <label class="theme-switch-toggle" aria-label="Toggle notifications">
-                <input
-                  type="checkbox"
-                  [checked]="notificationsEnabled"
-                  (change)="toggleNotifications(!notificationsEnabled)"
-                />
-                <span class="slider-round"></span>
-              </label>
-            </div>
-          </div>
-
-          <!-- 5. Trip Planning Defaults -->
-          <div class="settings-group">
-            <span class="settings-group-title">Trip Planning Defaults</span>
-            <div class="setting-card">
-              <div class="setting-header-line">
-                <div class="setting-icon-badge blue">
-                  <ion-icon name="cash-outline"></ion-icon>
-                </div>
-                <div class="setting-text-col">
-                  <span class="setting-label">Default Daily Budget</span>
-                  <span class="setting-desc">Pre-filled budget for new suggested itineraries</span>
-                </div>
-              </div>
-
-              <div class="budget-chips-row">
-                @for (preset of budgetPresets; track preset) {
-                  <button
-                    type="button"
-                    class="budget-preset-chip"
-                    [class.active]="defaultBudget === preset"
-                    (click)="setDefaultBudget(preset)"
-                  >
-                    ₱{{ preset.toLocaleString() }}/day
-                  </button>
-                }
-              </div>
-            </div>
-          </div>
-
-          <!-- 6. Connectivity & Cloud Sync Status -->
-          <div class="settings-group">
-            <span class="settings-group-title">Connection & Cloud Sync</span>
-            <div class="setting-item-row">
-              <div class="setting-left">
-                <div class="setting-icon-badge" [class.green]="!isHostOffline" [class.amber]="isHostOffline">
-                  <ion-icon [name]="isHostOffline ? 'cloud-offline-outline' : 'shield-checkmark-outline'"></ion-icon>
-                </div>
-                <div class="setting-text-col">
-                  <span class="setting-label">{{ isHostOffline ? 'Offline Mode' : 'Cloud Sync Connected' }}</span>
-                  <span class="setting-desc">
-                    {{ isHostOffline ? 'Operating on local device cache' : 'Permanent Cloudflare Worker API proxy active' }}
-                  </span>
-                </div>
-              </div>
-              <span class="status-indicator-dot" [class.online]="!isHostOffline"></span>
-            </div>
-          </div>
-
-          <!-- 7. Storage & Clear Cache -->
-          <div class="settings-group">
-            <span class="settings-group-title">Device Storage</span>
-            <div class="setting-item-row">
-              <div class="setting-left">
-                <div class="setting-icon-badge red">
-                  <ion-icon name="trash-outline"></ion-icon>
-                </div>
-                <div class="setting-text-col">
-                  <span class="setting-label">Clear Cache</span>
-                  <span class="setting-desc">Free up storage space and reset search queries</span>
-                </div>
-              </div>
-              <button type="button" class="clear-cache-btn" (click)="clearLocalCache()">
-                Clear Cache
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </ng-template>
-  </ion-modal>
-
-  <!-- ========================================================
-       MODAL 3: HELP & SUPPORT SUB-WINDOW
-       ======================================================== -->
-  <ion-modal [isOpen]="isHelpSupportOpen" (didDismiss)="closeHelpSupport()" class="profile-subwindow-modal">
-    <ng-template>
-      <div class="subwindow-container">
-        <!-- Subwindow Header with Back Button -->
-        <div class="subwindow-header">
-          <button type="button" class="subwindow-back-btn" (click)="closeHelpSupport()" aria-label="Go back">
-            <ion-icon name="arrow-back-outline"></ion-icon>
-          </button>
-          <div class="subwindow-title-col">
-            <h3 class="subwindow-title">Help & Support</h3>
-            <p class="subwindow-subtitle">Assistance and answers for exploring Nueva Ecija</p>
-          </div>
-          <button type="button" class="subwindow-close-btn" (click)="closeHelpSupport()" aria-label="Close help">
-            <ion-icon name="close-outline"></ion-icon>
-          </button>
-        </div>
-
-        <div class="subwindow-body">
-          <!-- Quick Assistance Banner -->
-          <div class="help-hero-banner">
-            <div class="help-hero-icon">
-              <ion-icon name="help-circle-outline"></ion-icon>
-            </div>
-            <div class="help-hero-copy">
-              <h4>Planning Your Nueva Ecija Adventure</h4>
-              <p>Everything you need to know about navigating the Rice Granary of the Philippines, from public transit fares to offline map usage.</p>
-            </div>
-          </div>
-
-          <!-- FAQs Section -->
-          <div class="settings-group">
-            <span class="settings-group-title">Frequently Asked Questions</span>
-
-            <div class="faq-accordion">
-              <!-- FAQ Item 1 -->
-              <div class="faq-card" [class.open]="activeFaqIndex === 0">
-                <button type="button" class="faq-header" (click)="toggleFaq(0)">
-                  <span class="faq-question">How does the app generate suggested itineraries?</span>
-                  <ion-icon [name]="activeFaqIndex === 0 ? 'chevron-forward-outline' : 'chevron-forward-outline'" class="faq-chevron"></ion-icon>
+              <div class="faq-item" [class.open]="activeFaqIndex === 0">
+                <button type="button" class="faq-toggle-btn" (click)="toggleFaq(0)">
+                  <span>How does the app generate suggested itineraries?</span>
+                  <ion-icon name="chevron-forward-outline"></ion-icon>
                 </button>
                 @if (activeFaqIndex === 0) {
-                  <div class="faq-body">
-                    <p>Our pacing engine analyzes 2,673 provincial points of interest, your selected pacing (Relaxed, Moderate, Fast-Paced), daily budget, and starting destination to calculate optimal daily road routes via Open Source Routing Machine (OSRM) with midday dining anchors.</p>
-                  </div>
+                  <p class="faq-answer">
+                    Our pacing engine analyzes 2,673 provincial points of interest, your selected pacing (Relaxed, Moderate, Fast-Paced), daily budget, and starting destination to calculate optimal daily road routes via Open Source Routing Machine (OSRM).
+                  </p>
                 }
               </div>
 
-              <!-- FAQ Item 2 -->
-              <div class="faq-card" [class.open]="activeFaqIndex === 1">
-                <button type="button" class="faq-header" (click)="toggleFaq(1)">
-                  <span class="faq-question">Can I use the app completely offline in remote areas?</span>
-                  <ion-icon class="faq-chevron" name="chevron-forward-outline"></ion-icon>
+              <div class="row-divider"></div>
+
+              <div class="faq-item" [class.open]="activeFaqIndex === 1">
+                <button type="button" class="faq-toggle-btn" (click)="toggleFaq(1)">
+                  <span>Can I use the app offline in remote areas?</span>
+                  <ion-icon name="chevron-forward-outline"></ion-icon>
                 </button>
                 @if (activeFaqIndex === 1) {
-                  <div class="faq-body">
-                    <p>Yes! All created itineraries, destination notes, and visited map areas are cached in offline device storage. You can access your saved trips, directions, and emergency contacts even with zero cellular signal in the Sierra Madre mountain passes.</p>
-                  </div>
+                  <p class="faq-answer">
+                    Yes! All created itineraries, destination notes, and visited map areas are cached locally so you can travel through the Sierra Madre mountains with confidence.
+                  </p>
                 }
               </div>
 
-              <!-- FAQ Item 3 -->
-              <div class="faq-card" [class.open]="activeFaqIndex === 2">
-                <button type="button" class="faq-header" (click)="toggleFaq(2)">
-                  <span class="faq-question">How do local tricycles and jeepneys work?</span>
-                  <ion-icon class="faq-chevron" name="chevron-forward-outline"></ion-icon>
+              <div class="row-divider"></div>
+
+              <div class="faq-item" [class.open]="activeFaqIndex === 2">
+                <button type="button" class="faq-toggle-btn" (click)="toggleFaq(2)">
+                  <span>What are the emergency provincial hotlines?</span>
+                  <ion-icon name="chevron-forward-outline"></ion-icon>
                 </button>
                 @if (activeFaqIndex === 2) {
-                  <div class="faq-body">
-                    <p>Within town centers (poblacion), tricycle base fares generally range from ₱20 to ₱50 per person depending on distance. For travel between municipalities (e.g. Cabanatuan to Bongabon or Pantabangan), modern jeepneys and passenger vans (UV Express) operate regularly from the Cabanatuan Central Terminal.</p>
-                  </div>
+                  <p class="faq-answer">
+                    PDRRMO Nueva Ecija: (044) 940 3388<br />
+                    PNP Nueva Ecija: 117 / (044) 463 0565<br />
+                    Tourism Office: tourism&#64;nuevaecija.gov.ph
+                  </p>
                 }
-              </div>
-
-              <!-- FAQ Item 4 -->
-              <div class="faq-card" [class.open]="activeFaqIndex === 3">
-                <button type="button" class="faq-header" (click)="toggleFaq(3)">
-                  <span class="faq-question">What are the must-visit natural landmarks?</span>
-                  <ion-icon class="faq-chevron" name="chevron-forward-outline"></ion-icon>
-                </button>
-                @if (activeFaqIndex === 3) {
-                  <div class="faq-body">
-                    <p>Highlights include Minalungao National Park (karst limestone cliffs & emerald river), Pantabangan Lake & Dam (fishing & mountain vistas), Gabaldon Falls, and the historic heritage church of Gapan City.</p>
-                  </div>
-                }
-              </div>
-            </div>
-          </div>
-
-          <!-- Provincial Tourist Emergency Contacts -->
-          <div class="settings-group">
-            <span class="settings-group-title">Provincial Emergency Hotlines</span>
-
-            <div class="emergency-contact-card">
-              <div class="emergency-row">
-                <div class="emergency-icon-circle">
-                  <ion-icon name="call-outline"></ion-icon>
-                </div>
-                <div class="emergency-copy">
-                  <span class="emergency-name">PDRRMO Nueva Ecija (Disaster & Rescue)</span>
-                  <span class="emergency-num">(044) 940 3388 / 0917 800 2345</span>
-                </div>
-              </div>
-
-              <div class="emergency-row">
-                <div class="emergency-icon-circle">
-                  <ion-icon name="call-outline"></ion-icon>
-                </div>
-                <div class="emergency-copy">
-                  <span class="emergency-name">Philippine National Police (PNP) Nueva Ecija</span>
-                  <span class="emergency-num">117 / (044) 463 0565</span>
-                </div>
-              </div>
-
-              <div class="emergency-row">
-                <div class="emergency-icon-circle">
-                  <ion-icon name="call-outline"></ion-icon>
-                </div>
-                <div class="emergency-copy">
-                  <span class="emergency-name">Provincial Tourism & Cultural Affairs Office</span>
-                  <span class="emergency-num">tourism&#64;nuevaecija.gov.ph</span>
-                </div>
               </div>
             </div>
           </div>
@@ -816,96 +480,30 @@
   </ion-modal>
 
   <!-- ========================================================
-       MODAL 4: ABOUT SUB-WINDOW
+       MODAL 5: ABOUT SUB-WINDOW
        ======================================================== -->
-  <ion-modal [isOpen]="isAboutOpen" (didDismiss)="closeAbout()" class="profile-subwindow-modal">
+  <ion-modal [isOpen]="isAboutOpen" (didDismiss)="closeAbout()" class="figma-settings-modal">
     <ng-template>
-      <div class="subwindow-container">
-        <!-- Subwindow Header with Back Button -->
-        <div class="subwindow-header">
-          <button type="button" class="subwindow-back-btn" (click)="closeAbout()" aria-label="Go back">
+      <div class="settings-view-container">
+        <div class="settings-view-header">
+          <button type="button" class="back-arrow-btn" (click)="closeAbout()" aria-label="Back">
             <ion-icon name="arrow-back-outline"></ion-icon>
           </button>
-          <div class="subwindow-title-col">
-            <h3 class="subwindow-title">About</h3>
-            <p class="subwindow-subtitle">Official provincial travel companion</p>
-          </div>
-          <button type="button" class="subwindow-close-btn" (click)="closeAbout()" aria-label="Close about">
-            <ion-icon name="close-outline"></ion-icon>
-          </button>
+          <h2 class="view-header-title">About</h2>
         </div>
 
-        <div class="subwindow-body">
-          <!-- App Identity Card -->
-          <div class="about-hero-card">
-            <div class="about-badge-icon">
-              <ion-icon name="information-circle-outline"></ion-icon>
+        <div class="settings-view-body">
+          <div class="settings-card-container p-20 text-center">
+            <div class="about-icon-circle">
+              <ion-icon name="information-circle"></ion-icon>
             </div>
-            <h4 class="about-app-name">Nueva Ecija Travel Itinerary</h4>
-            <span class="about-tagline">Trip mo, trip ko</span>
-            <span class="about-version-tag">Version {{ appVersion }} (Production Release)</span>
-          </div>
-
-          <!-- Mission & Scope -->
-          <div class="settings-group">
-            <span class="settings-group-title">Provincial Coverage</span>
-            <p class="about-narrative">
-              Dedicated travel and itinerary planning companion engineered for travelers exploring the province of Nueva Ecija, Philippines. Encompasses all <strong>32 municipalities and 5 component cities</strong> (Cabanatuan City, Gapan City, Palayan City, San Jose City, and Science City of Muñoz).
+            <h3 class="about-app-title">Nueva Ecija Travel Companion</h3>
+            <span class="about-app-tagline">Trip mo, trip ko</span>
+            <p class="about-app-desc">
+              Comprehensive travel and itinerary planning companion engineered for travelers exploring all 32 municipalities and 5 component cities of Nueva Ecija, Philippines.
             </p>
+            <span class="about-app-ver">Version {{ appVersion }}</span>
           </div>
-
-          <!-- Open Data & Attribution -->
-          <div class="settings-group">
-            <span class="settings-group-title">Attributions & Open Data</span>
-            <div class="attribution-card">
-              <div class="attrib-item">
-                <span class="attrib-title">OpenStreetMap</span>
-                <span class="attrib-desc">Geospatial POI coordinates and vector boundary data © OpenStreetMap contributors (ODbL).</span>
-              </div>
-              <div class="attrib-item">
-                <span class="attrib-title">OSRM Road Routing</span>
-                <span class="attrib-desc">Turn-by-turn road distance and drive time calculations powered by Open Source Routing Machine with geodesic fallback.</span>
-              </div>
-              <div class="attrib-item">
-                <span class="attrib-title">Ionic & Angular</span>
-                <span class="attrib-desc">Built with Ionic 9, Angular 22 standalone architecture, and Leaflet.</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </ng-template>
-  </ion-modal>
-
-  <!-- ========================================================
-       MODAL 5: FIGMA-ALIGNED LOG OUT CONFIRMATION MODAL
-       ======================================================== -->
-  <ion-modal [isOpen]="isLogoutConfirmOpen" (didDismiss)="closeLogoutConfirm()" class="logout-confirm-modal">
-    <ng-template>
-      <div class="logout-sheet-container" role="dialog" aria-labelledby="logout-title" aria-describedby="logout-desc">
-        <div class="logout-icon-circle">
-          <ion-icon name="log-out-outline"></ion-icon>
-        </div>
-
-        <h3 id="logout-title" class="logout-title">Log Out?</h3>
-        <p id="logout-desc" class="logout-desc">
-          You will be signed out of your account. You can always log back in anytime.
-        </p>
-
-        @if (guestItineraryCount > 0) {
-          <div class="unsynced-warning-box">
-            <ion-icon name="alert-circle-outline"></ion-icon>
-            <span>Note: You have {{ guestItineraryCount }} unsynced local {{ guestItineraryCount === 1 ? 'trip' : 'trips' }} on this device.</span>
-          </div>
-        }
-
-        <div class="logout-actions-stack">
-          <button type="button" class="logout-primary-btn" (click)="executeLogout()">
-            Log Out
-          </button>
-          <button type="button" class="logout-cancel-btn" (click)="closeLogoutConfirm()">
-            Cancel
-          </button>
         </div>
       </div>
     </ng-template>

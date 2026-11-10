@@ -937,9 +937,65 @@ This checklist tracks completed, active, and pending tasks across all developmen
   - Angular production build: **Exit code 0, 0 budget errors**.
   - Capacitor Android sync: **Exit code 0 (6 plugins synced)**.
 
+---
 
-
-
-
-
-
+## Phase 35: Figma-Aligned Profile Tab Visual Alignment & After Log Out Screen (Travel Itinerary App.fig)
+- [x] **35.1 (Exact High-Resolution Asset Extraction)**:
+  - Extracted authentic profile avatar photo pattranite_avatar.jpg (Pattranite selfie taking photo in mirror) from Kiwi chunk 1 binary canvas (Travel Itinerary App.fig).
+  - Extracted authentic 'After Log Out' skyscraper photo in organic blob logout_skyscrapers_blob.png.
+  - Extracted authentic 'After Log Out' bottom cityscape skyline silhouette logout_cityscape_silhouette.png.
+- [x] **35.2 (Figma Screen 1 - Profile Main Screen Visual Alignment)**:
+  - Header: Left-aligned bold title Profile (ont-size: 26px, bold), no right gear icon in toolbar.
+  - Identity row: Horizontal arrangement featuring circular avatar photo on left (76px x 76px, circular clip, subtle border) with Name (Pattranite Limpatiyakorn), handle/email (@loverrukk@gmail.com), and outline pill button Edit Profile (order: 1.5px solid #0088ff, transparent bg, rounded pill) on the right.
+  - Profile Menu Card: Single rounded white container card (order-radius: 20px, order: 1px solid #e2e8f0, soft shadow) enclosing 5 items with thin horizontal dividers:
+    1. **Settings**: Blue gear icon (#0088ff), title Settings, subtitle Manage your account and customize your app experience. Click opens Settings subwindow.
+    2. **Favorites**: Blue filled heart icon (#0088ff), title Favorites, subtitle Your favorite places, all saved in one place. Find them whenever you're ready to explore. Click navigates to /tabs/history.
+    3. **Help & Support**: Blue filled question mark circle icon (#0088ff), title Help & Support, subtitle Get assistance and find answers to common questions. Click opens Help & Support subwindow.
+    4. **About**: Blue filled info circle icon (#0088ff), title About, subtitle Version 1.0.0. Click opens About subwindow.
+    5. **Log Out**: Red exit door icon (#ff3b30), title Log Out (bold red text), subtitle Sign out of your account. Click opens Log Out Confirmation modal.
+  - Removed right-chevron arrows to match the Figma screenshots with 100% precision.
+- [x] **35.3 (Figma Screen 1 - Settings Sub-Window Alignment)**:
+  - Header: Blue back arrow ← (#0088ff) + bold Settings.
+  - Single rounded white card containing 6 settings rows with subtle dividers:
+    1. **Account Information**: Blue person outline icon. Click opens Edit Profile.
+    2. **Notifications**: Blue bell icon with iOS-style blue toggle switch.
+    3. **Privacy & Security**: Blue padlock icon. Click displays encryption & security status alert.
+    4. **Language**: Blue globe icon with 'English' text on right. Click toggles / switches language.
+    5. **App Appearance**: Blue moon/sun icon with 'Light' text on right. Click toggles dark/light mode with instant DOM hydration.
+    6. **Clear Cache**: Blue trash can icon with bold title Clear Cache and subtitle Free up storage space.
+- [x] **35.4 (Figma Screen 1 - Log Out Confirmation Modal Alignment)**:
+  - Centered floating modal card (order-radius: 28px, white background, soft shadow).
+  - Subtle top triple-dot indicator handle (...).
+  - Prominent blue exit door icon (#0088ff, 52px).
+  - Title: Log Out? (ont-size: 20px, bold).
+  - Subtitle: You will be signed out of your account. You can always log back in anytime.
+  - Two stacked full-width solid vibrant blue buttons:
+    - Primary: Log Out (background #0088ff, white text, order-radius: 16px).
+    - Secondary: Cancel (background #0088ff, white text, order-radius: 16px).
+- [x] **35.5 (Figma Screen 2 - Edit Profile Sub-Window Alignment)**:
+  - Header: Blue back arrow ← (#0088ff) + bold Edit Profile.
+  - Centered circular avatar photo (96px x 96px) with translucent camera overlay badge and pill button Change Photo (order: 1.5px solid #0088ff).
+  - Form fields in exact Figma visual hierarchy and vertical order:
+    1. First Name: Input 'Pattranite'
+    2. Middle Initial (if applicable): Input 'N/A'
+    3. Last Name: Input 'Limpatayakorn'
+    4. Birthday: Input 'May 23, 2000'
+    5. Gender: Input 'Female'
+    6. Email Address: Readonly input '@loverrukk@gmail.com'
+    7. Phone Number: Input '+66 81 234 5678'
+  - Full-width primary button: Save Changes (solid vibrant blue #0088ff, white text, order-radius: 16px).
+- [x] **35.6 (Figma Screen 3 - After Log Out Screen Implementation)**:
+  - Integrated into WelcomePage (eatures/auth/welcome/):
+    - Top: Slanted blue airplane icon (#0088ff) + bold black title Trip mo, trip ko.
+    - Organic smooth blob frame (order-radius: 40% 60% 70% 30% / 45% 50% 50% 55%, cyan/blue border & shadow) enclosing skyscraper photography (ssets/images/logout_skyscrapers_blob.png).
+    - Heading: You’re now logged out (bold, 22px).
+    - Subtitle: Your account has been signed out. Explore as guest or log in again to access your saved trips and preferences.
+    - Two stacked solid blue buttons: Continue as Guest and Log In (both solid #0088ff, white text, pill radius).
+    - Bottom: Cityscape skyline illustration (ssets/images/logout_cityscape_silhouette.png).
+- [x] **35.7 (Automated Testing & Full Verification Suite)**:
+  - Vitest Unit Tests: **310/310 passing [100%] across 30 test files** (18 tests in profile.page.spec.ts + 5 tests in welcome.page.spec.ts).
+  - TypeScript strict typecheck (	sconfig.e2e.json): **Exit code 0**.
+  - Production Angular build (
+g build): **Exit code 0** (component styles strictly under 16 kB budget).
+  - Capacitor Android sync (
+px cap sync android): **Exit code 0 (6 plugins synchronized)**.

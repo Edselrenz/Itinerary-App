@@ -19,13 +19,16 @@ logger = logging.getLogger(__name__)
 ROOT_DB = Path(__file__).resolve().parents[3] / "nueva_ecija_travel.db"
 
 def resolve_db_url(raw_url: str) -> str:
-    """Resolves relative SQLite URLs to the canonical project root database."""
+    """Resolves relative SQLite URLs and enforces short connect timeouts for unreachable Postgres."""
     if raw_url.startswith("sqlite:///./nueva_ecija_travel.db"):
         return f"sqlite:///{ROOT_DB.as_posix()}"
+    if raw_url.startswith("postgresql") and "connect_timeout" not in raw_url:
+        separator = "&" if "?" in raw_url else "?"
+        return f"{raw_url}{separator}connect_timeout=2"
     return raw_url
 
 db_url = resolve_db_url(settings.database_url)
-connect_args = {"check_same_thread": False} if db_url.startswith("sqlite") else {}
+connect_args = {"check_same_thread": False} if db_url.startswith("sqlite") else {"connect_timeout": 2}
 
 try:
     engine = create_engine(db_url, pool_pre_ping=True, connect_args=connect_args)

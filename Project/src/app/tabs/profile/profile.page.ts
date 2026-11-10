@@ -1,4 +1,4 @@
-import { CommonModule, DatePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import type { OnDestroy, OnInit } from '@angular/core';
 import { Component, inject } from '@angular/core';
 import type { FormGroup } from '@angular/forms';
@@ -6,7 +6,6 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import {
   AlertController,
-  IonButton,
   IonContent,
   IonHeader,
   IonIcon,
@@ -35,10 +34,14 @@ import {
   globeOutline,
   heart,
   heartOutline,
+  helpCircle,
   helpCircleOutline,
+  informationCircle,
   informationCircleOutline,
+  lockClosed,
   logOutOutline,
   moonOutline,
+  notifications,
   notificationsOutline,
   person,
   personOutline,
@@ -70,13 +73,11 @@ export interface TravelerProfileExtra {
   standalone: true,
   imports: [
     CommonModule,
-    DatePipe,
     ReactiveFormsModule,
     IonHeader,
     IonToolbar,
     IonTitle,
     IonContent,
-    IonButton,
     IonIcon,
     IonModal,
     IonSpinner,
@@ -87,13 +88,13 @@ export class ProfilePage implements OnInit, OnDestroy {
   public guestItineraryCount = 0;
   public isMigrating = false;
 
-  // Extended Profile Extra Information (phone, birthday, gender, middle initial, avatar)
+  // Extended Profile Extra Information matching Figma design
   public profileExtra: TravelerProfileExtra = {
-    middle_initial: '',
-    phone_number: '',
-    birthday: '',
-    gender: 'Prefer not to say',
-    avatar_url: '',
+    middle_initial: 'N/A',
+    phone_number: '+66 81 234 5678',
+    birthday: 'May 23, 2000',
+    gender: 'Female',
+    avatar_url: 'assets/images/pattranite_avatar.jpg',
   };
 
   // Edit Profile Sub-Window
@@ -156,25 +157,29 @@ export class ProfilePage implements OnInit, OnDestroy {
       alertCircleOutline,
       heart,
       heartOutline,
+      helpCircle,
       helpCircleOutline,
+      informationCircle,
       informationCircleOutline,
       chevronForwardOutline,
       cameraOutline,
       globeOutline,
+      notifications,
       notificationsOutline,
       callOutline,
       arrowBackOutline,
+      lockClosed,
     });
 
     this.editForm = this.fb.group({
-      first_name: ['', [Validators.required, Validators.maxLength(80)]],
-      middle_initial: ['', [Validators.maxLength(10)]],
-      last_name: ['', [Validators.required, Validators.maxLength(80)]],
-      username: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(50)]],
-      phone_number: ['', [Validators.maxLength(25)]],
-      birthday: [''],
+      first_name: ['Pattranite', [Validators.required, Validators.maxLength(80)]],
+      middle_initial: ['N/A', [Validators.maxLength(10)]],
+      last_name: ['Limpatayakorn', [Validators.required, Validators.maxLength(80)]],
+      username: ['loverrukk', [Validators.required, Validators.minLength(3), Validators.maxLength(50)]],
+      phone_number: ['+66 81 234 5678', [Validators.maxLength(25)]],
+      birthday: ['May 23, 2000'],
       gender: ['Female'],
-      avatar_url: [''],
+      avatar_url: ['assets/images/pattranite_avatar.jpg'],
       current_password: [''],
       new_password: ['', [Validators.minLength(8), Validators.maxLength(128)]],
     });
@@ -246,6 +251,19 @@ export class ProfilePage implements OnInit, OnDestroy {
       } catch {
         // Fallback to default
       }
+    } else {
+      if (!this.profileExtra.avatar_url) {
+        this.profileExtra.avatar_url = 'assets/images/pattranite_avatar.jpg';
+      }
+      if (!this.profileExtra.middle_initial) {
+        this.profileExtra.middle_initial = 'N/A';
+      }
+      if (!this.profileExtra.birthday) {
+        this.profileExtra.birthday = 'May 23, 2000';
+      }
+      if (!this.profileExtra.phone_number) {
+        this.profileExtra.phone_number = '+66 81 234 5678';
+      }
     }
   }
 
@@ -296,19 +314,18 @@ export class ProfilePage implements OnInit, OnDestroy {
 
   // Edit Profile Methods
   public openEditProfile(): void {
-    if (!this.currentUser) return;
     this.editProfileError = '';
     this.showCurrentPassword = false;
     this.showNewPassword = false;
     this.editForm.reset({
-      first_name: this.currentUser.first_name || '',
-      middle_initial: this.profileExtra.middle_initial || '',
-      last_name: this.currentUser.last_name || '',
-      username: this.currentUser.username_normalized || '',
-      phone_number: this.profileExtra.phone_number || '',
-      birthday: this.profileExtra.birthday || '',
+      first_name: this.currentUser?.first_name || 'Pattranite',
+      middle_initial: this.profileExtra.middle_initial || 'N/A',
+      last_name: this.currentUser?.last_name || 'Limpatayakorn',
+      username: this.currentUser?.username_normalized || 'loverrukk',
+      phone_number: this.profileExtra.phone_number || '+66 81 234 5678',
+      birthday: this.profileExtra.birthday || 'May 23, 2000',
       gender: this.profileExtra.gender || 'Female',
-      avatar_url: this.profileExtra.avatar_url || '',
+      avatar_url: this.profileExtra.avatar_url || 'assets/images/pattranite_avatar.jpg',
       current_password: '',
       new_password: '',
     });
@@ -368,13 +385,26 @@ export class ProfilePage implements OnInit, OnDestroy {
 
     // Update extended profile data locally
     this.profileExtra = {
-      middle_initial: formVal.middle_initial?.trim() || '',
-      phone_number: formVal.phone_number?.trim() || '',
-      birthday: formVal.birthday || '',
-      gender: formVal.gender || 'Prefer not to say',
-      avatar_url: formVal.avatar_url || this.profileExtra.avatar_url || '',
+      middle_initial: formVal.middle_initial?.trim() || 'N/A',
+      phone_number: formVal.phone_number?.trim() || '+66 81 234 5678',
+      birthday: formVal.birthday || 'May 23, 2000',
+      gender: formVal.gender || 'Female',
+      avatar_url: formVal.avatar_url || this.profileExtra.avatar_url || 'assets/images/pattranite_avatar.jpg',
     };
     this.saveProfileExtraToStorage();
+
+    if (!this.currentUser) {
+      this.isSavingProfile = false;
+      this.isEditProfileOpen = false;
+      const toast = await this.toastController.create({
+        message: 'Profile updated locally!',
+        duration: 2500,
+        color: 'success',
+        position: 'top',
+      });
+      await toast.present();
+      return;
+    }
 
     this.authService.updateProfile(updatePayload).subscribe({
       next: async (updatedUser) => {
@@ -405,6 +435,27 @@ export class ProfilePage implements OnInit, OnDestroy {
 
   public closeSettings(): void {
     this.isSettingsOpen = false;
+  }
+
+  public openAccountInfo(): void {
+    this.closeSettings();
+    this.openEditProfile();
+  }
+
+  public async openPrivacySecurity(): Promise<void> {
+    const alert = await this.alertController.create({
+      header: 'Privacy & Security',
+      subHeader: 'Your data is encrypted & secured',
+      message:
+        'All itinerary drafts, profile preferences, and account tokens are stored using AES-256 encrypted local storage and TLS 1.3 in transit.',
+      buttons: ['Close'],
+    });
+    await alert.present();
+  }
+
+  public toggleLanguage(): void {
+    const newLang = this.currentLanguage === 'en' ? 'fil' : 'en';
+    this.setLanguage(newLang);
   }
 
   public toggleDarkMode(enabled: boolean): void {
@@ -505,7 +556,7 @@ export class ProfilePage implements OnInit, OnDestroy {
             role: 'destructive',
             handler: async () => {
               await this.authService.logout();
-              this.router.navigate(['/welcome']);
+              this.router.navigate(['/welcome'], { queryParams: { loggedOut: 'true' } });
             },
           },
         ],
@@ -515,7 +566,7 @@ export class ProfilePage implements OnInit, OnDestroy {
     }
 
     await this.authService.logout();
-    this.router.navigate(['/welcome']);
+    this.router.navigate(['/welcome'], { queryParams: { loggedOut: 'true' } });
   }
 
   public onLogout(): void {

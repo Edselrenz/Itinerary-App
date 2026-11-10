@@ -1,19 +1,16 @@
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
-import type { ComponentFixture} from '@angular/core/testing';
-import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
-import { AlertController, ToastController } from '@ionic/angular';
 import { BehaviorSubject, of, throwError } from 'rxjs';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-
-import type { User } from '../../core/models/auth.models';
-import { AuthService } from '../../core/services/auth.service';
-import { ConnectivityService } from '../../core/services/connectivity.service';
-import { GuestMigrationService } from '../../core/services/guest-migration.service';
+import { AlertController, ToastController } from '@ionic/angular';
 
 import { ProfilePage } from './profile.page';
-
+import { AuthService } from '../../core/services/auth.service';
+import { GuestMigrationService } from '../../core/services/guest-migration.service';
+import { ConnectivityService } from '../../core/services/connectivity.service';
+import { User } from '../../core/models/auth.models';
 
 describe('ProfilePage', () => {
   let component: ProfilePage;
@@ -244,11 +241,31 @@ describe('ProfilePage', () => {
     );
   });
 
-  it('executes logout and navigates to /welcome when no unsynced trips exist', async () => {
+  it('executes logout and navigates to /welcome with loggedOut queryParam when no unsynced trips exist', async () => {
     component.guestItineraryCount = 0;
     await component.executeLogout();
     expect(mockAuthService.logout).toHaveBeenCalled();
-    expect(mockRouter.navigate).toHaveBeenCalledWith(['/welcome']);
+    expect(mockRouter.navigate).toHaveBeenCalledWith(['/welcome'], { queryParams: { loggedOut: 'true' } });
+  });
+
+  it('supports Settings row shortcuts: account info, privacy, language toggle', async () => {
+    component.openSettings();
+    expect(component.isSettingsOpen).toBe(true);
+
+    component.openAccountInfo();
+    expect(component.isSettingsOpen).toBe(false);
+    expect(component.isEditProfileOpen).toBe(true);
+
+    await component.openPrivacySecurity();
+    expect(mockAlertController.create).toHaveBeenCalledWith(
+      expect.objectContaining({ header: 'Privacy & Security' })
+    );
+
+    component.currentLanguage = 'en';
+    component.toggleLanguage();
+    expect(component.currentLanguage).toBe('fil');
+    component.toggleLanguage();
+    expect(component.currentLanguage).toBe('en');
   });
 
   it('syncs guest trips and presents success toast', async () => {

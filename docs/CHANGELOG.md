@@ -8,6 +8,39 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [0.35.0] - 2026-11-10
+### Added
+- **Exact Figma Screenshot Layout & Asset Realignment (`Travel Itinerary App.fig`)**:
+  - Extracted authentic imagery from Figma: circular Pattranite avatar (`assets/images/pattranite_avatar.jpg`), skyscraper low-angle view (`assets/images/logout_skyscrapers_blob.png`), and cityscape skyline silhouette (`assets/images/logout_cityscape_silhouette.png`).
+  - Refactored `ProfilePage` (`Project/src/app/tabs/profile/`):
+    - Left-aligned bold header `Profile` without toolbar gear icon.
+    - Identity section with circular avatar photo on left, and Name (`Pattranite Limpatiyakorn`), handle/email (`@loverrukk@gmail.com`), and outline pill button `Edit Profile` on right.
+    - Single rounded container card enclosing 5 items without chevrons: Settings (blue gear), Favorites (blue heart), Help & Support (blue question mark), About (blue info circle), and Log Out (red exit door).
+  - Aligned **Settings** subwindow to exact Figma design:
+    - Blue back arrow `←` + bold `Settings`.
+    - Single card with 6 rows: Account Information (person icon), Notifications (bell icon + blue toggle switch), Privacy & Security (padlock icon), Language (globe icon + "English"), App Appearance (moon/sun icon + "Light"), and Clear Cache (trash icon + "Free up storage space").
+  - Aligned **Log Out Confirmation Modal**:
+    - Floating dialog with top triple-dot handle indicator, prominent blue exit door icon, title "Log Out?", description, and two stacked full-width solid blue buttons (`Log Out` and `Cancel`).
+  - Aligned **Edit Profile** subwindow:
+    - Blue back arrow `←` + bold `Edit Profile`.
+    - Centered circular avatar photo with camera overlay badge and `Change Photo` pill button.
+    - 7 stacked input fields: First Name, Middle Initial (if applicable), Last Name, Birthday, Gender, Email Address, Phone Number.
+    - Full-width solid blue `Save Changes` button.
+  - Implemented **After Log Out** screen in `WelcomePage` (`features/auth/welcome/`):
+    - Slanted blue airplane icon + `Trip mo, trip ko`.
+    - Skyscraper photography in organic smooth wavy blob mask with blue border.
+    - Bold heading "You’re now logged out" and subtitle.
+    - Two stacked solid blue buttons: `Continue as Guest` and `Log In`.
+    - Cityscape skyline silhouette at bottom.
+- **Unit Test Suite Expansion**:
+  - Created `Project/src/app/features/auth/welcome/welcome.page.spec.ts` covering onboarding and After Log Out states.
+  - Added Settings shortcuts and loggedOut query navigation tests to `profile.page.spec.ts`.
+  - Reached **310 total passing unit tests across 30 test files** in Vitest.
+
+### Changed
+- Refactored `profile.page.scss` to use flat class selectors and CSS custom properties, maintaining component stylesheet well below the 16 kB warning budget.
+- Added short connect timeout for PostgreSQL resolution in `backend/app/core/database.py`.
+
 ## [0.34.0] - 2026-11-10
 ### Added
 - **Figma-Aligned Profile Tab Redesign (`Travel Itinerary App.fig`)**:

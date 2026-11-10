@@ -1,63 +1,124 @@
 <ion-content class="welcome-content" [fullscreen]="true">
   <div class="welcome-screen-wrapper">
-    <div class="welcome-container">
-      <!-- 1. Airplane SVG - Trip mo, trip ko -->
-      <div class="brand-row">
-        <svg class="airplane-svg" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
-          <path
-            fill="currentColor"
-            d="M32.31,16.59l-11.3-4.57V6.14a3,3,0,0,0-6,0v5.88L3.69,16.59a1.5,1.5,0,0,0-.94,1.39v2.24a1,1,0,0,0,1.35.93l10.37-3.69v6.52l-3.3,2.47a1,1,0,0,0-.38.79v2.17a1,1,0,0,0,1.45.89l5.82-2.79,5.82,2.79a1,1,0,0,0,1.45-.89V28a1,1,0,0,0-.38-.79l-3.3-2.47V17.46l10.37,3.69a1,1,0,0,0,1.35-.93V18A1.5,1.5,0,0,0,32.31,16.59Z"
-            transform="rotate(45 18 18)"
-          />
-        </svg>
-        <h1 class="brand-title">Trip mo, trip ko</h1>
-      </div>
 
-      <!-- 2. Your next adventure is waiting -->
-      <h2 class="hero-headline">
-        Your next adventure<br />is waiting.
-      </h2>
-
-      <!-- 3. Get personalized itineraries, easy commutes, and nearby essentials -->
-      <p class="hero-subtitle">
-        Get personalized itineraries, easy commutes,<br />and nearby essentials.
-      </p>
-
-      <!-- 4. Action buttons & divider -->
-      <div class="actions-group">
-        <!-- Log in -->
-        <ion-button expand="block" class="primary-pill-btn" (click)="goToLogin()">
-          Log in
-        </ion-button>
-
-        <!-- Sign up -->
-        <ion-button expand="block" class="primary-pill-btn" (click)="goToSignup()">
-          Sign up
-        </ion-button>
-
-        <!-- line or line -->
-        <div class="divider-row">
-          <span class="divider-line"></span>
-          <span class="divider-text">or</span>
-          <span class="divider-line"></span>
+    @if (isAfterLogout) {
+      <!-- ==========================================
+           AFTER LOG OUT VIEW (FIGMA SCREEN 3)
+           ========================================== -->
+      <div class="welcome-container after-logout-container">
+        <!-- 1. Airplane SVG - Trip mo, trip ko -->
+        <div class="brand-row">
+          <svg class="airplane-svg" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+            <path
+              fill="#0088ff"
+              d="M32.31,16.59l-11.3-4.57V6.14a3,3,0,0,0-6,0v5.88L3.69,16.59a1.5,1.5,0,0,0-.94,1.39v2.24a1,1,0,0,0,1.35.93l10.37-3.69v6.52l-3.3,2.47a1,1,0,0,0-.38.79v2.17a1,1,0,0,0,1.45.89l5.82-2.79,5.82,2.79a1,1,0,0,0,1.45-.89V28a1,1,0,0,0-.38-.79l-3.3-2.47V17.46l10.37,3.69a1,1,0,0,0,1.35-.93V18A1.5,1.5,0,0,0,32.31,16.59Z"
+              transform="rotate(45 18 18)"
+            />
+          </svg>
+          <h1 class="brand-title">Trip mo, trip ko</h1>
         </div>
 
-        <!-- Continue as Guest -->
-        <button type="button" class="guest-pill-btn" (click)="goToGuest()">
-          <ion-icon name="person" class="guest-icon"></ion-icon>
-          <span>Continue as Guest</span>
-        </button>
-      </div>
-    </div>
+        <!-- 2. Skyscraper Photography Inside Organic Blob Mask -->
+        <div class="blob-frame-wrapper">
+          <div class="organic-blob-mask">
+            <img
+              src="assets/images/logout_skyscrapers_blob.png"
+              alt="Skyscrapers low angle view against clear sky"
+              class="blob-skyscraper-img"
+            />
+          </div>
+        </div>
 
-    <!-- 5. Building background anchored at bottom -->
-    <div class="bottom-buildings-wrap">
-      <img
-        src="assets/images/welcome_hero_buildings.png"
-        alt="City buildings background"
-        class="bottom-buildings-img"
-        aria-hidden="true"
-      />
-    </div>
+        <!-- 3. Headline & Description -->
+        <h2 class="hero-headline logout-headline">You’re now logged out</h2>
+        <p class="hero-subtitle logout-subtitle">
+          Your account has been signed out. Explore as guest or log in again to access your saved trips and preferences.
+        </p>
+
+        <!-- 4. Two Stacked Solid Blue Buttons -->
+        <div class="logout-action-stack">
+          <button type="button" class="figma-solid-blue-btn" (click)="goToGuest()">
+            Continue as Guest
+          </button>
+          <button type="button" class="figma-solid-blue-btn" (click)="goToLogin()">
+            Log In
+          </button>
+        </div>
+      </div>
+
+      <!-- 5. Cityscape Skyline Silhouette at Bottom -->
+      <div class="bottom-buildings-wrap">
+        <img
+          src="assets/images/logout_cityscape_silhouette.png"
+          alt="City buildings skyline"
+          class="bottom-buildings-img"
+          aria-hidden="true"
+        />
+      </div>
+    } @else {
+      <!-- ==========================================
+           STANDARD WELCOME VIEW (ONBOARDING)
+           ========================================== -->
+      <div class="welcome-container">
+        <!-- 1. Airplane SVG - Trip mo, trip ko -->
+        <div class="brand-row">
+          <svg class="airplane-svg" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+            <path
+              fill="currentColor"
+              d="M32.31,16.59l-11.3-4.57V6.14a3,3,0,0,0-6,0v5.88L3.69,16.59a1.5,1.5,0,0,0-.94,1.39v2.24a1,1,0,0,0,1.35.93l10.37-3.69v6.52l-3.3,2.47a1,1,0,0,0-.38.79v2.17a1,1,0,0,0,1.45.89l5.82-2.79,5.82,2.79a1,1,0,0,0,1.45-.89V28a1,1,0,0,0-.38-.79l-3.3-2.47V17.46l10.37,3.69a1,1,0,0,0,1.35-.93V18A1.5,1.5,0,0,0,32.31,16.59Z"
+              transform="rotate(45 18 18)"
+            />
+          </svg>
+          <h1 class="brand-title">Trip mo, trip ko</h1>
+        </div>
+
+        <!-- 2. Your next adventure is waiting -->
+        <h2 class="hero-headline">
+          Your next adventure<br />is waiting.
+        </h2>
+
+        <!-- 3. Get personalized itineraries, easy commutes, and nearby essentials -->
+        <p class="hero-subtitle">
+          Get personalized itineraries, easy commutes,<br />and nearby essentials.
+        </p>
+
+        <!-- 4. Action buttons & divider -->
+        <div class="actions-group">
+          <!-- Log in -->
+          <ion-button expand="block" class="primary-pill-btn" (click)="goToLogin()">
+            Log in
+          </ion-button>
+
+          <!-- Sign up -->
+          <ion-button expand="block" class="primary-pill-btn" (click)="goToSignup()">
+            Sign up
+          </ion-button>
+
+          <!-- line or line -->
+          <div class="divider-row">
+            <span class="divider-line"></span>
+            <span class="divider-text">or</span>
+            <span class="divider-line"></span>
+          </div>
+
+          <!-- Continue as Guest -->
+          <button type="button" class="guest-pill-btn" (click)="goToGuest()">
+            <ion-icon name="person" class="guest-icon"></ion-icon>
+            <span>Continue as Guest</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 5. Building background anchored at bottom -->
+      <div class="bottom-buildings-wrap">
+        <img
+          src="assets/images/welcome_hero_buildings.png"
+          alt="City buildings background"
+          class="bottom-buildings-img"
+          aria-hidden="true"
+        />
+      </div>
+    }
+
   </div>
 </ion-content>

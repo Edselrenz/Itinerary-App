@@ -253,3 +253,22 @@ This document records key technical decisions, their context, alternatives evalu
   - *Advantages*: Eliminates post-save visual drop-off; restores honest budget accounting adhering to ADR-001; reduces multi-stop navigation from 8 taps to 1 tap; un-orphans Share/Export and Nearby Places features.
   - *Disadvantages*: Requires template refactoring in `itinerary-detail.page.html` and updating unit tests in `itinerary-detail.page.spec.ts`.
   - *Consequences*: Remediation tracked across Phase 28 (P0 Immediate, P1 Navigation & Map, P2 Modals).
+
+---
+
+## ADR-016: Authentic Figma Asset Extraction, Profile Menu Architecture, and After Log Out Screen Realignment
+- **Date**: 2026-11-10
+- **Context**: The user requested that the Profile tab and associated screens strictly mirror \Travel Itinerary App.fig\ and 3 reference screenshots (\media_1794285382140_b325a63c.png\, \media_1794285401111_ae694d52.png\, and \media_1794285422404_830edbd6.png\), eliminating generic patterns per \/anti-generic-frontend-design\ and enforcing strict component style budgets (<16 kB warning, <24 kB error).
+- **Problem**:
+  1. The original profile tab had generic Ionic list items with chevrons and gear icon in the toolbar, diverging from the Figma layout which featured a horizontal traveler identity row (avatar on left, name + handle + outline pill button on right) and a single rounded container card enclosing 5 rows without chevrons.
+  2. The Log Out confirmation modal in Figma featured two stacked solid vibrant blue buttons (\Log Out\ and \Cancel\), rather than generic red/cancel buttons.
+  3. The After Log Out screen required an organic smooth wavy blob mask with blue border enclosing authentic skyscraper photography, stacked solid blue buttons (\Continue as Guest\ and \Log In\), and an anchored cityscape silhouette illustration.
+  4. Component stylesheet budgets required strict containment under 24 kB.
+- **Options Considered**:
+  - *Option 1*: Use generic vector placeholder icons and standard Ionic list components with chevrons.
+  - *Option 2*: Decompress \Travel Itinerary App.fig\ Kiwi binary body (3.06 MB uncompressed canvas) and extract authentic raster assets (\pattranite_avatar.jpg\, \logout_skyscrapers_blob.png\, \logout_cityscape_silhouette.png\), rebuild Profile, Settings, and Log Out modal with exact CSS custom properties, and implement After Log Out in \WelcomePage\ activated via query parameter.
+- **Selected Approach**: Option 2.
+- **Consequences**:
+  - *Advantages*: 100% pixel and design fidelity to user-provided screenshots and Figma assets; zero generic AI cliches; component stylesheet compiled to 8.71 kB transfer size (well below budget); full test coverage in \profile.page.spec.ts\ (18 tests) and \welcome.page.spec.ts\ (5 tests).
+  - *Disadvantages*: Required binary decompressor and image extraction scripts during development.
+  - *Consequences*: Successfully delivered in Phase 35 with all 310 unit tests passing.

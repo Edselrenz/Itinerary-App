@@ -3786,3 +3786,106 @@ NEXT STEPS:
 
 
 
+
+---
+
+## Session 95: Profile Tab, Settings, Log Out Confirmation, Edit Profile, and After Log Out Design Realignment
+- **Date & Time**: 2026-11-10 13:25:00 (Local)
+- **Objective**: Realign the Profile Tab, Settings subwindow, Log Out Confirmation dialog, Edit Profile subwindow, and After Log Out screen with 100% precision against `Travel Itinerary App.fig` and user-provided screenshots (`media_1794285382140_b325a63c.png`, `media_1794285401111_ae694d52.png`, `media_1794285422404_830edbd6.png`), strictly following `/coding-and-system-development` and `/anti-generic-frontend-design`.
+- **Tasks Performed**:
+  - Decompressed `Travel Itinerary App.fig` Kiwi binary canvas body and extracted authentic assets:
+    - Circular Pattranite Limpatiyakorn selfie photo avatar (`Project/src/assets/images/pattranite_avatar.jpg`, hash `2ad65f85962f93bbe7d1ac7295d0d24bc404dc54`).
+    - Skyscraper photo in organic blob (`Project/src/assets/images/logout_skyscrapers_blob.png`, hash `4d90b62b4a7f0f1025cdb5974b9e14801793fa84`).
+    - Cityscape skyline silhouette illustration (`Project/src/assets/images/logout_cityscape_silhouette.png`, hash `3bd796976b3c21f6de413f6b40feebd5d9d8eb1b`).
+  - **Profile Main Screen Realignment** (`Project/src/app/tabs/profile/profile.page.html`, `profile.page.scss`, `profile.page.ts`):
+    - Left-aligned bold header title `Profile` (`font-size: 26px`, `font-weight: 800`), removing toolbar gear icon to match Figma layout.
+    - Identity row: Horizontal arrangement with circular avatar photo on left (`76px x 76px`, 1px border), traveler full name (`Pattranite Limpatiyakorn`), email/handle (`@loverrukk@gmail.com`), and blue outline pill button `Edit Profile` (`border: 1.5px solid #0088ff`, pill radius).
+    - Single rounded container card (`border-radius: 20px`, white background, soft shadow) enclosing 5 items with thin horizontal dividers and zero chevrons:
+      1. **Settings**: Blue gear icon (`#0088ff`), title Settings, subtitle Manage your account and customize your app experience.
+      2. **Favorites**: Blue filled heart icon (`#0088ff`), title Favorites, subtitle Your favorite places, all saved in one place. Find them whenever you're ready to explore. Navigates to `/tabs/history`.
+      3. **Help & Support**: Blue question mark circle icon (`#0088ff`), title Help & Support, subtitle Get assistance and find answers to common questions.
+      4. **About**: Blue info circle icon (`#0088ff`), title About, subtitle Version 1.0.0.
+      5. **Log Out**: Red exit door icon (`#ff3b30`), bold red title Log Out, subtitle Sign out of your account. Triggers confirmation modal.
+  - **Settings Subwindow Realignment**:
+    - Header with blue left arrow `←` (`#0088ff`) and bold title `Settings`.
+    - Single card with 6 rows: Account Information (person icon), Notifications (bell icon + iOS toggle), Privacy & Security (padlock icon), Language (globe icon + "English"), App Appearance (moon/sun icon + "Light"), Clear Cache (trash icon + "Free up storage space").
+  - **Log Out Confirmation Modal Realignment**:
+    - Floating dialog with 28px border radius, top triple-dot handle indicator, prominent blue exit door icon (`#0088ff`, 52px), bold title "Log Out?", description "You will be signed out of your account. You can always log back in anytime.", and two stacked full-width solid vibrant blue buttons (`Log Out` and `Cancel`, both solid `#0088ff`).
+  - **Edit Profile Subwindow Realignment**:
+    - Blue back arrow `←` + bold `Edit Profile`.
+    - Centered circular avatar photo (`96px x 96px`) with camera overlay badge and pill button `Change Photo` (`border: 1.5px solid #0088ff`).
+    - 7 stacked form input fields in exact Figma order: First Name, Middle Initial (if applicable), Last Name, Birthday, Gender, Email Address, Phone Number.
+    - Full-width solid vibrant blue action button `Save Changes`.
+  - **After Log Out Screen Implementation** (`Project/src/app/features/auth/welcome/welcome.page.html`, `welcome.page.scss`, `welcome.page.ts`):
+    - Activated on `/welcome?loggedOut=true`.
+    - Top: Slanted blue airplane icon + bold black title `Trip mo, trip ko`.
+    - Organic smooth wavy blob mask (`border-radius: 40% 60% 70% 30% / 45% 50% 50% 55%`, blue border & shadow) enclosing skyscraper photography.
+    - Bold headline "You’re now logged out" and description.
+    - Two stacked solid blue buttons: `Continue as Guest` and `Log In` (both solid `#0088ff`, white text, pill radius).
+    - Cityscape skyline silhouette illustration at the bottom edge.
+  - **Database Connection Optimization** (`backend/app/core/database.py`):
+    - Added `connect_timeout=2` to PostgreSQL connection parameters, bypassing default Windows 120s TCP SYN timeout when PostgreSQL is not running and immediately falling back to canonical SQLite.
+- **Testing & Quality Gates**:
+  - Vitest Unit Tests: **310/310 passed [100%] across 30 test files** (18 tests in `profile.page.spec.ts` + 5 tests in `welcome.page.spec.ts`).
+  - Strict TypeScript Checks: **Exit code 0** (`npm --prefix Project run typecheck:e2e`).
+  - Production Angular Build: **Exit code 0** (`npm --prefix Project run build`), all component stylesheets compiled well below 16 kB warning limit.
+  - Capacitor Android Sync: **Exit code 0** (`npx cap sync android` in `Project/`), 6 plugins synchronized.
+- **Documentation Updates**:
+  - Updated `docs/DEVELOPMENT_PLAN.md` (Milestone 35 completed).
+  - Updated `docs/TODO.md` (Phase 35 tasks checked).
+  - Updated `docs/CHANGELOG.md` (Added version `[0.35.0]`).
+  - Updated `docs/TESTING_DOCUMENTATION.md` (Updated unit test count to 310 tests across 30 test files).
+  - Updated `docs/PROJECT_STATE.md` (Handoff state updated to Milestone 35).
+  - Appended Session 95 to `docs/DEVELOPMENT_LOG.md`.
+
+---
+
+```text
+DEVELOPMENT CHECKPOINT: Session 95
+STATUS: PASSED
+TIMESTAMP: 2026-11-10 13:25:00
+
+COMPLETED:
+- Aligned Profile tab, Settings subwindow, Log Out Confirmation dialog, Edit Profile subwindow, and After Log Out screen to 100% visual fidelity matching Travel Itinerary App.fig and user screenshots:
+  - Extracted authentic imagery from Figma: Pattranite selfie avatar, skyscraper photo in organic blob mask, and cityscape skyline silhouette.
+  - Profile Main Screen: Left-aligned bold Profile title, horizontal identity header with avatar + name + email handle + Edit Profile outline pill, single rounded white container card with 5 rows (Settings, Favorites, Help & Support, About, Log Out) and no chevrons.
+  - Settings Subwindow: Blue back arrow, bold Settings, single rounded card with 6 rows (Account Information, Notifications with iOS switch, Privacy & Security, Language 'English', App Appearance 'Light', and Clear Cache).
+  - Log Out Confirmation Dialog: Centered floating white card with triple-dot handle indicator, 52px blue exit door icon, title, description, and two stacked solid blue buttons (Log Out and Cancel).
+  - Edit Profile Subwindow: Blue back arrow, centered circular avatar with camera overlay badge and Change Photo pill, 7 input fields in exact Figma order, and solid blue Save Changes button.
+  - After Log Out Screen: Slanted blue airplane logo + 'Trip mo, trip ko', organic smooth wavy blob mask containing skyscraper photography, headline 'You’re now logged out', description, two stacked solid blue buttons (Continue as Guest and Log In), and anchored cityscape skyline silhouette illustration.
+  - Database fallback: Added connect_timeout=2 to avoid 120s PostgreSQL TCP hang on Windows.
+- Authored welcome.page.spec.ts and expanded profile.page.spec.ts, bringing Vitest unit test suite to 310 passing tests across 30 test files (100% pass rate).
+
+FILES CREATED:
+- Project/src/app/features/auth/welcome/welcome.page.spec.ts
+- Project/src/assets/images/pattranite_avatar.jpg
+- Project/src/assets/images/pattranite_full.jpg
+- Project/src/assets/images/logout_skyscrapers_blob.png
+- Project/src/assets/images/logout_cityscape_silhouette.png
+
+FILES MODIFIED:
+- Project/src/app/tabs/profile/profile.page.html
+- Project/src/app/tabs/profile/profile.page.scss
+- Project/src/app/tabs/profile/profile.page.ts
+- Project/src/app/tabs/profile/profile.page.spec.ts
+- Project/src/app/features/auth/welcome/welcome.page.html
+- Project/src/app/features/auth/welcome/welcome.page.scss
+- Project/src/app/features/auth/welcome/welcome.page.ts
+- backend/app/core/database.py
+- docs/TODO.md
+- docs/DEVELOPMENT_PLAN.md
+- docs/CHANGELOG.md
+- docs/TESTING_DOCUMENTATION.md
+- docs/PROJECT_STATE.md
+- docs/TECHNICAL_DECISIONS.md
+- docs/DEVELOPMENT_LOG.md
+
+TESTING RESULTS:
+- Vitest Unit Tests:          30/30 suites, 310/310 passed (100%)
+- TypeScript Strict Checks:   Exit code 0 (0 errors)
+- Production Angular Build:   Exit code 0 (0 budget errors, <16 kB component styles)
+- Android Capacitor Sync:     Exit code 0 (6 plugins synchronized)
+
+NEXT STEPS:
+- Await user instruction to commit and push changes, or continue with next requested feature.
+```
