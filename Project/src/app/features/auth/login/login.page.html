@@ -130,10 +130,15 @@
           type="button"
           class="demo-pill-btn"
           (click)="onDemoLogin()"
-          [disabled]="isLoading"
+          [disabled]="isLoading || isDemoLoading"
         >
-          <ion-icon name="sparkles" class="demo-btn-icon"></ion-icon>
-          <span>Explore Demo Account (Pattranite Persona)</span>
+          @if (isDemoLoading) {
+            <ion-spinner name="crescent" class="demo-spinner"></ion-spinner>
+            <span>Entering Demo Mode...</span>
+          } @else {
+            <ion-icon name="sparkles" class="demo-btn-icon"></ion-icon>
+            <span>Explore Demo Account (Pattranite Persona)</span>
+          }
         </button>
       </div>
 
@@ -196,8 +201,14 @@
               type="button"
               class="subwindow-save-btn"
               (click)="submitRecoveryRequest()"
+              [disabled]="!recoveryEmail.trim() || isSubmittingRecovery"
             >
-              Send Recovery Request
+              @if (isSubmittingRecovery) {
+                <ion-spinner name="crescent" class="btn-spinner"></ion-spinner>
+                <span>Sending Request...</span>
+              } @else {
+                <span>Send Recovery Request</span>
+              }
             </button>
           } @else {
             <div class="recovery-success-box">

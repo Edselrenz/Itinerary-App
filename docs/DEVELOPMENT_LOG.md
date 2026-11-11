@@ -4253,3 +4253,76 @@ NEXT STEPS:
   - `docs/DEVELOPMENT_PLAN.md`
   - `docs/CHANGELOG.md`
   - `docs/DEVELOPMENT_LOG.md`
+
+---
+
+## Session 107: Phase 43 — System-Wide Loading States & Visual Feedback Remediation Pre-Development Documentation
+- **Date & Time**: 2026-11-11 16:35:00 (Local)
+- **Objective**:
+  - Perform comprehensive pre-development documentation across all project tracking documents (`TODO.md`, `DEVELOPMENT_PLAN.md`, `CHANGELOG.md`, `DEVELOPMENT_LOG.md`, and `SYSTEM_ANALYSIS_AND_TESTING_REPORT.md`) before initiating code modifications for Phase 43.
+  - Plan the architectural remediation for the 5 visual feedback and loading defects identified in Section 9 of `SYSTEM_ANALYSIS_AND_TESTING_REPORT.md`:
+    1. Critical Infinite Loading Spinner on direct navigation in `ItineraryDetailPage`.
+    2. Missing loading spinner and progress text on Demo Account CTA in `LoginPage`.
+    3. Missing loading state and disabled state on Account Recovery in `LoginPage`.
+    4. Static form during 4-6s algorithm execution in `SuggestedWizardPage`.
+    5. Success toast race condition causing toast truncation upon saving in `SuggestedWizardPage`.
+- **Pre-Development Analysis & Architectural Strategy**:
+  - **1. Direct Route Loading in `ItineraryDetailPage`**:
+    - Under Angular's `provideZonelessChangeDetection()`, `ItineraryDetailPage` lacked `ChangeDetectorRef` and `ApplicationRef`. Direct visits to `/#/itinerary/:id` leave `isLoading = false` trapped in memory without a DOM re-render, creating a permanent infinite spinner.
+    - Solution: Inject `ChangeDetectorRef` and `ApplicationRef`, define `updateUI()`, and invoke it synchronously in `loadItinerary()` on both `next` and `error` paths.
+  - **2. Demo Account CTA Loading State in `LoginPage`**:
+    - Tapping `.demo-pill-btn` disables the button but presents zero spinner or status copy.
+    - Solution: Add `isDemoLoading: boolean = false`, update `.demo-pill-btn` with `@if (isDemoLoading)` displaying an `<ion-spinner name="crescent" class="demo-spinner">` and `"Entering Demo Mode..."`.
+  - **3. Account Recovery Submission Loading State in `LoginPage`**:
+    - Tapping `.subwindow-save-btn` inside the recovery modal neither disables the button nor renders a progress indicator.
+    - Solution: Add `isSubmittingRecovery: boolean = false`, bind `[disabled]="isSubmittingRecovery"`, and show `<ion-spinner name="crescent" class="btn-spinner">` with `this.updateUI()`.
+  - **4. Suggested Wizard Questionnaire Scrim in `SuggestedWizardPage`**:
+    - During recommendation clustering, only the bottom CTA button displays a spinner while the entire questionnaire above remains static. Mobile travelers with the CTA button below the fold experience no visual confirmation.
+    - Solution: Add `.wizard-generating-scrim` overlay with a centered card featuring a crescent spinner and informative progress copy ("Building Your Nueva Ecija Itinerary...", "Clustering destinations and optimizing route pacing...").
+  - **5. Success Toast Race Condition in `SuggestedWizardPage`**:
+    - `router.navigate(['/tabs/home'])` immediately follows `toast.present()`, causing the incoming view to clip or dismiss the toast container prematurely.
+    - Solution: Introduce an explicit 350ms graceful transition guard after `await toast.present()` before navigation.
+- **Documentation Updates Committed**:
+  - Updated `docs/TODO.md` with Phase 43 task items (43.1 through 43.6).
+  - Updated `docs/DEVELOPMENT_PLAN.md` with Milestone 43 (architectural scope and verification criteria).
+  - Updated `docs/CHANGELOG.md` with release entry `[0.43.0]`.
+  - Updated `docs/DEVELOPMENT_LOG.md` with Session 107.
+  - Updated `docs/SYSTEM_ANALYSIS_AND_TESTING_REPORT.md` and root `SYSTEM_ANALYSIS_AND_TESTING_REPORT.md` with Section 9.3 remediation plan.
+- **Tasks Executed & Implementation Details**:
+  - **1. ItineraryDetailPage (`itinerary-detail.page.ts`)**:
+    - Injected `ChangeDetectorRef` and `ApplicationRef`, implemented `updateUI()`.
+    - Hooked `this.updateUI()` into `loadItinerary()` on `next` and `error` paths, `ngOnInit()`, `selectDay()`, `toggleEditMode()`, `cancelEdit()`, `openStopDetail()`, `closeStopDetail()`, `openNearbyPlaces()`, `closeNearbyPlaces()`, `setNearbyTab()`, and `saveChanges()`.
+    - Eliminates the infinite loading freeze on direct route visits (`/#/itinerary/:id`).
+  - **2. LoginPage (`login.page.html`, `login.page.ts`, `login.page.scss`)**:
+    - Added `isDemoLoading` state and updated `.demo-pill-btn` with `<ion-spinner name="crescent" class="demo-spinner">` and `"Entering Demo Mode..."`.
+    - Added `isSubmittingRecovery` state, bound `[disabled]="isSubmittingRecovery"`, and rendered `<ion-spinner name="crescent" class="btn-spinner">` inside `.subwindow-save-btn`.
+    - Added `.demo-spinner` styling and disabled state in `login.page.scss`.
+    - Added unit tests in `login.page.spec.ts` for recovery submission and demo account loading states.
+  - **3. SuggestedWizardPage (`suggested-wizard.page.html`, `.page.scss`, `.page.ts`)**:
+    - Implemented `.wizard-generating-scrim` overlay with centered card, `<ion-spinner name="crescent">`, and descriptive status copy during recommendation clustering.
+    - Added a 350ms graceful transition guard after `await toast.present()` in `acceptAndSave()` before navigating to prevent view swap from clipping the confirmation toast.
+- **Verification & Test Results**:
+  - **Vitest Unit Tests**: `npm --prefix Project run test:unit`: **32/32 test suites passed, 330/330 tests passed (100.0%) in 36.92s**.
+  - **Angular Production Build**: `ng build --base-href /Itinerary-App/`: **Exit code 0, 0 budget violations (all components < 16 kB)**.
+  - **Automated Playwright Verification**: **4/4 checks passed (100.0%)**:
+    1. Direct route to `/#/itinerary/:id` cleanly resolved loading state without infinite spinner: **PASS**.
+    2. Demo login authenticated and navigated to `/tabs/home` with toast: **PASS**.
+    3. Recovery submission shows visual progress indicator: **PASS**.
+    4. Suggested wizard generated itinerary and rendered `.figma-trip-card` automatically: **PASS**.
+- **Files Modified**:
+  - `Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.ts`
+  - `Project/src/app/features/auth/login/login.page.ts`
+  - `Project/src/app/features/auth/login/login.page.html`
+  - `Project/src/app/features/auth/login/login.page.scss`
+  - `Project/src/app/features/auth/login/login.page.spec.ts`
+  - `Project/src/app/features/itinerary/suggested-wizard/suggested-wizard.page.html`
+  - `Project/src/app/features/itinerary/suggested-wizard/suggested-wizard.page.scss`
+  - `Project/src/app/features/itinerary/suggested-wizard/suggested-wizard.page.ts`
+  - `docs/TODO.md`
+  - `docs/DEVELOPMENT_PLAN.md`
+  - `docs/CHANGELOG.md`
+  - `docs/DEVELOPMENT_LOG.md`
+  - `docs/SYSTEM_ANALYSIS_AND_TESTING_REPORT.md`
+  - `SYSTEM_ANALYSIS_AND_TESTING_REPORT.md`
+
+

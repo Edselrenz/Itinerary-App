@@ -103,12 +103,21 @@ describe('LoginPage', () => {
     expect(component.recoverySubmitted).toBe(false);
 
     component.recoveryEmail = 'pedro@valid.ph';
-    component.submitRecoveryRequest();
+    component.submitRecoveryRequest(0);
     expect(component.recoveryError).toBeNull();
     expect(component.recoverySubmitted).toBe(true);
 
     component.closeForgotPasswordModal();
     expect(component.isForgotModalOpen).toBe(false);
+  });
+
+  it('should track isSubmittingRecovery state during recovery submission (Phase 43.3)', async () => {
+    component.recoveryEmail = 'pedro@valid.ph';
+    component.submitRecoveryRequest(50);
+    expect(component.isSubmittingRecovery).toBe(true);
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    expect(component.isSubmittingRecovery).toBe(false);
+    expect(component.recoverySubmitted).toBe(true);
   });
 
   it('should open recovery modal without duplicate toasts on forgot password click (QA-09)', () => {
@@ -145,10 +154,12 @@ describe('LoginPage', () => {
   });
 
   it('should authenticate demo account when onDemoLogin is clicked (Finding 1)', async () => {
+    expect(component.isDemoLoading).toBe(false);
     component.onDemoLogin();
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(mockAuthService.loginDemo).toHaveBeenCalled();
     expect(mockRouter.navigate).toHaveBeenCalledWith(['/tabs/home']);
+    expect(component.isDemoLoading).toBe(false);
   });
 
   it('should display error message on login failure with reactive change detection (FIX-01C)', () => {

@@ -792,3 +792,52 @@ Our comprehensive audit revealed **5 distinct visual feedback and loading defect
 - **Symptom**: After clicking "Save to My Trips", the green confirmation toast is often invisible or flashes for a fraction of a second.
 - **Root Cause**: `router.navigate(['/tabs/home'])` immediately follows `toast.present()`, causing the incoming view to unmount or visually obscure the top toast container.
 - **Fix**: Add a short 300ms–400ms delay before navigation or dispatch the toast through a root-level notification service.
+
+---
+
+### 9.3 Phase 43 Remediation Plan & Implementation Roadmap
+
+The following 5-point engineering roadmap has been established and scheduled for implementation in Phase 43 / Milestone 43:
+
+1. **Remediation 43.1 (`ItineraryDetailPage`)**:
+   - Inject `ApplicationRef` and `ChangeDetectorRef`.
+   - Implement `updateUI()`.
+   - Trigger `this.updateUI()` synchronously in `loadItinerary()` on `next` and `error` paths when setting `this.isLoading = false`.
+   - Result: Infinite loading freeze on direct route navigation (`/#/itinerary/:id`) is permanently eliminated.
+
+2. **Remediation 43.2 (`LoginPage`)**:
+   - Add `isDemoLoading: boolean = false` state tracked during `onDemoLogin()`.
+   - Update `.demo-pill-btn` in `login.page.html` with an `@if (isDemoLoading)` condition rendering `<ion-spinner name="crescent" class="demo-spinner"></ion-spinner> <span>Entering Demo Mode...</span>`.
+   - Trigger `this.updateUI()` on invocation and resolution.
+
+3. **Remediation 43.3 (`LoginPage`)**:
+   - Add `isSubmittingRecovery: boolean = false` state in `login.page.ts`.
+   - Update `.subwindow-save-btn` in `login.page.html` with `[disabled]="isSubmittingRecovery"` and render `<ion-spinner name="crescent" class="btn-spinner"></ion-spinner>` while active.
+
+4. **Remediation 43.4 (`SuggestedWizardPage`)**:
+   - Add `.wizard-generating-scrim` overlay in `suggested-wizard.page.html` and `suggested-wizard.page.scss` when `isGenerating === true`.
+   - Render a centered card with `<ion-spinner name="crescent"></ion-spinner>` and informative status ("Building Your Nueva Ecija Itinerary...", "Clustering destinations and optimizing route pacing...").
+   - Result: Travelers on mobile viewports with the submit button below the fold receive immediate, prominent feedback that generation is underway.
+
+5. **Remediation 43.5 (`SuggestedWizardPage`)**:
+   - In `suggested-wizard.page.ts:acceptAndSave()`, add a 350ms graceful delay after `await toast.present()` before executing `this.router.navigate(['/tabs/home'])`.
+   - Result: Success confirmation toast is guaranteed to display cleanly without being swallowed by view transition unmounting.
+
+---
+
+### 9.4 Phase 43 Implementation & Verification Closure
+
+All 5 visual feedback and loading defects have been implemented, verified, and audited:
+
+1. **Direct Route Navigation in `ItineraryDetailPage`**: Injected `ChangeDetectorRef` and `ApplicationRef`, implemented `updateUI()`, and hooked synchronous UI updates into `loadItinerary()` on `next` and `error` paths. Verified via Playwright that `/#/itinerary/:id` never stays stuck with an infinite loading spinner.
+2. **Demo Account CTA in `LoginPage`**: Added `isDemoLoading` state and rendered `<ion-spinner name="crescent" class="demo-spinner"></ion-spinner> <span>Entering Demo Mode...</span>` inside `.demo-pill-btn`.
+3. **Account Recovery in `LoginPage`**: Added `isSubmittingRecovery` state, bound `[disabled]="isSubmittingRecovery"`, and rendered `<ion-spinner name="crescent" class="btn-spinner"></ion-spinner>` inside `.subwindow-save-btn`.
+4. **Suggested Wizard Generation Scrim in `SuggestedWizardPage`**: Added `.wizard-generating-scrim` overlay with a progress card & spinner during algorithm execution, providing immediate feedback on mobile viewports.
+5. **Success Toast Race Condition in `SuggestedWizardPage`**: Added a 350ms graceful delay after `await toast.present()` before router navigation.
+
+**Quality Gate Results**:
+- Vitest: **32/32 suites passed, 330/330 tests passed (100.0%) in 36.92s**.
+- Angular Build: **Exit code 0, 0 budget violations (all components < 16 kB)**.
+- Playwright Verification: **4/4 checks passed (100.0%)**.
+
+

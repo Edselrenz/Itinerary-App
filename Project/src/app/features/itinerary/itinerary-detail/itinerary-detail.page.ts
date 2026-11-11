@@ -4,6 +4,8 @@ import type {
   OnInit,
 } from '@angular/core';
 import {
+  ApplicationRef,
+  ChangeDetectorRef,
   Component,
   PLATFORM_ID,
   inject,
@@ -194,6 +196,8 @@ export class ItineraryDetailPage implements OnInit, OnDestroy, ComponentCanDeact
   private toastController = inject(ToastController);
   private location = inject(Location);
   private platformId = inject(PLATFORM_ID);
+  private cdr = inject(ChangeDetectorRef);
+  private appRef = inject(ApplicationRef);
 
   constructor() {
     this.isBrowser = isPlatformBrowser(this.platformId);
@@ -244,12 +248,26 @@ export class ItineraryDetailPage implements OnInit, OnDestroy, ComponentCanDeact
     });
   }
 
+  public updateUI(): void {
+    try {
+      this.cdr.detectChanges();
+    } catch {
+      this.cdr.markForCheck();
+    }
+    try {
+      this.appRef.tick();
+    } catch {
+      // Best-effort full application tick
+    }
+  }
+
   public ngOnInit(): void {
     this.itineraryId = this.route.snapshot.paramMap.get('id');
     if (this.itineraryId) {
       this.loadItinerary(this.itineraryId);
     } else {
       this.isLoading = false;
+      this.updateUI();
     }
   }
 
@@ -284,6 +302,7 @@ export class ItineraryDetailPage implements OnInit, OnDestroy, ComponentCanDeact
               role: 'destructive',
               handler: () => {
                 this.isEditMode = false;
+                this.updateUI();
                 resolve(true);
               },
             },
@@ -302,8 +321,10 @@ export class ItineraryDetailPage implements OnInit, OnDestroy, ComponentCanDeact
       this.budgetSummary = this.itineraryService.calculateBudgetSummary(cached);
       this.refreshNearbyPlaces();
       this.isLoading = false;
+      this.updateUI();
     } else {
       this.isLoading = true;
+      this.updateUI();
     }
 
     this.subscriptions.add(
@@ -325,9 +346,11 @@ export class ItineraryDetailPage implements OnInit, OnDestroy, ComponentCanDeact
             this.budgetSummary = this.itineraryService.calculateBudgetSummary(itin);
             this.refreshNearbyPlaces();
             this.isLoading = false;
+            this.updateUI();
           },
           error: () => {
             this.isLoading = false;
+            this.updateUI();
           },
         })
     );
@@ -365,11 +388,13 @@ export class ItineraryDetailPage implements OnInit, OnDestroy, ComponentCanDeact
   public toggleEditMode(): void {
     this.initEditForm();
     this.isEditMode = true;
+    this.updateUI();
   }
 
   public cancelEdit(): void {
     this.isEditMode = false;
     this.initEditForm();
+    this.updateUI();
   }
 
   public addDay(): void {
@@ -519,6 +544,7 @@ export class ItineraryDetailPage implements OnInit, OnDestroy, ComponentCanDeact
           this.itinerary = updated;
           this.budgetSummary = this.itineraryService.calculateBudgetSummary(updated);
           this.isEditMode = false;
+          this.updateUI();
           const toast = await this.toastController.create({
             message: 'Itinerary changes saved successfully!',
             duration: 2500,
@@ -528,6 +554,7 @@ export class ItineraryDetailPage implements OnInit, OnDestroy, ComponentCanDeact
           await toast.present();
         },
         error: async () => {
+          this.updateUI();
           const toast = await this.toastController.create({
             message: 'Failed to save changes. Please try again.',
             duration: 2500,
@@ -623,6 +650,7 @@ export class ItineraryDetailPage implements OnInit, OnDestroy, ComponentCanDeact
   public selectDay(index: number): void {
     this.activeDayIndex = index;
     this.refreshNearbyPlaces();
+    this.updateUI();
     if (this.isBrowser && typeof document !== 'undefined') {
       setTimeout(() => {
         const el = document.getElementById(`day-card-${index}`);
@@ -637,18 +665,22 @@ export class ItineraryDetailPage implements OnInit, OnDestroy, ComponentCanDeact
     const curDay = this.itinerary?.days[this.activeDayIndex];
     const muni = this.getDayLocation(curDay);
     this.nearbyPlacesList = this.placeService.getNearbyPlaces(muni);
+    this.updateUI();
   }
 
   public openNearbyPlaces(_stop?: unknown): void {
     this.viewMode = 'nearby';
+    this.updateUI();
   }
 
   public closeNearbyPlaces(): void {
     this.viewMode = 'itinerary';
+    this.updateUI();
   }
 
   public setNearbyTab(tab: 'restaurants' | 'hospitals' | 'stores'): void {
     this.activeNearbyTab = tab;
+    this.updateUI();
   }
 
   public get filteredNearbyPlaces(): NearbyPlaceItem[] {
@@ -739,6 +771,7 @@ export class ItineraryDetailPage implements OnInit, OnDestroy, ComponentCanDeact
 
   public toggleAssumptions(): void {
     this.isAssumptionsExpanded = !this.isAssumptionsExpanded;
+    this.updateUI();
   }
 
   public parseAssumption(note: string): { tag: string; title: string; description: string; icon: string } {
@@ -853,11 +886,13 @@ export class ItineraryDetailPage implements OnInit, OnDestroy, ComponentCanDeact
   public openStopDetail(item: ItineraryItem): void {
     this.selectedStop = item;
     this.isStopModalOpen = true;
+    this.updateUI();
   }
 
   public closeStopDetail(): void {
     this.isStopModalOpen = false;
     this.selectedStop = null;
+    this.updateUI();
   }
 
   public onStopMarkerSelected(idx: number): void {

@@ -50,11 +50,13 @@ import { GuestMigrationService } from '../../../core/services/guest-migration.se
 export class LoginPage {
   public showPassword = false;
   public isLoading = false;
+  public isDemoLoading = false;
   public errorMessage: string | null = null;
   public isForgotModalOpen = false;
   public recoveryEmail = '';
   public recoverySubmitted = false;
   public recoveryError: string | null = null;
+  public isSubmittingRecovery = false;
 
   public loginForm = new FormGroup({
     email: new FormControl('', [Validators.required, Validators.email]),
@@ -115,16 +117,18 @@ export class LoginPage {
     this.recoveryEmail = typeof emailVal === 'string' ? emailVal.trim() : '';
     this.recoverySubmitted = false;
     this.recoveryError = null;
+    this.isSubmittingRecovery = false;
     this.isForgotModalOpen = true;
     this.updateUI();
   }
 
   public closeForgotPasswordModal(): void {
     this.isForgotModalOpen = false;
+    this.isSubmittingRecovery = false;
     this.updateUI();
   }
 
-  public submitRecoveryRequest(): void {
+  public submitRecoveryRequest(delayMs = 500): void {
     this.recoveryError = null;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!this.recoveryEmail || !emailRegex.test(this.recoveryEmail)) {
@@ -132,8 +136,21 @@ export class LoginPage {
       this.updateUI();
       return;
     }
-    this.recoverySubmitted = true;
+    this.isSubmittingRecovery = true;
     this.updateUI();
+
+    if (delayMs <= 0) {
+      this.isSubmittingRecovery = false;
+      this.recoverySubmitted = true;
+      this.updateUI();
+      return;
+    }
+
+    setTimeout(() => {
+      this.isSubmittingRecovery = false;
+      this.recoverySubmitted = true;
+      this.updateUI();
+    }, delayMs);
   }
 
   public onSubmit(): void {
@@ -178,6 +195,7 @@ export class LoginPage {
 
   public onDemoLogin(): void {
     this.isLoading = true;
+    this.isDemoLoading = true;
     this.errorMessage = null;
     this.updateUI();
     this.authService.loginDemo().subscribe({
@@ -188,6 +206,7 @@ export class LoginPage {
           // Migration is best-effort and non-blocking
         }
         this.isLoading = false;
+        this.isDemoLoading = false;
         this.updateUI();
         const toast = await this.toastController.create({
           message: 'Signed in as Demo Traveler (Pattranite Persona)',
@@ -200,6 +219,7 @@ export class LoginPage {
       },
       error: () => {
         this.isLoading = false;
+        this.isDemoLoading = false;
         this.updateUI();
       },
     });

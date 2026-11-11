@@ -1174,3 +1174,29 @@ px cap sync android): **Exit code 0 (6 plugins synchronized)**.
   - All 4 Playwright reactivity tests passed (100.0%).
   - Vitest Unit Tests: **32/32 test suites passed, 329/329 tests passed (100.0%) in 23.92s**.
   - Production Angular Build (`ng build`): **Exit code 0, 0 budget violations (all components < 16 kB)**.
+
+---
+
+## Phase 43: System-Wide Loading States & Visual Feedback Remediation
+- [x] **43.1 (Fix Infinite Loading Spinner in ItineraryDetailPage)**:
+  - In `Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.ts`, injected `ApplicationRef` alongside `ChangeDetectorRef` and implemented `updateUI()` (`this.cdr.detectChanges()` + `this.appRef.tick()`).
+  - Invoked `this.updateUI()` inside `loadItinerary()` on both `next` and `error` paths when setting `this.isLoading = false`, ensuring direct route navigation (`/#/itinerary/:id`) dismisses the loading spinner immediately without requiring DOM interactions.
+- [x] **43.2 (Fix Demo Account CTA Loading State in LoginPage)**:
+  - In `Project/src/app/features/auth/login/login.page.ts`, introduced `isDemoLoading: boolean = false` state tracked during `onDemoLogin()`.
+  - In `Project/src/app/features/auth/login/login.page.html`, updated `.demo-pill-btn` with an `@if (isDemoLoading)` block rendering `<ion-spinner name="crescent" class="demo-spinner"></ion-spinner> <span>Entering Demo Mode...</span>`.
+  - Ensured `this.updateUI()` is invoked on start, success, and error so the loading indicator renders immediately.
+- [x] **43.3 (Fix Account Recovery Submission Loading State in LoginPage)**:
+  - In `Project/src/app/features/auth/login/login.page.ts`, introduced `isSubmittingRecovery: boolean = false` state tracked in `submitRecoveryRequest()`.
+  - In `Project/src/app/features/auth/login/login.page.html`, bound `[disabled]="isSubmittingRecovery"` and rendered `<ion-spinner name="crescent" class="btn-spinner"></ion-spinner>` inside `.subwindow-save-btn`.
+  - Ensured `this.updateUI()` is invoked on trigger and completion.
+- [x] **43.4 (Fix Static Form During Suggested Wizard Generation)**:
+  - In `Project/src/app/features/itinerary/suggested-wizard/suggested-wizard.page.html` and `suggested-wizard.page.scss`, added an overlay card (`.wizard-generating-scrim`) over the questionnaire when `isGenerating === true`.
+  - Displayed crescent spinner with informative progress text ("Building Your Nueva Ecija Itinerary...", "Clustering destinations and optimizing route pacing...") guaranteeing immediate visual feedback on mobile viewports where the CTA button is below the fold.
+- [x] **43.5 (Fix Success Toast Race Condition on Itinerary Save)**:
+  - In `Project/src/app/features/itinerary/suggested-wizard/suggested-wizard.page.ts:acceptAndSave()`, introduced a graceful 350ms transition guard after `await toast.present()` before executing `this.router.navigate(['/tabs/home'])`.
+  - Prevented view transition unmounting from obscuring the green confirmation toast.
+- [x] **43.6 (Quality Gates Verification & E2E Testing)**:
+  - Vitest Unit Tests: **32/32 suites passed, 330/330 tests passed (100.0%) in 36.92s**.
+  - Production Angular build: **Exit code 0, 0 budget violations (all components < 16 kB)**.
+  - Playwright automated verification: **4/4 checks passed (100.0%)** testing direct itinerary route, demo account loading, account recovery spinner, and wizard scrim.
+

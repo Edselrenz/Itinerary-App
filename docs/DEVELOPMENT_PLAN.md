@@ -540,3 +540,28 @@ The bottom navigation bar implements all 4 planned primary tabs (`/tabs/home`, `
 - [x] **42.2: Suggested Wizard Immediate Itinerary Feedback**: Resolved UI freeze in `suggested-wizard.page.ts` where the "Find Itinerary" button remained in an infinite circling spinner state (`isGenerating = true`) until an external click triggered change detection. Implemented `updateUI()`, invoking immediate synchronous change detection upon `suggestItinerary` next/error resolution and `saveItinerary` handlers, clearing the spinner and transitioning to the itinerary view automatically.
 - [x] **42.3: Auth & Custom Builder Zoneless Synchronization**: Updated `signup.page.ts` and `custom-builder.page.ts` to invoke synchronous `updateUI()` on asynchronous observable completion.
 - [x] **42.4: Quality Gates & Automated E2E Verification**: Verified via automated Playwright test suite (`test_zoneless_reactivity.mjs`) against the production distribution bundle (`Project/www`), confirming 100% immediate visual feedback without click triggers. 100% Vitest unit tests passed (32/32 suites, 329/329 tests) and clean production build with 0 budget violations.
+
+#### Milestone 43: System-Wide Loading States & Visual Feedback Remediation (COMPLETED)
+- [x] **43.1: Fix Infinite Loading Spinner on Direct Route Navigation (`ItineraryDetailPage`)**:
+  - In `Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.ts`, injected `ApplicationRef` alongside `ChangeDetectorRef` and implemented `updateUI()` combining `this.cdr.detectChanges()` and `this.appRef.tick()`.
+  - In `loadItinerary()`, invoked `this.updateUI()` inside both `next` and `error` paths when setting `this.isLoading = false`, ensuring direct deep links (`/#/itinerary/:id`) dismiss the centered loading spinner immediately upon data arrival or 404 without requiring user gestures.
+- [x] **43.2: Demo Account CTA Loading State (`LoginPage`)**:
+  - In `Project/src/app/features/auth/login/login.page.ts`, tracked `isDemoLoading: boolean = false` throughout `onDemoLogin()`.
+  - In `login.page.html`, augmented `.demo-pill-btn` with an `@if (isDemoLoading)` state displaying `<ion-spinner name="crescent" class="demo-spinner"></ion-spinner> <span>Entering Demo Mode...</span>`.
+  - Called `this.updateUI()` on state transitions to guarantee immediate visual feedback.
+- [x] **43.3: Account Recovery Submission Loading State (`LoginPage`)**:
+  - In `login.page.ts`, introduced `isSubmittingRecovery: boolean = false` in `submitRecoveryRequest()`.
+  - In `login.page.html`, bound `[disabled]="isSubmittingRecovery"` and rendered `<ion-spinner name="crescent" class="btn-spinner"></ion-spinner>` inside `.subwindow-save-btn`.
+  - Called `this.updateUI()` on state transitions.
+- [x] **43.4: Progress Scrim During Suggested Wizard Generation (`SuggestedWizardPage`)**:
+  - In `suggested-wizard.page.html` and `suggested-wizard.page.scss`, implemented `.wizard-generating-scrim` overlay displaying a centered progress card with crescent spinner and informative status ("Building Your Nueva Ecija Itinerary...", "Clustering destinations and optimizing route pacing...").
+  - Guaranteed immediate visual feedback during the 4–6s clustering computation even on mobile viewports where the CTA button is below the fold.
+- [x] **43.5: Success Toast Transition Guard on Itinerary Save (`SuggestedWizardPage`)**:
+  - In `suggested-wizard.page.ts:acceptAndSave()`, introduced a 350ms graceful delay after `await toast.present()` before `this.router.navigate(['/tabs/home'])`.
+  - Prevented Ionic `<ion-router-outlet>` view swap animations from obscuring or clipping the green confirmation toast.
+- [x] **43.6: Comprehensive Verification & Release Gates**:
+  - Vitest Unit Tests: **32/32 suites, 330/330 tests passed (100.0%) in 36.92s**.
+  - Angular production build: **0 budget violations (all components < 16 kB)**.
+  - Playwright automated verification of all 5 remediated flows: **4/4 checks passed (100.0%)**.
+  - Deployed to GitHub Pages and verified live website.
+

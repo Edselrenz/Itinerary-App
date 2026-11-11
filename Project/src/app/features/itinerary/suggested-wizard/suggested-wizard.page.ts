@@ -697,6 +697,8 @@ export class SuggestedWizardPage implements OnInit {
             position: 'top',
           });
           await toast.present();
+          // Graceful transition delay so toast presentation is visible before router swaps views (Phase 43.5)
+          await new Promise((resolve) => setTimeout(resolve, 350));
           if (targetRoute === '/custom-builder') {
             await this.router.navigate(['/custom-builder', saved.id]);
           } else {

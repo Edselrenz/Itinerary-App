@@ -1,3 +1,21 @@
+## [0.43.0] - 2026-11-11
+### Fixed
+- **Infinite Loading Spinner on Direct Route Navigation (`ItineraryDetailPage`)**:
+  - In `Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.ts`, injected `ApplicationRef` alongside `ChangeDetectorRef` and implemented `updateUI()`.
+  - Added synchronous `this.updateUI()` inside `loadItinerary()` on `next` and `error` paths when setting `this.isLoading = false`, ensuring direct route navigation (`/#/itinerary/:id`) dismisses the centered loading spinner immediately upon data arrival or 404 without requiring DOM touch events.
+- **Demo Account CTA Loading State (`LoginPage`)**:
+  - In `Project/src/app/features/auth/login/login.page.ts`, added `isDemoLoading: boolean = false` state tracked throughout `onDemoLogin()`.
+  - In `login.page.html`, updated `.demo-pill-btn` with an `@if (isDemoLoading)` block rendering `<ion-spinner name="crescent" class="demo-spinner"></ion-spinner> <span>Entering Demo Mode...</span>`.
+- **Missing Loading State on Account Recovery (`LoginPage`)**:
+  - In `login.page.ts`, added `isSubmittingRecovery: boolean = false` state tracked in `submitRecoveryRequest()`.
+  - In `login.page.html`, bound `[disabled]="isSubmittingRecovery"` and rendered `<ion-spinner name="crescent" class="btn-spinner"></ion-spinner>` inside `.subwindow-save-btn`.
+- **Static Questionnaire Feedback During Wizard Generation (`SuggestedWizardPage`)**:
+  - In `suggested-wizard.page.html` and `suggested-wizard.page.scss`, implemented `.wizard-generating-scrim` overlay with centered progress card, crescent spinner, and descriptive status text ("Building Your Nueva Ecija Itinerary...", "Clustering destinations and optimizing route pacing..."), guaranteeing immediate feedback on mobile screens where the action button is below the fold.
+- **Success Toast Race Condition on Itinerary Save (`SuggestedWizardPage`)**:
+  - In `suggested-wizard.page.ts:acceptAndSave()`, added a 350ms graceful delay after `await toast.present()` prior to router navigation to prevent Ionic view unmounting from clipping the green confirmation toast.
+
+---
+
 ## [0.42.0] - 2026-11-11
 ### Fixed
 - **Login Immediate Feedback on Invalid Password**:

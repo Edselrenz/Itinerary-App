@@ -24,6 +24,16 @@
       <h1 class="main-heading">Tell us your travel details</h1>
     </div>
 
+    @if (isGenerating) {
+    <div class="wizard-generating-scrim" role="status" aria-live="polite">
+      <div class="scrim-card">
+        <ion-spinner name="crescent" class="scrim-spinner"></ion-spinner>
+        <h3 class="scrim-title">Building Your Itinerary</h3>
+        <p class="scrim-desc">Clustering destinations and optimizing route pacing across Nueva Ecija...</p>
+      </div>
+    </div>
+    }
+
     <form [formGroup]="form" class="wizard-form">
       <!-- Destination Field with Combobox & Wrapped Quick Chips -->
       <div class="form-group destination-form-group">
