@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component } from '@angular/core';
+import { ApplicationRef, ChangeDetectorRef, Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   AbstractControl,
@@ -85,6 +85,8 @@ export class SignupPage {
 
   public isUsernameCustom = false;
 
+  private appRef = inject(ApplicationRef);
+
   constructor(
     private router: Router,
     private authService: AuthService,
@@ -106,6 +108,19 @@ export class SignupPage {
     });
   }
 
+  private updateUI(): void {
+    try {
+      this.cdr.detectChanges();
+    } catch {
+      this.cdr.markForCheck();
+    }
+    try {
+      this.appRef.tick();
+    } catch {
+      // Best-effort full application tick
+    }
+  }
+
   public autoSuggestUsername(): void {
     if (this.isUsernameCustom) return;
     const fn = (this.signupForm.get('firstName')?.value || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -122,12 +137,12 @@ export class SignupPage {
 
   public togglePassword(): void {
     this.showPassword = !this.showPassword;
-    this.cdr.markForCheck();
+    this.updateUI();
   }
 
   public toggleConfirmPassword(): void {
     this.showConfirmPassword = !this.showConfirmPassword;
-    this.cdr.markForCheck();
+    this.updateUI();
   }
 
   public goBack(): void {
@@ -141,13 +156,13 @@ export class SignupPage {
   public onSubmit(): void {
     if (this.signupForm.invalid) {
       this.signupForm.markAllAsTouched();
-      this.cdr.markForCheck();
+      this.updateUI();
       return;
     }
 
     this.isLoading = true;
     this.errorMessage = null;
-    this.cdr.markForCheck();
+    this.updateUI();
 
     const val = this.signupForm.value;
     const emailStr = (val.email || '').trim();
@@ -172,7 +187,7 @@ export class SignupPage {
             // Non-blocking
           }
           this.isLoading = false;
-          this.cdr.markForCheck();
+          this.updateUI();
           this.router.navigate(['/tabs/home']);
         },
         error: (err) => {
@@ -180,7 +195,7 @@ export class SignupPage {
           this.errorMessage =
             err.error?.detail ||
             'Unable to complete registration. Please check your information.';
-          this.cdr.markForCheck();
+          this.updateUI();
         },
       });
   }

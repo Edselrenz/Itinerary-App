@@ -4213,3 +4213,43 @@ NEXT STEPS:
   - `docs/DEVELOPMENT_PLAN.md` (marked Milestone 41 COMPLETED)
   - `docs/CHANGELOG.md` (logged release `[0.41.0]`)
   - `docs/DEVELOPMENT_LOG.md` (recorded Session 105)
+
+---
+
+## Session 106: Phase 42 — Zoneless Immediate Feedback & Change Detection Synchronization
+- **Date & Time**: 2026-11-11 15:25:00 - 15:40:00 (Local)
+- **Objective**:
+  - Resolve issue where logging in with an invalid password does not give immediate feedback unless clicking on something.
+  - Resolve issue where creating a suggested itinerary shows an infinite circling spinner in the create button unless clicking on something.
+- **Root Cause Analysis**:
+  - In `Project/src/main.ts`, the application uses Angular Zoneless Change Detection (`provideZonelessChangeDetection()`).
+  - Without Zone.js, asynchronous callbacks (such as HTTP `HttpClient` errors, RxJS `catchError`, or Promise resolutions) do not automatically schedule an application tick.
+  - Calling `this.cdr.markForCheck()` merely marks component views as dirty; without Zone.js, dirty views remain unchecked until a DOM event (such as a subsequent click) triggers an Angular event listener tick.
+- **Tasks Performed & Implementation Details**:
+  - **Login Page (`login.page.ts`)**:
+    - Injected `ApplicationRef` alongside `ChangeDetectorRef`.
+    - Implemented `updateUI()` which invokes synchronous `this.cdr.detectChanges()` guarded by try/catch, followed by `this.appRef.tick()`.
+    - Replaced all async callback `markForCheck()` calls in `onSubmit()` and `onDemoLogin()` with `this.updateUI()`.
+    - Error banner `<div class="error-banner">` now renders immediately upon 401 Unauthorized or network failure, and the login button re-enables with zero delay and no clicks required.
+  - **Suggested Wizard Page (`suggested-wizard.page.ts`)**:
+    - Injected `ApplicationRef` and implemented `updateUI()`.
+    - Replaced all `markForCheck()` calls in `generateItinerary()`, `acceptAndSave()`, `selectDay()`, `refreshNearbyPlaces()`, and form questionnaire controls with `this.updateUI()`.
+    - The button spinner (`isGenerating = true`) clears immediately upon suggestion completion, and the view transitions automatically to `viewMode = 'itinerary'` without requiring any artificial screen taps.
+  - **Signup & Custom Builder Pages**:
+    - Updated `signup.page.ts` and `custom-builder.page.ts` to execute `updateUI()` upon asynchronous completion.
+  - **Quality Gates & Automated Verification**:
+    - Built production distribution (`ng build`) with exit code 0; all component styles strictly < 16 kB.
+    - Vitest unit tests: **32/32 suites passed, 329/329 tests passed (100.0%) in 23.92s**.
+    - Executed automated Playwright test suite (`test_zoneless_reactivity.mjs`) against `Project/www`:
+      1. Login immediate error banner feedback on invalid credentials without extra clicks: **PASS**.
+      2. Suggested Wizard immediate transition to generated plan without stuck circling spinner: **PASS**.
+      3. Total checks: **4/4 passed (100.0%)**.
+- **Files Modified**:
+  - `Project/src/app/features/auth/login/login.page.ts`
+  - `Project/src/app/features/itinerary/suggested-wizard/suggested-wizard.page.ts`
+  - `Project/src/app/features/auth/signup/signup.page.ts`
+  - `Project/src/app/features/itinerary/custom-builder/custom-builder.page.ts`
+  - `docs/TODO.md`
+  - `docs/DEVELOPMENT_PLAN.md`
+  - `docs/CHANGELOG.md`
+  - `docs/DEVELOPMENT_LOG.md`

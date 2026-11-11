@@ -1152,3 +1152,25 @@ px cap sync android): **Exit code 0 (6 plugins synchronized)**.
   - Angular Production Build (`ng build --base-href /Itinerary-App/`): **Exit code 0, 0 budget violations (all components < 16 kB)**.
   - Capacitor Android Sync: **Exit code 0 (web distribution directory synced)**.
   - Updated `docs/DEVELOPMENT_PLAN.md`, `docs/CHANGELOG.md`, and `docs/DEVELOPMENT_LOG.md`.
+
+---
+
+## Phase 42: Zoneless Immediate Feedback & Change Detection Synchronization
+- [x] **42.1 (Login Immediate Feedback on Invalid Password)**:
+  - In `Project/src/app/features/auth/login/login.page.ts`, resolved zoneless change detection latency where `this.cdr.markForCheck()` only marked views as dirty but failed to trigger an immediate template refresh without external DOM click events.
+  - Injected `ApplicationRef` alongside `ChangeDetectorRef` and implemented `updateUI()`, combining synchronous `this.cdr.detectChanges()` with `this.appRef.tick()`.
+  - Verified `<div class="error-banner">` renders immediately upon invalid password or network error and re-enables the submit button with zero user interaction delay.
+- [x] **42.2 (Suggested Wizard Immediate Itinerary Feedback)**:
+  - In `Project/src/app/features/itinerary/suggested-wizard/suggested-wizard.page.ts`, resolved freeze where the "Find Itinerary" button remained in an infinite circling spinner state (`isGenerating = true`) after recommendation clustering completed.
+  - Injected `ApplicationRef` and implemented `updateUI()`, invoking immediate synchronous change detection upon `suggestItinerary` next/error resolution and `saveItinerary` handlers.
+  - Verified the button spinner clears automatically and the view immediately transitions into the generated itinerary view without requiring any artificial screen clicks.
+- [x] **42.3 (Auth & Custom Builder Zoneless Synchronization)**:
+  - In `Project/src/app/features/auth/signup/signup.page.ts`, injected `ApplicationRef` and updated `onSubmit()` to invoke `updateUI()`.
+  - In `Project/src/app/features/itinerary/custom-builder/custom-builder.page.ts`, injected `ChangeDetectorRef` and `ApplicationRef` and updated `saveItinerary()` to invoke `updateUI()`.
+- [x] **42.4 (Automated Playwright & Quality Gates Verification)**:
+  - Created automated Playwright verification script (`test_zoneless_reactivity.mjs`) testing both workflows against the production distribution bundle (`Project/www`):
+    1. Login error banner feedback renders immediately upon submitting invalid credentials (no clicks needed).
+    2. Suggested Wizard transitions automatically to the generated plan (no stuck circling spinner, no clicks needed).
+  - All 4 Playwright reactivity tests passed (100.0%).
+  - Vitest Unit Tests: **32/32 test suites passed, 329/329 tests passed (100.0%) in 23.92s**.
+  - Production Angular Build (`ng build`): **Exit code 0, 0 budget violations (all components < 16 kB)**.

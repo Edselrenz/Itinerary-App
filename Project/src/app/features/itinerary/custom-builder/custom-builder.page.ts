@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import type { OnDestroy, OnInit } from '@angular/core';
-import { Component, inject } from '@angular/core';
+import { ApplicationRef, ChangeDetectorRef, Component, inject } from '@angular/core';
 import type { FormGroup } from '@angular/forms';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -216,6 +216,21 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
   public placeService = inject(PlaceService);
   private alertController = inject(AlertController);
   private toastController = inject(ToastController);
+  private cdr = inject(ChangeDetectorRef);
+  private appRef = inject(ApplicationRef);
+
+  private updateUI(): void {
+    try {
+      this.cdr.detectChanges();
+    } catch {
+      this.cdr.markForCheck();
+    }
+    try {
+      this.appRef.tick();
+    } catch {
+      // Best-effort full application tick
+    }
+  }
 
   constructor() {
     addIcons({arrowBack,checkmarkCircle,addOutline,calendarOutline,createOutline,locationSharp,locationOutline,cashOutline,searchOutline,closeOutline,checkmark,arrowForwardOutline,trashOutline,arrowUpOutline,arrowDownOutline,businessOutline,saveOutline,checkmarkOutline,timeOutline,alertCircleOutline,sparkles,});
@@ -1404,6 +1419,7 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
     }
 
     this.isSaving = true;
+    this.updateUI();
     const formVals = this.form.value;
 
     const payload = {
@@ -1452,6 +1468,7 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
       next: async (saved) => {
         this.isSaving = false;
         this.hasUnsavedChanges = false;
+        this.updateUI();
         if (saved && saved.id) {
           this.router.navigate(['/itinerary', saved.id]);
         } else {
@@ -1467,6 +1484,7 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
       },
       error: async (err) => {
         this.isSaving = false;
+        this.updateUI();
         const toast = await this.toastController.create({
           message: err?.error?.detail || 'Failed to save itinerary. Please try again.',
           duration: 3500,

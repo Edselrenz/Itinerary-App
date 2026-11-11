@@ -1,3 +1,17 @@
+## [0.42.0] - 2026-11-11
+### Fixed
+- **Login Immediate Feedback on Invalid Password**:
+  - In `Project/src/app/features/auth/login/login.page.ts`, resolved zoneless change detection latency where `this.cdr.markForCheck()` failed to trigger immediate view re-render during asynchronous error callbacks.
+  - Injected `ApplicationRef` alongside `ChangeDetectorRef` and implemented `updateUI()`, combining synchronous `this.cdr.detectChanges()` and `this.appRef.tick()`, rendering `<div class="error-banner">` and re-enabling the login button immediately without requiring user clicks.
+- **Suggested Wizard Immediate Itinerary Feedback**:
+  - In `Project/src/app/features/itinerary/suggested-wizard/suggested-wizard.page.ts`, resolved freeze where the "Find Itinerary" button remained in an infinite circling spinner state (`isGenerating = true`) until an external click triggered change detection.
+  - Implemented `updateUI()`, invoking immediate synchronous change detection upon `suggestItinerary` next/error resolution and `saveItinerary` handlers.
+  - Verified the button spinner clears automatically and the view immediately transitions into the generated itinerary view without requiring any artificial screen clicks.
+- **Zoneless Synchronization in Signup & Custom Builder**:
+  - Updated `Project/src/app/features/auth/signup/signup.page.ts` and `Project/src/app/features/itinerary/custom-builder/custom-builder.page.ts` to execute synchronous `updateUI()` on asynchronous observable completion, preventing unrendered async states.
+
+---
+
 ## [0.41.0] - 2026-11-11
 ### Fixed
 - **Zoneless Error Banner Reactivity in LoginPage (FIX-01C)**:

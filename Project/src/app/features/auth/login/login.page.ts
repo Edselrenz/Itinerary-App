@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, inject } from '@angular/core';
+import { ApplicationRef, ChangeDetectorRef, Component, inject } from '@angular/core';
 import {
   FormControl,
   FormGroup,
@@ -67,6 +67,7 @@ export class LoginPage {
   private guestMigrationService = inject(GuestMigrationService);
   private toastController = inject(ToastController);
   private cdr = inject(ChangeDetectorRef);
+  private appRef = inject(ApplicationRef);
 
   constructor() {
     addIcons({
@@ -83,9 +84,22 @@ export class LoginPage {
     });
   }
 
+  private updateUI(): void {
+    try {
+      this.cdr.detectChanges();
+    } catch {
+      this.cdr.markForCheck();
+    }
+    try {
+      this.appRef.tick();
+    } catch {
+      // Best-effort full application tick
+    }
+  }
+
   public togglePassword(): void {
     this.showPassword = !this.showPassword;
-    this.cdr.markForCheck();
+    this.updateUI();
   }
 
   public goBack(): void {
@@ -102,12 +116,12 @@ export class LoginPage {
     this.recoverySubmitted = false;
     this.recoveryError = null;
     this.isForgotModalOpen = true;
-    this.cdr.markForCheck();
+    this.updateUI();
   }
 
   public closeForgotPasswordModal(): void {
     this.isForgotModalOpen = false;
-    this.cdr.markForCheck();
+    this.updateUI();
   }
 
   public submitRecoveryRequest(): void {
@@ -115,23 +129,23 @@ export class LoginPage {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!this.recoveryEmail || !emailRegex.test(this.recoveryEmail)) {
       this.recoveryError = 'Please enter a valid email address.';
-      this.cdr.markForCheck();
+      this.updateUI();
       return;
     }
     this.recoverySubmitted = true;
-    this.cdr.markForCheck();
+    this.updateUI();
   }
 
   public onSubmit(): void {
     if (this.loginForm.invalid) {
       this.loginForm.markAllAsTouched();
-      this.cdr.markForCheck();
+      this.updateUI();
       return;
     }
 
     this.isLoading = true;
     this.errorMessage = null;
-    this.cdr.markForCheck();
+    this.updateUI();
 
     const { email, password, rememberMe } = this.loginForm.value;
     this.authService
@@ -144,7 +158,7 @@ export class LoginPage {
             // Migration is best-effort and non-blocking
           }
           this.isLoading = false;
-          this.cdr.markForCheck();
+          this.updateUI();
           this.router.navigate(['/tabs/home']);
         },
         error: (err) => {
@@ -157,7 +171,7 @@ export class LoginPage {
               err.error?.detail ||
               'Invalid email or password. Please check your credentials and try again.';
           }
-          this.cdr.markForCheck();
+          this.updateUI();
         },
       });
   }
@@ -165,7 +179,7 @@ export class LoginPage {
   public onDemoLogin(): void {
     this.isLoading = true;
     this.errorMessage = null;
-    this.cdr.markForCheck();
+    this.updateUI();
     this.authService.loginDemo().subscribe({
       next: async () => {
         try {
@@ -174,7 +188,7 @@ export class LoginPage {
           // Migration is best-effort and non-blocking
         }
         this.isLoading = false;
-        this.cdr.markForCheck();
+        this.updateUI();
         const toast = await this.toastController.create({
           message: 'Signed in as Demo Traveler (Pattranite Persona)',
           duration: 2000,
@@ -186,7 +200,7 @@ export class LoginPage {
       },
       error: () => {
         this.isLoading = false;
-        this.cdr.markForCheck();
+        this.updateUI();
       },
     });
   }

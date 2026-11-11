@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import type { OnInit } from '@angular/core';
-import { ChangeDetectorRef, Component, inject } from '@angular/core';
+import { ApplicationRef, ChangeDetectorRef, Component, inject } from '@angular/core';
 import type { FormGroup } from '@angular/forms';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -155,6 +155,20 @@ export class SuggestedWizardPage implements OnInit {
   public placeService = inject(PlaceService);
   private toastController = inject(ToastController);
   private cdr = inject(ChangeDetectorRef);
+  private appRef = inject(ApplicationRef);
+
+  private updateUI(): void {
+    try {
+      this.cdr.detectChanges();
+    } catch {
+      this.cdr.markForCheck();
+    }
+    try {
+      this.appRef.tick();
+    } catch {
+      // Best-effort full application tick
+    }
+  }
 
   constructor() {
     addIcons({
@@ -236,7 +250,7 @@ export class SuggestedWizardPage implements OnInit {
 
   public setDestination(dest: string): void {
     this.form.patchValue({ destination: dest });
-    this.cdr.markForCheck();
+    this.updateUI();
   }
 
   public onDestinationSelected(event: {
@@ -250,12 +264,12 @@ export class SuggestedWizardPage implements OnInit {
     } else if (event.type === 'municipality') {
       this.anchorPlaceId = undefined;
     }
-    this.cdr.markForCheck();
+    this.updateUI();
   }
 
   public setBudgetPreset(budget: number): void {
     this.form.patchValue({ daily_budget: budget });
-    this.cdr.markForCheck();
+    this.updateUI();
   }
 
   public togglePreference(key: string): void {
@@ -264,7 +278,7 @@ export class SuggestedWizardPage implements OnInit {
     } else {
       this.selectedPreferences.add(key);
     }
-    this.cdr.markForCheck();
+    this.updateUI();
   }
 
   public isPreferenceSelected(key: string): boolean {
@@ -284,12 +298,12 @@ export class SuggestedWizardPage implements OnInit {
       this.popupEndDate = toLocalIsoDate(addDaysLocal(start, 2));
     }
     this.isDatePickerOpen = true;
-    this.cdr.markForCheck();
+    this.updateUI();
   }
 
   public closeDatePicker(): void {
     this.isDatePickerOpen = false;
-    this.cdr.markForCheck();
+    this.updateUI();
   }
 
   public onPopupDateChange(): void {
@@ -384,21 +398,23 @@ export class SuggestedWizardPage implements OnInit {
 
   public setTravelMode(mode: 'DRIVE' | 'TWO_WHEELER' | 'WALK'): void {
     this.travelMode = mode;
-    this.cdr.markForCheck();
+    this.updateUI();
   }
 
   public setMinRating(rating: number): void {
     this.minRating = rating;
-    this.cdr.markForCheck();
+    this.updateUI();
   }
 
   public generateItinerary(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      this.updateUI();
       return;
     }
 
     this.isGenerating = true;
+    this.updateUI();
     const vals = this.form.value;
 
     const req: SuggestedItineraryRequest = {
@@ -425,11 +441,11 @@ export class SuggestedWizardPage implements OnInit {
         this.itineraryService.setActiveDraftItinerary(plan);
         this.budgetSummary = this.itineraryService.calculateBudgetSummary(plan);
         this.refreshNearbyPlaces();
-        this.cdr.markForCheck();
+        this.updateUI();
       },
       error: async (err) => {
         this.isGenerating = false;
-        this.cdr.markForCheck();
+        this.updateUI();
         const toast = await this.toastController.create({
           message: err?.error?.detail || 'Failed to generate itinerary. Please try again.',
           duration: 3000,
@@ -444,26 +460,26 @@ export class SuggestedWizardPage implements OnInit {
   public selectDay(index: number): void {
     this.activeDayIndex = index;
     this.refreshNearbyPlaces();
-    this.cdr.markForCheck();
+    this.updateUI();
   }
 
   public refreshNearbyPlaces(): void {
     const curDay = this.generatedPlan?.days[this.activeDayIndex];
     const muni = this.getDayLocationName(curDay);
     this.nearbyPlacesList = this.placeService.getNearbyPlaces(muni);
-    this.cdr.markForCheck();
+    this.updateUI();
   }
 
   public openStopDetail(stop: ItineraryItem): void {
     this.selectedStop = stop;
     this.isStopModalOpen = true;
-    this.cdr.markForCheck();
+    this.updateUI();
   }
 
   public closeStopDetail(): void {
     this.isStopModalOpen = false;
     this.selectedStop = null;
-    this.cdr.markForCheck();
+    this.updateUI();
   }
 
   public getStopImage(stop: ItineraryItem): string {
@@ -665,12 +681,15 @@ export class SuggestedWizardPage implements OnInit {
       })),
     };
 
+    this.isSaving = true;
+    this.updateUI();
+
     return new Promise<void>((resolve, reject) => {
       this.itineraryService.createItinerary(payload).subscribe({
         next: async (saved) => {
           this.isSaving = false;
           this.itineraryService.setActiveDraftItinerary(null);
-          this.cdr.markForCheck();
+          this.updateUI();
           const toast = await this.toastController.create({
             message: `Suggested itinerary "${saved.title}" saved successfully!`,
             duration: 2500,
@@ -688,7 +707,7 @@ export class SuggestedWizardPage implements OnInit {
         error: async (err) => {
           this.isSaving = false;
           this.itineraryService.setActiveDraftItinerary(null);
-          this.cdr.markForCheck();
+          this.updateUI();
           const toast = await this.toastController.create({
             message: err?.error?.detail || 'Failed to save itinerary.',
             duration: 3000,

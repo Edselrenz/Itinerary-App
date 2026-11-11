@@ -728,7 +728,8 @@ All test suites were executed to establish a complete audit trail:
 
 ---
 
-### 8.5 Actionable Next Steps
+### 8.5 Resolved Items & Phase 42 Audit Closure
 
-1. **Resolve `login.page.ts` Zoneless Reactivity**: Inject `ChangeDetectorRef` and call `this.cdr.markForCheck()` in the `error: (err) => ...` callback so invalid credential banners appear immediately upon 401 rejection.
-2. **Deploy Commit `b5c10aa` to GitHub Pages**: Push `main` to trigger the GitHub Actions workflow, updating the production bundle so that the `.demo-pill-btn` ("Explore Demo Persona") and the latest profile updates go live on `https://edselrenz.github.io/Itinerary-App/`.
+1. **Resolve `login.page.ts` Zoneless Reactivity**: **RESOLVED in Phase 42**. Injected `ApplicationRef` alongside `ChangeDetectorRef` and implemented `updateUI()`, combining synchronous `this.cdr.detectChanges()` and `this.appRef.tick()`. Invalid credential errors and server unreachability banners (`<div class="error-banner">`) now appear immediately with zero click delay.
+2. **Resolve `suggested-wizard.page.ts` Circling Spinner UI Freeze**: **RESOLVED in Phase 42**. Injected `ApplicationRef` and implemented `updateUI()` in `suggested-wizard.page.ts`. When recommendation generation completes, `this.updateUI()` is invoked immediately, automatically clearing the circling button spinner and transitioning directly into the generated itinerary view without requiring any screen clicks.
+3. **Deploy Latest Bundle to GitHub Pages**: Commit `0be51bb` successfully built and deployed via GitHub Actions (Workflow Run `42976994636`). Verified live on `https://edselrenz.github.io/Itinerary-App/` with 14/14 Playwright tests passed (100.0%). Next push will deploy Phase 42 immediate reactivity updates.
