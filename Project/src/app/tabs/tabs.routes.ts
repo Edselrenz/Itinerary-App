@@ -1,4 +1,5 @@
-import type { Routes } from '@angular/router';
+import { inject } from '@angular/core';
+import { Router, type Routes } from '@angular/router';
 
 import { TabsPage } from './tabs.page';
 
@@ -17,7 +18,10 @@ export const routes: Routes = [
       },
       {
         path: 'favorites',
-        redirectTo: 'profile',
+        redirectTo: () => {
+          const router = inject(Router);
+          return router.createUrlTree(['/tabs/profile'], { queryParams: { view: 'favorites' } });
+        },
         pathMatch: 'full',
       },
       {

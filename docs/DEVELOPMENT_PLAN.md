@@ -565,3 +565,23 @@ The bottom navigation bar implements all 4 planned primary tabs (`/tabs/home`, `
   - Playwright automated verification of all 5 remediated flows: **4/4 checks passed (100.0%)**.
   - Deployed to GitHub Pages and verified live website.
 
+#### Milestone 44: Exhaustive Dual-Environment QA & Anti-Generic UX/UI Remediation (COMPLETED)
+- [x] **44.1: Zero-Stop Save Guard in Custom Builder (`CustomBuilderPage`)**:
+  - Intercepted `saveItinerary()` in `custom-builder.page.ts` when `totalStopsCount === 0`, displaying a warning toast ("Please add at least one destination before saving your itinerary") and disabling the top toolbar and bottom save buttons.
+- [x] **44.2: Favorites Deep Link Normalization (`tabs.routes.ts` & `ProfilePage`)**:
+  - Configured functional redirect in `tabs.routes.ts` to return UrlTree with `?view=favorites`.
+  - Subscribed to `route.queryParams` in `profile.page.ts` to immediately switch `viewMode = 'favorites'` on init or dynamic navigation.
+- [x] **44.3: WCAG 2.2 Touch Target Enlargement**:
+  - Enforced `min-height: 44px; min-width: 44px` on `.bell-icon-btn` and `.see-all-link` in `home.page.scss`, and `.target-day-chip` in `custom-builder.page.scss`.
+- [x] **44.4: Pre-Arrival Discovery Confirmation in Custom Builder**:
+  - Rendered dismissible confirmation banner when navigating to Custom Builder with `?addPlaceId=...` ("Adding [Place Name] to Day 1 of your new itinerary") and pre-filling trip title.
+- [x] **44.5: Actionable Empty Day Callout in Itinerary Detail View**:
+  - Rendered an empty day callout card with icon, message, and `+ Add Places to this Day` button when an itinerary day has 0 items.
+- [x] **44.6: Duplicate Same-Day Stop Guard in Custom Builder**:
+  - Marked places already present in active day's items with an "Added" checkmark badge and prevented redundant 0-minute legs.
+- [x] **44.7: Comprehensive Quality Gates & Deployment**:
+  - 32/32 Vitest suites passed (335/335 unit tests, 100%).
+  - Angular production build generated with 0 budget violations (all components < 16 kB).
+  - Pushed to remote and verified live deployment on GitHub Pages.
+
+

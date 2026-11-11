@@ -238,6 +238,16 @@ export class ProfilePage implements OnInit, OnDestroy {
       })
     );
 
+    if (this.route?.queryParams) {
+      this.subscriptions.add(
+        this.route.queryParams.subscribe((params) => {
+          if (params && params['view'] === 'favorites') {
+            this.openFavorites();
+          }
+        })
+      );
+    }
+
     const viewParam = this.route.snapshot.queryParamMap.get('view');
     if (viewParam === 'favorites') {
       this.openFavorites();

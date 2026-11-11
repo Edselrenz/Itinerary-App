@@ -48,6 +48,7 @@ describe('ProfilePage', () => {
   };
 
   const mockActivatedRoute = {
+    queryParams: of({}),
     snapshot: {
       queryParamMap: {
         get: vi.fn().mockReturnValue(null),

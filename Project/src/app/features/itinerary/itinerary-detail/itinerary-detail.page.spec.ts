@@ -511,5 +511,17 @@ describe('ItineraryDetailPage', () => {
       );
       windowOpenSpy.mockRestore();
     });
+
+    it('Phase 44.5: renders empty day callout when an itinerary day has zero items and wires CTA to toggleEditMode', () => {
+      fixture.detectChanges();
+      const emptyCallout = fixture.nativeElement.querySelector('.empty-day-callout');
+      expect(emptyCallout).toBeTruthy();
+      expect(emptyCallout.textContent).toContain('No destinations added for Day 2');
+
+      const addStopsBtn = emptyCallout.querySelector('.btn-add-stops');
+      expect(addStopsBtn).toBeTruthy();
+      addStopsBtn.click();
+      expect(component.isEditMode).toBe(true);
+    });
   });
 });

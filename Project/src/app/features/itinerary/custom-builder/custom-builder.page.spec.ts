@@ -614,4 +614,38 @@ describe('CustomBuilderPage', () => {
     // Stop 1 ends at 10:00 AM, distance ~14.4 km driving is ~22 min + 10 min buffer = ~32 min transit buffer -> ~10:32 AM
     expect(nextTime).toMatch(/10:3\d AM/);
   });
+
+  it('Phase 44.1: prevents saving itinerary when totalStopsCount === 0 and presents warning toast', async () => {
+    // Ensure all days have 0 items
+    component.days.forEach((d) => (d.items = []));
+    expect(component.totalStopsCount).toBe(0);
+
+    await component.saveItinerary();
+
+    expect(mockToastController.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Please add at least one destination before saving your itinerary.',
+        color: 'warning',
+      })
+    );
+    expect(mockItineraryService.createItinerary).not.toHaveBeenCalled();
+    expect(mockItineraryService.updateItinerary).not.toHaveBeenCalled();
+  });
+
+  it('Phase 44.4: supports pre-arrival banner display and dismissal', () => {
+    component.preAddedPlaceName = 'Minalungao National Park';
+    expect(component.preAddedPlaceName).toBe('Minalungao National Park');
+
+    component.dismissPreArrivalBanner();
+    expect(component.preAddedPlaceName).toBeNull();
+  });
+
+  it('Phase 44.6: correctly identifies duplicate stops for active day via isPlaceInActiveDay', () => {
+    expect(component.isPlaceInActiveDay(mockPlace.id)).toBe(false);
+    expect(component.isPlaceInActiveDay(null)).toBe(false);
+    expect(component.isPlaceInActiveDay(undefined)).toBe(false);
+
+    component.selectPlaceFromPicker(mockPlace);
+    expect(component.isPlaceInActiveDay(mockPlace.id)).toBe(true);
+  });
 });

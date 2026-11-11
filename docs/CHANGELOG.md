@@ -1,3 +1,22 @@
+## [0.44.0] - 2026-11-11
+### Added
+- **Zero-Stop Save Guard in Custom Builder (`CustomBuilderPage`)**:
+  - Intercepts `saveItinerary()` if `totalStopsCount === 0`, displaying a warning toast and disabling the toolbar save button.
+- **Pre-Arrival Discovery Confirmation Banner in Custom Builder**:
+  - Displays a confirmation banner when entering via `?addPlaceId=...` ("Adding [Place Name] to Day 1 of your new itinerary") and pre-fills the trip title.
+- **Actionable Empty Day Callout in Itinerary Detail View**:
+  - Renders an empty day card with icon, guidance, and `+ Add Places to this Day` CTA button when an itinerary day has 0 destinations.
+- **Duplicate Same-Day Stop Guard in Custom Builder**:
+  - Labels destinations already added to the active day with an "Added" badge to prevent redundant 0-minute legs.
+
+### Changed
+- **Favorites Deep Link Normalization**:
+  - Updated `tabs.routes.ts` so `/#/tabs/favorites` redirects to `profile?view=favorites`, immediately opening the favorites subview.
+- **WCAG 2.2 Touch Target Enlargement**:
+  - Enforced `min-height: 44px; min-width: 44px;` on notification bell, see-all link on Home, and target day chips in Custom Builder.
+
+---
+
 ## [0.43.0] - 2026-11-11
 ### Fixed
 - **Infinite Loading Spinner on Direct Route Navigation (`ItineraryDetailPage`)**:

@@ -29,5 +29,14 @@ describe('Routing & Redirect Gates (BUG-14 / TASK-12)', () => {
     expect(paths).toContain('history');
     expect(paths).toContain('profile');
     expect(paths).toContain('saved');
+    expect(paths).toContain('favorites');
+  });
+
+  it('Phase 44.2: should configure favorites route redirect to profile with view=favorites', () => {
+    const rootRoute = routes.find((r) => r.path === '');
+    const favRoute = rootRoute?.children?.find((r) => r.path === 'favorites');
+    expect(favRoute).toBeDefined();
+    expect(typeof favRoute?.redirectTo).toBe('function');
+    expect(favRoute?.pathMatch).toBe('full');
   });
 });

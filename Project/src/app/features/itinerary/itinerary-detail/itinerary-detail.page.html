@@ -269,6 +269,7 @@
                   (stopIndexSelected)="onStopMarkerSelected($event)"
                 ></app-itinerary-route-map>
 
+                @if (day.items && day.items.length > 0) {
                 <div class="activities-view-stack">
                   @for (stop of day.items; track stop.id; let sIdx = $index) {
                     <!-- Leg Travel Badge Between Consecutive Stops (Phase 30.3.1 GAP-01) -->
@@ -337,6 +338,17 @@
                     </div>
                   }
                 </div>
+                } @else {
+                  <div class="empty-day-callout">
+                    <ion-icon name="map-outline" class="empty-day-icon"></ion-icon>
+                    <h4 class="empty-day-title">No destinations added for Day {{ day.day_number }}</h4>
+                    <p class="empty-day-desc">This day has no scheduled activities yet.</p>
+                    <button type="button" class="btn-add-stops" (click)="toggleEditMode()">
+                      <ion-icon name="add-outline"></ion-icon>
+                      <span>Add Places to this Day</span>
+                    </button>
+                  </div>
+                }
 
                 <!-- Nearby Places Quick-Add Banner -->
                 <button

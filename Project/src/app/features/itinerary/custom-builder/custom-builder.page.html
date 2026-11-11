@@ -12,7 +12,7 @@
       slot="end"
       class="header-save-btn"
       (click)="saveItinerary()"
-      [disabled]="isSaving"
+      [disabled]="totalStopsCount === 0 || isSaving"
       aria-label="Save itinerary"
     >
       @if (isSaving) {
@@ -42,6 +42,19 @@
 
 <ion-content class="builder-content" [fullscreen]="true">
   <div class="builder-container">
+    @if (preAddedPlaceName) {
+    <div class="pre-arrival-banner" role="status" aria-live="polite">
+      <ion-icon name="sparkles" class="banner-icon"></ion-icon>
+      <div class="banner-content">
+        <strong>Place Pre-Loaded</strong>
+        <span>{{ preAddedPlaceName }} was automatically added to Day 1 of your trip.</span>
+      </div>
+      <button type="button" class="banner-close-btn" (click)="dismissPreArrivalBanner()" aria-label="Dismiss banner">
+        <ion-icon name="close-outline"></ion-icon>
+      </button>
+    </div>
+    }
+
     @if (activeView === 'form') {
     <!-- ========================================================
            VIEW 0: "Tell us your travel details" QUESTIONNAIRE
@@ -557,7 +570,7 @@
 
       <!-- Save CTA Bar (Figma: "View Full Itinerary" / "Save Itinerary") -->
       <div class="save-footer-action-bar">
-        <button type="button" class="save-itinerary-full-btn" [disabled]="isSaving" (click)="saveItinerary()">
+        <button type="button" class="save-itinerary-full-btn" [disabled]="totalStopsCount === 0 || isSaving" (click)="saveItinerary()">
           @if (isSaving) {
           <ion-spinner name="crescent" class="btn-spinner"></ion-spinner>
           <span>Saving itinerary...</span>

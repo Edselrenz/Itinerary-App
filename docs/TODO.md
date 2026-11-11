@@ -1200,3 +1200,28 @@ px cap sync android): **Exit code 0 (6 plugins synchronized)**.
   - Production Angular build: **Exit code 0, 0 budget violations (all components < 16 kB)**.
   - Playwright automated verification: **4/4 checks passed (100.0%)** testing direct itinerary route, demo account loading, account recovery spinner, and wizard scrim.
 
+---
+
+## Phase 44: Exhaustive Dual-Environment QA & Anti-Generic UX/UI Remediation
+- [x] **44.1 (P0: Zero-Stop Save Guard in CustomBuilderPage)**:
+  - In `Project/src/app/features/itinerary/custom-builder/custom-builder.page.ts`, calculate `totalStopsCount` and intercept `saveItinerary()` if `totalStopsCount === 0`, presenting an informative warning toast ("Please add at least one destination before saving your itinerary").
+  - In `custom-builder.page.html`, disable the toolbar Save button (`[disabled]="totalStopsCount === 0 || isSaving"`).
+- [x] **44.2 (P1: Favorites Deep Link Normalization in Router & Profile)**:
+  - In `Project/src/app/tabs/tabs.routes.ts`, update the `favorites` route redirect to functional redirect returning UrlTree with query parameter `queryParams: { view: 'favorites' }`.
+  - In `Project/src/app/tabs/profile/profile.page.ts`, subscribe to `route.queryParams` on init and enter favorites view automatically when visiting `/#/tabs/favorites` or `/#/tabs/profile?view=favorites`.
+- [x] **44.3 (P1: WCAG 2.2 Touch Target Enlargement)**:
+  - In `Project/src/app/tabs/home/home.page.scss`, expand touch targets for `.bell-icon-btn` (38px -> 44px min) and `.see-all-link` (14px height -> 44px min touch container).
+  - In `Project/src/app/features/itinerary/custom-builder/custom-builder.page.scss`, enforce `min-height: 44px; min-width: 44px` on `.target-day-chip`.
+- [x] **44.4 (P2: Pre-Arrival Discovery Banner in Custom Builder)**:
+  - In `Project/src/app/features/itinerary/custom-builder/custom-builder.page.ts` and `custom-builder.page.html`, detect `addPlaceId` query parameter on entry and display an informative confirmation banner above the form ("Adding [Place Name] to Day 1 of your new itinerary"). Prefill trip title if empty.
+- [x] **44.5 (P2: Empty Day Callout in Itinerary Detail View)**:
+  - In `Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.html` and `itinerary-detail.page.scss`, render an intentional, accessible empty-day callout when `day.items.length === 0` with icon, title ("No destinations added for Day X"), and `+ Add Places to this Day` action button.
+- [x] **44.6 (P2: Duplicate Stop Guard in Custom Builder)**:
+  - In `Project/src/app/features/itinerary/custom-builder/custom-builder.page.ts` and `custom-builder.page.html`, detect if candidate venue is already added to the active day and render an "Added" checkmark badge.
+- [x] **44.7 (Quality Gates Verification & Remote Deployment)**:
+  - Vitest Unit Tests: 32/32 suites, 335/335 tests passing (100%).
+  - Angular production build: 0 budget violations (all components < 16 kB).
+  - Verification of zero-stop guard, favorites deep link, pre-arrival banner, and touch targets.
+  - Push to remote, monitor GitHub Actions deployment, and test live on GitHub Pages.
+
+

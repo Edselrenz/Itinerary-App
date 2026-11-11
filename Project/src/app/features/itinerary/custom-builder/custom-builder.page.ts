@@ -37,7 +37,7 @@ import {
   searchOutline,
   sparkles,
   timeOutline,
-  trashOutline, checkmarkOutline } from 'ionicons/icons';
+  trashOutline, checkmarkOutline, mapOutline } from 'ionicons/icons';
 import type { Observable} from 'rxjs';
 import { Subject, Subscription, debounceTime, distinctUntilChanged, map, merge } from 'rxjs';
 
@@ -111,6 +111,7 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
   public isEditMode = false;
   public isSaving = false;
   public hasUnsavedChanges = false;
+  public preAddedPlaceName: string | null = null;
 
   // View Mode: 'form' ("Tell us your travel details") vs 'browse' ("Add the places you want to visit") vs 'timeline' ("Your Custom Itinerary")
   public activeView: 'form' | 'browse' | 'timeline' = 'form';
@@ -233,7 +234,7 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
   }
 
   constructor() {
-    addIcons({arrowBack,checkmarkCircle,addOutline,calendarOutline,createOutline,locationSharp,locationOutline,cashOutline,searchOutline,closeOutline,checkmark,arrowForwardOutline,trashOutline,arrowUpOutline,arrowDownOutline,businessOutline,saveOutline,checkmarkOutline,timeOutline,alertCircleOutline,sparkles,});
+    addIcons({arrowBack,checkmarkCircle,addOutline,calendarOutline,sparkles,closeOutline,createOutline,locationOutline,mapOutline,cashOutline,searchOutline,checkmark,arrowForwardOutline,timeOutline,trashOutline,arrowUpOutline,arrowDownOutline,businessOutline,saveOutline,checkmarkOutline,locationSharp,alertCircleOutline,});
 
     const today = new Date();
     const tomorrow = addDaysLocal(today, 1);
@@ -319,6 +320,13 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
                   this.hasUnsavedChanges = true;
                   this.updateBudgetSummary();
                 }
+                const currentTitle = this.form.get('title')?.value;
+                if (!currentTitle || currentTitle.trim() === '' || currentTitle === 'Nueva Ecija Getaway') {
+                  const suggestedTitle = `Trip to ${place.municipality_name || place.name}`;
+                  this.form.patchValue({ title: suggestedTitle });
+                }
+                this.preAddedPlaceName = place.name;
+                this.updateUI();
               }
             },
           });
@@ -891,6 +899,11 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
     this.activeView = 'browse';
   }
 
+  public dismissPreArrivalBanner(): void {
+    this.preAddedPlaceName = null;
+    this.updateUI();
+  }
+
   public loadBrowsePlaces(): void {
     this.isBrowseLoading = true;
     const dest = this.form?.get('destination')?.value?.trim();
@@ -1039,7 +1052,8 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
     this.displayedPlaces = list;
   }
 
-  public isPlaceInActiveDay(placeId: string): boolean {
+  public isPlaceInActiveDay(placeId?: string | null): boolean {
+    if (!placeId) return false;
     const cur = this.currentDay;
     if (!cur) return false;
     return cur.items.some((it) => it.place_id === placeId);
@@ -1406,6 +1420,17 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
   // --- Save Itinerary ---
 
   public async saveItinerary(): Promise<void> {
+    if (this.totalStopsCount === 0) {
+      const toast = await this.toastController.create({
+        message: 'Please add at least one destination before saving your itinerary.',
+        duration: 3000,
+        color: 'warning',
+        position: 'top',
+      });
+      await toast.present();
+      return;
+    }
+
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       const toast = await this.toastController.create({
