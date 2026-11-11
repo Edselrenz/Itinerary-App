@@ -19,6 +19,8 @@ import {
   chevronUpOutline,
   closeOutline,
   globeOutline,
+  heart,
+  heartOutline,
   informationCircleOutline,
   locationOutline,
   navigateOutline,
@@ -34,6 +36,7 @@ import { environment } from '../../../../environments/environment';
 import type { CommuteInfo } from '../../../core/data/commute-guide.data';
 import type { Place, PlacePhoto } from '../../../core/models/place.models';
 import { ConnectivityService } from '../../../core/services/connectivity.service';
+import { FavoritesService } from '../../../core/services/favorites.service';
 import { PlaceService } from '../../../core/services/place.service';
 
 @Component({
@@ -62,6 +65,17 @@ export class PlaceDetailSheetComponent {
   public isHoursExpanded = false;
   public activePhotoIndex = 0;
   public placeService = inject(PlaceService);
+  public favoritesService = inject(FavoritesService);
+
+  public get isFavorite(): boolean {
+    return this.place ? this.favoritesService.isFavorite(this.place.id) : false;
+  }
+
+  public toggleFavorite(): void {
+    if (this.place) {
+      this.favoritesService.toggleFavorite(this.place);
+    }
+  }
 
   constructor() {
     addIcons({
@@ -74,6 +88,8 @@ export class PlaceDetailSheetComponent {
       chevronUpOutline,
       closeOutline,
       globeOutline,
+      heart,
+      heartOutline,
       informationCircleOutline,
       locationOutline,
       navigateOutline,

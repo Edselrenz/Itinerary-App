@@ -1,8 +1,95 @@
-# Changelog
+## [0.40.0] - 2026-11-11
+### Added
+- **Explicit Demo Mode Button on Login Screen (Finding 1)**:
+  - Added dedicated `.demo-login-group` with `<button class="demo-pill-btn" (click)="onDemoLogin()">` featuring sparkles icon and text `Explore Demo Account (Pattranite Persona)` on `Project/src/app/features/auth/login/login.page.html`.
+  - Added explicit `loginDemo(): Observable<AuthResponse>` and `isDemoUser()` helper to `Project/src/app/core/services/auth.service.ts`, bypassing remote network requests and authenticating directly as Pattranite Limpatiyakorn with toast notification.
+  - Added full dark mode support for the demo account button in `Project/src/app/features/auth/login/login.page.scss`.
+- **Pacing Parameter to Suggested Itinerary Schemas (Finding 4)**:
+  - Added `pacing: str = "moderate"` to `backend/app/schemas/itinerary.py` (`SuggestedItineraryRequest`).
+  - Added `pacing?: 'relaxed' | 'moderate' | 'fast' | string;` to `Project/src/app/core/models/itinerary.models.ts`.
 
-All notable changes to the Nueva Ecija Travel Itinerary project are documented in this file.
+### Changed
+- **Honest Authentication Failure Messaging (Finding 1)**:
+  - Removed silent fallback in `AuthService.login()` that silently signed in as Pattranite Limpatiyakorn on status 0, 502, or 504 errors. Login failures now truthfully report server unreachability and prompt the traveler to plan as Guest or use the explicit Demo account button.
+- **Philippine Account Metadata Integrity (Finding 2)**:
+  - Eliminated automatic assignment of Pattranite's Thai telephone number (`+66`) and Bangkok birthdate to real registered Philippine accounts in `Project/src/app/tabs/profile/profile.page.ts`. Non-demo accounts retain their registered names and start with blank profile extra fields.
+  - Updated profile form field placeholders to Philippine-appropriate hints: `First Name` ("e.g. Maria"), `Middle Initial` ("Optional"), `Last Name` ("e.g. Santos"), `Phone Number` ("+63 912 345 6789").
+- **Day-Trip Lodging Exclusion & Questionnaire Pacing (Findings 6 & 4)**:
+  - In `backend/app/algorithms/itinerary_generator.py`, heavily penalized accommodations (`score -= 100.0`) on single-day trips (`total_days == 1`), preventing hotels from being scheduled on 1-day getaways. Added transparent assumption note.
+  - In `Project/src/app/core/services/itinerary.service.ts`, filtered out lodging from single-day cluster presets and dynamic assignment, and dynamically scaled daily stops by questionnaire pacing (`relaxed`: 2, `moderate`: 3, `fast`: 4).
+- **Free Admission Badge for Zero-Cost Stops (Finding 8)**:
+  - In `Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.ts`, formatted verified ₱0 venues (`min === 0 && max === 0`) as "Free Admission" instead of "Price not listed" or "₱0".
+- **One-Tap Guest Access After Logout (Finding 3)**:
+  - In `Project/src/app/features/auth/welcome/welcome.page.ts:goToGuest()`, directed travelers clicking "Continue as Guest" directly to `/tabs/home` when `isAfterLogout` is true, eliminating redundant tutorial screens.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+### Fixed
+- **Zoneless Change Detection UI Freeze in Suggested Wizard (Finding 11)**:
+  - Injected `ChangeDetectorRef` in `Project/src/app/features/itinerary/suggested-wizard/suggested-wizard.page.ts` and called `this.cdr.markForCheck()` across all async observable callbacks, date picker changes, destination selections, and preference toggles, allowing generated itineraries to render immediately without requiring an artificial screen tap.
+- **Profile Password Visibility Toggle Form-Wipe Bug (Finding 2)**:
+  - Replaced accidental `this.openEditProfile()` calls inside `toggleCurrentPasswordVisibility()` and `toggleNewPasswordVisibility()` in `ProfilePage` with `this.cdr.markForCheck()`, preventing password visibility toggles from wiping user input.
+- **Active Map Navigation Cancellation on Tab Tap (Finding 7)**:
+  - In `Project/src/app/tabs/tabs.page.ts:onMapTabClicked()`, added guard checking `router.url` for `followRoute=true` or `routeItineraryId`. Active GPS navigation is preserved and query parameters are no longer wiped when tapping the Map tab.
+- **Playwright E2E Hash Routing Alignment**:
+  - Aligned direct navigation URLs in `Project/e2e/app.spec.ts` with Angular's hash location routing strategy (`/#/...`).
+
+---
+
+## [0.39.0] - 2026-11-10
+### Changed
+- **Bottom Navigation Bar De-Cluttering**:
+  - Removed the `favorites` tab button from the bottom navigation bar in `Project/src/app/tabs/tabs.page.html`, restoring the bottom navigation bar to exactly the 4 canonical tabs (`Home`, `Map`, `Saved`, `Profile`) matching Figma design.
+  - Redirected `/tabs/favorites` in `tabs.routes.ts` and `/favorites` in `app.routes.ts` directly to `/tabs/profile`.
+- **In-Page Favorites Subview in Profile Tab**:
+  - Migrated Favorites into an in-page subview (`viewMode: 'favorites'`) within `ProfilePage` (`profile.page.html`, `.ts`, `.scss`) accessible only via the Profile tab menu card.
+  - Integrated header `← Favorites` with item count pill, live search input, horizontal category filtering scroller (`ALL`, `Nature & Parks`, `Culture & Heritage`, `Cafes & Dining`, `Resorts & Stays`, `Farm & Agri-Tourism`), destination cards with heart removal toggle, Google Maps directions link, place detail sheet preview, and empty state with exploration CTA.
+  - Kept the bottom 4-tab bar visible on the Profile tab during favorites inspection without cluttering the main navigation.
+
+---
+
+## [0.38.0] - 2026-11-10
+### Added
+- **Blank Avatar Placeholder for Signed-In Individuals**:
+  - Imported and integrated authentic neutral grey silhouette avatar (`Project/src/assets/images/default_avatar_placeholder.png`) matching user specification (`media_1794313889456_46c51912.png`).
+  - Configured `defaultAvatar` fallback across `ProfilePage` (`profile.page.ts`) and profile edit forms to default to this blank silhouette placeholder for signed-in travelers without an uploaded portrait photo.
+
+### Changed
+- **In-Page Edit Profile Sub-View Matching Figma Layout**:
+  - Rebuilt Edit Profile as an in-page sub-view inside `ProfilePage` (`viewMode: 'edit'`), retaining the visible bottom tab bar matching Image 1 (`media_1794313719867_c04de25f.png`).
+  - Implemented header `← Edit Profile` with blue arrow navigating back to main profile (`viewMode = 'profile'`).
+  - Rendered centered circular avatar with camera overlay, `Change Photo` blue outlined pill button (`.change-photo-pill-btn`), 7 form fields in exact specified sequence (First Name, Middle Initial (if applicable), Last Name, Birthday, Gender, Email Address, Phone Number), and solid blue `Save Changes` pill button.
+  - Eliminated legacy modal backdrop stacking and backdrop DOM interception.
+
+### Fixed
+- **Profile Picture Upload & Preview Reactivity**:
+  - Diagnosed root cause: under Angular 19/22 `provideZonelessChangeDetection()`, asynchronous native browser events like `FileReader.onload` run outside the framework's change detection zone, causing image preview state changes to fail to re-render in the template.
+  - Injected `ChangeDetectorRef` and added explicit `this.cdr.markForCheck()` inside `reader.onload` in `onAvatarSelected(event)`.
+  - Added strict image MIME type validation (`image/*`) and cleared `input.value = ''` after selection to allow users to re-select the same image or choose new images continuously.
+  - Persisted user-selected avatar base64 data to local storage key `ne_profile_extra_<id>`, instantly updating both the Edit Profile preview and main Profile tab avatar circle.
+
+---
+
+## [0.37.0] - 2026-11-10
+### Added
+- **Dedicated Favorites Tab (`/tabs/favorites`)**:
+  - Implemented `FavoritesService` (`Project/src/app/core/services/favorites.service.ts`) managing persistent saved destinations under `ne_favorite_places_v1` with reactive `favorites$` observable and initial iconic seed places.
+  - Implemented `FavoritesPage` (`Project/src/app/tabs/favorites/`) with instant search filtering, category pills, destination cards with heart action, directions link, and empty state.
+  - Added favorite toggle heart button to `PlaceDetailSheetComponent` (`place-detail-sheet.component.html`, `.scss`, `.ts`) allowing travelers to bookmark and unbookmark any destination with immediate reactive state update.
+  - Registered `favorites` route in `tabs.routes.ts`, added route alias in `app.routes.ts`, and added bottom tab button with heart icon in `tabs.page.html`.
+- **Authenticated Profile Persona Pre-Set**:
+  - Ensured whenever someone logs in, their profile is pre-set with Pattranite Limpatiyakorn (`assets/images/pattranite_avatar.jpg`, `Pattranite Limpatiyakorn`, `@loverrukk@gmail.com`).
+  - Added demo/offline login fallback in `AuthService.login()` with a valid 30-day token so GitHub Pages testers and offline sessions log in seamlessly into the authenticated traveler experience without needing a local backend server.
+
+### Changed
+- **In-Page Sub-Views for Settings, Help & Support, and About Matching Figma**:
+  - Transformed Settings into an in-page sub-view inside `ProfilePage` (`viewMode: 'settings'`), rendering the exact single rounded card enclosing 6 rows (Account Information, Notifications iOS toggle, Privacy & Security, Language, App Appearance, Clear Cache) with the bottom tab bar visible matching Figma (`media_1794305628697_56ce48c5.png`).
+  - Transformed Help & Support and About into in-page sub-views (`viewMode: 'help'` and `viewMode: 'about'`) matching the identical design rhythm, blue back arrows, rounded container cards, and active bottom tab bar.
+  - Rebuilt the Before Log Out confirmation modal as a floating centered card on top of the Profile tab with triple dots, vibrant blue door exit SVG icon, bold heading, description, and stacked solid blue buttons matching Figma (`media_1794305642780_d5248c99.png`).
+  - Verified After Log Out view in `WelcomePage` matching Figma (`media_1794305651445_190286a1.png`).
+
+### Fixed
+- **Dark Mode White-on-White Color Inversion Bug**:
+  - Diagnosed root cause: `--background: #ffffff;` was hardcoded on component `<ion-content>` containers, while global `body.dark` switched `--ion-text-color` to near-white (`#f1f5f9`), causing white text on white backgrounds.
+  - Established universal dark theme styling in `Project/src/global.scss` under `html.dark, body.dark`: enforced `--background: #0b1120 !important;` on all pages, card surfaces to `#1e293b`, borders to `#334155`, inputs to `#0f172a`, and high-contrast typography (`#f8fafc` headings, `#94a3b8` body/subtitles).
 
 ---
 

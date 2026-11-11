@@ -212,6 +212,7 @@ def score_place(
     max_radius_km: float = 25.0,
     planned_time: time | None = None,
     target_weekday: int = 0,
+    is_single_day_trip: bool = False,
 ) -> float:
     """Scores a candidate place based on preferences, proximity, Bayesian quality rating, hours, and diversity."""
     # Hard boost or filter for dining slots
@@ -227,12 +228,15 @@ def score_place(
     if day_has_mountain and is_mountain_peak(place.name):
         score -= 60.0
 
-    # Morning slot penalty for overnight accommodation (DEF-03)
-    if not require_dining and is_accommodation_place(place):
-        if len(current_day_categories) == 0:
-            score -= 40.0
-        else:
-            score += 20.0
+    # Overnight accommodation logic (Finding 6 / DEF-03)
+    if is_accommodation_place(place):
+        if is_single_day_trip:
+            score -= 100.0
+        elif not require_dining:
+            if len(current_day_categories) == 0:
+                score -= 40.0
+            else:
+                score += 20.0
 
     # 1. Category / Preference match (+40)
     if place.category in preferred_categories:
@@ -452,6 +456,7 @@ def generate_suggested_itinerary_data(
                     max_radius_km=cluster_radius_km,
                     planned_time=slot["planned_time"],
                     target_weekday=travel_date.weekday(),
+                    is_single_day_trip=(total_days == 1),
                 )
                 scored_candidates.append((s, p))
 
@@ -651,6 +656,8 @@ def generate_suggested_itinerary_data(
         assumptions.append(
             f"Pricing Notice: {unverified_cost_count} stop(s) do not list verified admission/dining costs in open records and are not counted as ₱0."
         )
+    if total_days == 1:
+        assumptions.append("Single-Day Itinerary: Planned as a day-trip getaway without overnight lodging.")
 
     now = datetime.now(timezone.utc)
     itinerary_id = uuid.uuid4()

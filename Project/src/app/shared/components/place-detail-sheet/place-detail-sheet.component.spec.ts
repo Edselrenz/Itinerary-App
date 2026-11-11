@@ -148,4 +148,12 @@ describe('PlaceDetailSheetComponent', () => {
     expect(closeBtn).toBeTruthy();
     expect(closeBtn.getAttribute('aria-label')).toBe('Close details');
   });
+
+  it('allows toggling favorite state for the place', () => {
+    const favBtn = fixture.nativeElement.querySelector('.sheet-fav-btn');
+    expect(favBtn).toBeTruthy();
+    const initialFav = component.isFavorite;
+    component.toggleFavorite();
+    expect(component.isFavorite).toBe(!initialFav);
+  });
 });

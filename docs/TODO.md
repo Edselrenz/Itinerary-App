@@ -1039,3 +1039,93 @@ px cap sync android): **Exit code 0 (6 plugins synchronized)**.
   - Replaced `provideZoneChangeDetection` with native `provideZonelessChangeDetection()` in `Project/src/main.ts`.
   - Resolved `RuntimeError: NG0908: In this configuration Angular requires Zone.js` which caused the application to fail during `bootstrapApplication()` and render a blank white screen on `http://localhost:8100/` and GitHub Pages.
   - Verified application bootstrapping: `Current URL: http://localhost:8100/#/welcome`, full DOM tree hydrated with zero console errors.
+
+---
+
+## Phase 37: Profile Persona Pre-Set, Settings/Help Sub-Views, Logout Parity, Dark Mode Fix & Dedicated Favorites Tab
+- [x] **37.1 (Authenticated Profile Pre-Set Persona)**:
+  - Ensured logging in pre-populates traveler persona with Pattranite Limpatiyakorn (`assets/images/pattranite_avatar.jpg`, `Pattranite Limpatiyakorn`, `@loverrukk@gmail.com`).
+  - Added seamless demo/offline login fallback in `AuthService.login()` with valid 30-day token generation so testers on GitHub Pages and local sessions log in directly to Pattranite's profile without local backend setup.
+- [x] **37.2 (Settings, Help & Support, About In-Page Sub-Views Matching Image 1)**:
+  - Transformed Settings, Help & Support, and About into in-page sub-views within `ProfilePage` (`viewMode: 'profile' | 'settings' | 'help' | 'about'`).
+  - In Settings, rendered the exact single rounded card enclosing 6 rows with blue icons (`Account Information`, `Notifications` with iOS toggle, `Privacy & Security`, `Language`, `App Appearance`, `Clear Cache`), retaining the bottom tab bar visible matching Image 1 (`media_1794305628697_56ce48c5.png`).
+  - In Help & Support and About, aligned to the same clean card-based design with blue back arrows and active bottom tab bar.
+- [x] **37.3 (Before Log Out Modal & After Log Out Screen Alignment Matching Images 2 & 3)**:
+  - In Before Log Out modal, implemented floating dialog with triple-dot handle, vibrant blue door exit SVG icon, bold "Log Out?", description, and stacked solid blue buttons matching Image 2 (`media_1794305642780_d5248c99.png`).
+  - In After Log Out screen (`WelcomePage` with `loggedOut=true`), verified layout matching Image 3 (`media_1794305651445_190286a1.png`) with airplane logo, organic skyscraper photo blob mask, heading, stacked blue buttons, and cityscape skyline silhouette.
+- [x] **37.4 (Dark Mode Color Inversion Bug Fix)**:
+  - Eliminated the dark mode white-on-white bug across `Project/src/global.scss` and component stylesheets by establishing universal dark theme variables (`html.dark, body.dark`) with `--background: #0b1120 !important;`, card surfaces `#1e293b`, borders `#334155`, and high-contrast typography (`#f8fafc` headings, `#94a3b8` body/subtitles).
+- [x] **37.5 (Dedicated Favorites Tab & Place Bookmarking)**:
+  - Created `FavoritesService` managing persisted favorite destinations under `ne_favorite_places_v1`.
+  - Added favorite heart toggle button to `PlaceDetailSheetComponent` allowing travelers to heart/unheart any venue.
+  - Created `FavoritesPage` at `/tabs/favorites` with search, category filtering, venue cards, directions action, and empty state.
+  - Added `Favorites` tab button in `tabs.page.html` with heart icon and wired Profile "Favorites" row to `/tabs/favorites`.
+- [x] **37.6 (Verification & Test Suite Updates)**:
+  - Vitest Unit Tests: **32/32 test suites passed, 321/321 unit tests passed (100%)**.
+  - Production Angular Build (`ng build --base-href /Itinerary-App/`): **Exit code 0, 0 budget violations (all components < 16 kB)**.
+  - 24-Point Acceptance Gate: **24/24 checks passed (100.0%)**.
+
+---
+
+## Phase 38: Edit Profile Screen Formatting, Photo Upload Fix & Blank Avatar Placeholder
+- [x] **38.1 (Blank Avatar Placeholder for Signed-In Individuals)**:
+  - Import and configure `Project/src/assets/images/default_avatar_placeholder.png` based on the user's uploaded neutral silhouette avatar (`media_1794313889456_46c51912.png`).
+  - Set default avatar for signed-in individuals without uploaded photos to `assets/images/default_avatar_placeholder.png`, replacing hardcoded selfie placeholders.
+- [x] **38.2 (Edit Profile In-Page Subview Alignment Matching Image 1)**:
+  - Transition `Edit Profile` from an `<ion-modal>` into an in-page sub-view (`viewMode: 'edit'`) inside `ProfilePage`, retaining the visible bottom tab bar and matching Image 1 (`media_1794313719867_c04de25f.png`).
+  - Render header `← Edit Profile` with blue back arrow navigating back to `viewMode = 'profile'`.
+  - Render centered circular avatar with camera overlay, `Change Photo` blue outlined pill button, 7 form fields in exact sequence, and solid blue `Save Changes` pill button.
+- [x] **38.3 (Profile Picture Upload & Preview Fix)**:
+  - Resolve asynchronous `FileReader.onload` change detection issue under `provideZonelessChangeDetection()` by explicitly triggering `this.cdr.markForCheck()`.
+  - Wire hidden file input with direct trigger on both the avatar circle and `Change Photo` button.
+  - Maintain `editAvatarPreview` state and persist base64 data to `ne_profile_extra_<id>` upon saving.
+- [x] **38.4 (Full Quality Gate Verification)**:
+  - Vitest Unit Tests: **32/32 suites, 322/322 unit tests passed (100%)**.
+  - Angular Production Build (`ng build --base-href /Itinerary-App/`): **0 errors, <16 kB component styles**.
+  - Capacitor Android Sync (`npx cap sync android`): **6 plugins synced in 0.548s**.
+
+---
+
+## Phase 39: Favorites Profile-Only Migration (Bottom Navigation De-Clutter)
+- [x] **39.1 (Remove Favorites from Bottom Tab Bar)**:
+  - Removed the `<ion-tab-button tab="favorites">` from `Project/src/app/tabs/tabs.page.html`, restoring the bottom tab bar to exactly the 4 main canonical tabs (`Home`, `Map`, `Saved`, `Profile`).
+  - Redirected `/tabs/favorites` in `Project/src/app/tabs/tabs.routes.ts` and `/favorites` in `Project/src/app/app.routes.ts` to `profile`.
+- [x] **39.2 (Integrate Favorites Sub-View in Profile Tab)**:
+  - Expanded `viewMode` in `ProfilePage` (`Project/src/app/tabs/profile/profile.page.ts`) to include `'favorites'`.
+  - Connected `FavoritesService` and `PlaceService` in `ProfilePage`, loading bookmarked places reactive stream and supporting live search filtering and category chips.
+  - Implemented in-page sub-view `@if (viewMode === 'favorites')` in `Project/src/app/tabs/profile/profile.page.html` with `← Favorites` header, search bar, category chips, card list with heart toggle, directions action, and empty state.
+  - Retained bottom tab bar visible on Profile tab without cluttering the 4 main bottom tabs.
+- [x] **39.3 (Quality Gate Verification & Regression Prevention)**:
+  - Updated `profile.page.spec.ts` to verify in-page favorites view mode navigation and actions.
+  - Vitest unit tests: **32/32 test suites passed, 322/322 tests passed (100.0%) in 21.91s**.
+  - Angular production build (`ng build --base-href /Itinerary-App/`): **Exit code 0, 0 budget violations (all components < 16 kB)**.
+  - Capacitor Android sync (`npx cap sync android`): **Exit code 0, 6 plugins synchronized in 0.485s**.
+
+---
+
+## Phase 40: Critical Remediation Suite (System Review Audit Findings)
+- [x] **40.1 (Finding 11: Fix Zoneless Change Detection Freeze in Suggested Wizard)**:
+  - In `suggested-wizard.page.ts`, injected `ChangeDetectorRef` and invoked `this.cdr.markForCheck()` across `suggestItinerary` next/error handlers, `saveItinerary` next/error handlers, `selectDay`, `refreshNearbyPlaces`, `setDestination`, `setBudgetPreset`, `togglePreference`, `openDatePicker`, `closeDatePicker`, `setTravelMode`, `setMinRating`, `openStopDetail`, and `closeStopDetail`. Generated itineraries render instantly upon calculation without requiring any artificial screen taps.
+- [x] **40.2 (Finding 1: Prevent Silent Demo Login Usurpation & Provide Explicit Demo Action)**:
+  - In `auth.service.ts`, removed automatic silent fallback to `loverrukk@gmail.com` on offline/502/504 errors so real login attempts report honest connectivity failures.
+  - Added explicit `loginDemo(): Observable<AuthResponse>` to `AuthService` and helper `isDemoUser()`.
+  - In `login.page.html` and `login.page.ts`, added a dedicated, clearly styled `[Explore Demo Account (Pattranite Persona)]` button triggering explicit demo login with toast notification.
+- [x] **40.3 (Finding 2: Eliminate Foreign Persona Defaults on Real Accounts & Form Wipe Bug)**:
+  - In `profile.page.ts`, ensured non-demo registered users (`currentUser.id !== 'usr_pattranite_demo_01'`) retain their real names and start with blank profile extra fields and Philippine placeholder hints (`+63 9XX XXX XXXX`).
+  - Fixed the bug in `toggleCurrentPasswordVisibility()` and `toggleNewPasswordVisibility()`: replaced `this.openEditProfile()` with `this.cdr.markForCheck()` so toggling password visibility never wipes user input.
+- [x] **40.4 (Finding 7: Prevent Active Map Navigation Cancellation on Tab Tap)**:
+  - In `tabs.page.ts:onMapTabClicked()`, inspected `this.router.url`; if `followRoute=true` or `routeItineraryId` is active, preserved active route navigation parameters without wiping query parameters.
+- [x] **40.5 (Finding 6 & Finding 4: Day-Trip Lodging Exclusion & Questionnaire Pacing in Generator)**:
+  - In `backend/app/algorithms/itinerary_generator.py` and `Project/src/app/core/services/itinerary.service.ts`, excluded overnight hotel/resort accommodations on 1-day single-day getaways (`totalDays === 1`).
+  - In `itinerary.service.ts:generateOfflineSuggestedItinerary()`, read `request.pacing` and dynamically scaled daily stops (`relaxed` = 2, `moderate` = 3, `fast` = 4).
+- [x] **40.6 (Finding 8: Differentiate Free Venues (₱0) from Unpriced Venues)**:
+  - In `itinerary-detail.page.ts`, ensured stops with `min === 0 && max === 0` render `'Free Admission'` badge instead of `'₱0'` or `'Price not listed'`.
+- [x] **40.7 (Finding 3: Streamline Continue as Guest After Logout)**:
+  - In `welcome.page.ts:goToGuest()`, if `isAfterLogout` is true, immediately invoked `authService.continueAsGuest()` and navigated directly to `/tabs/home`.
+- [x] **40.8 (Playwright E2E Hash Routing Alignment)**:
+  - In `Project/e2e/app.spec.ts`, aligned direct navigation URLs with hash location routing (`/#/tabs/map`, `/#/tabs/home`, `/#/welcome`, `/#/custom-builder`).
+- [x] **40.9 (Verification & Quality Gates)**:
+  - Vitest Unit Tests: **32/32 test suites passed, 327/327 tests passed (100.0%) in 47.64s**.
+  - Backend Tests: Generator bounding box & chronological tests passed 100%.
+  - Production Angular Build (`ng build --base-href /Itinerary-App/`): **Exit code 0, 0 budget violations (all components < 16 kB)**.
+  - Capacitor Android Sync: **Exit code 0 (web directory synced)**.

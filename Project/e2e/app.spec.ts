@@ -9,8 +9,8 @@ test.describe('Nueva Ecija Travel Itinerary Planner E2E Journey', () => {
   });
 
   test('redirects root url to welcome page with brand elements', async ({ page }) => {
-    await page.goto('/');
-    await expect(page).toHaveURL(/\/welcome/);
+    await page.goto('/#/welcome');
+    await expect(page).toHaveURL(/#\/welcome/);
 
     // Hero branding and adventure copy
     await expect(page.locator('.brand-title')).toContainText('Trip mo, trip ko');
@@ -23,11 +23,11 @@ test.describe('Nueva Ecija Travel Itinerary Planner E2E Journey', () => {
   });
 
   test('completes guest authentication journey from welcome to home', async ({ page }) => {
-    await page.goto('/welcome');
+    await page.goto('/#/welcome');
 
     // Click Continue as Guest on Welcome screen
     await page.locator('.guest-pill-btn').click();
-    await expect(page).toHaveURL(/\/guest/);
+    await expect(page).toHaveURL(/#\/guest/);
 
     // Verify Guest explanation view
     await expect(page.locator('.guest-title')).toContainText('Explore as a guest');
@@ -35,7 +35,7 @@ test.describe('Nueva Ecija Travel Itinerary Planner E2E Journey', () => {
 
     // Click Continue as Guest button to enter main tabs
     await page.locator('.guest-content-section ion-button', { hasText: 'Continue as Guest' }).click();
-    await expect(page).toHaveURL(/\/tabs\/home/);
+    await expect(page).toHaveURL(/#\/tabs\/home/);
 
     // Verify Home tab view
     await expect(page.locator('.header-title')).toContainText('Where are you');
@@ -43,7 +43,7 @@ test.describe('Nueva Ecija Travel Itinerary Planner E2E Journey', () => {
   });
 
   test('navigates seamlessly between Home and Map tabs', async ({ page }) => {
-    await page.goto('/tabs/home');
+    await page.goto('/#/tabs/home');
 
     // Verify Tab bar is present with navigation buttons
     const tabBar = page.locator('ion-tab-bar');
@@ -51,7 +51,7 @@ test.describe('Nueva Ecija Travel Itinerary Planner E2E Journey', () => {
 
     // Navigate to Map tab
     await page.locator('ion-tab-button[tab="map"]').click();
-    await expect(page).toHaveURL(/\/tabs\/map/);
+    await expect(page).toHaveURL(/#\/tabs\/map/);
 
     // Verify Map canvas and filter bar are loaded
     await expect(page.locator('#leaflet-map')).toBeVisible();
@@ -59,12 +59,12 @@ test.describe('Nueva Ecija Travel Itinerary Planner E2E Journey', () => {
 
     // Navigate back to Home tab
     await page.locator('ion-tab-button[tab="home"]').click();
-    await expect(page).toHaveURL(/\/tabs\/home/);
+    await expect(page).toHaveURL(/#\/tabs\/home/);
     await expect(page.locator('.header-title')).toContainText('Where are you');
   });
 
   test('navigates to Custom Itinerary Builder and verifies travel questionnaire', async ({ page }) => {
-    await page.goto('/tabs/home');
+    await page.goto('/#/tabs/home');
 
     // Click Custom Itinerary action card
     const customCard = page.locator('.action-card.custom-card');
@@ -72,7 +72,7 @@ test.describe('Nueva Ecija Travel Itinerary Planner E2E Journey', () => {
     await customCard.click();
 
     // Verify Custom Builder view
-    await expect(page).toHaveURL(/\/custom-builder/);
+    await expect(page).toHaveURL(/#\/custom-builder/);
     await expect(page.locator('.main-heading')).toContainText('Tell us your travel details');
 
     // Verify questionnaire form inputs exist
@@ -81,19 +81,19 @@ test.describe('Nueva Ecija Travel Itinerary Planner E2E Journey', () => {
 
   test('allows direct deep-linking to core application routes', async ({ page }) => {
     // Direct link to Map
-    await page.goto('/tabs/map');
-    await expect(page).toHaveURL(/\/tabs\/map/);
+    await page.goto('/#/tabs/map');
+    await expect(page).toHaveURL(/#\/tabs\/map/);
     await expect(page.locator('#leaflet-map')).toBeVisible();
 
     // Direct link to Custom Builder
-    await page.goto('/custom-builder');
-    await expect(page).toHaveURL(/\/custom-builder/);
+    await page.goto('/#/custom-builder');
+    await expect(page).toHaveURL(/#\/custom-builder/);
     await expect(page.locator('.main-heading')).toContainText('Tell us your travel details');
   });
 
   test('displays places on map and opens place detail sheet when tapped from list view', async ({ page }) => {
-    await page.goto('/tabs/map');
-    await expect(page).toHaveURL(/\/tabs\/map/);
+    await page.goto('/#/tabs/map');
+    await expect(page).toHaveURL(/#\/tabs\/map/);
     await expect(page.locator('#leaflet-map')).toBeVisible();
 
     // Verify POI list toggle button shows loaded destinations
@@ -147,7 +147,7 @@ test.describe('Nueva Ecija Travel Itinerary Planner E2E Journey', () => {
   });
 
   test('verifies Leaflet map markers and interaction on canvas', async ({ page }) => {
-    await page.goto('/tabs/map');
+    await page.goto('/#/tabs/map');
     await expect(page.locator('#leaflet-map')).toBeVisible();
 
     // Wait for Leaflet marker layer pane to attach to the map DOM
@@ -167,8 +167,8 @@ test.describe('Nueva Ecija Travel Itinerary Planner E2E Journey', () => {
 
   test('deep-links to map with coordinates and verifies navigation controls', async ({ page }) => {
     // Cabanatuan City Plaza coordinates
-    await page.goto('/tabs/map?lat=15.4859&lng=120.9669&zoom=15');
-    await expect(page).toHaveURL(/tabs\/map\?lat=15\.4859/);
+    await page.goto('/#/tabs/map?lat=15.4859&lng=120.9669&zoom=15');
+    await expect(page).toHaveURL(/#\/tabs\/map\?lat=15\.4859/);
     await expect(page.locator('#leaflet-map')).toBeVisible();
 
     // Verify map canvas is loaded and responsive

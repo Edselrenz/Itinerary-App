@@ -29,8 +29,15 @@ describe('TabsPage', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should reset query params to empty when map tab is clicked', () => {
+  it('should reset query params to empty when map tab is clicked in discovery mode', () => {
+    Object.defineProperty(router, 'url', { value: '/tabs/home', configurable: true });
     component.onMapTabClicked();
     expect(router.navigate).toHaveBeenCalledWith(['/tabs/map'], { queryParams: {} });
+  });
+
+  it('should preserve active route navigation when following a route on map (Finding 7)', () => {
+    Object.defineProperty(router, 'url', { value: '/tabs/map?followRoute=true&routeItineraryId=it-123', configurable: true });
+    component.onMapTabClicked();
+    expect(router.navigate).not.toHaveBeenCalled();
   });
 });

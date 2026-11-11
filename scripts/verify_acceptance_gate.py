@@ -111,7 +111,7 @@ def record_check(number: int, name: str, category: str, passed: bool, detail: st
         "detail": detail,
     })
     status_icon = "[PASS]" if passed else "[FAIL]"
-    print(f"  {status_icon} Check #{number:02d} [{category}]: {name} - {detail}")
+    print(f"  {status_icon} Check #{number:02d} [{category}]: {name} - {detail}", flush=True)
 
 
 def run_auth_checks():

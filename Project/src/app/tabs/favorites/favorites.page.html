@@ -1,0 +1,129 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar class="fav-toolbar">
+    <div class="fav-header-wrap">
+      <div class="title-with-badge">
+        <h1 class="fav-main-title">Favorites</h1>
+        <span class="fav-count-pill">{{ filteredFavorites.length }}</span>
+      </div>
+      <p class="fav-subtitle">Your curated collection of favorite places across Nueva Ecija.</p>
+    </div>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="fav-content" [fullscreen]="true">
+  <div class="fav-layout-container">
+
+    <!-- Search Input -->
+    <div class="search-wrap">
+      <ion-icon name="search-outline" class="search-lead-icon"></ion-icon>
+      <input
+        type="text"
+        [formControl]="searchControl"
+        placeholder="Search saved places or towns..."
+        class="search-native-input"
+        aria-label="Search favorite places"
+      />
+      @if (searchControl.value) {
+        <button type="button" class="clear-search-btn" (click)="clearSearch()" aria-label="Clear search">
+          <ion-icon name="close-outline"></ion-icon>
+        </button>
+      }
+    </div>
+
+    <!-- Category Pills Horizontal Scroller -->
+    <div class="category-pills-row">
+      @for (cat of categories; track cat) {
+        <button
+          type="button"
+          class="cat-filter-pill"
+          [class.active]="selectedCategory === cat"
+          (click)="selectCategory(cat)"
+        >
+          {{ cat === 'ALL' ? 'All Places' : cat }}
+        </button>
+      }
+    </div>
+
+    <!-- Favorites Cards List -->
+    @if (filteredFavorites.length > 0) {
+      <div class="favorites-grid">
+        @for (place of filteredFavorites; track place.id) {
+          <article class="fav-place-card" (click)="openPlaceDetail(place)" role="button" tabindex="0">
+            <!-- Thumbnail Image with Category Badge -->
+            <div class="card-thumb-wrap">
+              <img [src]="getPlaceImage(place)" [alt]="place.name" class="card-thumb-img" loading="lazy" />
+              <button
+                type="button"
+                class="heart-toggle-btn active"
+                (click)="removeFavorite(place, $event)"
+                aria-label="Remove from favorites"
+                title="Remove from favorites"
+              >
+                <ion-icon name="heart"></ion-icon>
+              </button>
+              @if (place.category) {
+                <span class="thumb-cat-badge">{{ place.category }}</span>
+              }
+            </div>
+
+            <!-- Content Section -->
+            <div class="card-body">
+              <div class="card-muni-row">
+                <ion-icon name="location-outline" class="muni-icon"></ion-icon>
+                <span class="muni-text">{{ place.municipality_name || 'Nueva Ecija' }}</span>
+              </div>
+
+              <h2 class="card-venue-name">{{ place.name }}</h2>
+
+              <div class="card-cost-row">
+                <span class="cost-text">{{ formatCost(place) }}</span>
+              </div>
+
+              <!-- Card Actions -->
+              <div class="card-actions-bar">
+                <a
+                  [href]="getDirectionsUrl(place)"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="action-pill-btn directions-btn"
+                  (click)="$event.stopPropagation()"
+                >
+                  <ion-icon name="navigate-outline"></ion-icon>
+                  <span>Directions</span>
+                </a>
+                <button type="button" class="action-pill-btn details-btn">
+                  <span>View Details</span>
+                  <ion-icon name="open-outline"></ion-icon>
+                </button>
+              </div>
+            </div>
+          </article>
+        }
+      </div>
+    } @else {
+      <!-- Empty State -->
+      <div class="empty-favorites-container">
+        <div class="empty-icon-circle">
+          <ion-icon name="heart-outline"></ion-icon>
+        </div>
+        <h2 class="empty-title">No favorite places saved yet</h2>
+        <p class="empty-desc">
+          Tap the heart button on any destination on the Home or Map tabs to save your personal must-visit spots here.
+        </p>
+        <button type="button" class="explore-map-btn" (click)="goToMap()">
+          <ion-icon name="compass-outline"></ion-icon>
+          <span>Explore Places on Map</span>
+        </button>
+      </div>
+    }
+
+  </div>
+</ion-content>
+
+<!-- Place Detail Inspection Bottom Sheet -->
+@if (selectedPlaceForDetail) {
+  <app-place-detail-sheet
+    [place]="selectedPlaceForDetail"
+    (closeSheet)="closePlaceDetail()"
+  ></app-place-detail-sheet>
+}

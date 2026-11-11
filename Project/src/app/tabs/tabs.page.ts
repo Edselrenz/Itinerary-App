@@ -10,6 +10,8 @@ import {
 import { addIcons } from 'ionicons';
 import {
   bookmarkOutline,
+  heart,
+  heartOutline,
   home,
   locationSharp,
   personCircleOutline,
@@ -31,6 +33,8 @@ export class TabsPage {
     addIcons({
       home,
       locationSharp,
+      heart,
+      heartOutline,
       bookmarkOutline,
       timeOutline,
       personCircleOutline,
@@ -38,7 +42,11 @@ export class TabsPage {
   }
 
   public onMapTabClicked(_event?: Event): void {
-    // Explicitly navigate without query parameters so map tab always resets to general discovery mode
+    // If traveler is currently following an active route on the map, preserve route navigation state (Finding 7)
+    if (this.router.url.includes('followRoute=true') || this.router.url.includes('routeItineraryId=')) {
+      return;
+    }
+    // Otherwise reset to general discovery mode
     this.router.navigate(['/tabs/map'], { queryParams: {} });
   }
 }

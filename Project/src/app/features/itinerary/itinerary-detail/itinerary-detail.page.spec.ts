@@ -178,6 +178,15 @@ describe('ItineraryDetailPage', () => {
     expect(component.getStopCost(stop)).toBe('₱150 - ₱300');
   });
 
+  it('formats verified ₱0 stops as Free Admission (Finding 8)', () => {
+    const freeStop = {
+      ...mockItinerary.days[0].items[0],
+      estimated_cost_min: 0,
+      estimated_cost_max: 0,
+    };
+    expect(component.getStopCost(freeStop)).toBe('Free Admission');
+  });
+
   it('opens and closes stop details modal', () => {
     const stop = mockItinerary.days[0].items[0];
     component.openStopDetail(stop);

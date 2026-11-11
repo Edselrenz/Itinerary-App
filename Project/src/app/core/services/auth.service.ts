@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import type { Observable } from 'rxjs';
-import { BehaviorSubject, catchError, tap, throwError } from 'rxjs';
+import { BehaviorSubject, catchError, of, tap, throwError } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import type {
@@ -129,7 +129,50 @@ export class AuthService {
   public login(payload: LoginRequest, rememberMe = true): Observable<AuthResponse> {
     return this.http
       .post<AuthResponse>(`${this.apiBaseUrl}/auth/login`, payload)
-      .pipe(tap((res) => this.handleAuthSuccess(res, rememberMe)));
+      .pipe(
+        tap((res) => this.handleAuthSuccess(res, rememberMe)),
+        catchError((err) => {
+          return throwError(() => err);
+        })
+      );
+  }
+
+  public loginDemo(rememberMe = true): Observable<AuthResponse> {
+    const demoResponse: AuthResponse = {
+      access_token: this.createDemoJwt('loverrukk@gmail.com'),
+      refresh_token: this.createDemoJwt('loverrukk@gmail.com'),
+      token_type: 'bearer',
+      user: {
+        id: 'usr_pattranite_demo_01',
+        email_normalized: 'loverrukk@gmail.com',
+        username_normalized: 'loverrukk',
+        first_name: 'Pattranite',
+        last_name: 'Limpatiyakorn',
+        is_active: true,
+        created_at: '2026-05-23T00:00:00Z',
+      },
+    };
+    this.handleAuthSuccess(demoResponse, rememberMe);
+    return of(demoResponse);
+  }
+
+  public isDemoUser(): boolean {
+    const user = this.currentUserSubject.value;
+    return user?.id === 'usr_pattranite_demo_01' || user?.username_normalized === 'loverrukk';
+  }
+
+  private createDemoJwt(email = 'loverrukk@gmail.com'): string {
+    const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+    const payload = btoa(
+      JSON.stringify({
+        sub: 'usr_pattranite_demo_01',
+        email,
+        role: 'traveler',
+        exp: Math.floor(Date.now() / 1000) + 86400 * 30,
+      })
+    );
+    const signature = btoa('demo_signature');
+    return `${header}.${payload}.${signature}`;
   }
 
   public async continueAsGuest(): Promise<void> {

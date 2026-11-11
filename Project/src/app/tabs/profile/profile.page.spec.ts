@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { BehaviorSubject, of, throwError } from 'rxjs';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { AlertController, ToastController } from '@ionic/angular';
@@ -47,6 +47,14 @@ describe('ProfilePage', () => {
     navigate: vi.fn().mockResolvedValue(true),
   };
 
+  const mockActivatedRoute = {
+    snapshot: {
+      queryParamMap: {
+        get: vi.fn().mockReturnValue(null),
+      },
+    },
+  };
+
   const mockAlert = { present: vi.fn().mockResolvedValue(undefined) };
   const mockAlertController = { create: vi.fn().mockResolvedValue(mockAlert) };
   const mockToast = { present: vi.fn().mockResolvedValue(undefined) };
@@ -64,6 +72,7 @@ describe('ProfilePage', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: Router, useValue: mockRouter },
+        { provide: ActivatedRoute, useValue: mockActivatedRoute },
         { provide: AuthService, useValue: mockAuthService },
         { provide: GuestMigrationService, useValue: mockGuestMigrationService },
         { provide: ConnectivityService, useValue: mockConnectivityService },
@@ -88,9 +97,20 @@ describe('ProfilePage', () => {
     expect(component.guestItineraryCount).toBe(2);
   });
 
-  it('navigates to /tabs/history when Favorites is selected', () => {
+  it('opens and closes in-page Favorites subview when Favorites row is selected', () => {
+    expect(component.viewMode).toBe('profile');
     component.openFavorites();
-    expect(mockRouter.navigate).toHaveBeenCalledWith(['/tabs/history']);
+    expect(component.viewMode).toBe('favorites');
+    expect(component.allFavorites).toBeDefined();
+
+    component.selectFavCategory('Nature & Parks');
+    expect(component.selectedFavCategory).toBe('Nature & Parks');
+
+    component.clearFavSearch();
+    expect(component.favSearchControl.value).toBe('');
+
+    component.closeFavorites();
+    expect(component.viewMode).toBe('profile');
   });
 
   it('opens and closes edit profile modal with prefilled data', () => {
@@ -304,5 +324,29 @@ describe('ProfilePage', () => {
 
   it('should clean up subscription on destroy without error', () => {
     expect(() => component.ngOnDestroy()).not.toThrow();
+  });
+
+  it('initializes with blank avatar placeholder for signed in users and handles photo selection', () => {
+    expect(component.profileExtra.avatar_url).toBe('assets/images/default_avatar_placeholder.png');
+
+    component.openEditProfile();
+    expect(component.viewMode).toBe('edit');
+    expect(component.editAvatarPreview).toBe('assets/images/default_avatar_placeholder.png');
+
+    const fakeFile = new File(['dummy-bytes'], 'avatar.png', { type: 'image/png' });
+    const fakeEvent = {
+      target: {
+        files: [fakeFile],
+        value: 'C:\\fakepath\\avatar.png',
+      },
+    } as unknown as Event;
+
+    component.onAvatarSelected(fakeEvent);
+
+    const nonImageFile = new File(['text'], 'doc.pdf', { type: 'application/pdf' });
+    component.onAvatarSelected({
+      target: { files: [nonImageFile], value: '' },
+    } as unknown as Event);
+    expect(component.editProfileError).toBe('Please select a valid image file.');
   });
 });

@@ -16,6 +16,11 @@ export const routes: Routes = [
         loadComponent: () => import('./map/map.page').then((m) => m.MapPage),
       },
       {
+        path: 'favorites',
+        redirectTo: 'profile',
+        pathMatch: 'full',
+      },
+      {
         path: 'history',
         loadComponent: () => import('./history/history.page').then((m) => m.HistoryPage),
       },

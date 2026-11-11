@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import type { OnInit } from '@angular/core';
-import { Component, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, inject } from '@angular/core';
 import type { FormGroup } from '@angular/forms';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -154,6 +154,7 @@ export class SuggestedWizardPage implements OnInit {
   private itineraryService = inject(ItineraryService);
   public placeService = inject(PlaceService);
   private toastController = inject(ToastController);
+  private cdr = inject(ChangeDetectorRef);
 
   constructor() {
     addIcons({
@@ -235,6 +236,7 @@ export class SuggestedWizardPage implements OnInit {
 
   public setDestination(dest: string): void {
     this.form.patchValue({ destination: dest });
+    this.cdr.markForCheck();
   }
 
   public onDestinationSelected(event: {
@@ -248,10 +250,12 @@ export class SuggestedWizardPage implements OnInit {
     } else if (event.type === 'municipality') {
       this.anchorPlaceId = undefined;
     }
+    this.cdr.markForCheck();
   }
 
   public setBudgetPreset(budget: number): void {
     this.form.patchValue({ daily_budget: budget });
+    this.cdr.markForCheck();
   }
 
   public togglePreference(key: string): void {
@@ -260,6 +264,7 @@ export class SuggestedWizardPage implements OnInit {
     } else {
       this.selectedPreferences.add(key);
     }
+    this.cdr.markForCheck();
   }
 
   public isPreferenceSelected(key: string): boolean {
@@ -279,10 +284,12 @@ export class SuggestedWizardPage implements OnInit {
       this.popupEndDate = toLocalIsoDate(addDaysLocal(start, 2));
     }
     this.isDatePickerOpen = true;
+    this.cdr.markForCheck();
   }
 
   public closeDatePicker(): void {
     this.isDatePickerOpen = false;
+    this.cdr.markForCheck();
   }
 
   public onPopupDateChange(): void {
@@ -377,10 +384,12 @@ export class SuggestedWizardPage implements OnInit {
 
   public setTravelMode(mode: 'DRIVE' | 'TWO_WHEELER' | 'WALK'): void {
     this.travelMode = mode;
+    this.cdr.markForCheck();
   }
 
   public setMinRating(rating: number): void {
     this.minRating = rating;
+    this.cdr.markForCheck();
   }
 
   public generateItinerary(): void {
@@ -399,6 +408,7 @@ export class SuggestedWizardPage implements OnInit {
       end_date: vals.end_date,
       daily_budget: Number(vals.daily_budget),
       preferences: Array.from(this.selectedPreferences),
+      pacing: 'moderate',
       save_immediately: false,
       travel_mode: this.travelMode,
       min_rating: this.minRating > 0 ? this.minRating : undefined,
@@ -415,9 +425,11 @@ export class SuggestedWizardPage implements OnInit {
         this.itineraryService.setActiveDraftItinerary(plan);
         this.budgetSummary = this.itineraryService.calculateBudgetSummary(plan);
         this.refreshNearbyPlaces();
+        this.cdr.markForCheck();
       },
       error: async (err) => {
         this.isGenerating = false;
+        this.cdr.markForCheck();
         const toast = await this.toastController.create({
           message: err?.error?.detail || 'Failed to generate itinerary. Please try again.',
           duration: 3000,
@@ -432,22 +444,26 @@ export class SuggestedWizardPage implements OnInit {
   public selectDay(index: number): void {
     this.activeDayIndex = index;
     this.refreshNearbyPlaces();
+    this.cdr.markForCheck();
   }
 
   public refreshNearbyPlaces(): void {
     const curDay = this.generatedPlan?.days[this.activeDayIndex];
     const muni = this.getDayLocationName(curDay);
     this.nearbyPlacesList = this.placeService.getNearbyPlaces(muni);
+    this.cdr.markForCheck();
   }
 
   public openStopDetail(stop: ItineraryItem): void {
     this.selectedStop = stop;
     this.isStopModalOpen = true;
+    this.cdr.markForCheck();
   }
 
   public closeStopDetail(): void {
     this.isStopModalOpen = false;
     this.selectedStop = null;
+    this.cdr.markForCheck();
   }
 
   public getStopImage(stop: ItineraryItem): string {
@@ -654,6 +670,7 @@ export class SuggestedWizardPage implements OnInit {
         next: async (saved) => {
           this.isSaving = false;
           this.itineraryService.setActiveDraftItinerary(null);
+          this.cdr.markForCheck();
           const toast = await this.toastController.create({
             message: `Suggested itinerary "${saved.title}" saved successfully!`,
             duration: 2500,
@@ -671,6 +688,7 @@ export class SuggestedWizardPage implements OnInit {
         error: async (err) => {
           this.isSaving = false;
           this.itineraryService.setActiveDraftItinerary(null);
+          this.cdr.markForCheck();
           const toast = await this.toastController.create({
             message: err?.error?.detail || 'Failed to save itinerary.',
             duration: 3000,

@@ -8,6 +8,17 @@
     <ion-icon name="close-outline"></ion-icon>
   </button>
 
+  <button
+    type="button"
+    class="sheet-fav-btn"
+    [class.is-fav]="isFavorite"
+    (click)="toggleFavorite()"
+    [attr.aria-label]="isFavorite ? 'Remove from favorites' : 'Add to favorites'"
+    [title]="isFavorite ? 'Remove from favorites' : 'Add to favorites'"
+  >
+    <ion-icon [name]="isFavorite ? 'heart' : 'heart-outline'"></ion-icon>
+  </button>
+
   <!-- Photo Hero & Gallery -->
   <div class="sheet-photo-wrap">
     <img

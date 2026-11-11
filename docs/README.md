@@ -26,6 +26,7 @@ This documentation suite is maintained continuously throughout development to pr
 | [**MAP_AND_ROUTING_PROPOSAL.md**](./MAP_AND_ROUTING_PROPOSAL.md) | Full architectural analysis & engineering blueprints from `itinerary_app_map_and_routing_proposal.pdf` (MAP-01 to MAP-03, ROUTE-01 to ROUTE-05). | System Architects, Fullstack Engineers |
 | [**UI_UX_EVALUATION_REPORT.md**](./UI_UX_EVALUATION_REPORT.md) | Live UI/UX evaluation & developer template critique from `itinerary_app_ui_ux_evaluation_report.pdf` (UIUX-01 to UIUX-10, P0–P2). | UI/UX Designers, Frontend Engineers |
 | [**KNOWN_ISSUES.md**](./KNOWN_ISSUES.md) | Active bugs, intentional limitations, deferred features, and resolution pathways. | Developers, QA |
+| [**SYSTEM_ANALYSIS_AND_TESTING_REPORT.md**](./SYSTEM_ANALYSIS_AND_TESTING_REPORT.md) | Comprehensive system architecture review, test results (localhost & website), and 10 illogical functionality findings & proposals. | All Engineers, QA, Product Leads |
 | [**TODO.md**](./TODO.md) | Granular actionable checklist tracking remaining tasks across all development phases. | Developers |
 
 ---

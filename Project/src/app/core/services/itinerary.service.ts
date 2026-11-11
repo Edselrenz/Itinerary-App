@@ -875,11 +875,33 @@ export class ItineraryService {
     return false;
   }
 
+  private isAccommodationPlace(place: OfflineCuratedPlace): boolean {
+    const cat = (place.categoryKey || '').toLowerCase();
+    const tags = (place.tags || []).map((t) => t.toLowerCase());
+    if (cat === 'hotel_accommodation') return true;
+    if (
+      tags.some(
+        (t) =>
+          t.includes('cabin') ||
+          t.includes('glamping') ||
+          t.includes('resort villas') ||
+          t.includes('hotel') ||
+          t.includes('overnight')
+      )
+    ) {
+      return true;
+    }
+    return false;
+  }
+
   private async generateOfflineSuggestedItinerary(
     request: SuggestedItineraryRequest
   ): Promise<Itinerary> {
     const totalDays = Math.max(1, diffDaysLocal(request.start_date, request.end_date));
     const start = parseLocalIsoDate(request.start_date);
+    const isSingleDay = totalDays === 1;
+    const pacing = request.pacing || 'moderate';
+    const targetStopsPerDay = pacing === 'relaxed' ? 2 : pacing === 'fast' ? 4 : 3;
 
     // Canonical curated offline places dataset (DEF-05)
     const curatedPool: OfflineCuratedPlace[] = getOfflineCuratedPoolForItinerary();
@@ -1048,33 +1070,46 @@ export class ItineraryService {
         : null;
 
       if (cluster) {
-        dayPlaces = [...cluster.places];
+        dayPlaces = isSingleDay
+          ? cluster.places.filter((p) => !this.isAccommodationPlace(p))
+          : [...cluster.places];
+        if (dayPlaces.length > targetStopsPerDay) {
+          dayPlaces = dayPlaces.slice(0, targetStopsPerDay);
+        }
         dayPlaces.forEach((p) => markPlaceUsed(p));
       } else {
         // Dynamic assignment preventing cross-day repetition
         if (d === 0 && anchorPlace) {
-          dayPlaces.push(anchorPlace);
-          markPlaceUsed(anchorPlace);
+          if (!isSingleDay || !this.isAccommodationPlace(anchorPlace)) {
+            dayPlaces.push(anchorPlace);
+            markPlaceUsed(anchorPlace);
+          }
         }
 
         // Find unused candidates from matchedPool using fuzzy deduplication (PREF-06)
         let candidates = matchedPool.filter((p) => !isPlaceDuplicate(p));
-        if (candidates.length < 3) {
+        if (isSingleDay) {
+          candidates = candidates.filter((p) => !this.isAccommodationPlace(p));
+        }
+
+        if (candidates.length < targetStopsPerDay) {
           // Fill from general curatedPool without duplicating venues
           const extra = curatedPool.filter(
-            (p) => !isPlaceDuplicate(p) && !candidates.some((c) => c.id === p.id)
+            (p) => !isPlaceDuplicate(p) && !candidates.some((c) => c.id === p.id) && (!isSingleDay || !this.isAccommodationPlace(p))
           );
           candidates = [...candidates, ...extra];
         }
 
         // Only if ALL unique venues across the entire province are exhausted do we allow recycling, but NEVER within the same day
-        if (candidates.length < 3) {
-          const recyclable = curatedPool.filter((p) => !dayPlaces.some((dp) => dp.id === p.id));
+        if (candidates.length < targetStopsPerDay) {
+          const recyclable = curatedPool.filter(
+            (p) => !dayPlaces.some((dp) => dp.id === p.id) && (!isSingleDay || !this.isAccommodationPlace(p))
+          );
           candidates = [...candidates, ...recyclable];
         }
 
-        // Add places up to 3 stops per day with Smart Midday Dining Anchor (PREF-05) and Max 1 Hike/Day
-        while (dayPlaces.length < 3 && candidates.length > 0) {
+        // Add places up to targetStopsPerDay stops per day with Smart Midday Dining Anchor (PREF-05) and Max 1 Hike/Day
+        while (dayPlaces.length < targetStopsPerDay && candidates.length > 0) {
           const currentSlot = dayPlaces.length;
 
           // Slot 1 (middle stop around noon): prioritize dining venue if available
@@ -1298,10 +1333,11 @@ export class ItineraryService {
       preferences: request.preferences || [],
       type: 'suggested',
       assumptions: [
-        'Pacing: 2 to 3 stops scheduled per day to allow relaxed travel along provincial roads.',
+        `Pacing: ${targetStopsPerDay} stops scheduled per day to allow ${pacing} travel along provincial roads.`,
         `Geographic clustering: Stops on each day are clustered around ${request.destination || 'Nueva Ecija'} to prevent backtracking.`,
         'Budget & Expenses: Estimates reflect entrance, activities, and dining where available. Inter-town transit and fuel are not included.',
         'Operating Hours: Hours reflect verified public records; travelers are encouraged to verify schedules locally for holidays.',
+        ...(isSingleDay ? ['Single-Day Itinerary: Planned as a day-trip getaway without overnight lodging.'] : []),
       ],
       created_at: now,
       updated_at: now,

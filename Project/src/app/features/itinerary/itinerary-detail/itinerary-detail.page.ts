@@ -844,6 +844,7 @@ export class ItineraryDetailPage implements OnInit, OnDestroy, ComponentCanDeact
     if (item.estimated_cost_min != null || item.estimated_cost_max != null) {
       const min = item.estimated_cost_min ?? item.estimated_cost_max;
       const max = item.estimated_cost_max ?? item.estimated_cost_min;
+      if (min === 0 && max === 0) return 'Free Admission';
       return min === max ? `₱${min}` : `₱${min} - ₱${max}`;
     }
     return 'Price not listed';

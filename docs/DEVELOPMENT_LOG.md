@@ -4080,3 +4080,93 @@ NEXT STEPS:
   - `docs/TODO.md`
   - `docs/CHANGELOG.md`
   - `docs/DEVELOPMENT_LOG.md`
+
+
+---
+
+## Session 101: Phase 37 — Profile Persona Pre-Set, Settings/Help Sub-Views, Logout Parity, Dark Mode Fix & Dedicated Favorites Tab
+- **Date & Time**: 2026-11-10 18:00:00 - 19:30:00 (Local)
+- **Objective**: Implement comprehensive Profile Tab enhancements matching user-provided Figma screenshots and design directives.
+- **Tasks Performed & Implementation Details**:
+  - Pre-populated traveler persona with Pattranite Limpatiyakorn on login.
+  - Implemented in-page sub-views for App Settings, Help & Support, and About inside ProfilePage (`viewMode: 'profile' | 'settings' | 'help' | 'about'`).
+  - Implemented Figma Before Logout dialog and After Logout screen parity.
+  - Fixed dark mode color styling to eliminate white-on-white inversion bug.
+  - Built FavoritesService and place bookmarking in PlaceDetailSheetComponent.
+- **Verification**: Vitest unit tests (32/32 suites, 321/321 passed, 100%), clean production build, 24/24 acceptance checks passed.
+
+---
+
+## Session 102: Phase 38 — Edit Profile Formatting, Photo Upload Reactivity & Blank Avatar Placeholder
+- **Date & Time**: 2026-11-10 19:45:00 - 20:45:00 (Local)
+- **Objective**: Implement user request to realign Edit Profile matching Figma screenshot, fix photo upload preview reactivity, and provide blank avatar placeholder.
+- **Tasks Performed & Implementation Details**:
+  - Integrated neutral grey silhouette avatar (`Project/src/assets/images/default_avatar_placeholder.png`) as default avatar placeholder for signed-in individuals.
+  - Rebuilt Edit Profile as in-page sub-view inside ProfilePage (`viewMode: 'edit'`) retaining bottom navigation bar.
+  - Fixed profile photo upload reactivity using `ChangeDetectorRef.markForCheck()` inside `FileReader.onload`.
+- **Verification**: Vitest unit tests (32/32 suites, 322/322 passed, 100%), clean production build, Capacitor Android sync passed.
+
+---
+
+## Session 103: Phase 39 — Favorites Profile-Only Migration (Bottom Navigation De-Clutter)
+- **Date & Time**: 2026-11-10 21:00:00 - 21:20:00 (Local)
+- **Objective**: Migrate Favorites to be accessible only via the Profile tab, removing the 5th tab from bottom navigation bar to restore the 4-tab Figma design.
+- **Tasks Performed & Implementation Details**:
+  - Removed `<ion-tab-button tab="favorites">` from `tabs.page.html`.
+  - Added in-page Favorites subview inside `ProfilePage` (`viewMode: 'favorites'`) with search, category filtering, and POI cards.
+  - Redirected `/tabs/favorites` and `/favorites` routes to `/tabs/profile`.
+- **Verification**: Vitest unit tests (32/32 suites, 322/322 passed, 100%), clean production build, Capacitor sync passed.
+
+---
+
+## Session 104: Phase 40 — Critical Remediation Suite (System Review Audit Findings)
+- **Date & Time**: 2026-11-11 13:10:00 - 13:38:00 (Local)
+- **Objective**: Implement comprehensive remediation for high-priority findings from `docs/SYSTEM_ANALYSIS_AND_TESTING_REPORT.md`:
+  - Finding 11 (P0): Zoneless Change Detection UI Freeze in Suggested Wizard.
+  - Finding 1 (P0): Silent Demo Login Usurpation & Transparent Offline Auth with Explicit Demo Action.
+  - Finding 2 (P0): Foreign Persona Defaults on Real Philippine Accounts & Password Toggle Form Wipe Bug.
+  - Finding 7 (P1): Active Map Navigation Cancellation on Tab Tap.
+  - Findings 6 & 4 (P1): Day-Trip Lodging Exclusion & Questionnaire Pacing in Generator.
+  - Finding 8 (P2): Free Admission Badge for Zero-Cost Stops (₱0).
+  - Finding 3 (P2): One-Tap Post-Logout Guest Access.
+  - Playwright E2E Hash Routing Alignment.
+- **Tasks Performed & Implementation Details**:
+  - Finding 11: Injected `ChangeDetectorRef` into `suggested-wizard.page.ts` and added explicit `cdr.markForCheck()` across all async observable callbacks, user selections, and modal state toggles.
+  - Finding 1: Removed silent demo fallback on offline/502/504 errors in `auth.service.ts`; implemented explicit `loginDemo()` and added a styled `[Explore Demo Account (Pattranite Persona)]` button in `login.page.html` with dark mode support.
+  - Finding 2: Restricted foreign persona metadata to demo mode (`usr_pattranite_demo_01`); real registered accounts retain their names and blank extra fields with Philippine placeholder hints (`+63 9XX XXX XXXX`). Replaced `this.openEditProfile()` with `this.cdr.markForCheck()` in password visibility toggles, fixing form-wipe bug.
+  - Finding 7: Guarded `tabs.page.ts:onMapTabClicked()` to preserve active GPS route navigation query parameters (`followRoute=true`, `routeItineraryId`).
+  - Findings 6 & 4: Excluded overnight lodging on single-day trips in `itinerary_generator.py` and `itinerary.service.ts`; dynamically scaled stops per day by questionnaire pacing (`relaxed`: 2, `moderate`: 3, `fast`: 4).
+  - Finding 8: Formatted verified ₱0 venues as "Free Admission" in `itinerary-detail.page.ts`.
+  - Finding 3: Streamlined "Continue as Guest" after logout to navigate directly to `/tabs/home` without tutorial interstitial in `welcome.page.ts`.
+  - Playwright E2E: Aligned URLs in `Project/e2e/app.spec.ts` with Angular hash routing.
+- **Verification**:
+  - Vitest Unit Tests: **32/32 test suites passed, 327/327 tests passed (100.0%) in 47.64s**.
+  - Backend Tests: Bounding box and chronological generator tests passed 100%.
+  - Angular Production Build (`ng build --base-href /Itinerary-App/`): **Exit code 0, 0 budget violations (all component styles < 16 kB)**.
+  - Capacitor Android Sync: **Exit code 0 (web assets synchronized)**.
+- **Files Modified**:
+  - `Project/src/app/features/itinerary/suggested-wizard/suggested-wizard.page.ts`
+  - `Project/src/app/core/services/auth.service.ts`
+  - `Project/src/app/core/services/auth.service.spec.ts`
+  - `Project/src/app/features/auth/login/login.page.html`
+  - `Project/src/app/features/auth/login/login.page.ts`
+  - `Project/src/app/features/auth/login/login.page.scss`
+  - `Project/src/app/features/auth/login/login.page.spec.ts`
+  - `Project/src/app/tabs/profile/profile.page.ts`
+  - `Project/src/app/tabs/profile/profile.page.html`
+  - `Project/src/app/tabs/profile/profile.page.spec.ts`
+  - `Project/src/app/tabs/tabs.page.ts`
+  - `Project/src/app/tabs/tabs.page.spec.ts`
+  - `backend/app/algorithms/itinerary_generator.py`
+  - `backend/app/schemas/itinerary.py`
+  - `Project/src/app/core/models/itinerary.models.ts`
+  - `Project/src/app/core/services/itinerary.service.ts`
+  - `Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.ts`
+  - `Project/src/app/features/itinerary/itinerary-detail/itinerary-detail.page.spec.ts`
+  - `Project/src/app/features/auth/welcome/welcome.page.ts`
+  - `Project/src/app/features/auth/welcome/welcome.page.spec.ts`
+  - `Project/e2e/app.spec.ts`
+  - `docs/TODO.md`
+  - `docs/DEVELOPMENT_PLAN.md`
+  - `docs/CHANGELOG.md`
+  - `docs/DEVELOPMENT_LOG.md`

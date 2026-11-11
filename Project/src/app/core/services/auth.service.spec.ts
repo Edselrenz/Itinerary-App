@@ -101,4 +101,15 @@ describe('AuthService with SecureTokenStorage (SEC-02)', () => {
     expect(secureTokenStorageMock.clearTokens).toHaveBeenCalled();
     expect(guestStorageMock.setGuestMode).toHaveBeenCalledWith(true);
   });
+
+  it('authenticates demo persona via loginDemo without server network request', () => {
+    service.loginDemo(true).subscribe((res) => {
+      expect(res.user.id).toBe('usr_pattranite_demo_01');
+      expect(res.user.first_name).toBe('Pattranite');
+      expect(service.isDemoUser()).toBe(true);
+    });
+
+    httpMock.expectNone(`${environment.apiBaseUrl}/auth/login`);
+    expect(secureTokenStorageMock.saveTokens).toHaveBeenCalled();
+  });
 });

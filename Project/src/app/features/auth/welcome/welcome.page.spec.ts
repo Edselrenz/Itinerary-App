@@ -3,6 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { AuthService } from '../../../core/services/auth.service';
 import { WelcomePage } from './welcome.page';
 
 describe('WelcomePage', () => {
@@ -18,6 +19,10 @@ describe('WelcomePage', () => {
     queryParams: of({ loggedOut: 'false' }),
   };
 
+  const mockAuthService = {
+    continueAsGuest: vi.fn().mockResolvedValue(undefined),
+  };
+
   beforeEach(async () => {
     vi.clearAllMocks();
 
@@ -26,6 +31,7 @@ describe('WelcomePage', () => {
       providers: [
         { provide: Router, useValue: mockRouter },
         { provide: ActivatedRoute, useValue: mockActivatedRoute },
+        { provide: AuthService, useValue: mockAuthService },
       ],
     }).compileComponents();
 
@@ -63,8 +69,15 @@ describe('WelcomePage', () => {
     expect(mockRouter.navigate).toHaveBeenCalledWith(['/signup']);
   });
 
-  it('navigates to /guest when goToGuest is called', () => {
+  it('navigates to /guest when goToGuest is called in standard onboarding state', () => {
     component.goToGuest();
     expect(mockRouter.navigate).toHaveBeenCalledWith(['/guest']);
+  });
+
+  it('directly navigates to /tabs/home when goToGuest is called after logout (Finding 3)', () => {
+    component.isAfterLogout = true;
+    component.goToGuest();
+    expect(mockAuthService.continueAsGuest).toHaveBeenCalled();
+    expect(mockRouter.navigate).toHaveBeenCalledWith(['/tabs/home']);
   });
 });

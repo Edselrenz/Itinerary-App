@@ -64,6 +64,11 @@ export const routes: Routes = [
     pathMatch: 'full',
   },
   {
+    path: 'favorites',
+    redirectTo: '/tabs/profile',
+    pathMatch: 'full',
+  },
+  {
     path: '',
     redirectTo: '/welcome',
     pathMatch: 'full',

@@ -1,0 +1,357 @@
+:host {
+  --fav-blue: #0088ff;
+  --fav-blue-hover: #0077e6;
+  --fav-bg: #f8fafc;
+  --fav-card-bg: #ffffff;
+  --fav-card-border: #e2e8f0;
+  --fav-text-main: #0f172a;
+  --fav-text-sub: #64748b;
+  --fav-red: #ef4444;
+}
+
+:host-context(.dark) {
+  --fav-bg: #0f172a;
+  --fav-card-bg: #1e293b;
+  --fav-card-border: #334155;
+  --fav-text-main: #f8fafc;
+  --fav-text-sub: #94a3b8;
+}
+
+.fav-toolbar {
+  --background: var(--fav-bg);
+  --border-color: transparent;
+  padding: 8px 16px 0 16px;
+}
+
+.fav-header-wrap {
+  padding-bottom: 4px;
+}
+
+.title-with-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.fav-main-title {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--fav-text-main);
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.fav-count-pill {
+  background: #fee2e2;
+  color: #ef4444;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 2px 9px;
+  border-radius: 9999px;
+}
+
+.fav-subtitle {
+  font-size: 13px;
+  color: var(--fav-text-sub);
+  margin: 4px 0 0 0;
+}
+
+.fav-content {
+  --background: var(--fav-bg);
+}
+
+.fav-layout-container {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 12px 16px 40px 16px;
+}
+
+// Search Wrap
+.search-wrap {
+  display: flex;
+  align-items: center;
+  background: var(--fav-card-bg);
+  border: 1px solid var(--fav-card-border);
+  border-radius: 14px;
+  padding: 0 12px;
+  height: 44px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+}
+
+.search-lead-icon {
+  font-size: 18px;
+  color: var(--fav-text-sub);
+  margin-right: 8px;
+}
+
+.search-native-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--fav-text-main);
+  font-size: 14px;
+  outline: none;
+
+  &::placeholder {
+    color: var(--fav-text-sub);
+  }
+}
+
+.clear-search-btn {
+  background: transparent;
+  border: none;
+  color: var(--fav-text-sub);
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 2px;
+}
+
+// Category Pills Row
+.category-pills-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  margin-bottom: 16px;
+  -webkit-overflow-scrolling: touch;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.cat-filter-pill {
+  white-space: nowrap;
+  background: var(--fav-card-bg);
+  border: 1px solid var(--fav-card-border);
+  border-radius: 9999px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fav-text-sub);
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &.active {
+    background: var(--fav-blue);
+    border-color: var(--fav-blue);
+    color: #ffffff;
+  }
+}
+
+// Favorites Cards Grid
+.favorites-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.fav-place-card {
+  background: var(--fav-card-bg);
+  border: 1px solid var(--fav-card-border);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+
+  &:active {
+    transform: scale(0.99);
+  }
+}
+
+.card-thumb-wrap {
+  position: relative;
+  width: 100%;
+  height: 160px;
+  overflow: hidden;
+  background: #cbd5e1;
+}
+
+.card-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.heart-toggle-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: #ef4444;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: transform 0.15s ease;
+
+  &:active {
+    transform: scale(0.9);
+  }
+}
+
+.thumb-cat-badge {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  background: rgba(15, 23, 42, 0.75);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  backdrop-filter: blur(4px);
+}
+
+.card-body {
+  padding: 14px 16px;
+}
+
+.card-muni-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.muni-icon {
+  font-size: 14px;
+  color: var(--fav-blue);
+}
+
+.muni-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fav-blue);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.card-venue-name {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--fav-text-main);
+  margin: 0 0 6px 0;
+  line-height: 1.25;
+}
+
+.card-cost-row {
+  margin-bottom: 12px;
+}
+
+.cost-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fav-text-sub);
+}
+
+.card-actions-bar {
+  display: flex;
+  gap: 8px;
+  border-top: 1px solid var(--fav-card-border);
+  padding-top: 12px;
+}
+
+.action-pill-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &.directions-btn {
+    background: #eff6ff;
+    color: var(--fav-blue);
+    border: 1px solid #bfdbfe;
+
+    &:active {
+      background: #dbeafe;
+    }
+  }
+
+  &.details-btn {
+    background: var(--fav-blue);
+    color: #ffffff;
+    border: none;
+
+    &:active {
+      background: var(--fav-blue-hover);
+    }
+  }
+}
+
+// Empty State
+.empty-favorites-container {
+  text-align: center;
+  padding: 48px 24px;
+  background: var(--fav-card-bg);
+  border: 1px solid var(--fav-card-border);
+  border-radius: 24px;
+  margin-top: 16px;
+}
+
+.empty-icon-circle {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: #fee2e2;
+  color: #ef4444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  margin: 0 auto 16px auto;
+}
+
+.empty-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--fav-text-main);
+  margin: 0 0 8px 0;
+}
+
+.empty-desc {
+  font-size: 13.5px;
+  color: var(--fav-text-sub);
+  line-height: 1.5;
+  max-width: 320px;
+  margin: 0 auto 24px auto;
+}
+
+.explore-map-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--fav-blue);
+  color: #ffffff;
+  border: none;
+  border-radius: 9999px;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 136, 255, 0.25);
+  transition: background 0.15s ease;
+
+  &:active {
+    background: var(--fav-blue-hover);
+  }
+}

@@ -34,6 +34,38 @@
   box-shadow: 0 -4px 24px rgba(15, 23, 42, 0.16);
 }
 
+.sheet-fav-btn {
+  position: absolute;
+  top: 12px;
+  right: 54px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  color: #ffffff;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 20;
+  transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease;
+
+  ion-icon {
+    font-size: 19px;
+  }
+
+  &.is-fav {
+    background: #ffffff;
+    color: #ef4444;
+  }
+
+  &:active {
+    transform: scale(0.92);
+  }
+}
+
 .sheet-close-btn {
   position: absolute;
   top: 12px;

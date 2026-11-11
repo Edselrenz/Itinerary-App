@@ -30,6 +30,7 @@ describe('LoginPage', () => {
 
   const mockAuthService = {
     login: vi.fn().mockReturnValue(of({ user: { id: 'u1' }, access_token: 'tok' })),
+    loginDemo: vi.fn().mockReturnValue(of({ user: { id: 'usr_pattranite_demo_01' }, access_token: 'tok' })),
   };
 
   const mockGuestMigrationService = {
@@ -141,6 +142,12 @@ describe('LoginPage', () => {
         message: 'Apple Sign-In is disabled in this pilot build.',
       })
     );
+  });
+
+  it('should authenticate demo account when onDemoLogin is clicked (Finding 1)', () => {
+    component.onDemoLogin();
+    expect(mockAuthService.loginDemo).toHaveBeenCalled();
+    expect(mockRouter.navigate).toHaveBeenCalledWith(['/tabs/home']);
   });
 });
 

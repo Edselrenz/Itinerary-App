@@ -3319,16 +3319,140 @@ body {
   }
 }
 
-/* Global Dark Mode Rules */
+/* Global Dark Mode Rules — Permanent Elimination of White-on-White Inversions */
+html.dark,
 body.dark {
-  --ion-background-color: #0b1120;
-  --ion-text-color: #f1f5f9;
-  --ion-card-background: #1e293b;
-  --ion-toolbar-background: #0b1120;
-  --ion-tab-bar-background: #0f172a;
+  --ion-background-color: #0b1120 !important;
+  --ion-text-color: #f1f5f9 !important;
+  --ion-card-background: #1e293b !important;
+  --ion-item-background: #1e293b !important;
+  --ion-toolbar-background: #0b1120 !important;
+  --ion-tab-bar-background: #0f172a !important;
+  background-color: #0b1120 !important;
+  color: #f1f5f9 !important;
 
-  .profile-content {
-    --background: #0b1120;
+  ion-content,
+  .profile-content,
+  .fav-content,
+  .home-content,
+  .history-content,
+  .map-content,
+  .custom-builder-content,
+  .suggested-wizard-content,
+  .itinerary-detail-content {
+    --background: #0b1120 !important;
+    background: #0b1120 !important;
+    color: #f1f5f9 !important;
+  }
+
+  ion-header,
+  ion-toolbar,
+  .fav-toolbar,
+  .profile-toolbar,
+  .home-header {
+    --background: #0b1120 !important;
+    --border-color: #1e293b !important;
+    background: #0b1120 !important;
+    color: #f1f5f9 !important;
+  }
+
+  /* Containers, Cards & Modals in Dark Mode */
+  .profile-card,
+  .settings-card-container,
+  .fav-place-card,
+  .itinerary-card,
+  .action-card.custom-card,
+  .dest-card,
+  .search-container,
+  .search-results-floating-panel,
+  .search-wrap,
+  .place-detail-sheet,
+  .logout-card-container,
+  .custom-tab-bar {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    color: #f1f5f9 !important;
+  }
+
+  /* Text Elements in Dark Mode */
+  .header-title,
+  .fav-main-title,
+  .profile-title,
+  .view-header-title,
+  .subview-header-title,
+  .card-venue-name,
+  .item-title,
+  .row-title,
+  .user-fullname,
+  .empty-title,
+  .logout-heading,
+  .about-app-title,
+  .section-subheading,
+  .faq-toggle-btn span,
+  .meta-val {
+    color: #f8fafc !important;
+  }
+
+  .fav-subtitle,
+  .item-desc,
+  .row-subtitle,
+  .user-email-handle,
+  .cost-text,
+  .empty-desc,
+  .logout-body-text,
+  .faq-answer,
+  .about-app-desc,
+  .meta-label,
+  .muni-text {
+    color: #94a3b8 !important;
+  }
+
+  /* Inputs & Selectors */
+  .search-native-input,
+  .edit-field-input {
+    background: #0f172a !important;
+    border-color: #334155 !important;
+    color: #f8fafc !important;
+
+    &::placeholder {
+      color: #64748b !important;
+    }
+  }
+
+  /* Dividers */
+  .card-item-divider,
+  .row-divider,
+  .section-divider {
+    background: #334155 !important;
+  }
+
+  /* Category pills */
+  .cat-filter-pill,
+  .category-pill-btn {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    color: #cbd5e1 !important;
+
+    &.active {
+      background: #0284c7 !important;
+      border-color: #38bdf8 !important;
+      color: #ffffff !important;
+    }
+  }
+
+  /* Tab bar */
+  .custom-tab-bar {
+    background: #0f172a !important;
+    border-top: 1px solid #1e293b !important;
+
+    ion-tab-button {
+      background: #0f172a !important;
+      color: #94a3b8 !important;
+
+      &.tab-selected {
+        color: #38bdf8 !important;
+      }
+    }
   }
 
   .user-card,

@@ -10,6 +10,8 @@ import {
 import { addIcons } from 'ionicons';
 import { person } from 'ionicons/icons';
 
+import { AuthService } from '../../../core/services/auth.service';
+
 @Component({
   selector: 'app-welcome',
   templateUrl: './welcome.page.html',
@@ -22,6 +24,7 @@ export class WelcomePage implements OnInit {
 
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+  private authService = inject(AuthService);
 
   constructor() {
     addIcons({ person });
@@ -42,6 +45,11 @@ export class WelcomePage implements OnInit {
   }
 
   public goToGuest(): void {
+    if (this.isAfterLogout) {
+      this.authService.continueAsGuest();
+      this.router.navigate(['/tabs/home']);
+      return;
+    }
     this.router.navigate(['/guest']);
   }
 }

@@ -142,6 +142,7 @@ export interface SuggestedItineraryRequest {
   end_date: string;
   daily_budget: number;
   preferences: string[];
+  pacing?: 'relaxed' | 'moderate' | 'fast' | string;
   save_immediately?: boolean;
   origin_lat?: number;
   origin_lng?: number;

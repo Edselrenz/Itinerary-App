@@ -52,6 +52,60 @@
 // -----------------------------------------------------------------------------
 // 1. Traveler Identity Header (Horizontal Avatar + Name + Pill Button)
 // -----------------------------------------------------------------------------
+.profile-view-header {
+  padding: 12px 20px 4px 20px;
+}
+
+.subview-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px 16px 20px;
+
+  .back-arrow-btn {
+    background: transparent;
+    border: none;
+    font-size: 26px;
+    color: var(--pf-blue);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    padding: 0;
+    line-height: 1;
+
+    ion-icon {
+      color: var(--pf-blue);
+      font-size: 26px;
+    }
+  }
+
+  .subview-header-title {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--pf-text-main);
+    margin: 0;
+  }
+}
+
+.about-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 14px;
+  .meta-label {
+    color: var(--pf-text-sub);
+  }
+  .meta-val {
+    color: var(--pf-text-main);
+    font-weight: 600;
+  }
+}
+
+.my-16 {
+  margin-top: 16px;
+  margin-bottom: 16px;
+}
+
 .identity-section {
   padding: 12px 20px 16px 20px;
 }
@@ -482,6 +536,11 @@
   color: var(--pf-blue);
 }
 
+.logout-door-svg {
+  width: 58px;
+  height: 58px;
+}
+
 .logout-heading {
   font-size: 20px;
   font-weight: 800;
@@ -522,6 +581,10 @@
 // -----------------------------------------------------------------------------
 // 5. Edit Profile Sub-Window
 // -----------------------------------------------------------------------------
+.edit-profile-subview-body {
+  padding: 10px 20px 32px 20px;
+}
+
 .edit-avatar-section {
   display: flex;
   flex-direction: column;
@@ -538,6 +601,12 @@
   margin-bottom: 12px;
   border: 1px solid rgba(0, 0, 0, 0.1);
   background: #f1f5f9;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+
+  &:active {
+    transform: scale(0.96);
+  }
 }
 
 .edit-avatar-img {
@@ -547,39 +616,44 @@
   display: block;
 }
 
-.camera-badge-btn {
+.camera-center-overlay {
   position: absolute;
   inset: 0;
   margin: auto;
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(2px);
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 20px;
-  cursor: pointer;
+  pointer-events: none;
 }
 
-.hidden-file-picker {
+.hidden-file-input {
   display: none;
 }
 
-.change-photo-pill {
+.change-photo-pill-btn {
   border: 1.5px solid var(--pf-blue);
-  background: transparent;
+  background: #ffffff;
   color: var(--pf-blue);
   border-radius: 9999px;
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 600;
-  padding: 6px 22px;
+  padding: 7px 24px;
   cursor: pointer;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, transform 0.15s ease;
 
   &:active {
     background: rgba(0, 136, 255, 0.08);
+    transform: scale(0.98);
   }
 }
 
@@ -737,4 +811,289 @@
   font-size: 12px;
   color: #94a3b8;
   font-weight: 500;
+}
+
+// -----------------------------------------------------------------------------
+// Favorites In-Page Subview (Accessible only from Profile Tab)
+// -----------------------------------------------------------------------------
+.header-title-pill-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fav-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 136, 255, 0.12);
+  color: var(--pf-blue);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 9999px;
+}
+
+.fav-subview-body {
+  padding: 0 16px 24px 16px;
+}
+
+.fav-search-bar {
+  display: flex;
+  align-items: center;
+  background: var(--pf-card-bg);
+  border: 1px solid var(--pf-card-border);
+  border-radius: 24px;
+  padding: 8px 14px;
+  margin-bottom: 12px;
+  gap: 8px;
+
+  .fav-search-icon {
+    font-size: 18px;
+    color: var(--pf-text-sub);
+    flex-shrink: 0;
+  }
+
+  .fav-search-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 14px;
+    color: var(--pf-text-main);
+
+    &::placeholder {
+      color: var(--pf-text-sub);
+    }
+  }
+
+  .fav-search-clear {
+    background: transparent;
+    border: none;
+    padding: 0;
+    color: var(--pf-text-sub);
+    font-size: 18px;
+    cursor: pointer;
+  }
+}
+
+.fav-category-scroller {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 12px;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  .fav-cat-btn {
+    flex-shrink: 0;
+    border: 1px solid var(--pf-card-border);
+    background: var(--pf-card-bg);
+    color: var(--pf-text-sub);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &.active {
+      background: var(--pf-blue);
+      border-color: var(--pf-blue);
+      color: #ffffff;
+    }
+  }
+}
+
+.fav-places-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.fav-place-item {
+  background: var(--pf-card-bg);
+  border: 1px solid var(--pf-card-border);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+
+  &:active {
+    transform: scale(0.99);
+  }
+
+  .fav-item-thumb-box {
+    position: relative;
+    width: 100%;
+    height: 140px;
+    overflow: hidden;
+    background: #e2e8f0;
+
+    .fav-item-thumb {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .fav-item-heart-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(4px);
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ef4444;
+      font-size: 18px;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    }
+
+    .fav-item-cat-badge {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(4px);
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+  }
+
+  .fav-item-info {
+    padding: 12px 14px 14px 14px;
+
+    .fav-item-muni-row {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      color: var(--pf-blue);
+      font-weight: 600;
+      margin-bottom: 4px;
+
+      ion-icon {
+        font-size: 14px;
+      }
+    }
+
+    .fav-item-name {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--pf-text-main);
+      margin: 0 0 6px 0;
+      line-height: 1.3;
+    }
+
+    .fav-item-cost {
+      font-size: 12px;
+      color: var(--pf-text-sub);
+      margin: 0 0 12px 0;
+      font-weight: 500;
+    }
+
+    .fav-item-actions-row {
+      display: flex;
+      gap: 8px;
+
+      .fav-pill-action {
+        flex: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 8px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 700;
+        text-decoration: none;
+        cursor: pointer;
+        border: none;
+        transition: all 0.2s ease;
+
+        &.dir-pill {
+          background: #eff6ff;
+          color: var(--pf-blue);
+          border: 1px solid #bfdbfe;
+
+          &:hover {
+            background: #dbeafe;
+          }
+        }
+
+        &.view-pill {
+          background: var(--pf-blue);
+          color: #ffffff;
+
+          &:hover {
+            background: var(--pf-blue-hover);
+          }
+        }
+      }
+    }
+  }
+}
+
+.fav-empty-card {
+  text-align: center;
+  background: var(--pf-card-bg);
+  border: 1px solid var(--pf-card-border);
+  border-radius: 20px;
+  padding: 36px 20px;
+  margin-top: 16px;
+
+  .fav-empty-heart-circle {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: rgba(0, 136, 255, 0.08);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--pf-blue);
+    font-size: 30px;
+    margin-bottom: 16px;
+  }
+
+  .fav-empty-heading {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--pf-text-main);
+    margin: 0 0 8px 0;
+  }
+
+  .fav-empty-desc {
+    font-size: 13px;
+    color: var(--pf-text-sub);
+    line-height: 1.5;
+    max-width: 300px;
+    margin: 0 auto 20px auto;
+  }
+
+  .fav-explore-home-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--pf-blue);
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 10px 20px;
+    border-radius: 24px;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 3px 10px rgba(0, 136, 255, 0.25);
+  }
 }

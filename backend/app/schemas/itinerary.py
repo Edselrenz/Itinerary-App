@@ -177,6 +177,7 @@ class SuggestedItineraryRequest(BaseModel):
     origin_lng: float | None = None
     travel_mode: str = "DRIVE"
     min_rating: float | None = None
+    pacing: str = "moderate"
     include_live_places: bool = False
 
     @model_validator(mode="after")

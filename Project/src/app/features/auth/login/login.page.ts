@@ -26,6 +26,7 @@ import {
   logoApple,
   mailOutline,
   shieldCheckmarkOutline,
+  sparkles,
 } from 'ionicons/icons';
 
 import { AuthService } from '../../../core/services/auth.service';
@@ -77,6 +78,7 @@ export class LoginPage {
       alertCircleOutline,
       closeOutline,
       shieldCheckmarkOutline,
+      sparkles,
     });
   }
 
@@ -138,11 +140,42 @@ export class LoginPage {
         },
         error: (err) => {
           this.isLoading = false;
-          this.errorMessage =
-            err.error?.detail ||
-            'Unable to log in. Please check your credentials or network connection.';
+          if (err.status === 0 || err.status === 502 || err.status === 504) {
+            this.errorMessage =
+              'Authentication server is currently unreachable. You can continue planning trips as a Guest or explore using the Demo Persona below.';
+          } else {
+            this.errorMessage =
+              err.error?.detail ||
+              'Invalid email or password. Please check your credentials and try again.';
+          }
         },
       });
+  }
+
+  public onDemoLogin(): void {
+    this.isLoading = true;
+    this.errorMessage = null;
+    this.authService.loginDemo().subscribe({
+      next: async () => {
+        try {
+          await this.guestMigrationService.migrateGuestData(true);
+        } catch {
+          // Migration is best-effort and non-blocking
+        }
+        this.isLoading = false;
+        const toast = await this.toastController.create({
+          message: 'Signed in as Demo Traveler (Pattranite Persona)',
+          duration: 2000,
+          position: 'top',
+          color: 'primary',
+        });
+        await toast.present();
+        this.router.navigate(['/tabs/home']);
+      },
+      error: () => {
+        this.isLoading = false;
+      },
+    });
   }
 
   public async onGoogleLogin(): Promise<void> {
