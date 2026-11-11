@@ -1,3 +1,17 @@
+## [0.41.0] - 2026-11-11
+### Fixed
+- **Zoneless Error Banner Reactivity in LoginPage (FIX-01C)**:
+  - Injected `ChangeDetectorRef` into `Project/src/app/features/auth/login/login.page.ts`.
+  - Added explicit `this.cdr.markForCheck()` in `onSubmit()` (`error` and `next` callbacks), `onDemoLogin()`, `togglePassword()`, and recovery modal handlers, guaranteeing that `<div class="error-banner">` renders immediately upon 401 Unauthorized or network failure without requiring an external user click.
+- **Zoneless Error Banner Reactivity in SignupPage**:
+  - Injected `ChangeDetectorRef` into `Project/src/app/features/auth/signup/signup.page.ts`.
+  - Added explicit `this.cdr.markForCheck()` in `onSubmit()` (`error` and `next` callbacks), `togglePassword()`, and `toggleConfirmPassword()`, ensuring registration failure alerts render responsively.
+- **Balanced Category Browsing in Custom Builder (Finding 5)**:
+  - In `Project/src/app/features/itinerary/custom-builder/custom-builder.page.ts`, ensured the browse modal defaults to the balanced "All" view across all core categories (Food, Attractions, Stays, Nature) so travelers aren't misled into believing a municipality lacks dining or lodging options.
+  - Retained "✨ Recommended for You" as a prominent filter pill when travel preferences are selected.
+
+---
+
 ## [0.40.0] - 2026-11-11
 ### Added
 - **Explicit Demo Mode Button on Login Screen (Finding 1)**:

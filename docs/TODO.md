@@ -1129,3 +1129,26 @@ px cap sync android): **Exit code 0 (6 plugins synchronized)**.
   - Backend Tests: Generator bounding box & chronological tests passed 100%.
   - Production Angular Build (`ng build --base-href /Itinerary-App/`): **Exit code 0, 0 budget violations (all components < 16 kB)**.
   - Capacitor Android Sync: **Exit code 0 (web directory synced)**.
+
+---
+
+## Phase 41: Post-Audit Polish & Zoneless Auth Reactivity (FIX-01C, Finding 5 & Finding 10)
+- [x] **41.1 (Fix FIX-01C: Zoneless Reactivity in LoginPage)**:
+  - In `Project/src/app/features/auth/login/login.page.ts`, injected `ChangeDetectorRef` (`private cdr = inject(ChangeDetectorRef)`).
+  - Added explicit `this.cdr.markForCheck()` inside `onSubmit()` (`error` callback for 401/0/502/504 and `next` callback), `onDemoLogin()` error callback, `togglePassword()`, `submitRecoveryRequest()`, and modal toggle handlers.
+  - Verified `<div class="error-banner">` renders immediately upon 401 Unauthorized or network failure without requiring external DOM interactions.
+- [x] **41.2 (Fix Zoneless Reactivity in SignupPage)**:
+  - In `Project/src/app/features/auth/signup/signup.page.ts`, injected `ChangeDetectorRef`.
+  - Added explicit `this.cdr.markForCheck()` inside `onSubmit()` (`error` callback and `next` callback), `togglePassword()`, and `toggleConfirmPassword()`.
+  - Verified registration error banners render immediately upon rejection.
+- [x] **41.3 (Fix Finding 5: Balanced Category Browsing in Custom Builder)**:
+  - In `Project/src/app/features/itinerary/custom-builder/custom-builder.page.ts`, prevented Step 1 preference selection from hiding essential dining, accommodation, and attractions in Step 2 browse modal.
+  - Maintained balanced "All" view by default showing top highlights across all core categories, while populating "✨ Recommended for You" whenever preferences are selected.
+- [x] **41.4 (Fix Finding 10: Copywriting & Typographic Polish)**:
+  - Verified all customer-facing copywriting across `welcome.page.html` ("personalized itineraries") and `guest.page.html` ("Your trips are saved locally on this device") uses clean, professional English copy.
+- [x] **41.5 (Full Verification & Quality Gates)**:
+  - Added error banner reactivity unit tests in `login.page.spec.ts` and `signup.page.spec.ts`.
+  - Vitest Unit Tests: **32/32 test suites passed, 329/329 tests passed (100.0%) in 23.74s**.
+  - Angular Production Build (`ng build --base-href /Itinerary-App/`): **Exit code 0, 0 budget violations (all components < 16 kB)**.
+  - Capacitor Android Sync: **Exit code 0 (web distribution directory synced)**.
+  - Updated `docs/DEVELOPMENT_PLAN.md`, `docs/CHANGELOG.md`, and `docs/DEVELOPMENT_LOG.md`.

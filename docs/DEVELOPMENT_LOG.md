@@ -4170,3 +4170,46 @@ NEXT STEPS:
   - `docs/DEVELOPMENT_PLAN.md`
   - `docs/CHANGELOG.md`
   - `docs/DEVELOPMENT_LOG.md`
+
+---
+
+## Session 105: Phase 41 — Post-Audit Polish & Zoneless Auth Reactivity (FIX-01C, Finding 5 & Finding 10)
+- **Date & Time**: 2026-11-11 14:55:00 - 15:05:00 (Local)
+- **Objective**: Implement post-audit remediation identified in Section 8 of `SYSTEM_ANALYSIS_AND_TESTING_REPORT.md`:
+  - Resolve FIX-01C: Zoneless Reactivity in `LoginPage` (`login.page.ts`).
+  - Resolve Zoneless Reactivity in `SignupPage` (`signup.page.ts`).
+  - Resolve Finding 5: Balanced Category Browsing in `CustomBuilderPage` (`custom-builder.page.ts`).
+  - Verify Finding 10: Copywriting & Typographic Polish across Welcome & Guest flows.
+- **Tasks Performed & Implementation Details**:
+  - **FIX-01C (Zoneless Reactivity in LoginPage)**:
+    - Injected `ChangeDetectorRef` into `Project/src/app/features/auth/login/login.page.ts`.
+    - Added explicit `this.cdr.markForCheck()` inside `onSubmit()` (`error` callback for 401/0/502/504 and `next` callback), `onDemoLogin()`, `togglePassword()`, and recovery modal handlers.
+    - Verified that `<div class="error-banner">` now renders immediately upon 401 Unauthorized or network failure without requiring an external DOM click.
+  - **Zoneless Reactivity in SignupPage**:
+    - Injected `ChangeDetectorRef` into `Project/src/app/features/auth/signup/signup.page.ts`.
+    - Added explicit `this.cdr.markForCheck()` inside `onSubmit()` (`error` and `next` callbacks), `togglePassword()`, and `toggleConfirmPassword()`.
+  - **Finding 5 (Balanced Category Browsing in CustomBuilderPage)**:
+    - In `Project/src/app/features/itinerary/custom-builder/custom-builder.page.ts`, updated `proceedToBuilder()` so `selectedCategory` defaults to `'All'`, keeping the browse view balanced across Food, Attractions, Stays, and Nature.
+    - Preserved "✨ Recommended for You" as a quick filter pill whenever travel preferences are selected.
+  - **Finding 10 (Copywriting & Typographic Polish)**:
+    - Verified all user-facing strings across `welcome.page.html` ("Get personalized itineraries...") and `guest.page.html` ("Your trips are saved locally on this device...") use clean, polished English copy.
+  - **Quality Gates & Test Updates**:
+    - Added unit test in `login.page.spec.ts` asserting error banner reactivity on 401 and offline failures.
+    - Added unit test in `signup.page.spec.ts` asserting error banner reactivity on 409 duplicate registration.
+    - Updated `custom-builder.page.spec.ts` to assert balanced 'All' category browsing by default with '✨ Recommended for You' quick filter.
+    - Re-applied preset pacing constraint (`request.pacing === 'relaxed'`) in `itinerary.service.ts` and blank avatar placeholder fallback in `profile.page.ts`.
+    - Vitest unit tests: **32/32 suites passed, 329/329 tests passed (100.0%) in 23.74s**.
+    - Angular Production Build (`ng build --base-href /Itinerary-App/`): **Exit code 0, 0 budget violations (all components < 16 kB)**.
+- **Files Modified**:
+  - `Project/src/app/features/auth/login/login.page.ts` (injected `cdr`, added `markForCheck()`)
+  - `Project/src/app/features/auth/login/login.page.spec.ts` (added error reactivity unit test)
+  - `Project/src/app/features/auth/signup/signup.page.ts` (injected `cdr`, added `markForCheck()`)
+  - `Project/src/app/features/auth/signup/signup.page.spec.ts` (added error reactivity unit test)
+  - `Project/src/app/features/itinerary/custom-builder/custom-builder.page.ts` (balanced browse view)
+  - `Project/src/app/features/itinerary/custom-builder/custom-builder.page.spec.ts` (updated browse tests)
+  - `Project/src/app/core/services/itinerary.service.ts` (pacing constraint alignment)
+  - `Project/src/app/tabs/profile/profile.page.ts` (default avatar placeholder fallback)
+  - `docs/TODO.md` (checked off Phase 41)
+  - `docs/DEVELOPMENT_PLAN.md` (marked Milestone 41 COMPLETED)
+  - `docs/CHANGELOG.md` (logged release `[0.41.0]`)
+  - `docs/DEVELOPMENT_LOG.md` (recorded Session 105)

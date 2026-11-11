@@ -571,24 +571,9 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
       this.activeDayIndex = Math.min(this.activeDayIndex, this.days.length - 1);
     }
 
-    // Pre-filter places if preferences are selected (CUST-01)
-    if (this.selectedPreferences.size > 1) {
-      this.selectedCategory = '✨ Recommended for You';
-    } else if (this.selectedPreferences.size === 1) {
-      if (this.selectedPreferences.has('food')) {
-        this.selectedCategory = 'Food';
-      } else if (this.selectedPreferences.has('culture')) {
-        this.selectedCategory = 'Culture & Heritage';
-      } else if (this.selectedPreferences.has('resort')) {
-        this.selectedCategory = 'Resorts & Stays';
-      } else if (this.selectedPreferences.has('nature')) {
-        this.selectedCategory = 'Tourist Spots';
-      } else if (this.selectedPreferences.has('shopping')) {
-        this.selectedCategory = 'Shopping';
-      }
-    } else {
-      this.selectedCategory = 'All';
-    }
+    // Keep browse view balanced across all categories (Finding 5)
+    // Selected preferences remain accessible via '✨ Recommended for You' pill
+    this.selectedCategory = 'All';
 
     this.loadBrowsePlaces();
     this.applyBrowseFilter();

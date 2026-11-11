@@ -157,7 +157,8 @@ describe('CustomBuilderPage', () => {
     component.togglePreference('food');
     component.proceedToBuilder();
     expect(component.activeView).toBe('browse');
-    expect(component.selectedCategory).toBe('Food');
+    expect(component.selectedCategory).toBe('All');
+    expect(component.activeBrowseCategories).toContain('✨ Recommended for You');
 
     component.backToForm();
     expect(component.activeView).toBe('form');
@@ -550,25 +551,24 @@ describe('CustomBuilderPage', () => {
     expect(component.hasUnsavedChanges).toBe(true);
   });
 
-  it('CUST-01: maps culture and resort preferences to canonical categories and multi-preferences to Recommended tab', () => {
-    // Culture single preference
+  it('CUST-01: provides balanced browsing by default and populates Recommended tab with user preferences (Finding 5)', () => {
+    // Single preference maintains balanced All view while adding Recommended pill
     component.selectedPreferences.clear();
     component.togglePreference('culture');
     component.proceedToBuilder();
-    expect(component.selectedCategory).toBe('Culture & Heritage');
+    expect(component.selectedCategory).toBe('All');
+    expect(component.activeBrowseCategories).toContain('✨ Recommended for You');
 
-    // Resort single preference
-    component.selectedPreferences.clear();
-    component.togglePreference('resort');
-    component.proceedToBuilder();
-    expect(component.selectedCategory).toBe('Resorts & Stays');
+    // Tapping Recommended pill filters places by culture
+    component.setBrowseCategory('✨ Recommended for You');
+    expect(component.selectedCategory).toBe('✨ Recommended for You');
 
     // Multi-preference
     component.selectedPreferences.clear();
     component.togglePreference('food');
-    component.togglePreference('culture');
+    component.togglePreference('resort');
     component.proceedToBuilder();
-    expect(component.selectedCategory).toBe('✨ Recommended for You');
+    expect(component.selectedCategory).toBe('All');
     expect(component.activeBrowseCategories).toContain('✨ Recommended for You');
   });
 

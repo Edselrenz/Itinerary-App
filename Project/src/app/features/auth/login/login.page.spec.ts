@@ -4,7 +4,7 @@ import type { ComponentFixture} from '@angular/core/testing';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { ToastController } from '@ionic/angular';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import { AuthService } from '../../../core/services/auth.service';
@@ -144,10 +144,36 @@ describe('LoginPage', () => {
     );
   });
 
-  it('should authenticate demo account when onDemoLogin is clicked (Finding 1)', () => {
+  it('should authenticate demo account when onDemoLogin is clicked (Finding 1)', async () => {
     component.onDemoLogin();
+    await new Promise((resolve) => setTimeout(resolve, 0));
     expect(mockAuthService.loginDemo).toHaveBeenCalled();
     expect(mockRouter.navigate).toHaveBeenCalledWith(['/tabs/home']);
+  });
+
+  it('should display error message on login failure with reactive change detection (FIX-01C)', () => {
+    mockAuthService.login.mockReturnValueOnce(
+      throwError(() => ({ status: 401, error: { detail: 'Incorrect email or password' } }))
+    );
+
+    component.loginForm.setValue({
+      email: 'wrong@example.ph',
+      password: 'WrongPassword!',
+      rememberMe: false,
+    });
+
+    component.onSubmit();
+
+    expect(component.isLoading).toBe(false);
+    expect(component.errorMessage).toBe('Incorrect email or password');
+
+    // Also verify offline / gateway error message
+    mockAuthService.login.mockReturnValueOnce(
+      throwError(() => ({ status: 0 }))
+    );
+
+    component.onSubmit();
+    expect(component.errorMessage).toContain('Authentication server is currently unreachable');
   });
 });
 

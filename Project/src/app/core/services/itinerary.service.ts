@@ -1073,8 +1073,8 @@ export class ItineraryService {
         dayPlaces = isSingleDay
           ? cluster.places.filter((p) => !this.isAccommodationPlace(p))
           : [...cluster.places];
-        if (dayPlaces.length > targetStopsPerDay) {
-          dayPlaces = dayPlaces.slice(0, targetStopsPerDay);
+        if (request.pacing === 'relaxed' && dayPlaces.length > 2) {
+          dayPlaces = dayPlaces.slice(0, 2);
         }
         dayPlaces.forEach((p) => markPlaceUsed(p));
       } else {

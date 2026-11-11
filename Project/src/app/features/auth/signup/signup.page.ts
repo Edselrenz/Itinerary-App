@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectorRef, Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   AbstractControl,
@@ -89,7 +89,8 @@ export class SignupPage {
     private router: Router,
     private authService: AuthService,
     private guestMigrationService: GuestMigrationService,
-    private toastController: ToastController
+    private toastController: ToastController,
+    private cdr: ChangeDetectorRef
   ) {
     addIcons({
       arrowBackOutline,
@@ -121,10 +122,12 @@ export class SignupPage {
 
   public togglePassword(): void {
     this.showPassword = !this.showPassword;
+    this.cdr.markForCheck();
   }
 
   public toggleConfirmPassword(): void {
     this.showConfirmPassword = !this.showConfirmPassword;
+    this.cdr.markForCheck();
   }
 
   public goBack(): void {
@@ -138,11 +141,13 @@ export class SignupPage {
   public onSubmit(): void {
     if (this.signupForm.invalid) {
       this.signupForm.markAllAsTouched();
+      this.cdr.markForCheck();
       return;
     }
 
     this.isLoading = true;
     this.errorMessage = null;
+    this.cdr.markForCheck();
 
     const val = this.signupForm.value;
     const emailStr = (val.email || '').trim();
@@ -167,6 +172,7 @@ export class SignupPage {
             // Non-blocking
           }
           this.isLoading = false;
+          this.cdr.markForCheck();
           this.router.navigate(['/tabs/home']);
         },
         error: (err) => {
@@ -174,6 +180,7 @@ export class SignupPage {
           this.errorMessage =
             err.error?.detail ||
             'Unable to complete registration. Please check your information.';
+          this.cdr.markForCheck();
         },
       });
   }

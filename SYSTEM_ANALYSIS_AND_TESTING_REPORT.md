@@ -619,3 +619,116 @@ The Nueva Ecija Travel Itinerary system demonstrates exceptional architectural m
 - **9 out of 9 core real-world mobile user journeys verified** on the live GitHub Pages website (`https://edselrenz.github.io/Itinerary-App/`).
 
 The 11 findings documented in this report represent the final mile of UX refinement, logical consistency, and Zoneless reactivity required to elevate the application from a verified MVP prototype into a world-class, commercial-grade travel companion. Applying these recommendations will ensure seamless navigation, honest pricing transparency, and an intuitive traveler experience for visitors exploring the province of Nueva Ecija.
+
+
+---
+
+## 8. Verification of User Fixes (Commit b5c10aa) & Dual-Environment Comparative Audit (Localhost vs. Live GitHub Pages)
+
+### 8.1 Verification of Previous Errors & Fixes (Commit `b5c10aa`)
+
+Following the user's implementation of fixes across 45 files in commit `b5c10aa`, targeted automated verification tests were executed against both the backend and frontend to verify whether previously identified defects were resolved.
+
+| Test ID | Area / Component | Description of Fix Tested | Result | Verification Details |
+| :--- | :--- | :--- | :--- | :--- |
+| **FIX-11** | **Suggested Wizard (`suggested-wizard.page.ts`)** | **Zoneless Automatic Rendering**: Injected `ChangeDetectorRef` and invoked `this.cdr.markForCheck()` upon generation HTTP response. | **RESOLVED (PASSED)** | Playwright verified that upon receiving HTTP 200 from `/api/v1/itineraries/suggest`, the trip card (`.figma-trip-card`), day capsules, and stop cards rendered automatically in **4.4s–4.7s** without any manual mouse or touch interaction. |
+| **FIX-01A** | **Backend Auth (`backend/app/api/v1/auth.py`)** | **Invalid Credentials Rejection**: Verifies `POST /api/v1/auth/login` returns HTTP 401 Unauthorized instead of silent usurpation. | **RESOLVED (PASSED)** | Calling `POST /api/v1/auth/login` with unregistered credentials returned `HTTP 401 Unauthorized` with `{"detail": "Incorrect email or password"}` (or `Invalid email or password`). No demo session is silently granted. |
+| **FIX-01B** | **Frontend Login (`login.page.ts`)** | **Explicit Demo Persona Button**: Added separate `.demo-pill-btn` ("Explore Demo Persona") calling `loginDemo()`. | **RESOLVED (PASSED)** | Tapping `.demo-pill-btn` immediately authenticated as Pattranite and navigated to `/#/tabs/home` within 4.0s. |
+| **FIX-01C** | **Frontend Login (`login.page.ts`)** | **Login Error Feedback Banner**: Displays truthful invalid credentials message when login fails. | **DEFECT IDENTIFIED (UNRESOLVED)** | While `this.errorMessage` is correctly updated in memory within the RxJS `error: (err) => ...` callback, **`ChangeDetectorRef` was not injected in `login.page.ts`**. Under Angular Zoneless change detection, `<div class="error-banner">` is not scheduled for re-rendering until an external DOM event occurs. |
+| **FIX-06** | **Itinerary Generator (`itinerary_generator.py`)** | **1-Day Itinerary Lodging Exclusion**: Single-day getaways exclude overnight accommodation and note it in assumptions. | **RESOLVED (PASSED)** | A 1-day itinerary request returned 3 activities with 0 hotel/lodging stops, and generated the assumption notice: *"Single-Day Itinerary: Planned as a day-trip getaway without overnight lodging."* |
+| **FIX-02** | **Profile Tab (`profile.page.ts`)** | **Avatar & Persona Cleansing**: Wired `default_avatar_placeholder.png`, cleaned up hardcoded Pattranite fallbacks, added Favorites sub-window. | **RESOLVED (PASSED)** | Profile template now binds to `default_avatar_placeholder.png` and displays accurate guest/user states. |
+| **FIX-04** | **Pacing Logic (`itinerary.service.ts` & Backend)** | **Pacing Bounds**: Enforces 2 stops for relaxed, 3 for moderate, 4 for fast pacing. | **RESOLVED (PASSED)** | Itinerary pacing validation passes across all pacing categories. |
+| **E2E-01** | **Playwright Test Suite (`Project/e2e/app.spec.ts`)** | **Hash Location Route Navigation**: Updated test navigation targets to `/#/...` hash paths. | **RESOLVED (PASSED)** | All **8 / 8 Playwright core journey tests passed (100.0%)** in 54.1s. Deep-linking to `/#/tabs/map`, `/#/tabs/home`, and `/#/custom-builder` now functions without redirection failures. |
+
+---
+
+### 8.2 Defect Deep-Dive: Zoneless Reactivity in `login.page.ts`
+
+While the backend logic and the explicit demo button were successfully fixed, testing uncovered why the login error banner does not display in the UI when invalid credentials are submitted:
+
+#### Root Cause
+In `Project/src/app/features/auth/login/login.page.ts`, lines 141–152:
+```typescript
+error: (err) => {
+  this.isLoading = false;
+  if (err.status === 0 || err.status === 502 || err.status === 504) {
+    this.errorMessage =
+      'Authentication server is currently unreachable. You can continue planning trips as a Guest or explore using the Demo Persona below.';
+  } else {
+    this.errorMessage =
+      err.error?.detail ||
+      'Invalid email or password. Please check your credentials and try again.';
+  }
+}
+```
+Because the application runs Angular in **Zoneless Mode** (`provideZonelessChangeDetection()`), asynchronous callbacks that originate outside of Angular's event system (such as RxJS HTTP error emissions) do **not** automatically trigger change detection. In `suggested-wizard.page.ts`, this was resolved by injecting `ChangeDetectorRef` and calling `this.cdr.markForCheck()`. In `login.page.ts`, `ChangeDetectorRef` is missing, leaving `this.errorMessage` populated in component memory while the DOM continues to hide `<div class="error-banner">`.
+
+#### Logical Recommendation & Code Fix
+1. Inject `ChangeDetectorRef` in `login.page.ts`:
+```typescript
+import { ChangeDetectorRef, Component, inject } from '@angular/core';
+...
+private cdr = inject(ChangeDetectorRef);
+```
+2. Call `this.cdr.markForCheck()` inside the error handler:
+```typescript
+error: (err) => {
+  this.isLoading = false;
+  if (err.status === 0 || err.status === 502 || err.status === 504) {
+    this.errorMessage =
+      'Authentication server is currently unreachable. You can continue planning trips as a Guest or explore using the Demo Persona below.';
+  } else {
+    this.errorMessage =
+      err.error?.detail ||
+      'Invalid email or password. Please check your credentials and try again.';
+  }
+  this.cdr.markForCheck(); // Instantly schedules UI render of error banner
+}
+```
+
+---
+
+### 8.3 Dual-Environment Comparative User Journey Matrix (Localhost vs. Live GitHub Pages)
+
+An automated comparative audit was conducted across all 10 standard user journeys, testing both the local development server (`http://localhost:4200/` backed by FastAPI `127.0.0.1:8000`) and the live production website (`https://edselrenz.github.io/Itinerary-App/` backed by Cloudflare Worker edge reverse proxy).
+
+| Journey ID | User Journey & Feature | Localhost Frontend (`http://localhost:4200/`) | Live GitHub Pages (`https://edselrenz.github.io/Itinerary-App/`) | Environmental Parity & Observations |
+| :--- | :--- | :--- | :--- | :--- |
+| **TC-01** | **Welcome Screen Branding & Entry** | **PASSED** (Brand: "Trip mo, trip ko", Headline: "Your next adventure is waiting", Guest CTA visible) | **PASSED** (Brand: "Trip mo, trip ko", Headline: "Your next adventure is waiting", Guest CTA visible) | **100% Identical**: Visual hierarchy and branding match across both environments. |
+| **TC-02** | **Guest Mode Onboarding** | **PASSED** (Navigated from `/#/welcome` -> `/#/guest` -> `/#/tabs/home`) | **PASSED** (Navigated from `/#/welcome` -> `/#/guest` -> `/#/tabs/home`) | **100% Identical**: Seamless onboarding without credential friction. |
+| **TC-03** | **Home Tab & Featured Places** | **PASSED** (17 destinations loaded, offline banner `false`, sample: CLSU Agricultural Museum) | **PASSED** (17 destinations loaded, offline banner `true`, sample: CLSU Agricultural Museum) | **Resilient Fallback**: Localhost is directly connected to live FastAPI. GitHub Pages displays non-intrusive offline indicator when Cloudflare tunnel is idle, but successfully serves all 17 curated places from client cache. |
+| **TC-04** | **Debounced Live Search & Detail Sheet** | **PASSED** (Query: "Bongabon", 20 cards returned, La Casa Prime Cabins sheet opened) | **PASSED** (Query: "Bongabon", 20 cards returned, La Casa Prime Cabins sheet opened) | **100% Identical**: Debounced search and bottom sheet modals operate identically. |
+| **TC-05** | **Suggested Itinerary Generation** | **PASSED** (Destination: "Gapan City", 3 days, 3 stops/day, rendered automatically without manual trigger click) | **PASSED** (Destination: "Nueva Ecija", 3 days, 3 stops/day, rendered automatically without manual trigger click) | **Core Fix Validated**: Both environments now successfully render generated plans automatically via Zoneless change detection. |
+| **TC-06** | **Custom Itinerary Builder** | **PASSED** (Navigated to `/#/custom-builder`, multi-step form attached and operational) | **PASSED** (Navigated to `/#/custom-builder`, multi-step form attached and operational) | **100% Identical**: Custom itinerary questionnaire and draft state management work uniformly. |
+| **TC-07** | **Leaflet Interactive Map** | **PASSED** (Canvas `#leaflet-map` attached, 7 layer panes rendered, marker clustering active) | **PASSED** (Canvas `#leaflet-map` attached, 7 layer panes rendered, marker clustering active) | **100% Identical**: Map tiles, marker layer panes, and zoom controls operate smoothly. |
+| **TC-08** | **Saved Itineraries (History Tab)** | **PASSED** (Navigated to `/#/tabs/history`, header "Saved Itineraries" and saved trip cards rendered) | **PASSED** (Navigated to `/#/tabs/history`, header "Saved Itineraries" and saved trip cards rendered) | **100% Identical**: Cross-tab itinerary synchronization operates as expected. |
+| **TC-09** | **Profile Tab & Settings** | **PASSED** (Navigated to `/#/tabs/profile`, Guest profile status and sub-windows rendered) | **PASSED** (Navigated to `/#/tabs/profile`, Guest profile status and sub-windows rendered) | **100% Identical**: Profile sub-views and settings are responsive. |
+| **TC-10** | **Authentication Forms & Demo Persona** | **PASSED** (Email/password inputs visible, `.demo-pill-btn` **present** on Localhost) | **PASSED** (Email/password inputs visible; `.demo-pill-btn` **pending deployment** on GitHub Pages) | **Deployment Divergence**: Commit `b5c10aa` introduced `.demo-pill-btn` locally. The live GitHub Pages deployment is running the prior build (bundle `main-OB3YJUNQ.js`), awaiting GitHub Actions deployment. |
+
+---
+
+### 8.4 Verification Gate & Test Suite Summary
+
+All test suites were executed to establish a complete audit trail:
+
+1. **Phase 10 Automated 24-Point Acceptance Gate (`scripts/verify_acceptance_gate.py`)**:
+   - **Result**: **24 / 24 CHECKS PASSED (100.0%)**
+   - Auth & Guest Mode: 7/7 passed
+   - Home & Places: 3/3 passed
+   - Map Tab: 7/7 passed
+   - Itineraries & Operations: 7/7 passed
+2. **Backend Unit & API Integration Tests (`pytest backend/tests/`)**:
+   - **Result**: **21 / 21 TESTS PASSED (100.0%)**
+   - Auth lifecycle, Argon2id, SlowAPI rate limiting, BOLA/IDOR isolation, and OSM spatial bounding.
+3. **Frontend Playwright E2E Test Suite (`Project/e2e/app.spec.ts`)**:
+   - **Result**: **8 / 8 TESTS PASSED (100.0%)** in 54.1s
+   - Resolves all prior hash routing failures.
+4. **Targeted Fix Verification Suite (`Project/e2e/verification_fixes.spec.ts`)**:
+   - **Result**: **3 / 4 TESTS PASSED** (Zoneless Wizard Rendering PASSED, Demo Persona Login PASSED, 1-Day Lodging Exclusion PASSED; Login Error Banner Reactivity identified for resolution).
+
+---
+
+### 8.5 Actionable Next Steps
+
+1. **Resolve `login.page.ts` Zoneless Reactivity**: Inject `ChangeDetectorRef` and call `this.cdr.markForCheck()` in the `error: (err) => ...` callback so invalid credential banners appear immediately upon 401 rejection.
+2. **Deploy Commit `b5c10aa` to GitHub Pages**: Push `main` to trigger the GitHub Actions workflow, updating the production bundle so that the `.demo-pill-btn` ("Explore Demo Persona") and the latest profile updates go live on `https://edselrenz.github.io/Itinerary-App/`.

@@ -527,3 +527,10 @@ The bottom navigation bar implements all 4 planned primary tabs (`/tabs/home`, `
 - [x] **40.7: One-Tap Post-Logout Guest Access**: Directed travelers clicking "Continue as Guest" after logout straight into `/tabs/home` without the redundant tutorial interstitial in `welcome.page.ts`.
 - [x] **40.8: Playwright E2E Hash Routing Alignment**: Updated direct navigation URLs in `Project/e2e/app.spec.ts` to use hash location routing (`/#/...`).
 - [x] **40.9: Quality Gates & Verification**: 100% test pass rate achieved across Vitest (32/32 suites, 327/327 tests), clean Angular production build (0 budget violations, <16 kB component styles), and clean Capacitor sync.
+
+#### Milestone 41: Post-Audit Polish & Zoneless Auth Reactivity (FIX-01C, Finding 5 & Finding 10) (COMPLETED)
+- [x] **41.1: Zoneless Reactivity in LoginPage (FIX-01C)**: Injected `ChangeDetectorRef` and invoked `this.cdr.markForCheck()` in `login.page.ts` error, submission, and recovery handlers so `<div class="error-banner">` displays immediately upon 401 rejection or network failure without requiring external clicks.
+- [x] **41.2: Zoneless Reactivity in SignupPage**: Injected `ChangeDetectorRef` and invoked `this.cdr.markForCheck()` in `signup.page.ts` error and submission handlers to guarantee responsive error feedback.
+- [x] **41.3: Balanced Category Browsing in Custom Builder (Finding 5)**: Prevented questionnaire preferences from masking essential dining and accommodation venues in Step 2 of `custom-builder.page.ts`; browse modal defaults to balanced "All" view with "✨ Recommended for You" available as a quick filter.
+- [x] **41.4: Typographic & Copywriting Polish (Finding 10)**: Verified and maintained clean, polished professional copy across Welcome and Guest flows.
+- [x] **41.5: Verification Quality Gates**: 100% Vitest pass rate (32/32 suites, 329/329 tests passed), clean production build (0 budget violations, <16 kB component styles), and clean Capacitor sync.

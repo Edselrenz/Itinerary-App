@@ -4,7 +4,7 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { Router } from '@angular/router';
 import { ToastController } from '@ionic/angular';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 
 import { SignupPage } from './signup.page';
 import { AuthService } from '../../../core/services/auth.service';
@@ -122,6 +122,26 @@ describe('SignupPage', () => {
         message: 'Apple Sign-Up is disabled in this pilot build.',
       })
     );
+  });
+
+  it('should display error message on registration failure with reactive change detection', () => {
+    mockAuthService.register.mockReturnValueOnce(
+      throwError(() => ({ status: 409, error: { detail: 'Username is already taken' } }))
+    );
+
+    component.signupForm.patchValue({
+      firstName: 'Maria',
+      lastName: 'Santos',
+      username: 'mariasantos',
+      email: 'maria@example.ph',
+      password: 'Password123!',
+      confirmPassword: 'Password123!',
+    });
+
+    component.onSubmit();
+
+    expect(component.isLoading).toBe(false);
+    expect(component.errorMessage).toBe('Username is already taken');
   });
 });
 

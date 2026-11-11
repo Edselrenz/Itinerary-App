@@ -334,7 +334,7 @@ export class ProfilePage implements OnInit, OnDestroy {
           phone_number: '+66 81 234 5678',
           birthday: 'May 23, 2000',
           gender: 'Female',
-          avatar_url: 'assets/images/pattranite_avatar.jpg',
+          avatar_url: 'assets/images/default_avatar_placeholder.png',
         };
       } else {
         this.profileExtra = {
@@ -348,9 +348,7 @@ export class ProfilePage implements OnInit, OnDestroy {
     }
 
     if (!this.profileExtra.avatar_url) {
-      this.profileExtra.avatar_url = isDemo
-        ? 'assets/images/pattranite_avatar.jpg'
-        : 'assets/images/default_avatar_placeholder.png';
+      this.profileExtra.avatar_url = 'assets/images/default_avatar_placeholder.png';
     }
     this.cdr.markForCheck();
   }
@@ -498,8 +496,7 @@ export class ProfilePage implements OnInit, OnDestroy {
       this.currentUser.email_normalized === 'loverrukk@gmail.com';
 
     this.editAvatarPreview =
-      this.profileExtra.avatar_url ||
-      (isDemo ? 'assets/images/pattranite_avatar.jpg' : 'assets/images/default_avatar_placeholder.png');
+      this.profileExtra.avatar_url || 'assets/images/default_avatar_placeholder.png';
     this.editForm.reset({
       first_name: this.currentUser?.first_name || (isDemo ? 'Pattranite' : ''),
       middle_initial: this.profileExtra.middle_initial || '',
