@@ -602,5 +602,21 @@ The bottom navigation bar implements all 4 planned primary tabs (`/tabs/home`, `
 - [x] **45.8: Comprehensive Testing, Build Verification & Deployment**:
   - 32/32 Vitest suites passed (340/340 unit tests, 100%), verified build budget (<16 kB), staged, committed, pushed, and tested on live GitHub Pages.
 
+#### Milestone 46: Custom Itinerary Visual Feedback & Shimmer Skeleton Loading Remediation (COMPLETED)
+- [x] **46.1: Instant In-Memory Pre-Population & Timeout Protection in `loadBrowsePlaces()`**:
+  - In `custom-builder.page.ts`, synchronously pre-populate `allCuratedPlaces` with `this.placeService.getLoadedPlaces(dest)` before initiating HTTP requests, providing 0ms destination rendering.
+  - Wrap `searchObs` with RxJS `timeout(3500)` and fallback handler to prevent infinite loading freezes on slow/unreachable connections.
+- [x] **46.2: Context-Aware Skeleton Shimmer Card Grid in Place Browser**:
+  - Replace the crude dashed `.places-loading-box` with an animated, accessible skeleton shimmer grid (`.skeleton-grid` rendering 6 `.skeleton-card` elements) matching the destination card layout (thumbnail, category badge, title, location, meta row).
+- [x] **46.3: Start Building CTA Button Visual Feedback**:
+  - Add `isStartingBuilder` loading state on `.find-itinerary-cta-btn` with a crescent spinner and disabled state during transition to View 1.
+- [x] **46.4: Comprehensive Change Detection Synchronization Across Custom Builder Interactions**:
+  - Call `this.updateUI()` inside `proceedToBuilder()`, `switchToBrowse()`, `switchToTimeline()`, `setBrowseCategory()`, `onBrowseSearch()`, `clearBrowseSearch()`, `togglePlaceInActiveDay()`, and `inspectPlace()`.
+- [x] **46.5: Quality Gates Verification & Remote Deployment**:
+  - Vitest unit tests: 32/32 suites passing with dedicated Phase 46 specs (343/343 tests).
+  - Angular production build: ensure 0 budget violations (keep `custom-builder.page.scss` < 16 kB).
+  - Remote push, GitHub Actions completion, and live verification on GitHub Pages.
+
+
 
 

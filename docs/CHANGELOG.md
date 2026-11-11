@@ -1,3 +1,19 @@
+## [0.46.0] - 2026-11-11
+### Added
+- **Context-Aware Skeleton Shimmer Card Grid in Place Browser (`CustomBuilderPage`)**:
+  - Replaced crude dashed `.places-loading-box` with an animated, accessible skeleton shimmer grid (`.skeleton-grid`) rendering 6 responsive `.skeleton-card` placeholders matching `.place-browser-card` dimensions (thumbnail, category pill, title, location, meta row).
+- **Instant In-Memory Pre-Population & Timeout Protection (`CustomBuilderPage`)**:
+  - Synchronously pre-populated `allCuratedPlaces` with `placeService.getLoadedPlaces(dest)` on init and transition, eliminating blank screens and delays.
+  - Added RxJS `timeout(3500)` guard with graceful fallback to prevent hanging requests on slow/unreachable network connections.
+- **Start Building Button Visual Feedback (`CustomBuilderPage`)**:
+  - Added `isStartingBuilder` loading state on `.find-itinerary-cta-btn` with a crescent spinner and disabled state to provide immediate visual response.
+
+### Changed
+- **Comprehensive Change Detection Synchronization**:
+  - Injected `updateUI()` inside `proceedToBuilder()`, `switchToBrowse()`, `switchToTimeline()`, `setBrowseCategory()`, `onBrowseSearch()`, `clearBrowseSearch()`, `togglePlaceInActiveDay()`, and `inspectPlace()`.
+
+---
+
 ## [0.45.0] - 2026-11-11
 ### Fixed
 - **Change Detection Starvation on "Add Places" (`CustomBuilderPage`)**:

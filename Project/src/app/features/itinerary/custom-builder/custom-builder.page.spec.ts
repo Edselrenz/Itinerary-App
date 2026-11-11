@@ -41,6 +41,7 @@ describe('CustomBuilderPage', () => {
   const mockPlaceService = {
     getFeaturedPlaces: vi.fn().mockReturnValue(of([mockPlace])),
     searchPlaces: vi.fn().mockReturnValue(of({ total: 1, limit: 20, offset: 0, items: [mockPlace] })),
+    getLoadedPlaces: vi.fn().mockReturnValue([mockPlace]),
     getPlaceImage: vi.fn().mockReturnValue('assets/images/minalungao.png'),
     formatCategoryName: vi.fn().mockReturnValue('Nature & Adventure'),
   };
@@ -735,5 +736,46 @@ describe('CustomBuilderPage', () => {
         color: 'warning',
       })
     );
+  });
+
+  it('Phase 46.1: loadBrowsePlaces pre-populates from PlaceService and avoids infinite loading', () => {
+    component.allCuratedPlaces = [];
+    component.displayedPlaces = [];
+    component.loadBrowsePlaces();
+
+    // Since mock place service provides loaded places, allCuratedPlaces is populated immediately
+    expect(component.allCuratedPlaces.length).toBeGreaterThan(0);
+    expect(component.isBrowseLoading).toBe(false);
+  });
+
+  it('Phase 46.2: proceedToBuilder toggles view to browse with updateUI feedback', () => {
+    const updateSpy = vi.spyOn(component as any, 'updateUI');
+    component.form.patchValue({
+      title: 'Roadtrip Adventure',
+      destination: 'Bongabon',
+      daily_budget: 2500,
+    });
+
+    component.proceedToBuilder();
+
+    expect(component.activeView).toBe('browse');
+    expect(updateSpy).toHaveBeenCalled();
+    expect(component.isStartingBuilder).toBe(false);
+  });
+
+  it('Phase 46.3: view mode switchers and filters trigger updateUI', () => {
+    const updateSpy = vi.spyOn(component as any, 'updateUI');
+
+    component.switchToTimeline();
+    expect(component.activeView).toBe('timeline');
+    expect(updateSpy).toHaveBeenCalled();
+
+    component.switchToBrowse();
+    expect(component.activeView).toBe('browse');
+    expect(updateSpy).toHaveBeenCalled();
+
+    component.setBrowseCategory('Food');
+    expect(component.selectedCategory).toBe('Food');
+    expect(updateSpy).toHaveBeenCalled();
   });
 });

@@ -1247,5 +1247,23 @@ px cap sync android): **Exit code 0 (6 plugins synchronized)**.
   - Angular production build: 0 budget violations (all component styles < 16 kB).
   - Stage, commit, push, monitor GitHub Actions, and verify live on GitHub Pages.
 
+---
+
+## Phase 46: Custom Itinerary Visual Feedback & Shimmer Skeleton Loading Remediation
+- [x] **46.1 (P0: Instant In-Memory Pre-Population & Timeout Protection in `loadBrowsePlaces()`)**:
+  - In `custom-builder.page.ts`, synchronously pre-populate `allCuratedPlaces` with `this.placeService.getLoadedPlaces(dest)` before initiating HTTP requests, providing instantaneous destination card rendering.
+  - Guard `searchObs` with RxJS `timeout(3500)` and fallback handler so slow or unresponsive connections never leave `isBrowseLoading` stuck true.
+- [x] **46.2 (P0: Context-Aware Skeleton Shimmer Card Grid in Place Browser)**:
+  - Replace the crude dashed `.places-loading-box` with an animated, accessible skeleton shimmer card grid (`.skeleton-grid` with `.skeleton-card` placeholders) that mirrors the exact dimensions of `.place-browser-card`.
+- [x] **46.3 (P1: Start Building CTA Visual Feedback)**:
+  - Add `isStartingBuilder` state to `.find-itinerary-cta-btn` with a crescent spinner and disabled state to provide immediate visual feedback upon submission.
+- [x] **46.4 (P1: Comprehensive Change Detection Synchronization Across All Builder Interactions)**:
+  - Inject `updateUI()` in `proceedToBuilder()`, `switchToBrowse()`, `switchToTimeline()`, `setBrowseCategory()`, `onBrowseSearch()`, `clearBrowseSearch()`, `togglePlaceInActiveDay()`, and `inspectPlace()`.
+- [x] **46.5 (Quality Gates Verification & Remote Deployment)**:
+  - Vitest unit tests: 32/32 suites passing with dedicated Phase 46 specs (343/343 tests).
+  - Angular production build: strictly enforce component stylesheet limit (<16 kB for `custom-builder.page.scss`).
+  - Stage, commit, push to `main`, monitor GitHub Actions CI/CD run, and verify live on GitHub Pages.
+
+
 
 

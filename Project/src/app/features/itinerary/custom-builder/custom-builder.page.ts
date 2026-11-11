@@ -38,8 +38,8 @@ import {
   sparkles,
   timeOutline,
   trashOutline, checkmarkOutline, mapOutline } from 'ionicons/icons';
-import type { Observable} from 'rxjs';
-import { Subject, Subscription, debounceTime, distinctUntilChanged, map, merge } from 'rxjs';
+import type { Observable } from 'rxjs';
+import { Subject, Subscription, catchError, debounceTime, distinctUntilChanged, map, merge, of, timeout } from 'rxjs';
 
 import type { ComponentCanDeactivate } from '../../../core/guards/pending-changes.guard';
 import type { Itinerary, ItineraryDay, ItineraryItem } from '../../../core/models/itinerary.models';
@@ -167,6 +167,8 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
   public allCuratedPlaces: Place[] = [];
   public displayedPlaces: Place[] = [];
   public isBrowseLoading = false;
+  public isStartingBuilder = false;
+  public readonly skeletonPlaceHolders = [1, 2, 3, 4, 5, 6];
   public browseSearchSubject = new Subject<string>();
 
   // Budget summary
@@ -601,6 +603,9 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
       return;
     }
 
+    this.isStartingBuilder = true;
+    this.updateUI();
+
     // Sync days array with selected dates
     const targetDays = this.computedTripDays;
     const startDateStr = this.form.get('start_date')?.value;
@@ -632,6 +637,8 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
     this.applyBrowseFilter();
 
     this.activeView = 'browse';
+    this.isStartingBuilder = false;
+    this.updateUI();
   }
 
   public backToForm(): void {
@@ -944,10 +951,12 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
 
   public switchToTimeline(): void {
     this.activeView = 'timeline';
+    this.updateUI();
   }
 
   public switchToBrowse(): void {
     this.activeView = 'browse';
+    this.updateUI();
   }
 
   public dismissPreArrivalBanner(): void {
@@ -955,43 +964,65 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
     this.updateUI();
   }
 
+  private getInstantPlaces(dest?: string): Place[] {
+    if (this.placeService && typeof this.placeService.getLoadedPlaces === 'function') {
+      return this.placeService.getLoadedPlaces(dest) || [];
+    }
+    return [];
+  }
+
   public loadBrowsePlaces(): void {
-    this.isBrowseLoading = true;
     const dest = this.form?.get('destination')?.value?.trim();
+
+    // 1. Instant in-memory pre-population for 0ms rendering
+    if (this.allCuratedPlaces.length === 0) {
+      const immediatePlaces = this.getInstantPlaces(dest);
+      if (immediatePlaces && immediatePlaces.length > 0) {
+        this.allCuratedPlaces = immediatePlaces;
+        this.applyBrowseFilter();
+      }
+    }
+
+    // Only display skeleton shimmer if no places are currently rendered
+    this.isBrowseLoading = this.displayedPlaces.length === 0;
+    this.updateUI();
+
     const isSpecificMuni =
       dest &&
       dest !== 'Nueva Ecija' &&
       dest !== 'All of Nueva Ecija' &&
       !dest.startsWith('🌏');
 
-    const searchObs: Observable<Place[]> = isSpecificMuni
+    const searchObs: Observable<Place[]> = (isSpecificMuni
       ? this.placeService
           .searchPlaces({ municipality_name: dest, limit: 100 })
           .pipe(map((res) => res?.items || []))
-      : this.placeService.getFeaturedPlaces(50);
+      : this.placeService.getFeaturedPlaces(50)
+    ).pipe(
+      timeout(3500),
+      catchError(() => {
+        return of(this.getInstantPlaces(dest));
+      })
+    );
 
     searchObs.subscribe({
       next: (places: Place[]) => {
-        this.allCuratedPlaces = places;
+        if (places && places.length > 0) {
+          this.allCuratedPlaces = places;
+        } else if (this.allCuratedPlaces.length === 0) {
+          this.allCuratedPlaces = this.getInstantPlaces(dest);
+        }
         this.applyBrowseFilter();
         this.isBrowseLoading = false;
         this.updateUI();
       },
       error: () => {
-        this.placeService.getFeaturedPlaces(50).subscribe({
-          next: (places) => {
-            this.allCuratedPlaces = places;
-            this.applyBrowseFilter();
-            this.isBrowseLoading = false;
-            this.updateUI();
-          },
-          error: () => {
-            this.allCuratedPlaces = [];
-            this.displayedPlaces = [];
-            this.isBrowseLoading = false;
-            this.updateUI();
-          },
-        });
+        if (this.allCuratedPlaces.length === 0) {
+          this.allCuratedPlaces = this.getInstantPlaces(dest);
+        }
+        this.applyBrowseFilter();
+        this.isBrowseLoading = false;
+        this.updateUI();
       },
     });
   }
@@ -999,6 +1030,7 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
   public setBrowseCategory(cat: string): void {
     this.selectedCategory = cat;
     this.applyBrowseFilter();
+    this.updateUI();
   }
 
   public onBrowseSearch(event: Event): void {
@@ -1006,6 +1038,7 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
     this.browseSearchTerm = val;
     this.browseSearchSubject.next(val);
     this.applyBrowseFilter();
+    this.updateUI();
   }
 
   public executeBrowseServerSearch(query: string): void {
@@ -1018,6 +1051,7 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
             const newPlaces = res.items.filter((p) => !existingIds.has(p.id));
             this.allCuratedPlaces = [...this.allCuratedPlaces, ...newPlaces];
             this.applyBrowseFilter();
+            this.updateUI();
           }
         },
       });
@@ -1028,6 +1062,7 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
     this.browseSearchTerm = '';
     this.browseSearchSubject.next('');
     this.applyBrowseFilter();
+    this.updateUI();
   }
 
   public applyBrowseFilter(): void {
@@ -1123,6 +1158,7 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
     } else {
       this.addPlaceStop(place);
     }
+    this.updateUI();
   }
 
   public getDayLocation(day: BuilderDay | undefined): string {
@@ -1325,10 +1361,12 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
 
   public inspectPlace(place: Place): void {
     this.selectedPlaceForDetail = place;
+    this.updateUI();
   }
 
   public closePlaceDetailSheet(): void {
     this.selectedPlaceForDetail = null;
+    this.updateUI();
   }
 
   public addPlaceFromDetailSheet(place: Place): void {

@@ -184,8 +184,18 @@
       </div>
 
       <!-- Action CTA (C-BUG-01) -->
-      <button type="button" class="find-itinerary-cta-btn" [disabled]="form.invalid" (click)="proceedToBuilder()">
+      <button
+        type="button"
+        class="find-itinerary-cta-btn"
+        [disabled]="form.invalid || isStartingBuilder"
+        (click)="proceedToBuilder()"
+      >
+        @if (isStartingBuilder) {
+        <ion-spinner name="crescent" class="cta-spinner"></ion-spinner>
+        <span>Opening Catalog...</span>
+        } @else {
         <span>Start Building Itinerary →</span>
+        }
       </button>
     </form>
     } @else if (activeView === 'browse') {
@@ -248,10 +258,23 @@
 
     <!-- Places List Grid -->
     <div class="places-grid-container">
-      @if (isBrowseLoading) {
-      <div class="places-loading-box">
-        <ion-spinner name="crescent" color="primary"></ion-spinner>
-        <p>Loading destinations...</p>
+      @if (isBrowseLoading && displayedPlaces.length === 0) {
+      <div class="places-cards-grid skeleton-grid" aria-busy="true" aria-label="Loading destinations">
+        @for (s of skeletonPlaceHolders; track s) {
+        <div class="place-browser-card skeleton-card">
+          <div class="place-card-thumb skeleton-shimmer">
+            <div class="skeleton-pill"></div>
+          </div>
+          <div class="place-card-body">
+            <div class="skeleton-line title-line skeleton-shimmer"></div>
+            <div class="skeleton-line muni-line skeleton-shimmer"></div>
+            <div class="card-meta-row">
+              <div class="skeleton-line cost-line skeleton-shimmer"></div>
+              <div class="skeleton-btn skeleton-shimmer"></div>
+            </div>
+          </div>
+        </div>
+        }
       </div>
       } @else if (displayedPlaces.length > 0) {
       <div class="places-cards-grid">

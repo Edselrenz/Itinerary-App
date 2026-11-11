@@ -906,6 +906,30 @@ During end-to-end user journey analysis across both environments, 5 illogical pr
     }
     ```
 
+---
+
+## 12. Custom Itinerary Visual Feedback & Shimmer Skeleton Loading Remediation (Phase 46)
+
+### 12.1 Root Cause Analysis of Visual Feedback Defect in Custom Builder
+During user acceptance testing on live production (`https://edselrenz.github.io/Itinerary-App/`), a critical user friction point was identified in View 1 (Browse Places catalog):
+1. **Generic & Crude Loading Box**: The loading state previously rendered `<div class="places-loading-box">` with a dashed border, an `ion-spinner`, and text *"Loading destinations..."*. This pattern violates Anti-Generic Frontend Design principles: it feels like an unstyled wireframe and leaves a large blank void across the viewport.
+2. **Missing Instant In-Memory Pre-Population**: The application awaited an asynchronous HTTP round-trip before displaying any places, even though `PlaceService` has 17 canonical curated destinations (`curatedOfflinePlaces`) ready synchronously in memory.
+3. **Absence of Network Timeout Guard**: If an API request is delayed or encounters transient latency, the subscription hung without a fallback, keeping `isBrowseLoading` true.
+4. **Change Detection Gaps on View Mode Swapping**: Methods such as `proceedToBuilder()`, `switchToBrowse()`, `switchToTimeline()`, `setBrowseCategory()`, `onBrowseSearch()`, `clearBrowseSearch()`, and `togglePlaceInActiveDay()` changed view state without calling `updateUI()`.
+
+### 12.2 Architectural Remediation
+1. **Context-Aware Skeleton Shimmer Card Grid**:
+   - Replace `.places-loading-box` with `.skeleton-grid` containing 6 `.skeleton-card` placeholders.
+   - Each skeleton card matches the layout of `.place-browser-card` (thumbnail with shimmer, category badge placeholder, 2-line title, location pill, and bottom cost/add bar).
+2. **Synchronous In-Memory Warm-Up & Timeout Protection**:
+   - In `loadBrowsePlaces()`, immediately populate `allCuratedPlaces` with `placeService.getLoadedPlaces(dest)` if empty.
+   - Wrap the network search observable with RxJS `timeout(3500)` and fallback handler.
+3. **Action Button Feedback**:
+   - Bind `isStartingBuilder` to `.find-itinerary-cta-btn` with a spinner and disabled state.
+4. **Change Detection Synchronization**:
+   - Injected `updateUI()` in all user-facing interaction methods.
+
+
 #### 2. ILLOGICAL NAVIGATION: Deep Link to Favorites Drops Traveler on Profile Settings Root (`tabs.routes.ts`)
 - **Observed Behavior**:
   - When a traveler types `/#/tabs/favorites` or bookmarks the favorites URL, the application redirects them to `/#/tabs/profile`.
