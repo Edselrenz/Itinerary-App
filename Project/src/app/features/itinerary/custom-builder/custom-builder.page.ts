@@ -636,6 +636,7 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
 
   public backToForm(): void {
     this.activeView = 'form';
+    this.updateUI();
   }
 
   public async onHeaderBack(): Promise<void> {
@@ -643,6 +644,7 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
       await this.onCancel();
     } else if (!this.isEditMode) {
       this.activeView = 'form';
+      this.updateUI();
     } else {
       await this.onCancel();
     }
