@@ -255,7 +255,7 @@
       </div>
       } @else if (displayedPlaces.length > 0) {
       <div class="places-cards-grid">
-        @for (place of displayedPlaces; track place.id) {
+        @for (place of displayedPlaces; track place.id; let pIdx = $index) {
         <div
           class="place-browser-card"
           (click)="inspectPlace(place)"
@@ -268,7 +268,7 @@
               [src]="placeService.getPlaceImage(place.name, place.image_url)"
               [alt]="place.name"
               class="thumb-img"
-              loading="lazy"
+              [loading]="pIdx === 0 ? 'eager' : 'lazy'"
             />
             <span class="card-category-tag"> {{ placeService.formatCategoryName(place.category) }} </span>
           </div>
@@ -385,7 +385,9 @@
         <div class="budget-card-text">
           <div class="budget-card-header">
             <span class="budget-card-label">Verified Estimated Costs</span>
-            <span class="budget-card-target">Budget: ₱{{ form.get('daily_budget')?.value || 0 }}/day</span>
+            <span class="budget-card-target">
+              Budget: ₱{{ form.get('daily_budget')?.value || 0 }}/day (₱{{ ((form.get('daily_budget')?.value || 0) * (days.length || 1)) | number }} total for {{ days.length || 1 }} {{ (days.length || 1) === 1 ? 'day' : 'days' }})
+            </span>
           </div>
           <div class="budget-card-amount">{{ budgetSummary.displayText }}</div>
           @if (budgetSummary.unverifiedCount > 0) {

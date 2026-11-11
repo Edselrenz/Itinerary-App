@@ -1,3 +1,23 @@
+## [0.45.0] - 2026-11-11
+### Fixed
+- **Change Detection Starvation on "Add Places" (`CustomBuilderPage`)**:
+  - Injected `updateUI()` inside all subscriber callbacks in `loadBrowsePlaces()` in `custom-builder.page.ts`, eliminating the permanent "Loading destinations..." spinner and rendering place cards immediately upon API arrival.
+- **Silent Multi-Day Stop Discard on Date Shortening (`CustomBuilderPage`)**:
+  - Intercepted `applyDatePicker()` with an `AlertController` confirmation prompt when reducing trip duration with existing scheduled destinations on trailing days, preventing silent data loss.
+- **Chronological Schedule Inversion on Reordering (`CustomBuilderPage`)**:
+  - Automatically invoked `autoOptimizeDaySchedule(this.activeDayIndex)` and `updateUI()` in `moveStopUp()` and `moveStopDown()`, preserving forward chronological pacing with transit buffers.
+- **Cost Range Inversion (`Min > Max`) & `[object Object]` Toast (`CustomBuilderPage`)**:
+  - Added client-side guard in `saveStopEdits()` preventing `editStopCostMin > editStopCostMax`.
+  - Implemented safe extraction and joining of error detail arrays/objects in `saveItinerary()` error handler, preventing `"[object Object]"` toasts.
+- **Off-Grid Custom Venue Partial GPS Geofencing Vulnerability (`CustomBuilderPage`)**:
+  - Enforced all-or-nothing coordinate entry in `addCustomVenueStop()` and validated `customVenueCostMin <= customVenueCostMax`.
+- **Cumulative Multi-Day Budget Display (`CustomBuilderPage`)**:
+  - Updated timeline budget card header to display total multi-day trip budget allowance alongside the daily rate.
+- **LCP Image Warning `NG0913` (`CustomBuilderPage`)**:
+  - Set `[loading]="pIdx === 0 ? 'eager' : 'lazy'"` on the primary destination thumbnail in the browse grid.
+
+---
+
 ## [0.44.0] - 2026-11-11
 ### Added
 - **Zero-Stop Save Guard in Custom Builder (`CustomBuilderPage`)**:

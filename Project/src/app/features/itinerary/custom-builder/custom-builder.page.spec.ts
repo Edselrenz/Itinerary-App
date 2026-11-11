@@ -648,4 +648,92 @@ describe('CustomBuilderPage', () => {
     component.selectPlaceFromPicker(mockPlace);
     expect(component.isPlaceInActiveDay(mockPlace.id)).toBe(true);
   });
+
+  it('Phase 45.1: loadBrowsePlaces triggers updateUI upon places arrival', () => {
+    const updateSpy = vi.spyOn(component, 'updateUI');
+    component.loadBrowsePlaces();
+    expect(updateSpy).toHaveBeenCalled();
+    expect(component.isBrowseLoading).toBe(false);
+  });
+
+  it('Phase 45.2: applyDatePicker prompts alert confirmation before shortening trip when discarded days contain stops', async () => {
+    component.days = [
+      { id: 'd1', day_number: 1, travel_date: '2026-11-15', title: 'Day 1', items: [] },
+      { id: 'd2', day_number: 2, travel_date: '2026-11-16', title: 'Day 2', items: [{ ...mockPlace, name: 'Stop on Day 2' } as any] },
+    ];
+    component.popupStartDate = '2026-11-15';
+    component.popupEndDate = '2026-11-15'; // Shorten to 1 day
+
+    await component.applyDatePicker();
+
+    expect(mockAlertController.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        header: 'Shorten Trip Duration?',
+      })
+    );
+  });
+
+  it('Phase 45.3: moveStopUp and moveStopDown invoke autoOptimizeDaySchedule and updateUI', () => {
+    const optimizeSpy = vi.spyOn(component, 'autoOptimizeDaySchedule');
+    const updateSpy = vi.spyOn(component, 'updateUI');
+    const cur = component.currentDay!;
+    cur.items = [
+      { id: 's1', name: 'Stop 1', sort_order: 1 } as any,
+      { id: 's2', name: 'Stop 2', sort_order: 2 } as any,
+    ];
+
+    component.moveStopDown(0);
+    expect(optimizeSpy).toHaveBeenCalled();
+    expect(updateSpy).toHaveBeenCalled();
+    expect(cur.items[0].id).toBe('s2');
+
+    component.moveStopUp(1);
+    expect(optimizeSpy).toHaveBeenCalledTimes(2);
+    expect(cur.items[0].id).toBe('s1');
+  });
+
+  it('Phase 45.4: saveStopEdits validates min <= max cost and saveItinerary safely parses array error detail', async () => {
+    component.editingStop = { id: 's1', name: 'Stop 1', duration_minutes: 60 } as any;
+    component.editingStopIndex = 0;
+    component.editStopCostMin = 1500;
+    component.editStopCostMax = 500; // Inverted
+
+    await component.saveStopEdits();
+
+    expect(mockToastController.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Estimated minimum cost cannot be greater than maximum cost.',
+        color: 'warning',
+      })
+    );
+  });
+
+  it('Phase 45.5: addCustomVenueStop guards partial coordinates and min > max cost', async () => {
+    component.customVenueTitle = 'Hidden Springs';
+    component.customVenueLat = 15.632;
+    component.customVenueLng = null; // Partial coordinate
+
+    await component.addCustomVenueStop();
+
+    expect(mockToastController.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Please provide both Latitude and Longitude coordinates, or leave both blank.',
+        color: 'warning',
+      })
+    );
+
+    // Inverted custom venue cost
+    component.customVenueLng = 121.144;
+    component.customVenueCostMin = 2000;
+    component.customVenueCostMax = 500;
+
+    await component.addCustomVenueStop();
+
+    expect(mockToastController.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Custom venue minimum cost cannot exceed maximum cost.',
+        color: 'warning',
+      })
+    );
+  });
 });

@@ -4360,5 +4360,35 @@ NEXT STEPS:
   - **Unit Tests**: 32/32 suites passed, 335/335 tests passed (100.0%).
   - **Production Build**: Clean build with 0 budget violations (all components < 16 kB).
 
+---
+
+## Session 109: Phase 45 — Custom Itinerary Subsystem Deep-Dive Remediation & Quality Hardening
+- **Date & Time**: 2026-11-11 21:15:00 (Local)
+- **Objective**:
+  - Remediate 7 critical defects and illogical workflows identified in Section 11 of `SYSTEM_ANALYSIS_AND_TESTING_REPORT.md` across the Custom Itinerary Subsystem:
+    1. **45.1 (P0)**: Infinite "Loading destinations..." spinner change detection starvation in `loadBrowsePlaces()`.
+    2. **45.2 (P0)**: Silent multi-day stop discard on date shortening in `applyDatePicker()`.
+    3. **45.3 (P1)**: Chronology inversion on stop reordering in `moveStopUp()` and `moveStopDown()`.
+    4. **45.4 (P1)**: Inverted cost range validation (`Min <= Max`) and safe Pydantic validation error parsing to eliminate `"[object Object]"` toasts.
+    5. **45.5 (P2)**: Partial GPS coordinate entry vulnerability in off-grid custom venue modal.
+    6. **45.6 (P2)**: Cumulative multi-day budget display in timeline view.
+    7. **45.7 (P3)**: LCP thumbnail eager loading optimization (`NG0913`).
+- **Pre-Development Documentation**:
+  - Updated `docs/TODO.md` with Phase 45 task items.
+  - Updated `docs/DEVELOPMENT_PLAN.md` with Milestone 45 (IN PROGRESS).
+  - Updated `docs/CHANGELOG.md` with release entry `[0.45.0]`.
+  - Updated `docs/DEVELOPMENT_LOG.md` with Session 109.
+- **Implementation & Verification Completed**:
+  - **45.1 Change Detection Starvation**: Added `this.updateUI()` inside all subscriber callbacks in `loadBrowsePlaces()`, eliminating the permanent browse loading spinner.
+  - **45.2 Multi-Day Stop Discard Confirmation**: Added `AlertController` confirmation dialog in `applyDatePicker()` before shortening dates when discarded days have scheduled destinations.
+  - **45.3 Chronological Schedule Continuity**: Added `autoOptimizeDaySchedule(this.activeDayIndex)` and `updateUI()` in `moveStopUp()` and `moveStopDown()`, guaranteeing planned times stay chronologically sequential with transit buffers.
+  - **45.4 Cost Range Guard & Error Parsing**: Validated `editStopCostMin <= editStopCostMax` in `saveStopEdits()`; safely formatted error detail arrays/objects in `saveItinerary()` to eliminate `"[object Object]"` toasts.
+  - **45.5 Off-Grid Custom Venue Guards**: Enforced both coordinates or neither in `addCustomVenueStop()` and validated `customVenueCostMin <= customVenueCostMax`.
+  - **45.6 Cumulative Multi-Day Budget Display**: Updated timeline budget card header to display total multi-day allowance alongside daily rate.
+  - **45.7 Browse Grid LCP Optimization**: Added `[loading]="pIdx === 0 ? 'eager' : 'lazy'"` to the first browse place card thumbnail (`NG0913`).
+  - **Unit Tests**: 32/32 suites passed, 340/340 tests passed (100.0%) in 27.96s.
+  - **Production Build**: Clean Angular production build with 0 budget violations (all components < 16 kB).
+
+
 
 

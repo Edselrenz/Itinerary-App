@@ -502,14 +502,44 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
     this.popupEndDate = toLocalIsoDate(end);
   }
 
-  public applyDatePicker(): void {
+  public async applyDatePicker(): Promise<void> {
     if (!this.tempTripSummary.isValid) return;
+    const newDaysCount = diffDaysLocal(this.popupStartDate, this.popupEndDate);
+
+    // Check if shortening discards days with existing items
+    if (newDaysCount < this.days.length) {
+      const discardedDays = this.days.slice(newDaysCount);
+      const hasStops = discardedDays.some((d) => d.items.length > 0);
+      if (hasStops) {
+        const alert = await this.alertController.create({
+          header: 'Shorten Trip Duration?',
+          message: `Reducing to ${newDaysCount} ${newDaysCount === 1 ? 'day' : 'days'} will discard scheduled stops on Day ${newDaysCount + 1}${this.days.length > newDaysCount + 1 ? ' to ' + this.days.length : ''}. Are you sure you want to proceed?`,
+          buttons: [
+            { text: 'Cancel', role: 'cancel' },
+            {
+              text: 'Discard & Shorten',
+              role: 'destructive',
+              handler: () => {
+                this.commitDatePickerChanges();
+              },
+            },
+          ],
+        });
+        await alert.present();
+        return;
+      }
+    }
+    this.commitDatePickerChanges();
+  }
+
+  public commitDatePickerChanges(): void {
     this.form.patchValue({
       start_date: this.popupStartDate,
       end_date: this.popupEndDate,
     });
     this.syncDaysWithDateRange();
     this.isDatePickerOpen = false;
+    this.updateUI();
   }
 
   public get displayDateRangeText(): string {
@@ -783,7 +813,9 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
     cur.items[itemIndex - 1] = temp;
 
     this.reindexSortOrder(cur);
+    this.autoOptimizeDaySchedule(this.activeDayIndex);
     this.hasUnsavedChanges = true;
+    this.updateUI();
   }
 
   public moveStopDown(itemIndex: number): void {
@@ -795,7 +827,9 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
     cur.items[itemIndex + 1] = temp;
 
     this.reindexSortOrder(cur);
+    this.autoOptimizeDaySchedule(this.activeDayIndex);
     this.hasUnsavedChanges = true;
+    this.updateUI();
   }
 
   public async removeStop(itemIndex: number): Promise<void> {
@@ -851,8 +885,23 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
     this.editingStopIndex = -1;
   }
 
-  public saveStopEdits(): void {
+  public async saveStopEdits(): Promise<void> {
     if (!this.editingStop || this.editingStopIndex < 0) return;
+
+    if (
+      this.editStopCostMin != null &&
+      this.editStopCostMax != null &&
+      Number(this.editStopCostMin) > Number(this.editStopCostMax)
+    ) {
+      const toast = await this.toastController.create({
+        message: 'Estimated minimum cost cannot be greater than maximum cost.',
+        duration: 3000,
+        color: 'warning',
+        position: 'top',
+      });
+      await toast.present();
+      return;
+    }
 
     const sourceDay = this.days[this.activeDayIndex];
     const targetIdx = Number(this.editStopTargetDayIndex);
@@ -924,6 +973,7 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
         this.allCuratedPlaces = places;
         this.applyBrowseFilter();
         this.isBrowseLoading = false;
+        this.updateUI();
       },
       error: () => {
         this.placeService.getFeaturedPlaces(50).subscribe({
@@ -931,11 +981,13 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
             this.allCuratedPlaces = places;
             this.applyBrowseFilter();
             this.isBrowseLoading = false;
+            this.updateUI();
           },
           error: () => {
             this.allCuratedPlaces = [];
             this.displayedPlaces = [];
             this.isBrowseLoading = false;
+            this.updateUI();
           },
         });
       },
@@ -1327,8 +1379,21 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
     const trimmedTitle = this.customVenueTitle.trim();
     if (!trimmedTitle) return;
 
-    // Validate coordinates if entered (UI-08)
-    if (this.customVenueLat != null && this.customVenueLng != null) {
+    // Validate coordinates if entered (UI-08 & Phase 45)
+    const hasLat = this.customVenueLat != null && String(this.customVenueLat).trim() !== '';
+    const hasLng = this.customVenueLng != null && String(this.customVenueLng).trim() !== '';
+    if ((hasLat && !hasLng) || (!hasLat && hasLng)) {
+      const toast = await this.toastController.create({
+        message: 'Please provide both Latitude and Longitude coordinates, or leave both blank.',
+        duration: 3000,
+        color: 'warning',
+        position: 'top',
+      });
+      await toast.present();
+      return;
+    }
+
+    if (hasLat && hasLng) {
       const lat = Number(this.customVenueLat);
       const lng = Number(this.customVenueLng);
       const isWithinNuevaEcija = lat >= 15.15 && lat <= 16.15 && lng >= 120.70 && lng <= 121.40;
@@ -1342,6 +1407,22 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
         await toast.present();
         return;
       }
+    }
+
+    // Validate cost bounds
+    if (
+      this.customVenueCostMin != null &&
+      this.customVenueCostMax != null &&
+      Number(this.customVenueCostMin) > Number(this.customVenueCostMax)
+    ) {
+      const toast = await this.toastController.create({
+        message: 'Custom venue minimum cost cannot exceed maximum cost.',
+        duration: 3000,
+        color: 'warning',
+        position: 'top',
+      });
+      await toast.present();
+      return;
     }
 
     const stop: BuilderStop = {
@@ -1510,9 +1591,17 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
       error: async (err) => {
         this.isSaving = false;
         this.updateUI();
+        let errorMsg = 'Failed to save itinerary. Please try again.';
+        if (Array.isArray(err?.error?.detail)) {
+          errorMsg = err.error.detail.map((d: any) => d.msg || d.message || JSON.stringify(d)).join('; ');
+        } else if (typeof err?.error?.detail === 'string') {
+          errorMsg = err.error.detail;
+        } else if (err?.error?.detail && typeof err.error.detail === 'object') {
+          errorMsg = err.error.detail.message || err.error.detail.msg || 'Failed to save itinerary. Please try again.';
+        }
         const toast = await this.toastController.create({
-          message: err?.error?.detail || 'Failed to save itinerary. Please try again.',
-          duration: 3500,
+          message: errorMsg,
+          duration: 4000,
           color: 'danger',
           position: 'top',
         });

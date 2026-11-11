@@ -584,4 +584,23 @@ The bottom navigation bar implements all 4 planned primary tabs (`/tabs/home`, `
   - Angular production build generated with 0 budget violations (all components < 16 kB).
   - Pushed to remote and verified live deployment on GitHub Pages.
 
+#### Milestone 45: Custom Itinerary Subsystem Deep-Dive Remediation & Quality Hardening (COMPLETED)
+- [x] **45.1: Change Detection Starvation Resolution (`loadBrowsePlaces`)**:
+  - Added `this.updateUI()` inside all subscriber callbacks in `loadBrowsePlaces()` in `custom-builder.page.ts`, eliminating the permanent "Loading destinations..." spinner.
+- [x] **45.2: Multi-Day Stop Discard Confirmation Dialog (`applyDatePicker`)**:
+  - Prompted confirmation alert before reducing trip dates when discarded days have scheduled destinations, preventing silent data loss.
+- [x] **45.3: Chronological Schedule Auto-Optimization on Stop Reorder (`moveStopUp`/`moveStopDown`)**:
+  - Invoked `autoOptimizeDaySchedule(this.activeDayIndex)` and `this.updateUI()` on stop reorder so timestamps update sequentially forward with transit buffer.
+- [x] **45.4: Cost Range Inversion Validation & Safe Pydantic Error Parsing**:
+  - Guarded `Min <= Max` in stop edit modal; safely parsed FastAPI error arrays in `saveItinerary()` to eliminate `"[object Object]"` toasts.
+- [x] **45.5: Off-Grid Custom Venue GPS Geofence Guard & Cost Bounds**:
+  - Required both latitude and longitude or neither in `addCustomVenueStop()`, and guarded `min_cost <= max_cost`.
+- [x] **45.6: Cumulative Multi-Day Budget Display**:
+  - Updated timeline budget card header in `custom-builder.page.html` to display total multi-day allowance alongside daily budget.
+- [x] **45.7: Browse Grid LCP Optimization**:
+  - Marked first place card thumbnail with `[loading]="pIdx === 0 ? 'eager' : 'lazy'"` to resolve `NG0913`.
+- [x] **45.8: Comprehensive Testing, Build Verification & Deployment**:
+  - 32/32 Vitest suites passed (340/340 unit tests, 100%), verified build budget (<16 kB), staged, committed, pushed, and tested on live GitHub Pages.
+
+
 

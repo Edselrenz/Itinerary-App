@@ -1019,3 +1019,389 @@ All 6 illogical flows, touch target defects, and UI inconsistencies identified i
 5. **P2: Empty Day Callout in Itinerary Detail**: Rendered an actionable `.empty-day-callout` card with map icon, title ("No destinations added for Day X"), and `+ Add Places to this Day` CTA button wired to `toggleEditMode()`. Verified in unit tests.
 6. **P2: Duplicate Stop Guard in Custom Builder**: Added safe `isPlaceInActiveDay` helper and verified "Added" badge to prevent redundant 0-minute legs. Verified in unit tests.
 
+
+---
+
+## 11. Custom Itinerary Deep-Dive QA & UX Analysis (Localhost vs. Website)
+
+### 11.1 Executive Overview & Scope of Custom Itinerary Audit
+
+An exhaustive, dual-environment quality assurance and user experience audit was conducted specifically targeting the **Custom Itinerary Planning and Lifecycle Subsystem**. The audit covered the entire end-to-end journey of an independent traveler planning a personalized journey across Nueva Ecija across five distinct functional states:
+
+1. **View 0: Trip Setup & Travel Details Questionnaire (`activeView = 'form'`)**:
+   - Trip title input, destination autocomplete with all 32 municipalities, date range picker modal with automatic nights/days calculation, and daily budget formulation.
+2. **View 1: Curated Destination Discovery & Day Scheduling (`activeView = 'browse'`)**:
+   - Multi-category destination browsing (`Tourist Spots`, `Food`, `Resorts & Stays`, `Culture & Heritage`, `Shopping`), real-time search, day-targeting selector chips (`Day 1`, `Day 2`, etc.), duplicate stop prevention guards, and place inspection sheets.
+3. **View 2: Chronological Timeline Builder & GIS Routing (`activeView = 'timeline'`)**:
+   - Active day stops timeline, sort order re-indexing, transit buffer time calculations (`calculateNextStopTime`), turn-by-turn route preview map, day deletion/addition controls, and verified estimated costs budget card.
+4. **View 3: Scheduled Stop Modification Modal (`isEditStopModalOpen`)**:
+   - Stop time overrides, duration sliders (5–1440 min), custom cost range inputs (`estimated_cost_min`, `estimated_cost_max`), personal travel notes, and cross-day stop re-assignment.
+5. **View 4: Off-Grid Custom Venue Creation Modal (`isPlacePickerOpen`, `pickerTab = 'custom'`)**:
+   - User-defined venue names, custom address, geofenced GPS coordinates (Latitude 15.15–16.15, Longitude 120.70–121.40), estimated expenditure, and custom schedule placement.
+6. **View 5: Persistence, Detail View & Editing Lifecycle (`itinerary-detail.page.ts`)**:
+   - Guest IndexedDB vs. authenticated FastAPI PostgreSQL persistence, empty day callout rendering, turn-by-turn Google Maps deep linking, and inline trip modification mode.
+
+Testing was executed in parallel against:
+- **Local Development Server**: `http://localhost:4200` backed by FastAPI on `http://127.0.0.1:8000/api/v1` and PostgreSQL 16.
+- **Production Website**: `https://edselrenz.github.io/Itinerary-App/` (Bundle: Angular 19+ SPA backed by Cloudflare Worker proxy `https://ne-itinerary-api.edselrenz0.workers.dev`).
+
+---
+
+### 11.2 Comprehensive Automated & Manual Test Matrix (Dual Environment Results)
+
+| Test Case | Functional Scope | Localhost (Dev Server) | Live GitHub Pages | Defect Classification |
+| :--- | :--- | :--- | :--- | :--- |
+| **TC-CUST-01** | **Zero-Stop Save Guard**: Verify save buttons disabled and warning toast presented when stops = 0. | **PASS** (`isSaveDisabled: true`, navigation blocked) | **PASS** (`isSaveDisabled: true`, navigation blocked) | Verified Working (Phase 44) |
+| **TC-CUST-02** | **Pre-Arrival Discovery Banner**: Direct navigation via `?destination=...&addPlaceId=...`. | **PASS** (Banner visible, place pre-added to Day 1) | **PASS** (Banner visible, place pre-added to Day 1) | Verified Working (Phase 44) |
+| **TC-CUST-03** | **Duplicate Same-Day Stop Guard**: Verify "Added" state prevents duplicate place additions to same day. | **PASS** (`place: CLSU Museum`, button toggles to "Added") | **FAIL / BLOCKED** (Trapped by Browse spinner bug) | **UI Freeze / Change Detection Bug** |
+| **TC-CUST-04** | **Date Reduction Multi-Day Data Loss**: Shorten trip from 3 days to 1 day with Day 2/3 stops populated. | **DEFECT_SILENT_DISCARD** (Day 2/3 discarded without warning) | **DEFECT_SILENT_DISCARD** (Day 2/3 discarded without warning) | **Critical Data Loss Defect (P0)** |
+| **TC-CUST-05** | **Stop Reordering Chronology**: Swap Stop 1 (09:00 AM) and Stop 2 (11:21 AM) using Move Down button. | **DEFECT_CHRONOLOGY_INVERTED** (11:21 AM now precedes 09:00 AM) | **DEFECT_CHRONOLOGY_INVERTED** (Times swap with cards) | **Illogical Schedule Flow (P1)** |
+| **TC-CUST-06** | **Cost Range Inversion (`Min > Max`)**: Set Min Cost = ₱1,200 and Max Cost = ₱300 in Edit Modal. | **VALIDATION GAP** (Accepted locally; unparsed `[object Object]` on 422) | **VALIDATION GAP** (Accepted locally; unparsed `[object Object]` on 422) | **Form Validation & Toast Bug (P1)** |
+| **TC-CUST-07** | **Off-Grid Venue Geofencing**: Enter out-of-bounds coordinates (Manila: Lat 14.59, Lng 120.98). | **PASS** (Toast: "Coordinates fall outside Nueva Ecija") | **PASS** (Toast: "Coordinates fall outside Nueva Ecija") | Verified Working (UI-08) |
+| **TC-CUST-08** | **Full Save, Detail & Edit Lifecycle**: Save 2-stop itinerary, navigate to detail view, verify stops. | **PASS** (Saved to `/itinerary/<id>`, 2 stops rendered) | **PASS** (Saved to `/itinerary/<id>`, 2 stops rendered) | Verified Working |
+
+---
+
+### 11.3 Newly Discovered Illogical Processes, UX Friction Points & Critical Defects
+
+#### Defect 1: Change Detection Starvation / Infinite "Loading destinations..." Spinner on "Add Places" (CRITICAL - P0)
+- **Environments Affected**: Both Localhost and Live GitHub Pages.
+- **Location**: `Project/src/app/features/itinerary/custom-builder/custom-builder.page.ts:907-943`
+- **Symptom**:
+  When a traveler fills out the Travel Details form and clicks **"Start Building Itinerary →"** (`proceedToBuilder()`), the application navigates into View 1 ("Add the places you want to visit"). The screen renders `<div class="places-loading-box">` with an `ion-spinner` and the text *"Loading destinations..."*.
+  Although the network request `GET /api/v1/places?featured=true&limit=50` completes in ~180ms with HTTP 200 and 17 places, the UI **remains permanently stuck displaying the loading spinner**. No place cards are rendered.
+- **Root Cause**:
+  In `loadBrowsePlaces()`, `this.isBrowseLoading = false;` is set inside the RxJS `next` callback:
+  ```typescript
+  searchObs.subscribe({
+    next: (places: Place[]) => {
+      this.allCuratedPlaces = places;
+      this.applyBrowseFilter();
+      this.isBrowseLoading = false;
+      // Missing this.updateUI()!
+    },
+  ```
+  Because `CustomBuilderPage` operates within an Ionic router stack with detached change detection triggers, Angular does not run change detection automatically on this asynchronous resolution. The template condition `@if (isBrowseLoading)` is never re-evaluated until an external user event (such as clicking a category pill or typing in the search box) triggers zone change detection.
+- **User Impact**:
+  Users assume the application has frozen or crashed and frequently abandon the custom builder or refresh the page.
+- **Remediation**:
+  Call `this.updateUI()` inside both the `next` and `error` subscriber callbacks of `loadBrowsePlaces()`.
+
+---
+
+#### Defect 2: Silent Multi-Day Stop Discard on Date Shortening (CRITICAL - P0 DATA LOSS)
+- **Environments Affected**: Both Localhost and Live GitHub Pages.
+- **Location**: `Project/src/app/features/itinerary/custom-builder/custom-builder.page.ts:450`, `custom-builder.page.ts:579-595`
+- **Symptom**:
+  1. A user plans a 3-day trip (Dec 10 to Dec 12) and curates destinations for Day 1, Day 2, and Day 3.
+  2. The user decides to shorten their journey to a 1-day trip (Dec 10 to Dec 10) by clicking the date picker.
+  3. When applying the new date, `syncDaysWithDateRange()` executes:
+     ```typescript
+     if (targetDayCount < currentDays.length) {
+       currentDays.splice(targetDayCount);
+     }
+     ```
+  4. Day 2 and Day 3, along with all scheduled stops, custom notes, and transit plans, are **instantly deleted from memory with zero confirmation, zero warning, and no undo option**.
+- **Root Cause**:
+  `syncDaysWithDateRange()` and `proceedToBuilder()` truncate the `days` array strictly based on date math (`diffDaysLocal`) without checking if the discarded days contain scheduled destinations (`d.items.length > 0`).
+- **User Impact**:
+  Catastrophic data loss. A traveler who spent 20 minutes customizing a multi-day trip who adjusts their dates inadvertently loses their entire schedule without recourse.
+- **Remediation**:
+  Before truncating `this.days`, check if any discarded day (`this.days.slice(targetDayCount)`) has `items.length > 0`. If true, intercept with an `AlertController` confirmation dialog:
+  > *"Shortening your trip will discard stops scheduled on Day 2 and Day 3. Are you sure you want to proceed?"*
+  If the user cancels, revert the date picker input to its prior valid value.
+
+---
+
+#### Defect 3: Stop Reordering Chronology Inversion (HIGH - P1 ILLOGICAL FLOW)
+- **Environments Affected**: Both Localhost and Live GitHub Pages.
+- **Location**: `Project/src/app/features/itinerary/custom-builder/custom-builder.page.ts:777-799`
+- **Empirical Test Evidence**:
+  - Initial Schedule:
+    - Stop 1: CLSU Agricultural Museum @ **09:00 AM** (2 hrs)
+    - Stop 2: Camp Pangatian War Memorial @ **11:21 AM** (2 hrs)
+  - User Action: Click "Move Down" (`moveStopDown(0)`) on Stop 1 to visit Camp Pangatian first.
+  - Resulting Schedule in DOM:
+    - Stop 1: Camp Pangatian War Memorial @ **11:21 AM** (2 hrs)
+    - Stop 2: CLSU Agricultural Museum @ **09:00 AM** (2 hrs)
+- **Symptom**:
+  The timeline displays Stop 1 starting at 11:21 AM, followed immediately by Stop 2 starting at 09:00 AM. The time progression is physically reversed and chronological continuity is broken.
+- **Root Cause**:
+  `moveStopUp()` and `moveStopDown()` swap items in `cur.items` and invoke `this.reindexSortOrder(cur)`, which only updates `item.sort_order = idx + 1`. The method **never recalculates `planned_time`**. The itinerary page already contains an `autoOptimizeDaySchedule(dayIndex)` helper with transit calculation, but it is never automatically called when stops are reordered.
+- **User Impact**:
+  Travelers are presented with an illogical, backwards daily schedule that creates confusion and renders export/calendar sync invalid.
+- **Remediation**:
+  Automatically invoke `this.autoOptimizeDaySchedule(this.activeDayIndex)` inside `moveStopUp()` and `moveStopDown()`, or present an actionable inline pill: *"Times inverted. Click to auto-reschedule."*
+
+---
+
+#### Defect 4: Inverted Cost Range (`Min > Max`) & Unparsed `[object Object]` Toast (HIGH - P1)
+- **Environments Affected**: Both Localhost and Live GitHub Pages.
+- **Location**:
+  - Template: `custom-builder.page.html:1050-1080`
+  - Logic: `custom-builder.page.ts:863-864`, `custom-builder.page.ts:1514`
+  - Backend Schema: `backend/app/schemas/itinerary.py:47-49`
+- **Symptom**:
+  1. In the Edit Stop modal, a user can enter `Estimated Cost Min = ₱1,200` and `Estimated Cost Max = ₱300`. The frontend accepts this without error and updates the stop in memory.
+  2. For guest users, this is saved into IndexedDB without validation.
+  3. When an authenticated user saves or syncs to the backend, `POST /api/v1/itineraries` validates `estimated_cost_max >= estimated_cost_min` and rejects with HTTP 422:
+     ```json
+     {"detail": [{"loc": ["body", "days", 0, "items", 0], "msg": "Value error, estimated_cost_max cannot be less than estimated_cost_min.", "type": "value_error"}]}
+     ```
+  4. The error handler in `saveItinerary()` performs:
+     ```typescript
+     message: err?.error?.detail || 'Failed to save itinerary. Please try again.'
+     ```
+  5. Because `detail` is a JavaScript `Array` of validation error objects, string coercion evaluates `String([object Object])` to **`"[object Object]"`**.
+  6. The user is presented with a red toast reading **`"[object Object]"`** with no explanation of what went wrong.
+- **Remediation**:
+  1. Add client-side validation in `saveStopEdits()`:
+     ```typescript
+     if (this.editStopCostMin != null && this.editStopCostMax != null && Number(this.editStopCostMin) > Number(this.editStopCostMax)) {
+       // Show warning toast: "Minimum cost cannot be greater than maximum cost."
+       return;
+     }
+     ```
+  2. Format error toast messages safely in `saveItinerary()`:
+     ```typescript
+     let errorMsg = 'Failed to save itinerary. Please try again.';
+     if (Array.isArray(err?.error?.detail)) {
+       errorMsg = err.error.detail.map((d: any) => d.msg || d.message).join('; ');
+     } else if (typeof err?.error?.detail === 'string') {
+       errorMsg = err.error.detail;
+     }
+     ```
+
+---
+
+#### Defect 5: Off-Grid Custom Venue Partial GPS Coordinate Vulnerability (MEDIUM - P2)
+- **Environments Affected**: Both Localhost and Live GitHub Pages.
+- **Location**: `Project/src/app/features/itinerary/custom-builder/custom-builder.page.ts:717-727`
+- **Symptom**:
+  In the "Add Off-Grid Custom Venue" modal, the geofencing check is guarded by:
+  ```typescript
+  if (this.customVenueLat != null && this.customVenueLng != null) { ... }
+  ```
+  If a user fills in Latitude (e.g. `15.6320`) but leaves Longitude blank (or vice versa), the geofence check is bypassed completely. The stop is saved with `custom_lat: 15.632, custom_lng: null`.
+  When this stop is subsequently rendered on the route map in `itinerary-detail.page.ts`:
+  - `haversineDistanceMeters()` receives a null longitude, producing `NaN`.
+  - The map cannot plot a polyline or marker for that stop.
+- **Remediation**:
+  Enforce all-or-nothing coordinate entry:
+  ```typescript
+  const hasLat = this.customVenueLat != null && String(this.customVenueLat).trim() !== '';
+  const hasLng = this.customVenueLng != null && String(this.customVenueLng).trim() !== '';
+  if ((hasLat && !hasLng) || (!hasLat && hasLng)) {
+    // Show toast: "Please enter both Latitude and Longitude coordinates, or leave both blank."
+    return;
+  }
+  ```
+
+---
+
+#### Defect 6: Multi-Day Daily Budget vs. Cumulative Trip Budget Ambiguity (MEDIUM - P2 UX)
+- **Environments Affected**: Both Localhost and Live GitHub Pages.
+- **Location**: `Project/src/app/features/itinerary/custom-builder/custom-builder.page.html:383-397`
+- **Symptom**:
+  In the Timeline Builder view, the "Verified Estimated Costs" card compares total accumulated destination costs across all days against a single day's budget:
+  `Budget: ₱2500/day`
+  For a 3-day itinerary with 6 stops totaling ₱4,200, the UI suggests the user is over budget because ₱4,200 > ₱2,500, even though their actual total trip budget is ₱7,500 (3 days × ₱2,500).
+- **User Impact**:
+  Misleads travelers into thinking their trip is over-budget when it is actually well within their multi-day allowance.
+- **Remediation**:
+  Scale the budget comparison by the total number of trip days:
+  ```html
+  <span class="budget-card-target">
+    Budget: ₱{{ form.get('daily_budget')?.value || 0 }}/day (₱{{ (form.get('daily_budget')?.value || 0) * days.length }} total for {{ days.length }} {{ days.length === 1 ? 'day' : 'days' }})
+  </span>
+  ```
+
+---
+
+#### Defect 7: Largest Contentful Paint (LCP) Image Optimization Warning (LOW - P3)
+- **Environments Affected**: Both Localhost and Live GitHub Pages.
+- **Location**: `Project/src/app/features/itinerary/custom-builder/custom-builder.page.html:270`
+- **Symptom**:
+  Console warning `NG0913`: *An image with src http://localhost:4200/assets/images/minalungao.png is the Largest Contentful Paint (LCP) element but was given a "loading" value of "lazy"...*
+- **Remediation**:
+  Apply eager loading to the first browse place card: `[loading]="placeIndex === 0 ? 'eager' : 'lazy'"`.
+
+---
+
+### 11.4 Architectural Root-Cause Analysis & Concrete Remediation Proposals
+
+```mermaid
+flowchart TD
+    subgraph S1["1. Infinite Browse Spinner Defect"]
+        A["proceedToBuilder()"] --> B["loadBrowsePlaces()"]
+        B --> C["searchObs.subscribe(next: ...)"]
+        C --> D["isBrowseLoading = false"]
+        D -.->|"MISSING this.updateUI()"| E["DOM Never Re-evaluates @if(isBrowseLoading)"]
+        E --> F["FIX: Inject this.updateUI() in subscribe next/error"]
+    end
+
+    subgraph S2["2. Multi-Day Data Loss Defect"]
+        G["User Shortens Trip Dates"] --> H["syncDaysWithDateRange()"]
+        H --> I["currentDays.splice(targetDays)"]
+        I -.->|"SILENT DESTRUCTION"| J["Day 2/3 Stops Deleted without Prompt"]
+        J --> K["FIX: AlertController Confirmation if discarded days have items"]
+    end
+
+    subgraph S3["3. Chronology Inversion Defect"]
+        L["User Clicks Move Down on Stop 1"] --> M["moveStopDown(0)"]
+        M --> N["Items swapped, sort_order updated"]
+        N -.->|"planned_time retained"| O["11:21 AM precedes 09:00 AM"]
+        O --> P["FIX: Call autoOptimizeDaySchedule() on reorder"]
+    end
+```
+
+#### Complete Implementation Blueprint:
+
+1. **Fix 1 (`custom-builder.page.ts:926, 938`)**:
+   ```typescript
+   searchObs.subscribe({
+     next: (places: Place[]) => {
+       this.allCuratedPlaces = places;
+       this.applyBrowseFilter();
+       this.isBrowseLoading = false;
+       this.updateUI(); // Resolves Defect 1
+     },
+     error: () => {
+       this.placeService.getFeaturedPlaces(50).subscribe({
+         next: (places) => {
+           this.allCuratedPlaces = places;
+           this.applyBrowseFilter();
+           this.isBrowseLoading = false;
+           this.updateUI(); // Resolves Defect 1
+         },
+         error: () => {
+           this.allCuratedPlaces = [];
+           this.displayedPlaces = [];
+           this.isBrowseLoading = false;
+           this.updateUI(); // Resolves Defect 1
+         },
+       });
+     },
+   });
+   ```
+
+2. **Fix 2 (`custom-builder.page.ts:448`, `applyDatePicker`)**:
+   ```typescript
+   public async applyDatePicker(): Promise<void> {
+     if (!this.tempTripSummary.isValid) return;
+     const newDaysCount = diffDaysLocal(this.popupStartDate, this.popupEndDate);
+     
+     // Check if shortening discards days with existing items
+     if (newDaysCount < this.days.length) {
+       const discardedDays = this.days.slice(newDaysCount);
+       const hasStops = discardedDays.some((d) => d.items.length > 0);
+       if (hasStops) {
+         const alert = await this.alertController.create({
+           header: 'Shorten Trip Duration?',
+           message: `Reducing to ${newDaysCount} ${newDaysCount === 1 ? 'day' : 'days'} will discard scheduled stops on Day ${newDaysCount + 1}${this.days.length > newDaysCount + 1 ? ' to ' + this.days.length : ''}. Are you sure you want to proceed?`,
+           buttons: [
+             { text: 'Cancel', role: 'cancel' },
+             {
+               text: 'Discard & Shorten',
+               role: 'destructive',
+               handler: () => {
+                 this.commitDatePickerChanges();
+               },
+             },
+           ],
+         });
+         await alert.present();
+         return;
+       }
+     }
+     this.commitDatePickerChanges();
+   }
+   ```
+
+3. **Fix 3 (`custom-builder.page.ts:786, 798`)**:
+   ```typescript
+   public moveStopUp(itemIndex: number): void {
+     const cur = this.currentDay;
+     if (!cur || itemIndex <= 0) return;
+     const temp = cur.items[itemIndex];
+     cur.items[itemIndex] = cur.items[itemIndex - 1];
+     cur.items[itemIndex - 1] = temp;
+     this.reindexSortOrder(cur);
+     this.autoOptimizeDaySchedule(this.activeDayIndex); // Resolves Defect 3
+     this.hasUnsavedChanges = true;
+     this.updateUI();
+   }
+
+   public moveStopDown(itemIndex: number): void {
+     const cur = this.currentDay;
+     if (!cur || itemIndex >= cur.items.length - 1) return;
+     const temp = cur.items[itemIndex];
+     cur.items[itemIndex] = cur.items[itemIndex + 1];
+     cur.items[itemIndex + 1] = temp;
+     this.reindexSortOrder(cur);
+     this.autoOptimizeDaySchedule(this.activeDayIndex); // Resolves Defect 3
+     this.hasUnsavedChanges = true;
+     this.updateUI();
+   }
+   ```
+
+4. **Fix 4 (`custom-builder.page.ts:860`, `custom-builder.page.ts:1514`)**:
+   ```typescript
+   // In saveStopEdits():
+   if (this.editStopCostMin != null && this.editStopCostMax != null && Number(this.editStopCostMin) > Number(this.editStopCostMax)) {
+     const toast = await this.toastController.create({
+       message: 'Estimated minimum cost cannot be greater than maximum cost.',
+       duration: 3000,
+       color: 'warning',
+       position: 'top',
+     });
+     await toast.present();
+     return;
+   }
+
+   // In saveItinerary() error handler:
+   error: async (err) => {
+     this.isSaving = false;
+     this.updateUI();
+     let errorMsg = 'Failed to save itinerary. Please try again.';
+     if (Array.isArray(err?.error?.detail)) {
+       errorMsg = err.error.detail.map((d: any) => d.msg || d.message).join('; ');
+     } else if (typeof err?.error?.detail === 'string') {
+       errorMsg = err.error.detail;
+     }
+     const toast = await this.toastController.create({
+       message: errorMsg,
+       duration: 4000,
+       color: 'danger',
+       position: 'top',
+     });
+     await toast.present();
+   }
+   ```
+
+5. **Fix 5 (`custom-builder.page.ts:717-727`)**:
+   ```typescript
+   // Coordinate geofence in addCustomVenueStop():
+   const hasLat = this.customVenueLat != null && String(this.customVenueLat).trim() !== '';
+   const hasLng = this.customVenueLng != null && String(this.customVenueLng).trim() !== '';
+   if ((hasLat && !hasLng) || (!hasLat && hasLng)) {
+     const toast = await this.toastController.create({
+       message: 'Please provide both Latitude and Longitude coordinates, or leave both blank.',
+       duration: 3000,
+       color: 'warning',
+       position: 'top',
+     });
+     await toast.present();
+     return;
+   }
+   if (this.customVenueCostMin != null && this.customVenueCostMax != null && Number(this.customVenueCostMin) > Number(this.customVenueCostMax)) {
+     const toast = await this.toastController.create({
+       message: 'Custom venue minimum cost cannot exceed maximum cost.',
+       duration: 3000,
+       color: 'warning',
+       position: 'top',
+     });
+     await toast.present();
+     return;
+   }
+   ```

@@ -1224,4 +1224,28 @@ px cap sync android): **Exit code 0 (6 plugins synchronized)**.
   - Verification of zero-stop guard, favorites deep link, pre-arrival banner, and touch targets.
   - Push to remote, monitor GitHub Actions deployment, and test live on GitHub Pages.
 
+---
+
+## Phase 45: Custom Itinerary Subsystem Deep-Dive Remediation & Quality Hardening
+- [x] **45.1 (P0: Change Detection Starvation / Infinite Browse Spinner)**:
+  - In `custom-builder.page.ts`, invoke `this.updateUI()` inside both the `next` and `error` subscriber callbacks of `loadBrowsePlaces()` to immediately update the view when curated places load.
+- [x] **45.2 (P0: Multi-Day Stop Discard Confirmation on Date Shortening)**:
+  - In `custom-builder.page.ts`, intercept `applyDatePicker()` when `newDaysCount < this.days.length` and any discarded day contains stops (`d.items.length > 0`). Prompt an `AlertController` confirmation dialog (*"Shortening your trip will discard scheduled stops on Day X... Are you sure you want to proceed?"*), reverting the date input if canceled.
+- [x] **45.3 (P1: Chronological Continuity on Stop Reordering)**:
+  - In `custom-builder.page.ts`, invoke `this.autoOptimizeDaySchedule(this.activeDayIndex)` and `this.updateUI()` within `moveStopUp()` and `moveStopDown()` so planned stop times recalculate in sequential forward order with transit buffer.
+- [x] **45.4 (P1: Cost Range Guard & Safe API Error Parsing)**:
+  - In `custom-builder.page.ts:saveStopEdits()`, validate `editStopCostMin <= editStopCostMax` before closing modal.
+  - In `custom-builder.page.ts:saveItinerary()`, parse `err?.error?.detail` if it is an array of validation error objects to prevent displaying `"[object Object]"` in the error toast.
+- [x] **45.5 (P2: Off-Grid Custom Venue Partial GPS Coordinate Guard & Cost Validation)**:
+  - In `custom-builder.page.ts:addCustomVenueStop()`, enforce all-or-nothing coordinate entry (`both entered or both blank`) and validate `customVenueCostMin <= customVenueCostMax`.
+- [x] **45.6 (P2: Cumulative Multi-Day Budget Display)**:
+  - In `custom-builder.page.html`, update the "Verified Estimated Costs" card header to show total multi-day budget allowance (`₱X/day (₱Y total for Z days)`).
+- [x] **45.7 (P3: LCP Image Optimization in Browse Grid)**:
+  - In `custom-builder.page.html`, add `[loading]="pIdx === 0 ? 'eager' : 'lazy'"` to the first browse place card to resolve `NG0913`.
+- [x] **45.8 (Quality Gates Verification & Remote Deployment)**:
+  - Vitest Unit Tests: 32/32 suites, 340/340 tests passing (100%).
+  - Angular production build: 0 budget violations (all component styles < 16 kB).
+  - Stage, commit, push, monitor GitHub Actions, and verify live on GitHub Pages.
+
+
 
