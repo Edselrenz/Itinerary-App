@@ -310,6 +310,12 @@ class ProfileView(ft.Container):
         )
         self.page.show_dialog(dlg)
 
+    def _safe_update(self) -> None:
+        try:
+            self.update()
+        except Exception:
+            pass
+
     def _sync_guest_trips(self) -> None:
         if not self.session_manager.is_authenticated:
             self._navigate("/login")
@@ -317,7 +323,7 @@ class ProfileView(ft.Container):
 
         self.is_migrating = True
         self._build_content()
-        self.update()
+        self._safe_update()
 
         async def _worker():
             try:
@@ -325,7 +331,7 @@ class ProfileView(ft.Container):
             finally:
                 self.is_migrating = False
                 self._build_content()
-                self.update()
+                self._safe_update()
 
         asyncio.run(_worker())
 
@@ -333,7 +339,7 @@ class ProfileView(ft.Container):
         def confirm():
             self.guest_storage.clear_all()
             self._build_content()
-            self.update()
+            self._safe_update()
 
         show_confirm_dialog(
             self.page,

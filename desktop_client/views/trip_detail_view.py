@@ -192,10 +192,16 @@ class TripDetailView(ft.Container):
             spacing=0,
         )
 
+    def _safe_update(self) -> None:
+        try:
+            self.update()
+        except Exception:
+            pass
+
     def _select_day(self, day_idx: int) -> None:
         self.active_day_index = day_idx
         self._build_content()
-        self.update()
+        self._safe_update()
 
     def _open_export(self) -> None:
         if self.page:

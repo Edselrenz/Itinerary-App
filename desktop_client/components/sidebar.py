@@ -34,11 +34,17 @@ class SidebarNav(ft.Container):
 
         self._build_content()
 
+    def _safe_update(self) -> None:
+        try:
+            self.update()
+        except Exception:
+            pass
+
     def set_active_route(self, route: str) -> None:
         """Updates the highlighted route."""
         self.current_route = route
         self._build_content()
-        self.update()
+        self._safe_update()
 
     def _build_content(self) -> None:
         # Core Web Tabs (matching Ionic Tabs)

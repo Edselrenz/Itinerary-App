@@ -446,15 +446,21 @@ class SuggestedWizardView(ft.Container):
             spacing=0,
         )
 
+    def _safe_update(self) -> None:
+        try:
+            self.update()
+        except Exception:
+            pass
+
     def _set_budget(self, amount: float) -> None:
         self.budget_val = amount
         self._build_content()
-        self.update()
+        self._safe_update()
 
     def _set_pacing(self, key: str) -> None:
         self.pacing_val = key
         self._build_content()
-        self.update()
+        self._safe_update()
 
     def _toggle_category(self, key: str) -> None:
         if key in self.selected_categories:
@@ -463,19 +469,19 @@ class SuggestedWizardView(ft.Container):
         else:
             self.selected_categories.add(key)
         self._build_content()
-        self.update()
+        self._safe_update()
 
     def _select_day(self, day_idx: int) -> None:
         self.active_day_index = day_idx
         self._build_content()
-        self.update()
+        self._safe_update()
 
     def _reset_wizard(self) -> None:
         self.generated_itinerary = None
         self.is_generating = False
         self.error_message = None
         self._build_content()
-        self.update()
+        self._safe_update()
 
     def _open_export_dialog(self) -> None:
         if self.page and self.generated_itinerary:
@@ -491,17 +497,17 @@ class SuggestedWizardView(ft.Container):
             if end_d < start_d:
                 self.error_message = "End date cannot be earlier than start date."
                 self._build_content()
-                self.update()
+                self._safe_update()
                 return
         except ValueError:
             self.error_message = "Please enter valid dates in YYYY-MM-DD format."
             self._build_content()
-            self.update()
+            self._safe_update()
             return
 
         self.is_generating = True
         self._build_content()
-        self.update()
+        self._safe_update()
 
         async def _do_gen():
             try:

@@ -165,7 +165,21 @@ def main(page: ft.Page) -> None:
         page.update()
 
     # Subscribe session changes to update header/sidebar
-    session_manager.add_listener(lambda: sidebar._build_content() if sidebar else None)
+    def _on_session_changed():
+        if sidebar:
+            sidebar._build_content()
+            try:
+                sidebar.update()
+            except Exception:
+                pass
+        if header:
+            header._build_content()
+            try:
+                header.update()
+            except Exception:
+                pass
+
+    session_manager.add_listener(_on_session_changed)
 
     # Background Backend Health Monitor
     async def check_backend_loop():

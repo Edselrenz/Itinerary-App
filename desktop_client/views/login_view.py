@@ -175,14 +175,20 @@ class LoginView(ft.Container):
 
         self.content = card
 
+    def _safe_update(self) -> None:
+        try:
+            self.update()
+        except Exception:
+            pass
+
     def _show_error(self, message: str) -> None:
         self.error_text.value = message
         self.error_container.visible = True
-        self.update()
+        self._safe_update()
 
     def _clear_error(self) -> None:
         self.error_container.visible = False
-        self.update()
+        self._safe_update()
 
     def _handle_login(self) -> None:
         email = (self.email_input.value or "").strip()

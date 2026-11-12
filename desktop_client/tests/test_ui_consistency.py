@@ -150,3 +150,26 @@ def test_all_views_can_be_instantiated():
     )
     detail = TripDetailView(itinerary=sample_itin)
     assert detail is not None
+
+
+def test_unmounted_header_and_sidebar_safe_update():
+    """Ensure TopHeader and SidebarNav safely handle context/status/route updates when unmounted."""
+    header = TopHeader()
+    # These must NOT raise 'Control must be added to the page first'
+    header.set_header_context("Map & Discover", "Explore LGUs")
+    header.set_online_status(False)
+    header.set_online_status(True)
+    assert header.title_text == "Map & Discover"
+    assert header.is_online is True
+
+    sidebar = SidebarNav()
+    sidebar.set_active_route("/places")
+    assert sidebar.current_route == "/places"
+
+
+def test_continue_as_guest_welcome_flow():
+    """Verify Continue as Guest action transitions session to guest and routes to /dashboard."""
+    routed = []
+    welcome = WelcomeView(on_navigate=lambda r: routed.append(r))
+    welcome._continue_as_guest()
+    assert "/dashboard" in routed

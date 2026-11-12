@@ -37,19 +37,25 @@ class TopHeader(ft.Container):
 
         self._build_content()
 
+    def _safe_update(self) -> None:
+        try:
+            self.update()
+        except Exception:
+            pass
+
     def set_header_context(self, title: str, subtitle: Optional[str] = None) -> None:
         """Updates the header title and subtitle dynamically."""
         self.title_text = title
         if subtitle is not None:
             self.subtitle_text = subtitle
         self._build_content()
-        self.update()
+        self._safe_update()
 
     def set_online_status(self, online: bool) -> None:
         """Updates the server status indicator."""
         self.is_online = online
         self._build_content()
-        self.update()
+        self._safe_update()
 
     def _build_content(self) -> None:
         # Title and breadcrumbs

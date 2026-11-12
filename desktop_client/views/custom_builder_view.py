@@ -431,11 +431,17 @@ class CustomBuilderView(ft.Container):
             border=ft.Border.all(1, ThemeColors.BORDER_LIGHT),
         )
 
+    def _safe_update(self) -> None:
+        try:
+            self.update()
+        except Exception:
+            pass
+
     def _select_day(self, day_idx: int) -> None:
         self.active_day_index = day_idx
         self.feedback_message = None
         self._build_content()
-        self.update()
+        self._safe_update()
 
     def _add_new_day(self) -> None:
         new_day_num = len(self.days) + 1
@@ -451,7 +457,7 @@ class CustomBuilderView(ft.Container):
         self.days.append(new_day)
         self.active_day_index = len(self.days) - 1
         self._build_content()
-        self.update()
+        self._safe_update()
 
     def _add_place_to_active_day(self, place: Place) -> None:
         if not self.days:
@@ -474,7 +480,7 @@ class CustomBuilderView(ft.Container):
         self.feedback_message = f"Added '{place.name}' to Day {active_day.day_number}."
         self.feedback_is_error = False
         self._build_content()
-        self.update()
+        self._safe_update()
 
     def _open_custom_venue_dialog(self) -> None:
         if not self.page:
@@ -498,7 +504,7 @@ class CustomBuilderView(ft.Container):
             self.feedback_message = f"Added off-grid venue '{new_item.custom_title}' to Day {active_day.day_number}."
             self.feedback_is_error = False
             self._build_content()
-            self.update()
+            self._safe_update()
 
         show_custom_venue_dialog(self.page, handle_custom_save)
 
@@ -513,7 +519,7 @@ class CustomBuilderView(ft.Container):
             for i, itm in enumerate(active_day.items, 1):
                 itm.sort_order = i
             self._build_content()
-            self.update()
+            self._safe_update()
 
     def _move_stop_down(self, item: ItineraryItem) -> None:
         active_day = self.days[self.active_day_index]
@@ -526,7 +532,7 @@ class CustomBuilderView(ft.Container):
             for i, itm in enumerate(active_day.items, 1):
                 itm.sort_order = i
             self._build_content()
-            self.update()
+            self._safe_update()
 
     def _edit_stop(self, item: ItineraryItem) -> None:
         if not self.page:
@@ -539,7 +545,7 @@ class CustomBuilderView(ft.Container):
             item.estimated_cost_min = data.get("estimated_cost_min")
             item.estimated_cost_max = data.get("estimated_cost_max")
             self._build_content()
-            self.update()
+            self._safe_update()
 
         show_edit_stop_dialog(self.page, item, handle_edit_save)
 
@@ -551,7 +557,7 @@ class CustomBuilderView(ft.Container):
         self.feedback_message = f"Removed stop from Day {active_day.day_number}."
         self.feedback_is_error = False
         self._build_content()
-        self.update()
+        self._safe_update()
 
     def _confirm_reset(self) -> None:
         if not self.page:
@@ -563,7 +569,7 @@ class CustomBuilderView(ft.Container):
             self.feedback_message = "All scheduled stops cleared."
             self.feedback_is_error = False
             self._build_content()
-            self.update()
+            self._safe_update()
 
         show_confirm_dialog(
             self.page,
@@ -579,7 +585,7 @@ class CustomBuilderView(ft.Container):
             self.feedback_message = "Cannot save an empty itinerary. Please add at least 1 destination stop."
             self.feedback_is_error = True
             self._build_content()
-            self.update()
+            self._safe_update()
             return
 
         async def _do_save():
@@ -646,7 +652,7 @@ class CustomBuilderView(ft.Container):
             self.feedback_message = "Cannot export an empty itinerary. Add at least 1 stop."
             self.feedback_is_error = True
             self._build_content()
-            self.update()
+            self._safe_update()
             return
 
         draft_itin = Itinerary(

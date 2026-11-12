@@ -339,8 +339,7 @@ class PlacesView(ft.Container):
 
     def _safe_update(self) -> None:
         try:
-            if self.page:
-                self.update()
+            self.update()
         except Exception:
             pass
 

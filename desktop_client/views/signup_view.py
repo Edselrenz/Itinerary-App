@@ -211,14 +211,20 @@ class SignupView(ft.Container):
 
         self.content = card
 
+    def _safe_update(self) -> None:
+        try:
+            self.update()
+        except Exception:
+            pass
+
     def _show_error(self, message: str) -> None:
         self.error_text.value = message
         self.error_container.visible = True
-        self.update()
+        self._safe_update()
 
     def _clear_error(self) -> None:
         self.error_container.visible = False
-        self.update()
+        self._safe_update()
 
     def _handle_signup(self) -> None:
         first_name = (self.first_name_input.value or "").strip()
