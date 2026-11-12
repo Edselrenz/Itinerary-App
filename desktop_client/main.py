@@ -5,8 +5,24 @@ theme controls, health monitoring, and view switching.
 """
 
 import asyncio
+import os
+from pathlib import Path
+import sys
 from typing import Optional
 import flet as ft
+
+# Auto-detect bundled flet view in frozen standalone builds
+if getattr(sys, "frozen", False):
+    exe_dir = Path(sys.executable).parent
+    candidates = [
+        exe_dir / "flet",
+        exe_dir / "_internal" / "flet",
+        Path(getattr(sys, "_MEIPASS", "")) / "flet",
+    ]
+    for cand in candidates:
+        if (cand / "flet.exe").is_file():
+            os.environ["FLET_VIEW_PATH"] = str(cand)
+            break
 
 from desktop_client.components.header import TopHeader
 from desktop_client.components.sidebar import SidebarNav

@@ -8,8 +8,15 @@ Adheres strictly to the Nueva Ecija design language:
 """
 
 import os
-from dataclasses import dataclass, field
 from pathlib import Path
+import sys
+from dataclasses import dataclass, field
+
+
+def _resolve_base_dir() -> Path:
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).parent
+    return Path(__file__).resolve().parent.parent
 
 
 @dataclass(frozen=True)
@@ -118,7 +125,7 @@ class Settings:
     window_height: int = 820
     
     # Local Storage Directory
-    base_dir: Path = field(default_factory=lambda: Path(__file__).resolve().parent.parent)
+    base_dir: Path = field(default_factory=_resolve_base_dir)
     storage_dir: Path = field(init=False)
     
     def __post_init__(self) -> None:
