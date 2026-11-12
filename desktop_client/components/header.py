@@ -28,7 +28,7 @@ class TopHeader(ft.Container):
         self.session_manager = get_session_manager()
 
         self.height = 64
-        self.padding = ft.padding.symmetric(horizontal=24, vertical=8)
+        self.padding = ft.Padding.symmetric(horizontal=24, vertical=8)
         self.border = ft.Border(
             bottom=ft.BorderSide(1, ThemeColors.BORDER_LIGHT)
         )
@@ -93,7 +93,7 @@ class TopHeader(ft.Container):
                 spacing=6,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(horizontal=10, vertical=4),
+            padding=ft.Padding.symmetric(horizontal=10, vertical=4),
             border_radius=12,
             border=ft.Border.all(1, ThemeColors.BORDER_LIGHT),
         )
@@ -120,7 +120,7 @@ class TopHeader(ft.Container):
                 spacing=6,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(horizontal=10, vertical=4),
+            padding=ft.Padding.symmetric(horizontal=10, vertical=4),
             border_radius=8,
             bgcolor=ThemeColors.BG_LIGHT,
         )

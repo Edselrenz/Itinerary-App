@@ -27,7 +27,7 @@ class DashboardView(ft.Container):
         self.itinerary_service = get_itinerary_service()
 
         self.expand = True
-        self.padding = ft.padding.all(24)
+        self.padding = ft.Padding.all(24)
         self.bgcolor = ThemeColors.BG_LIGHT
 
         self.featured_places: list[Place] = []
@@ -82,7 +82,7 @@ class DashboardView(ft.Container):
             bgcolor=ThemeColors.EMERALD_DARK,
             border_radius=16,
             padding=24,
-            margin=ft.margin.only(bottom=20),
+            margin=ft.Margin.only(bottom=20),
         )
 
         # Quick Stats Cards
@@ -256,7 +256,7 @@ class DashboardView(ft.Container):
                                 content=ft.Text(badge_text, size=10, weight=ft.FontWeight.W_600, color=color),
                                 bgcolor=f"{color}1A",
                                 border_radius=6,
-                                padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                                padding=ft.Padding.symmetric(horizontal=8, vertical=4),
                             ),
                         ],
                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,

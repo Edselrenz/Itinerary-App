@@ -20,7 +20,7 @@ class SavedTripsView(ft.Container):
         self.itinerary_service = get_itinerary_service()
 
         self.expand = True
-        self.padding = ft.padding.all(24)
+        self.padding = ft.Padding.all(24)
         self.bgcolor = ThemeColors.BG_LIGHT
 
         self.itineraries: list[Itinerary] = []
@@ -151,7 +151,7 @@ class SavedTripsView(ft.Container):
                                         content=ft.Text(source_badge, size=10, weight=ft.FontWeight.W_600, color=badge_color),
                                         bgcolor=badge_bg,
                                         border_radius=6,
-                                        padding=ft.padding.symmetric(horizontal=8, vertical=2),
+                                        padding=ft.Padding.symmetric(horizontal=8, vertical=2),
                                     ),
                                 ],
                                 spacing=8,

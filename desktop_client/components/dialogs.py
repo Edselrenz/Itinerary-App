@@ -112,7 +112,7 @@ def show_place_detail_dialog(
                 content=ft.Text(place.formatted_category, size=11, color=ThemeColors.AZURE_DEEP),
                 bgcolor=ThemeColors.AZURE_SOFT,
                 border_radius=4,
-                padding=ft.padding.symmetric(horizontal=8, vertical=2),
+                padding=ft.Padding.symmetric(horizontal=8, vertical=2),
             ),
             ft.Divider(height=1),
             ft.Column(controls=info_rows, spacing=8),

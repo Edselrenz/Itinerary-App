@@ -37,8 +37,8 @@ class StopCard(ft.Container):
         self.border_radius = 10
         self.bgcolor = ThemeColors.SURFACE_LIGHT
         self.border = ft.Border.all(1, ThemeColors.BORDER_LIGHT)
-        self.padding = ft.padding.all(12)
-        self.margin = ft.margin.only(bottom=8)
+        self.padding = ft.Padding.all(12)
+        self.margin = ft.Margin.only(bottom=8)
 
         self._build_content()
 
@@ -71,7 +71,7 @@ class StopCard(ft.Container):
             ),
             bgcolor=ThemeColors.AZURE_SOFT,
             border_radius=6,
-            padding=ft.padding.symmetric(horizontal=6, vertical=2),
+            padding=ft.Padding.symmetric(horizontal=6, vertical=2),
         )
 
         duration_pill = ft.Container(
@@ -82,7 +82,7 @@ class StopCard(ft.Container):
             ),
             bgcolor=ThemeColors.BG_LIGHT,
             border_radius=6,
-            padding=ft.padding.symmetric(horizontal=6, vertical=2),
+            padding=ft.Padding.symmetric(horizontal=6, vertical=2),
         )
 
         cost_pill = ft.Container(
@@ -94,7 +94,7 @@ class StopCard(ft.Container):
             ),
             bgcolor=ThemeColors.EMERALD_MINT,
             border_radius=6,
-            padding=ft.padding.symmetric(horizontal=6, vertical=2),
+            padding=ft.Padding.symmetric(horizontal=6, vertical=2),
         )
 
         # Title & location
@@ -161,7 +161,7 @@ class StopCard(ft.Container):
                     spacing=4,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
-                padding=ft.padding.only(top=4),
+                padding=ft.Padding.only(top=4),
             )
 
         notes_row = None
@@ -173,7 +173,7 @@ class StopCard(ft.Container):
                     italic=True,
                     color=ThemeColors.TEXT_MUTED_LIGHT,
                 ),
-                padding=ft.padding.only(top=4),
+                padding=ft.Padding.only(top=4),
             )
 
         main_details = ft.Column(

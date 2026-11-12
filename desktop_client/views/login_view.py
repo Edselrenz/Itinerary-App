@@ -60,7 +60,7 @@ class LoginView(ft.Container):
             ),
             bgcolor=ThemeColors.ERROR_BG,
             border_radius=8,
-            padding=ft.padding.symmetric(horizontal=12, vertical=8),
+            padding=ft.Padding.symmetric(horizontal=12, vertical=8),
             visible=False,
         )
 
@@ -70,7 +70,7 @@ class LoginView(ft.Container):
             style=ft.ButtonStyle(
                 bgcolor=ThemeColors.EMERALD_PRIMARY,
                 color=ft.Colors.WHITE,
-                padding=ft.padding.symmetric(vertical=14),
+                padding=ft.Padding.symmetric(vertical=14),
             ),
             on_click=lambda _: self._handle_login(),
             width=float("inf"),

@@ -29,7 +29,7 @@ class ProfileView(ft.Container):
         self.settings = get_settings()
 
         self.expand = True
-        self.padding = ft.padding.all(24)
+        self.padding = ft.Padding.all(24)
         self.bgcolor = ThemeColors.BG_LIGHT
 
         self.status_msg: Optional[str] = None
@@ -84,7 +84,7 @@ class ProfileView(ft.Container):
                                         ),
                                         bgcolor=ThemeColors.SUCCESS_BG if not is_guest else ThemeColors.AMBER_LIGHT,
                                         border_radius=6,
-                                        padding=ft.padding.symmetric(horizontal=8, vertical=2),
+                                        padding=ft.Padding.symmetric(horizontal=8, vertical=2),
                                     ),
                                 ],
                                 spacing=2,
@@ -146,7 +146,7 @@ class ProfileView(ft.Container):
                                 content=ft.Text("Connected", size=11, weight=ft.FontWeight.W_600, color=ThemeColors.SUCCESS),
                                 bgcolor=ThemeColors.SUCCESS_BG,
                                 border_radius=6,
-                                padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                                padding=ft.Padding.symmetric(horizontal=8, vertical=4),
                             ),
                         ],
                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
@@ -187,7 +187,7 @@ class ProfileView(ft.Container):
             style=ft.ButtonStyle(
                 bgcolor=ThemeColors.ERROR if not is_guest else ThemeColors.EMERALD_PRIMARY,
                 color=ft.Colors.WHITE,
-                padding=ft.padding.symmetric(horizontal=24, vertical=12),
+                padding=ft.Padding.symmetric(horizontal=24, vertical=12),
             ),
             on_click=lambda _: self._handle_auth_action(),
         )

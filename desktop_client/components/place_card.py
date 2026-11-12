@@ -78,7 +78,7 @@ class PlaceCard(ft.Container):
             ),
             bgcolor=ThemeColors.AZURE_SOFT,
             border_radius=6,
-            padding=ft.padding.symmetric(horizontal=8, vertical=3),
+            padding=ft.Padding.symmetric(horizontal=8, vertical=3),
         )
 
         # Rating badge if available
@@ -134,7 +134,7 @@ class PlaceCard(ft.Container):
             ),
             bgcolor=ThemeColors.EMERALD_MINT,
             border_radius=6,
-            padding=ft.padding.symmetric(horizontal=8, vertical=3),
+            padding=ft.Padding.symmetric(horizontal=8, vertical=3),
         )
 
         # Action buttons

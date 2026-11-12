@@ -23,7 +23,7 @@ class TripDetailView(ft.Container):
         self.active_day_index = 0
 
         self.expand = True
-        self.padding = ft.padding.all(24)
+        self.padding = ft.Padding.all(24)
         self.bgcolor = ThemeColors.BG_LIGHT
 
         self._build_content()
@@ -65,7 +65,7 @@ class TripDetailView(ft.Container):
                                 content=ft.Text(source_badge, size=10, weight=ft.FontWeight.W_600, color=badge_col),
                                 bgcolor=badge_bg,
                                 border_radius=6,
-                                padding=ft.padding.symmetric(horizontal=8, vertical=2),
+                                padding=ft.Padding.symmetric(horizontal=8, vertical=2),
                             ),
                         ],
                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
@@ -87,7 +87,7 @@ class TripDetailView(ft.Container):
             bgcolor=ThemeColors.EMERALD_DARK,
             border_radius=14,
             padding=20,
-            margin=ft.margin.only(bottom=16),
+            margin=ft.Margin.only(bottom=16),
         )
 
         # Day Switcher Tabs
@@ -105,7 +105,7 @@ class TripDetailView(ft.Container):
                     bgcolor=ThemeColors.EMERALD_PRIMARY if is_active else ThemeColors.SURFACE_LIGHT,
                     border=ft.Border.all(1, ThemeColors.EMERALD_PRIMARY if is_active else ThemeColors.BORDER_LIGHT),
                     border_radius=8,
-                    padding=ft.padding.symmetric(horizontal=14, vertical=8),
+                    padding=ft.Padding.symmetric(horizontal=14, vertical=8),
                     ink=True,
                     on_click=lambda _, day_idx=idx: self._select_day(day_idx),
                 )

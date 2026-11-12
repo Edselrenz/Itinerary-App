@@ -34,7 +34,7 @@ class SuggestedWizardView(ft.Container):
         self.itinerary_service = get_itinerary_service()
 
         self.expand = True
-        self.padding = ft.padding.all(24)
+        self.padding = ft.Padding.all(24)
         self.bgcolor = ThemeColors.BG_LIGHT
 
         # Wizard State
@@ -113,7 +113,7 @@ class SuggestedWizardView(ft.Container):
                         ],
                         spacing=6,
                     ),
-                    padding=ft.padding.only(left=8),
+                    padding=ft.Padding.only(left=8),
                 ),
             ],
             spacing=16,
@@ -190,7 +190,7 @@ class SuggestedWizardView(ft.Container):
                     bgcolor=bg,
                     border=ft.Border.all(1, border_col),
                     border_radius=16,
-                    padding=ft.padding.symmetric(horizontal=12, vertical=6),
+                    padding=ft.Padding.symmetric(horizontal=12, vertical=6),
                     ink=True,
                     on_click=lambda _, k=cat["key"]: self._toggle_category(k),
                 )
@@ -226,7 +226,7 @@ class SuggestedWizardView(ft.Container):
             style=ft.ButtonStyle(
                 bgcolor=ThemeColors.EMERALD_PRIMARY,
                 color=ft.Colors.WHITE,
-                padding=ft.padding.symmetric(horizontal=32, vertical=16),
+                padding=ft.Padding.symmetric(horizontal=32, vertical=16),
             ),
             on_click=lambda _: self._start_generation(),
         )
@@ -353,7 +353,7 @@ class SuggestedWizardView(ft.Container):
             bgcolor=ThemeColors.EMERALD_DARK,
             border_radius=14,
             padding=20,
-            margin=ft.margin.only(bottom=16),
+            margin=ft.Margin.only(bottom=16),
         )
 
         # Day Switcher Tabs
@@ -373,7 +373,7 @@ class SuggestedWizardView(ft.Container):
                     bgcolor=bg,
                     border=ft.Border.all(1, ThemeColors.EMERALD_PRIMARY if is_active else ThemeColors.BORDER_LIGHT),
                     border_radius=8,
-                    padding=ft.padding.symmetric(horizontal=14, vertical=8),
+                    padding=ft.Padding.symmetric(horizontal=14, vertical=8),
                     ink=True,
                     on_click=lambda _, day_idx=idx: self._select_day(day_idx),
                 )

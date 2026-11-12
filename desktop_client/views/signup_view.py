@@ -42,7 +42,7 @@ class SignupView(ft.Container):
             password=True,
             can_reveal_password=True,
             prefix_icon=ft.Icons.LOCK_OUTLINE,
-            helper_text="At least 6 characters",
+            helper="At least 6 characters",
         )
 
         self.confirm_password_input = ft.TextField(
@@ -69,7 +69,7 @@ class SignupView(ft.Container):
             ),
             bgcolor=ThemeColors.ERROR_BG,
             border_radius=8,
-            padding=ft.padding.symmetric(horizontal=12, vertical=8),
+            padding=ft.Padding.symmetric(horizontal=12, vertical=8),
             visible=False,
         )
 
@@ -79,7 +79,7 @@ class SignupView(ft.Container):
             style=ft.ButtonStyle(
                 bgcolor=ThemeColors.EMERALD_PRIMARY,
                 color=ft.Colors.WHITE,
-                padding=ft.padding.symmetric(vertical=14),
+                padding=ft.Padding.symmetric(vertical=14),
             ),
             on_click=lambda _: self._handle_signup(),
             width=float("inf"),

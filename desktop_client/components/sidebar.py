@@ -30,7 +30,7 @@ class SidebarNav(ft.Container):
         self.border = ft.Border(
             right=ft.BorderSide(1, ThemeColors.BORDER_DARK)
         )
-        self.padding = ft.padding.all(16)
+        self.padding = ft.Padding.all(16)
         
         self._build_content()
 
@@ -89,7 +89,7 @@ class SidebarNav(ft.Container):
                 spacing=12,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.padding.only(bottom=20, top=4),
+            padding=ft.Padding.only(bottom=20, top=4),
         )
 
         # Traveler session status card
@@ -139,7 +139,7 @@ class SidebarNav(ft.Container):
             bgcolor=ThemeColors.SURFACE_DARK_HOVER,
             border_radius=10,
             padding=10,
-            margin=ft.margin.only(bottom=10),
+            margin=ft.Margin.only(bottom=10),
         )
 
         # Bottom actions: Theme toggle and Sign In / Sign Out
@@ -214,7 +214,7 @@ class SidebarNav(ft.Container):
             ),
             bgcolor=bg,
             border_radius=8,
-            padding=ft.padding.symmetric(horizontal=12, vertical=10),
+            padding=ft.Padding.symmetric(horizontal=12, vertical=10),
             ink=True,
             on_click=lambda _: self._nav_clicked(route),
         )

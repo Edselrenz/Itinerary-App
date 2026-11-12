@@ -16,7 +16,7 @@ class WelcomeView(ft.Container):
         self.auth_service = get_auth_service()
 
         self.expand = True
-        self.padding = ft.padding.symmetric(horizontal=48, vertical=32)
+        self.padding = ft.Padding.symmetric(horizontal=48, vertical=32)
         self.bgcolor = ThemeColors.BG_LIGHT
 
         self._build_content()
@@ -39,7 +39,7 @@ class WelcomeView(ft.Container):
             ),
             bgcolor=ThemeColors.EMERALD_DARK,
             border_radius=20,
-            padding=ft.padding.symmetric(horizontal=16, vertical=8),
+            padding=ft.Padding.symmetric(horizontal=16, vertical=8),
         )
 
         title_text = ft.Text(
@@ -110,7 +110,7 @@ class WelcomeView(ft.Container):
             style=ft.ButtonStyle(
                 bgcolor=ThemeColors.EMERALD_PRIMARY,
                 color=ft.Colors.WHITE,
-                padding=ft.padding.symmetric(horizontal=24, vertical=16),
+                padding=ft.Padding.symmetric(horizontal=24, vertical=16),
             ),
             on_click=lambda _: self._start_as_guest(),
         )
@@ -119,7 +119,7 @@ class WelcomeView(ft.Container):
             content="Sign In / Register Account",
             icon=ft.Icons.LOGIN,
             style=ft.ButtonStyle(
-                padding=ft.padding.symmetric(horizontal=24, vertical=16),
+                padding=ft.Padding.symmetric(horizontal=24, vertical=16),
             ),
             on_click=lambda _: self._go_login(),
         )

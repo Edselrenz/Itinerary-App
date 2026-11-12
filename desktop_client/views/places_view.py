@@ -27,7 +27,7 @@ class PlacesView(ft.Container):
         self.place_service = get_place_service()
 
         self.expand = True
-        self.padding = ft.padding.all(24)
+        self.padding = ft.Padding.all(24)
         self.bgcolor = ThemeColors.BG_LIGHT
 
         # Search & Filter State
@@ -254,7 +254,7 @@ class PlacesView(ft.Container):
             bgcolor=bg,
             border=ft.Border.all(1, border_color),
             border_radius=16,
-            padding=ft.padding.symmetric(horizontal=12, vertical=6),
+            padding=ft.Padding.symmetric(horizontal=12, vertical=6),
             ink=True,
             on_click=lambda _: self._on_category_click(key),
         )

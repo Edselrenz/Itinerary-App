@@ -40,7 +40,7 @@ class CustomBuilderView(ft.Container):
         self.itinerary_service = get_itinerary_service()
 
         self.expand = True
-        self.padding = ft.padding.all(20)
+        self.padding = ft.Padding.all(20)
         self.bgcolor = ThemeColors.BG_LIGHT
 
         # Itinerary Draft State
@@ -130,7 +130,7 @@ class CustomBuilderView(ft.Container):
             style=ft.ButtonStyle(
                 bgcolor=ThemeColors.SURFACE_DARK_HOVER,
                 color=ft.Colors.WHITE,
-                padding=ft.padding.symmetric(vertical=10),
+                padding=ft.Padding.symmetric(vertical=10),
             ),
             width=float("inf"),
             on_click=lambda _: self._open_custom_venue_dialog(),
@@ -184,7 +184,7 @@ class CustomBuilderView(ft.Container):
                 expand=True,
             ),
             width=420,
-            padding=ft.padding.all(12),
+            padding=ft.Padding.all(12),
             bgcolor=ThemeColors.SURFACE_LIGHT,
             border_radius=12,
             border=ft.Border.all(1, ThemeColors.BORDER_LIGHT),
@@ -230,7 +230,7 @@ class CustomBuilderView(ft.Container):
                         style=ft.ButtonStyle(
                             bgcolor=ThemeColors.EMERALD_PRIMARY,
                             color=ft.Colors.WHITE,
-                            padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                            padding=ft.Padding.symmetric(horizontal=8, vertical=4),
                         ),
                         on_click=lambda _, p=place: self._add_place_to_active_day(p),
                     ),
@@ -264,19 +264,19 @@ class CustomBuilderView(ft.Container):
                     content=ft.Text(f"{len(self.days)} Days", size=11, weight=ft.FontWeight.W_600, color=ThemeColors.AZURE_DEEP),
                     bgcolor=ThemeColors.AZURE_SOFT,
                     border_radius=6,
-                    padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                    padding=ft.Padding.symmetric(horizontal=8, vertical=4),
                 ),
                 ft.Container(
                     content=ft.Text(f"{total_stops} Stops", size=11, weight=ft.FontWeight.W_600, color=ThemeColors.EMERALD_PRIMARY),
                     bgcolor=ThemeColors.EMERALD_MINT,
                     border_radius=6,
-                    padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                    padding=ft.Padding.symmetric(horizontal=8, vertical=4),
                 ),
                 ft.Container(
                     content=ft.Text(f"Est. ₱{total_cost:,.0f}", size=11, weight=ft.FontWeight.W_600, color=ThemeColors.WARM_GOLD),
                     bgcolor=ThemeColors.AMBER_LIGHT,
                     border_radius=6,
-                    padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                    padding=ft.Padding.symmetric(horizontal=8, vertical=4),
                 ),
             ],
             spacing=6,
@@ -297,7 +297,7 @@ class CustomBuilderView(ft.Container):
                     ),
                     bgcolor=ThemeColors.EMERALD_PRIMARY if is_active else ThemeColors.SURFACE_LIGHT,
                     border_radius=8,
-                    padding=ft.padding.symmetric(horizontal=12, vertical=8),
+                    padding=ft.Padding.symmetric(horizontal=12, vertical=8),
                     border=ft.Border.all(1, ThemeColors.EMERALD_PRIMARY if is_active else ThemeColors.BORDER_LIGHT),
                     ink=True,
                     on_click=lambda _, i=idx: self._select_day(i),
@@ -307,7 +307,7 @@ class CustomBuilderView(ft.Container):
         add_day_btn = ft.OutlinedButton(
             content="+ Add Day",
             icon=ft.Icons.ADD,
-            style=ft.ButtonStyle(padding=ft.padding.symmetric(horizontal=10, vertical=6)),
+            style=ft.ButtonStyle(padding=ft.Padding.symmetric(horizontal=10, vertical=6)),
             on_click=lambda _: self._add_new_day(),
         )
 
@@ -420,7 +420,7 @@ class CustomBuilderView(ft.Container):
                 expand=True,
             ),
             expand=True,
-            padding=ft.padding.all(16),
+            padding=ft.Padding.all(16),
             bgcolor=ThemeColors.SURFACE_LIGHT,
             border_radius=12,
             border=ft.Border.all(1, ThemeColors.BORDER_LIGHT),
