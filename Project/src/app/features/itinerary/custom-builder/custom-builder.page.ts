@@ -47,7 +47,7 @@ import type { Place } from '../../../core/models/place.models';
 import type { ItineraryBudgetSummary } from '../../../core/services/itinerary.service';
 import { ItineraryService } from '../../../core/services/itinerary.service';
 import { PlaceService } from '../../../core/services/place.service';
-import { addDaysLocal, diffDaysLocal, formatDateRange, parseLocalIsoDate, toLocalIsoDate } from '../../../core/utils/date.utils';
+import { addDaysLocal, diffDaysLocal, formatDateRange, parseLocalIsoDate, toBackendIsoTime, toLocalIsoDate } from '../../../core/utils/date.utils';
 import { haversineDistanceMeters } from '../../../core/utils/polyline.util';
 import { DestinationAutocompleteComponent } from '../../../shared/components/destination-autocomplete/destination-autocomplete.component';
 import { ItineraryRouteMapComponent } from '../../../shared/components/itinerary-route-map/itinerary-route-map.component';
@@ -1587,7 +1587,7 @@ export class CustomBuilderPage implements OnInit, OnDestroy, ComponentCanDeactiv
           custom_lat: it.custom_lat ?? it.place?.latitude ?? null,
           custom_lng: it.custom_lng ?? it.place?.longitude ?? null,
           sort_order: it.sort_order,
-          planned_time: it.planned_time,
+          planned_time: toBackendIsoTime(it.planned_time),
           duration_minutes: it.duration_minutes,
           notes: it.notes,
           estimated_cost_min: it.estimated_cost_min,

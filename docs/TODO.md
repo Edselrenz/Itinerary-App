@@ -1264,6 +1264,25 @@ px cap sync android): **Exit code 0 (6 plugins synchronized)**.
   - Angular production build: strictly enforce component stylesheet limit (<16 kB for `custom-builder.page.scss`).
   - Stage, commit, push to `main`, monitor GitHub Actions CI/CD run, and verify live on GitHub Pages.
 
+---
+
+## Phase 47: Custom Itinerary ISO Time Normalization & Settings Input Dark-Mode Contrast Hardening
+- [x] **47.1 (P0: Timezone Sign 422 Rejection Normalization in Frontend)**:
+  - Implement `toBackendIsoTime(timeStr)` utility in `date.utils.ts` and `custom-builder.page.ts` converting 12-hour AM/PM formats (e.g. `"09:00 AM"`, `"01:13 PM"`) and range strings into strict 24-hour ISO format (`"09:00:00"`, `"13:13:00"`).
+  - Normalize `planned_time` in `saveItinerary()` in `custom-builder.page.ts`, `acceptAndSave()` in `suggested-wizard.page.ts`, and in `itinerary.service.ts` payload builders.
+- [x] **47.2 (P0: Resilient Time Format Validator in FastAPI Backend)**:
+  - In `backend/app/schemas/itinerary.py`, add `@field_validator("planned_time", mode="before")` on `ItineraryItemBase` and `ItineraryItemUpdate` using `datetime.strptime` to parse 12-hour AM/PM and 24-hour ISO times before Pydantic time parsing.
+- [x] **47.3 (P1: Dark Mode / User-Agent Input Background Color Hardening)**:
+  - In `Project/src/app/features/itinerary/custom-builder/custom-builder.page.scss`, explicitly set `background-color: #ffffff !important;` and `color: #0f172a !important;` on `.settings-input` and its focus state to eliminate dark charcoal input rectangles and satisfy WCAG 2.2 AA contrast.
+  - Enforce component stylesheet budget (< 16 kB).
+- [x] **47.4 (P1: Vitest Unit Tests & Backend Verification)**:
+  - Add unit tests for `toBackendIsoTime()` with 12-hour AM/PM, 24-hour, range strings, and null inputs.
+  - Verify 32/32 suites pass with 100% success rate (348/348 tests).
+- [x] **47.5 (Quality Gates Verification, Remote Deployment & Live Check)**:
+  - Angular production build verification (0 budget violations).
+  - Stage, commit, push to `origin/main`, monitor GitHub Actions, and verify live on GitHub Pages.
+
+
 
 
 

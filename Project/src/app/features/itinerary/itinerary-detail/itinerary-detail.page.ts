@@ -90,6 +90,7 @@ import {
   addDaysLocal,
   formatDateRange,
   parseLocalIsoDate,
+  toBackendIsoTime,
   toLocalIsoDate,
 } from '../../../core/utils/date.utils';
 import {
@@ -515,7 +516,7 @@ export class ItineraryDetailPage implements OnInit, OnDestroy, ComponentCanDeact
       items: day.items.map((act, aIdx) => ({
         place_id: act.place_id || null,
         custom_title: act.custom_title,
-        planned_time: act.planned_time,
+        planned_time: toBackendIsoTime(act.planned_time),
         duration_minutes: this.parseDurationMinutes(act.duration_label),
         notes: act.notes,
         estimated_cost_min: act.estimated_cost_min != null ? act.estimated_cost_min : act.estimated_cost,

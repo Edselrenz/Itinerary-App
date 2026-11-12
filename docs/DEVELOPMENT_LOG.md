@@ -4408,6 +4408,37 @@ NEXT STEPS:
   - Updated `docs/DEVELOPMENT_LOG.md` with Session 110.
   - Documented Section 12 in `SYSTEM_ANALYSIS_AND_TESTING_REPORT.md` and `docs/SYSTEM_ANALYSIS_AND_TESTING_REPORT.md`.
 
+---
+
+## Session 111: Phase 47 — Custom Itinerary ISO Time Normalization & Settings Input Dark-Mode Contrast Hardening
+- **Date & Time**: 2026-11-12 14:00:00 (Local)
+- **Objective**:
+  - Address two critical defects identified in Section 12 of `SYSTEM_ANALYSIS_AND_TESTING_REPORT.md`:
+    1. **47.1 (P0)**: Timezone Sign 422 Toast Error on Itinerary Save (`Input should be in a valid time format, invalid timezone sign`).
+    2. **47.2 (P1)**: Dark Charcoal / Pitch Black Input Box Inconsistency in Settings Card (`.settings-input`).
+- **Defect Analysis & Root Causes**:
+  - **Timezone Sign Toast Error**: `calculateNextStopTime()` generates 12-hour AM/PM time strings (`"09:00 AM"`). Pydantic v2's `time` field interprets `" AM"` as an invalid timezone offset, causing HTTP 422. The frontend joins 6 validation errors into an unreadable red toast.
+    - Solution: Normalize 12-hour time strings to 24-hour ISO format (`"09:00:00"`) in frontend before sending payload, and add a resilient `@field_validator("planned_time", mode="before")` in `backend/app/schemas/itinerary.py` using `datetime.strptime`.
+  - **Dark Charcoal Input Background**: `.settings-input` in `custom-builder.page.scss` lacked an explicit background color. In OS/browser dark mode, user-agent stylesheets injected `rgb(59, 59, 59)` while text was styled dark navy `#0f172a`, failing WCAG 2.2 AA contrast (1.67:1).
+    - Solution: Explicitly enforce `background-color: #ffffff !important;` and `color: #0f172a !important;` on `.settings-input` and its focus state.
+- **Pre-Development Documentation**:
+  - Updated `docs/TODO.md` with Phase 47 items.
+  - Updated `docs/DEVELOPMENT_PLAN.md` with Milestone 47.
+  - Updated `docs/CHANGELOG.md` with `[0.47.0]`.
+  - Updated `docs/DEVELOPMENT_LOG.md` with Session 111.
+- **Implementation Performed**:
+  - Implemented `toBackendIsoTime(timeStr)` in `date.utils.ts` and normalized `planned_time` across `custom-builder.page.ts`, `suggested-wizard.page.ts`, `itinerary-detail.page.ts`, and `guest-migration.service.ts`.
+  - Added `@field_validator("planned_time", mode="before")` on `ItineraryItemBase` and `ItineraryItemUpdate` in `backend/app/schemas/itinerary.py` using `datetime.strptime` to parse 12-hour AM/PM and 24-hour ISO formats.
+  - Enforced `background-color: #ffffff !important;` and `color: #0f172a !important;` on `.settings-input` and `:focus` state in `custom-builder.page.scss` to eliminate dark mode charcoal boxes and achieve WCAG 2.2 AA compliant contrast (12.6:1).
+  - Maintained `custom-builder.page.scss` at 15,348 bytes (< 16,384 bytes budget).
+  - Added unit test coverage for `toBackendIsoTime` in `date.utils.spec.ts` and `custom-builder.page.spec.ts`.
+- **Verification Results**:
+  - Python Schema Validation: Verified parsing `"09:00 AM"` -> `09:00:00`, `"01:13 PM"` -> `13:13:00`, and range strings.
+  - Vitest Unit Tests: 32/32 suites passed, 348/348 tests passed (100.0%) in 40.59s.
+  - Angular Production Build: Clean compilation in 14.55s with 0 budget violations (styles-TCIV4XIO.css 18.31 kB transfer, all component stylesheets < 16 kB).
+
+
+
 
 
 

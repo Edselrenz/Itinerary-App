@@ -4,6 +4,7 @@ import {
   diffDaysLocal,
   formatDateRange,
   parseLocalIsoDate,
+  toBackendIsoTime,
   toLocalIsoDate,
 } from './date.utils';
 
@@ -46,6 +47,42 @@ describe('Date Utilities (CR-007)', () => {
     expect(formatDateRange('2026-11-01', '2026-11-03')).toBe('Nov 1 – 3, 2026');
     expect(formatDateRange('2026-10-30', '2026-11-02')).toBe('Oct 30 – Nov 2, 2026');
     expect(formatDateRange('2026-12-30', '2027-01-02')).toBe('Dec 30, 2026 – Jan 2, 2027');
+  });
+
+  describe('toBackendIsoTime (Phase 47.1)', () => {
+    it('converts 12-hour AM/PM times into 24-hour ISO format (HH:MM:SS)', () => {
+      expect(toBackendIsoTime('09:00 AM')).toBe('09:00:00');
+      expect(toBackendIsoTime('9:00 AM')).toBe('09:00:00');
+      expect(toBackendIsoTime('11:21 AM')).toBe('11:21:00');
+      expect(toBackendIsoTime('12:00 PM')).toBe('12:00:00');
+      expect(toBackendIsoTime('12:30 PM')).toBe('12:30:00');
+      expect(toBackendIsoTime('01:13 PM')).toBe('13:13:00');
+      expect(toBackendIsoTime('1:13 PM')).toBe('13:13:00');
+      expect(toBackendIsoTime('11:59 PM')).toBe('23:59:00');
+      expect(toBackendIsoTime('12:00 AM')).toBe('00:00:00');
+      expect(toBackendIsoTime('12:15 AM')).toBe('00:15:00');
+    });
+
+    it('extracts and converts starting time from range strings', () => {
+      expect(toBackendIsoTime('09:00 AM - 11:00 AM')).toBe('09:00:00');
+      expect(toBackendIsoTime('01:15 PM - 03:00 PM (1 hr 45 min)')).toBe('13:15:00');
+      expect(toBackendIsoTime('10:30 AM - 12:00 PM')).toBe('10:30:00');
+    });
+
+    it('preserves or standardizes already valid 24-hour ISO time strings', () => {
+      expect(toBackendIsoTime('09:00:00')).toBe('09:00:00');
+      expect(toBackendIsoTime('13:13:00')).toBe('13:13:00');
+      expect(toBackendIsoTime('00:00:00')).toBe('00:00:00');
+      expect(toBackendIsoTime('14:30')).toBe('14:30:00');
+    });
+
+    it('returns null for null, empty, or unparseable input', () => {
+      expect(toBackendIsoTime(null)).toBeNull();
+      expect(toBackendIsoTime(undefined)).toBeNull();
+      expect(toBackendIsoTime('')).toBeNull();
+      expect(toBackendIsoTime('   ')).toBeNull();
+      expect(toBackendIsoTime('not a valid time')).toBeNull();
+    });
   });
 });
 

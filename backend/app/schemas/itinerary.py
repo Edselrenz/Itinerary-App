@@ -2,7 +2,8 @@
 
 import uuid
 from datetime import date, datetime, time
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from typing import Any
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from app.schemas.place import PlaceOut
 
 
@@ -26,6 +27,26 @@ class ItineraryItemBase(BaseModel):
     travel_distance_meters: int | None = None
     travel_duration_seconds: int | None = None
     route_polyline_from_prev: str | None = None
+
+    @field_validator("planned_time", mode="before")
+    @classmethod
+    def parse_planned_time(cls, v: Any) -> time | None:
+        if v is None or v == "":
+            return None
+        if isinstance(v, time):
+            return v
+        if isinstance(v, str):
+            v_clean = v.strip()
+            if not v_clean:
+                return None
+            if "-" in v_clean:
+                v_clean = v_clean.split("-")[0].strip()
+            for fmt in ("%I:%M %p", "%I:%M%p", "%H:%M:%S", "%H:%M"):
+                try:
+                    return datetime.strptime(v_clean, fmt).time()
+                except ValueError:
+                    continue
+        return v
 
 
 class ItineraryItemCreate(ItineraryItemBase):
@@ -66,6 +87,26 @@ class ItineraryItemUpdate(BaseModel):
     travel_distance_meters: int | None = None
     travel_duration_seconds: int | None = None
     route_polyline_from_prev: str | None = None
+
+    @field_validator("planned_time", mode="before")
+    @classmethod
+    def parse_planned_time(cls, v: Any) -> time | None:
+        if v is None or v == "":
+            return None
+        if isinstance(v, time):
+            return v
+        if isinstance(v, str):
+            v_clean = v.strip()
+            if not v_clean:
+                return None
+            if "-" in v_clean:
+                v_clean = v_clean.split("-")[0].strip()
+            for fmt in ("%I:%M %p", "%I:%M%p", "%H:%M:%S", "%H:%M"):
+                try:
+                    return datetime.strptime(v_clean, fmt).time()
+                except ValueError:
+                    continue
+        return v
 
 
 class ItineraryItemOut(ItineraryItemBase):

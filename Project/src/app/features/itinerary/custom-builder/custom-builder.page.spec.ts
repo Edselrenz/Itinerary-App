@@ -778,4 +778,70 @@ describe('CustomBuilderPage', () => {
     expect(component.selectedCategory).toBe('Food');
     expect(updateSpy).toHaveBeenCalled();
   });
+
+  it('Phase 47.1: saveItinerary normalizes planned_time to 24-hour ISO format before submission', async () => {
+    component.form.patchValue({
+      title: 'Time Format Normalization Trip',
+      destination: 'Bongabon',
+      daily_budget: 2500,
+      start_date: '2026-11-20',
+      end_date: '2026-11-20',
+    });
+
+    component.days = [
+      {
+        id: 'd1',
+        day_number: 1,
+        travel_date: '2026-11-20',
+        title: 'Day 1',
+        items: [
+          {
+            id: 'stop-norm-1',
+            place_id: 'pl-1',
+            custom_title: 'Morning Stop',
+            name: 'Morning Stop',
+            category: 'culture',
+            municipality: 'Bongabon',
+            image: '',
+            sort_order: 1,
+            planned_time: '09:00 AM',
+            duration_minutes: 60,
+          } as any,
+          {
+            id: 'stop-norm-2',
+            place_id: 'pl-2',
+            custom_title: 'Afternoon Stop',
+            name: 'Afternoon Stop',
+            category: 'food',
+            municipality: 'Bongabon',
+            image: '',
+            sort_order: 2,
+            planned_time: '01:13 PM',
+            duration_minutes: 60,
+          } as any,
+        ],
+      },
+    ];
+
+    await component.saveItinerary();
+
+    expect(mockItineraryService.createItinerary).toHaveBeenCalledWith(
+      expect.objectContaining({
+        days: expect.arrayContaining([
+          expect.objectContaining({
+            items: expect.arrayContaining([
+              expect.objectContaining({
+                custom_title: 'Morning Stop',
+                planned_time: '09:00:00',
+              }),
+              expect.objectContaining({
+                custom_title: 'Afternoon Stop',
+                planned_time: '13:13:00',
+              }),
+            ]),
+          }),
+        ]),
+      })
+    );
+  });
 });

@@ -4,6 +4,7 @@ import { AuthService } from './auth.service';
 import { GuestStorageService } from './guest-storage.service';
 import { ItineraryService } from './itinerary.service';
 import { ItineraryCreatePayload } from '../models/itinerary.models';
+import { toBackendIsoTime } from '../utils/date.utils';
 
 @Injectable({
   providedIn: 'root',
@@ -60,7 +61,7 @@ export class GuestMigrationService {
             custom_lat: it.custom_lat,
             custom_lng: it.custom_lng,
             sort_order: it.sort_order,
-            planned_time: it.planned_time,
+            planned_time: toBackendIsoTime(it.planned_time),
             duration_minutes: it.duration_minutes || 60,
             notes: it.notes,
             estimated_cost_min: it.estimated_cost_min,

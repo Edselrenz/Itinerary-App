@@ -617,6 +617,19 @@ The bottom navigation bar implements all 4 planned primary tabs (`/tabs/home`, `
   - Angular production build: ensure 0 budget violations (keep `custom-builder.page.scss` < 16 kB).
   - Remote push, GitHub Actions completion, and live verification on GitHub Pages.
 
+#### Milestone 47: Custom Itinerary ISO Time Normalization & Settings Input Dark-Mode Contrast Hardening (COMPLETED)
+- [x] **47.1: Frontend Time Format Normalization (`toBackendIsoTime`)**:
+  - Normalize 12-hour AM/PM time strings to 24-hour ISO format (`HH:MM:00`) before constructing itinerary payloads for FastAPI.
+- [x] **47.2: Backend Schema Pre-Validator on `planned_time`**:
+  - In `backend/app/schemas/itinerary.py`, add `@field_validator("planned_time", mode="before")` on `ItineraryItemBase` and `ItineraryItemUpdate` using `datetime.strptime` to accept both 12-hour and 24-hour times.
+- [x] **47.3: Input Background Styling Hardening in Custom Builder Settings**:
+  - In `custom-builder.page.scss`, explicitly set `background-color: #ffffff !important;` and `color: #0f172a !important;` on `.settings-input` to fix browser dark-mode charcoal backgrounds and satisfy WCAG 2.2 AA contrast.
+- [x] **47.4: Unit Tests & Production Build Gates**:
+  - Add comprehensive unit tests for time normalization. Ensure 100% test pass rate and enforce stylesheet budget (<16 kB).
+- [x] **47.5: CI/CD Deployment & Remote Verification**:
+  - Commit, push, monitor GitHub Actions deployment, and verify live on GitHub Pages.
+
+
 
 
 

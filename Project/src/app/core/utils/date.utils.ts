@@ -81,3 +81,42 @@ export function formatDateRange(startStr: string, endStr: string): string {
   return `${startMonth} ${startDay} – ${endMonth} ${endDay}, ${startYear}`;
 }
 
+/**
+ * Normalizes user-facing time strings (12-hour AM/PM, range strings, or 24-hour)
+ * into strict 24-hour ISO format (`HH:MM:00`) expected by the FastAPI backend time schema.
+ */
+export function toBackendIsoTime(timeStr?: string | null): string | null {
+  if (!timeStr) return null;
+  const clean = String(timeStr).trim();
+  if (!clean) return null;
+
+  // Handle range formats like "09:00 AM - 11:00 AM" or "12:00 PM - 2:00 PM (2 hrs)"
+  const firstPart = clean.includes('-') ? clean.split('-')[0].trim() : clean;
+
+  // Check for strict 24-hour format: "HH:MM:SS" or "HH:MM"
+  if (/^\d{2}:\d{2}:\d{2}$/.test(firstPart)) {
+    return firstPart;
+  }
+  if (/^\d{2}:\d{2}$/.test(firstPart)) {
+    return `${firstPart}:00`;
+  }
+
+  // Parse 12-hour format: "H:MM AM/PM" or "HH:MM AM/PM"
+  const match = firstPart.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?$/i);
+  if (match) {
+    let h = parseInt(match[1], 10);
+    const m = match[2];
+    const meridiem = (match[3] || '').toUpperCase();
+
+    if (meridiem === 'PM' && h < 12) {
+      h += 12;
+    } else if (meridiem === 'AM' && h === 12) {
+      h = 0;
+    }
+    return `${String(h).padStart(2, '0')}:${m}:00`;
+  }
+
+  return null;
+}
+
+

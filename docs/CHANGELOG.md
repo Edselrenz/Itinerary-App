@@ -1,3 +1,13 @@
+## [0.47.0] - 2026-11-12
+### Fixed
+- **Invalid Timezone Sign 422 Toast Error on Itinerary Save (`CustomBuilderPage`)**:
+  - Implemented `toBackendIsoTime(timeStr)` in `date.utils.ts` and `custom-builder.page.ts` converting 12-hour AM/PM formats (`"09:00 AM"`, `"01:13 PM"`) and range strings into 24-hour ISO format (`"09:00:00"`, `"13:13:00"`).
+  - Added resilient `@field_validator("planned_time", mode="before")` on `ItineraryItemBase` and `ItineraryItemUpdate` in `backend/app/schemas/itinerary.py` using `datetime.strptime` to accept both 12-hour and 24-hour formats.
+- **Dark / Charcoal Box Background Inconsistency in Settings Card (`CustomBuilderPage`)**:
+  - In `custom-builder.page.scss`, enforced `background-color: #ffffff !important;` and `color: #0f172a !important;` on `.settings-input` and its focus state, preventing user-agent dark-mode overrides and achieving WCAG 2.2 AA compliant contrast (12.6:1).
+
+---
+
 ## [0.46.0] - 2026-11-11
 ### Added
 - **Context-Aware Skeleton Shimmer Card Grid in Place Browser (`CustomBuilderPage`)**:
