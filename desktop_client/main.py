@@ -105,32 +105,32 @@ def main(page: ft.Page) -> None:
 
         if header is None:
             header = TopHeader(
-                title="Dashboard",
-                subtitle="Nueva Ecija Travel Platform",
+                title="Home",
+                subtitle="Trip mo, trip ko",
                 on_search_click=lambda: navigate_to("/places"),
             )
 
         # Resolve view content and update header breadcrumbs
-        if route == "/dashboard":
-            header.set_header_context("Dashboard Hub", "Overview & Quick Actions")
+        if route in ("/dashboard", "/home"):
+            header.set_header_context("Home", "Where are you going next?")
             content_area.content = DashboardView(on_navigate=navigate_to)
         elif route == "/places":
-            header.set_header_context("Explore Places", "2,670+ Curated POIs in 32 Municipalities")
+            header.set_header_context("Map & Discover", "Explore 2,670+ destinations across 32 LGUs")
             content_area.content = PlacesView(on_navigate=navigate_to)
         elif route == "/suggested":
-            header.set_header_context("AI Suggested Wizard", "Automated Geographically Clustered Routes")
+            header.set_header_context("Suggested Itinerary Wizard", "Automated Proximity Clustering")
             content_area.content = SuggestedWizardView(on_navigate=navigate_to)
         elif route == "/builder":
             header.set_header_context("Custom Itinerary Builder", "Interactive Stop-by-Stop Scheduling")
             content_area.content = CustomBuilderView(on_navigate=navigate_to)
         elif route == "/trips":
-            header.set_header_context("Saved Itineraries", "Manage and Export Travel Schedules")
+            header.set_header_context("Saved Itineraries", "Your Planned Trips in Nueva Ecija")
             content_area.content = SavedTripsView(
                 on_navigate=navigate_to,
                 on_select_trip=lambda it: navigate_to(f"/trips/{it.id}", it),
             )
         elif route == "/profile":
-            header.set_header_context("Profile & Settings", "Account, Theme & Cache Management")
+            header.set_header_context("Profile", "Traveler Identity & Preferences")
             content_area.content = ProfileView(
                 on_navigate=navigate_to,
                 on_toggle_theme=toggle_theme,
@@ -142,7 +142,7 @@ def main(page: ft.Page) -> None:
                 on_back=lambda: navigate_to("/trips"),
             )
         else:
-            header.set_header_context("Dashboard Hub", "Overview & Quick Actions")
+            header.set_header_context("Home", "Where are you going next?")
             content_area.content = DashboardView(on_navigate=navigate_to)
 
         shell = ft.Row(

@@ -12,12 +12,11 @@ from desktop_client.services.place_service import get_place_service
 
 
 def test_live_backend_integration():
-    async def _runner():
-        api = get_api_client()
-        healthy = await api.check_health()
-        if not healthy:
-            pytest.skip("FastAPI backend is not running on port 8000")
+    api = get_api_client()
+    if not api.check_health_sync():
+        pytest.skip("FastAPI backend is not running on port 8000")
 
+    async def _runner():
         place_svc = get_place_service()
         munis = await place_svc.get_municipalities()
         assert len(munis) >= 10

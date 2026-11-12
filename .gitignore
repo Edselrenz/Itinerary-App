@@ -104,6 +104,7 @@ bazel-out/
 # --- Scratch, Binaries & Temporary Investigation Files ---
 scratch/
 build_temp/
+build_cache/
 *.spec
 *.bin
 *.tmp

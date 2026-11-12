@@ -84,15 +84,21 @@ class ApiClient:
             await self._client.aclose()
             self._client = None
 
-    async def check_health(self) -> bool:
-        """Pings the backend to verify service availability."""
+    def check_health_sync(self) -> bool:
+        """Synchronous fast socket check of backend availability."""
         try:
-            client = await self.get_client()
-            url = f"{self.base_url}/places?limit=1"
-            response = await client.get(url, timeout=3.0)
-            return response.status_code == 200
+            import socket
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(0.3)
+            err = sock.connect_ex(("127.0.0.1", 8000))
+            sock.close()
+            return err == 0
         except Exception:
             return False
+
+    async def check_health(self) -> bool:
+        """Pings the backend to verify service availability with fast probe."""
+        return await asyncio.to_thread(self.check_health_sync)
 
     async def request(
         self,
@@ -105,6 +111,9 @@ class ApiClient:
         retried: bool = False,
     ) -> Any:
         """Executes an HTTP request with error handling and automatic retry on 401."""
+        if not self.check_health_sync():
+            raise NetworkError(f"Cannot connect to server at {self.base_url}. Please check if backend is running.")
+
         url = f"{self.base_url}/{endpoint.lstrip('/')}"
         req_headers = self._get_headers(headers)
         req_timeout = timeout or self.default_timeout

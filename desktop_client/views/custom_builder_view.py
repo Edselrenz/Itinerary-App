@@ -121,7 +121,7 @@ class CustomBuilderView(ft.Container):
             value=self.catalog_category,
             dense=True,
             width=180,
-            on_change=lambda e: self._on_catalog_cat_change(e.control.value),
+            on_select=lambda e: self._on_catalog_cat_change(e.control.value),
         )
 
         add_custom_btn = ft.FilledButton(
@@ -196,8 +196,8 @@ class CustomBuilderView(ft.Container):
             content=ft.Row(
                 controls=[
                     ft.Container(
-                        content=ft.Icon(ft.Icons.LOCATION_ON, size=18, color=ThemeColors.EMERALD_PRIMARY),
-                        bgcolor=ThemeColors.EMERALD_MINT,
+                        content=ft.Icon(ft.Icons.LOCATION_ON, size=18, color=ThemeColors.PRIMARY_BLUE),
+                        bgcolor=ThemeColors.PRIMARY_LIGHT,
                         border_radius=6,
                         padding=8,
                     ),
@@ -218,8 +218,8 @@ class CustomBuilderView(ft.Container):
                             ft.Text(
                                 place.formatted_cost,
                                 size=10,
-                                weight=ft.FontWeight.W_600,
-                                color=ThemeColors.EMERALD_PRIMARY,
+                                weight=ft.FontWeight.W_700,
+                                color=ThemeColors.BUDGET_GREEN,
                             ),
                         ],
                         spacing=1,
@@ -228,9 +228,10 @@ class CustomBuilderView(ft.Container):
                     ft.FilledButton(
                         content="+ Add",
                         style=ft.ButtonStyle(
-                            bgcolor=ThemeColors.EMERALD_PRIMARY,
+                            bgcolor=ThemeColors.PRIMARY_BLUE,
                             color=ft.Colors.WHITE,
                             padding=ft.Padding.symmetric(horizontal=8, vertical=4),
+                            shape=ft.RoundedRectangleBorder(radius=6),
                         ),
                         on_click=lambda _, p=place: self._add_place_to_active_day(p),
                     ),
@@ -295,10 +296,10 @@ class CustomBuilderView(ft.Container):
                         ],
                         spacing=4,
                     ),
-                    bgcolor=ThemeColors.EMERALD_PRIMARY if is_active else ThemeColors.SURFACE_LIGHT,
+                    bgcolor=ThemeColors.PRIMARY_BLUE if is_active else ThemeColors.SURFACE_LIGHT,
+                    border=ft.Border.all(1, ThemeColors.PRIMARY_BLUE if is_active else ThemeColors.BORDER_LIGHT),
                     border_radius=8,
                     padding=ft.Padding.symmetric(horizontal=12, vertical=8),
-                    border=ft.Border.all(1, ThemeColors.EMERALD_PRIMARY if is_active else ThemeColors.BORDER_LIGHT),
                     ink=True,
                     on_click=lambda _, i=idx: self._select_day(i),
                 )
@@ -376,11 +377,15 @@ class CustomBuilderView(ft.Container):
                 padding=8,
             )
 
-        # Save and Export Actions
+        # Save and Export Actions matching Figma
         save_btn = ft.FilledButton(
             content="Save Itinerary",
             icon=ft.Icons.SAVE,
-            style=ft.ButtonStyle(bgcolor=ThemeColors.EMERALD_PRIMARY, color=ft.Colors.WHITE),
+            style=ft.ButtonStyle(
+                bgcolor=ThemeColors.PRIMARY_BLUE,
+                color=ft.Colors.WHITE,
+                shape=ft.RoundedRectangleBorder(radius=10),
+            ),
             on_click=lambda _: self._save_itinerary(),
         )
 
@@ -629,7 +634,11 @@ class CustomBuilderView(ft.Container):
                 except Exception:
                     pass
 
-        asyncio.create_task(_do_save())
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(_do_save())
+        except RuntimeError:
+            asyncio.run(_do_save())
 
     def _export_draft(self) -> None:
         total_stops = sum(len(d.items) for d in self.days)
@@ -687,4 +696,8 @@ class CustomBuilderView(ft.Container):
                 except Exception:
                     pass
 
-        asyncio.create_task(_query())
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(_query())
+        except RuntimeError:
+            pass

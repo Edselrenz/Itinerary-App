@@ -34,16 +34,16 @@ class StopCard(ft.Container):
         self.on_delete = on_delete
         self.editable = editable
 
-        self.border_radius = 10
+        self.border_radius = 12
         self.bgcolor = ThemeColors.SURFACE_LIGHT
-        self.border = ft.Border.all(1, ThemeColors.BORDER_LIGHT)
+        self.border = ft.Border.all(1.2, ThemeColors.BORDER_LIGHT)
         self.padding = ft.Padding.all(12)
         self.margin = ft.Margin.only(bottom=8)
 
         self._build_content()
 
     def _build_content(self) -> None:
-        # Sequence number badge
+        # Sequence number badge (matching Web UI blue circles)
         sequence_badge = ft.Container(
             content=ft.Text(
                 str(self.item.sort_order),
@@ -51,27 +51,27 @@ class StopCard(ft.Container):
                 weight=ft.FontWeight.BOLD,
                 color=ft.Colors.WHITE,
             ),
-            width=26,
-            height=26,
-            border_radius=13,
-            bgcolor=ThemeColors.EMERALD_PRIMARY,
+            width=28,
+            height=28,
+            border_radius=14,
+            bgcolor=ThemeColors.PRIMARY_BLUE,
             alignment=ft.Alignment(0, 0),
         )
 
         # Planned time / duration pills
         time_text = self.item.planned_time or f"Stop #{self.item.sort_order}"
         duration_text = f"{self.item.duration_minutes} mins"
-        
+
         time_pill = ft.Container(
             content=ft.Text(
                 time_text,
                 size=10,
-                weight=ft.FontWeight.W_600,
-                color=ThemeColors.AZURE_DEEP,
+                weight=ft.FontWeight.W_700,
+                color=ThemeColors.PRIMARY_BLUE,
             ),
-            bgcolor=ThemeColors.AZURE_SOFT,
+            bgcolor=ThemeColors.PRIMARY_LIGHT,
             border_radius=6,
-            padding=ft.Padding.symmetric(horizontal=6, vertical=2),
+            padding=ft.Padding.symmetric(horizontal=8, vertical=2),
         )
 
         duration_pill = ft.Container(
@@ -89,130 +89,125 @@ class StopCard(ft.Container):
             content=ft.Text(
                 self.item.display_cost,
                 size=10,
-                weight=ft.FontWeight.W_600,
-                color=ThemeColors.EMERALD_PRIMARY,
+                weight=ft.FontWeight.BOLD,
+                color=ThemeColors.BUDGET_GREEN,
             ),
-            bgcolor=ThemeColors.EMERALD_MINT,
+            bgcolor=ThemeColors.SUCCESS_BG,
             border_radius=6,
-            padding=ft.Padding.symmetric(horizontal=6, vertical=2),
+            padding=ft.Padding.symmetric(horizontal=8, vertical=2),
         )
 
         # Title & location
         title_text = self.item.display_title
-        category_or_custom = (
-            self.item.place.formatted_category
-            if self.item.place
-            else "Off-Grid Custom Venue"
-        )
-        location_text = (
-            self.item.place.address_text or self.item.place.municipality_name or "Nueva Ecija"
-            if self.item.place
-            else "Custom Coordinates"
+        muni_text = "Nueva Ecija"
+        if self.item.place and self.item.place.municipality_name:
+            muni_text = self.item.place.municipality_name
+
+        header_row = ft.Row(
+            controls=[
+                sequence_badge,
+                ft.Column(
+                    controls=[
+                        ft.Text(
+                            title_text,
+                            size=13,
+                            weight=ft.FontWeight.BOLD,
+                            color=ThemeColors.TEXT_MAIN_LIGHT,
+                            max_lines=1,
+                            overflow=ft.TextOverflow.ELLIPSIS,
+                        ),
+                        ft.Row(
+                            controls=[
+                                ft.Icon(ft.Icons.LOCATION_ON, size=12, color=ThemeColors.PRIMARY_BLUE),
+                                ft.Text(
+                                    muni_text,
+                                    size=11,
+                                    color=ThemeColors.TEXT_MUTED_LIGHT,
+                                ),
+                            ],
+                            spacing=3,
+                        ),
+                    ],
+                    spacing=2,
+                    expand=True,
+                ),
+            ],
+            spacing=10,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
         )
 
-        # Reorder and action controls
-        action_controls: list[ft.Control] = []
+        chips_row = ft.Row(
+            controls=[time_pill, duration_pill, cost_pill],
+            spacing=6,
+        )
+
+        # Action buttons for editable mode
+        actions: list[ft.Control] = []
         if self.editable:
-            action_controls = [
+            actions = [
                 ft.IconButton(
-                    icon=ft.Icons.KEYBOARD_ARROW_UP,
-                    icon_size=18,
-                    disabled=self.is_first,
+                    icon=ft.Icons.ARROW_UPWARD,
+                    icon_size=16,
                     tooltip="Move Up",
+                    disabled=self.is_first,
                     on_click=lambda _: self.on_move_up(self.item) if self.on_move_up else None,
                 ),
                 ft.IconButton(
-                    icon=ft.Icons.KEYBOARD_ARROW_DOWN,
-                    icon_size=18,
-                    disabled=self.is_last,
+                    icon=ft.Icons.ARROW_DOWNWARD,
+                    icon_size=16,
                     tooltip="Move Down",
+                    disabled=self.is_last,
                     on_click=lambda _: self.on_move_down(self.item) if self.on_move_down else None,
                 ),
                 ft.IconButton(
                     icon=ft.Icons.EDIT_OUTLINED,
-                    icon_size=18,
-                    tooltip="Edit Stop Details",
+                    icon_size=16,
+                    tooltip="Edit Stop",
                     on_click=lambda _: self.on_edit(self.item) if self.on_edit else None,
                 ),
                 ft.IconButton(
                     icon=ft.Icons.DELETE_OUTLINE,
-                    icon_size=18,
+                    icon_size=16,
                     icon_color=ThemeColors.ERROR,
                     tooltip="Remove Stop",
                     on_click=lambda _: self.on_delete(self.item) if self.on_delete else None,
                 ),
             ]
 
-        # Travel routing banner if distance exists
-        route_banner = None
-        if self.item.travel_distance_meters:
-            dist_km = self.item.travel_distance_meters / 1000.0
-            dur_min = (self.item.travel_duration_seconds or 0) // 60
-            route_banner = ft.Container(
-                content=ft.Row(
-                    controls=[
-                        ft.Icon(ft.Icons.DIRECTIONS_CAR, size=13, color=ThemeColors.TEXT_MUTED_LIGHT),
-                        ft.Text(
-                            f"Drive: {dist_km:.1f} km • ~{dur_min} min from previous stop",
-                            size=10,
-                            color=ThemeColors.TEXT_MUTED_LIGHT,
-                        ),
-                    ],
-                    spacing=4,
-                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                ),
-                padding=ft.Padding.only(top=4),
-            )
-
-        notes_row = None
-        if self.item.notes:
-            notes_row = ft.Container(
-                content=ft.Text(
-                    f"Note: {self.item.notes}",
-                    size=11,
-                    italic=True,
-                    color=ThemeColors.TEXT_MUTED_LIGHT,
-                ),
-                padding=ft.Padding.only(top=4),
-            )
-
-        main_details = ft.Column(
+        bottom_row = ft.Row(
             controls=[
-                ft.Row(
-                    controls=[
-                        time_pill,
-                        duration_pill,
-                        cost_pill,
-                    ],
-                    spacing=6,
-                ),
-                ft.Text(
-                    title_text,
-                    size=13,
-                    weight=ft.FontWeight.W_600,
-                    color=ThemeColors.TEXT_MAIN_LIGHT,
-                ),
-                ft.Text(
-                    f"{category_or_custom} • {location_text}",
-                    size=11,
-                    color=ThemeColors.TEXT_MUTED_LIGHT,
-                ),
+                chips_row,
+                ft.Row(controls=actions, spacing=2) if actions else ft.Container(),
             ],
-            spacing=4,
-            expand=True,
+            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
         )
 
-        if notes_row:
-            main_details.controls.append(notes_row)
-        if route_banner:
-            main_details.controls.append(route_banner)
+        controls_list: list[ft.Control] = [header_row, bottom_row]
 
-        self.content = ft.Row(
-            controls=[
-                sequence_badge,
-                main_details,
-                ft.Row(controls=action_controls, spacing=0),
-            ],
-            spacing=12,
-            vertical_alignment=ft.CrossAxisAlignment.START,
+        if self.item.notes:
+            controls_list.append(
+                ft.Container(
+                    content=ft.Row(
+                        controls=[
+                            ft.Icon(ft.Icons.NOTE_OUTLINED, size=12, color=ThemeColors.TEXT_MUTED_LIGHT),
+                            ft.Text(
+                                self.item.notes,
+                                size=11,
+                                italic=True,
+                                color=ThemeColors.TEXT_MUTED_LIGHT,
+                                expand=True,
+                            ),
+                        ],
+                        spacing=4,
+                    ),
+                    bgcolor=ThemeColors.BG_LIGHT,
+                    padding=ft.Padding.symmetric(horizontal=8, vertical=4),
+                    border_radius=4,
+                )
+            )
+
+        self.content = ft.Column(
+            controls=controls_list,
+            spacing=8,
         )

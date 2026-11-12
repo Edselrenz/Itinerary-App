@@ -1,4 +1,4 @@
-"""Places Explorer and Destination Catalog View."""
+"""Places Explorer and Destination Catalog View mirroring Ionic tabs/map."""
 
 import asyncio
 from typing import Callable, Optional
@@ -16,9 +16,12 @@ from desktop_client.services.place_service import get_place_service
 
 
 class PlacesView(ft.Container):
-    """Destination catalog with 16-category filters, 32-LGU dropdown,
+    """Destination catalog matching Ionic tabs/map:
 
-    free-text search, and pagination.
+    - Search bar with clear button.
+    - Category filter pills row with active highlighting.
+    - 32-LGU municipality selector and sort options.
+    - Responsive destination cards grid with honest pricing and details dialog.
     """
 
     def __init__(self, on_navigate: Optional[Callable[[str], None]] = None):
@@ -27,7 +30,7 @@ class PlacesView(ft.Container):
         self.place_service = get_place_service()
 
         self.expand = True
-        self.padding = ft.Padding.all(24)
+        self.padding = ft.Padding.symmetric(horizontal=28, vertical=20)
         self.bgcolor = ThemeColors.BG_LIGHT
 
         # Search & Filter State
@@ -47,34 +50,61 @@ class PlacesView(ft.Container):
         self._fetch_places()
 
     def _build_content(self) -> None:
-        # Search Bar
-        self.search_field = ft.TextField(
-            hint_text="Search places, landmarks, dishes, or farm resorts...",
-            prefix_icon=ft.Icons.SEARCH,
+        # Search Box (matching .map-search-box)
+        self.search_input = ft.TextField(
+            hint_text="Search places in Nueva Ecija (e.g. Minalungao, Farm Bistro, Dam)...",
+            hint_style=ft.TextStyle(size=13, color=ThemeColors.TEXT_FAINT_LIGHT),
+            prefix_icon=ft.Icons.SEARCH_ROUNDED,
             value=self.search_query,
+            border_radius=12,
+            border_color=ThemeColors.BORDER_LIGHT,
+            focused_border_color=ThemeColors.PRIMARY_BLUE,
             expand=True,
             on_submit=lambda _: self._on_search_submit(),
         )
 
-        search_btn = ft.FilledButton(
-            content="Search",
-            style=ft.ButtonStyle(bgcolor=ThemeColors.EMERALD_PRIMARY, color=ft.Colors.WHITE),
+        search_btn = ft.Container(
+            content=ft.Row(
+                controls=[
+                    ft.Icon(ft.Icons.SEARCH, size=16, color=ft.Colors.WHITE),
+                    ft.Text("Search", size=13, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
+                ],
+                spacing=6,
+                alignment=ft.MainAxisAlignment.CENTER,
+            ),
+            bgcolor=ThemeColors.PRIMARY_BLUE,
+            border_radius=12,
+            height=48,
+            padding=ft.Padding.symmetric(horizontal=18),
+            ink=True,
             on_click=lambda _: self._on_search_submit(),
         )
 
-        reset_btn = ft.OutlinedButton(
-            content="Reset",
-            icon=ft.Icons.CLEAR_ALL,
+        reset_btn = ft.Container(
+            content=ft.Row(
+                controls=[
+                    ft.Icon(ft.Icons.CLEAR_ALL, size=16, color=ThemeColors.TEXT_MUTED_LIGHT),
+                    ft.Text("Reset", size=13, color=ThemeColors.TEXT_MUTED_LIGHT),
+                ],
+                spacing=6,
+                alignment=ft.MainAxisAlignment.CENTER,
+            ),
+            border=ft.Border.all(1.2, ThemeColors.BORDER_LIGHT),
+            bgcolor=ThemeColors.SURFACE_LIGHT,
+            border_radius=12,
+            height=48,
+            padding=ft.Padding.symmetric(horizontal=14),
+            ink=True,
             on_click=lambda _: self._reset_filters(),
         )
 
         search_row = ft.Row(
             controls=[
-                self.search_field,
+                self.search_input,
                 search_btn,
                 reset_btn,
             ],
-            spacing=8,
+            spacing=10,
         )
 
         # LGU Dropdown Options
@@ -90,7 +120,10 @@ class PlacesView(ft.Container):
             options=lgu_options,
             value=self.selected_municipality,
             width=260,
-            on_change=lambda e: self._on_municipality_change(e.control.value),
+            border_radius=10,
+            border_color=ThemeColors.BORDER_LIGHT,
+            focused_border_color=ThemeColors.PRIMARY_BLUE,
+            on_select=lambda e: self._on_municipality_change(e.control.value),
         )
 
         self.sort_dropdown = ft.Dropdown(
@@ -104,7 +137,10 @@ class PlacesView(ft.Container):
             ],
             value=self.sort_by,
             width=200,
-            on_change=lambda e: self._on_sort_change(e.control.value),
+            border_radius=10,
+            border_color=ThemeColors.BORDER_LIGHT,
+            focused_border_color=ThemeColors.PRIMARY_BLUE,
+            on_select=lambda e: self._on_sort_change(e.control.value),
         )
 
         filter_row = ft.Row(
@@ -115,33 +151,33 @@ class PlacesView(ft.Container):
             spacing=12,
         )
 
-        # 16 Canonical Category Filter Chips
+        # Quick Category Filter Pills (matching .filter-scroll-track)
         category_chips: list[ft.Control] = [
-            self._create_category_chip("all", "All Categories", self.selected_category == "all")
+            self._create_category_pill("all", "All", ft.Icons.TRAVEL_EXPLORE, self.selected_category == "all")
         ]
         for cat in CANONICAL_CATEGORIES:
             is_active = self.selected_category == cat["key"]
             category_chips.append(
-                self._create_category_chip(cat["key"], cat["label"], is_active)
+                self._create_category_pill(cat["key"], cat["label"], ft.Icons.PLACE, is_active)
             )
 
-        category_bar = ft.Row(
+        category_track = ft.Row(
             controls=category_chips,
             scroll=ft.ScrollMode.AUTO,
             spacing=8,
         )
 
-        # Results header & pagination count
+        # Results summary header
         total_count = self.paginated_data.total if self.paginated_data else 0
         total_pages = self.paginated_data.total_pages if self.paginated_data else 1
-        
+
         results_info = ft.Row(
             controls=[
                 ft.Text(
                     f"Showing {total_count} destinations in Nueva Ecija",
                     size=13,
-                    weight=ft.FontWeight.W_600,
-                    color=ThemeColors.TEXT_MAIN_LIGHT,
+                    weight=ft.FontWeight.BOLD,
+                    color=ThemeColors.TEXT_BLACK,
                 ),
                 ft.Text(
                     f"Page {self.current_page} of {max(total_pages, 1)}",
@@ -158,8 +194,8 @@ class PlacesView(ft.Container):
             places_content = ft.Container(
                 content=ft.Row(
                     controls=[
-                        ft.ProgressRing(width=28, height=28, stroke_width=3),
-                        ft.Text("Querying Nueva Ecija places...", size=14, color=ThemeColors.TEXT_MUTED_LIGHT),
+                        ft.ProgressRing(width=24, height=24, stroke_width=2),
+                        ft.Text("Fetching places from backend registry...", size=13, color=ThemeColors.TEXT_MUTED_LIGHT),
                     ],
                     alignment=ft.MainAxisAlignment.CENTER,
                     spacing=12,
@@ -167,58 +203,57 @@ class PlacesView(ft.Container):
                 padding=60,
                 alignment=ft.Alignment(0, 0),
             )
-        elif not self.paginated_data or not self.paginated_data.items:
-            places_content = ft.Container(
-                content=ft.Column(
-                    controls=[
-                        ft.Icon(ft.Icons.SEARCH_OFF, size=48, color=ThemeColors.TEXT_MUTED_LIGHT),
-                        ft.Text("No destinations found matching your filters.", size=15, weight=ft.FontWeight.W_600),
-                        ft.Text("Try adjusting your keywords, selecting 'All Municipalities', or resetting filters.", size=12, color=ThemeColors.TEXT_MUTED_LIGHT),
-                        ft.Container(height=8),
-                        ft.FilledButton(
-                            content="Reset All Filters",
-                            style=ft.ButtonStyle(bgcolor=ThemeColors.EMERALD_PRIMARY, color=ft.Colors.WHITE),
-                            on_click=lambda _: self._reset_filters(),
-                        ),
-                    ],
-                    alignment=ft.MainAxisAlignment.CENTER,
-                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                    spacing=6,
-                ),
-                padding=40,
-                alignment=ft.Alignment(0, 0),
-            )
-        else:
+        elif self.paginated_data and self.paginated_data.items:
             cards = [
                 PlaceCard(
                     place=p,
                     on_view_details=self._show_place_details,
-                    on_add_to_day=lambda p: self._navigate_to_builder(p),
-                    width=290,
+                    on_add_to_day=lambda p: self._navigate("/builder"),
+                    width=float("inf"),
                 )
                 for p in self.paginated_data.items
             ]
-            places_content = ft.Row(
-                controls=cards,
-                wrap=True,
+            places_content = ft.ResponsiveRow(
+                controls=[ft.Container(content=c, col={"sm": 12, "md": 6, "lg": 4}) for c in cards],
                 spacing=16,
                 run_spacing=16,
             )
+        else:
+            places_content = ft.Container(
+                content=ft.Column(
+                    controls=[
+                        ft.Icon(ft.Icons.SEARCH_OFF, size=52, color=ThemeColors.TEXT_FAINT_LIGHT),
+                        ft.Text("No destinations found matching your filters.", size=15, weight=ft.FontWeight.BOLD),
+                        ft.Text("Try broadening your category or selecting 'All Municipalities'.", size=12, color=ThemeColors.TEXT_MUTED_LIGHT),
+                        ft.Container(height=8),
+                        ft.FilledButton(
+                            content="Reset All Filters",
+                            style=ft.ButtonStyle(bgcolor=ThemeColors.PRIMARY_BLUE, color=ft.Colors.WHITE),
+                            on_click=lambda _: self._reset_filters(),
+                        ),
+                    ],
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=6,
+                ),
+                padding=60,
+                alignment=ft.Alignment(0, 0),
+            )
 
-        # Pagination Buttons
+        # Pagination Controls
         prev_btn = ft.OutlinedButton(
             content="← Previous",
             disabled=self.current_page <= 1 or self.is_loading,
             on_click=lambda _: self._change_page(self.current_page - 1),
         )
+
         next_btn = ft.FilledButton(
             content="Next →",
+            style=ft.ButtonStyle(bgcolor=ThemeColors.PRIMARY_BLUE, color=ft.Colors.WHITE),
             disabled=self.current_page >= total_pages or self.is_loading,
-            style=ft.ButtonStyle(bgcolor=ThemeColors.EMERALD_PRIMARY, color=ft.Colors.WHITE),
             on_click=lambda _: self._change_page(self.current_page + 1),
         )
 
-        pagination_bar = ft.Row(
+        pagination_row = ft.Row(
             controls=[prev_btn, next_btn],
             alignment=ft.MainAxisAlignment.CENTER,
             spacing=16,
@@ -227,125 +262,139 @@ class PlacesView(ft.Container):
         self.content = ft.Column(
             controls=[
                 search_row,
-                ft.Container(height=4),
+                ft.Container(height=8),
+                category_track,
+                ft.Container(height=8),
                 filter_row,
-                ft.Container(height=8),
-                category_bar,
-                ft.Container(height=12),
-                ft.Divider(height=1, color=ThemeColors.BORDER_LIGHT),
-                ft.Container(height=8),
+                ft.Divider(color=ThemeColors.BORDER_LIGHT, height=1),
+                ft.Container(height=6),
                 results_info,
                 ft.Container(height=12),
                 places_content,
+                ft.Container(height=20),
+                pagination_row,
                 ft.Container(height=24),
-                pagination_bar if total_pages > 1 else ft.Container(),
             ],
-            scroll=ft.ScrollMode.AUTO,
             spacing=0,
+            scroll=ft.ScrollMode.AUTO,
+            expand=True,
         )
 
-    def _create_category_chip(self, key: str, label: str, is_active: bool) -> ft.Control:
-        bg = ThemeColors.EMERALD_PRIMARY if is_active else ThemeColors.SURFACE_LIGHT
-        text_color = ft.Colors.WHITE if is_active else ThemeColors.TEXT_MAIN_LIGHT
-        border_color = ThemeColors.EMERALD_PRIMARY if is_active else ThemeColors.BORDER_LIGHT
+    def _create_category_pill(self, key: str, label: str, icon: str, is_active: bool) -> ft.Control:
+        bg = ThemeColors.PRIMARY_BLUE if is_active else ThemeColors.SURFACE_LIGHT
+        color = ft.Colors.WHITE if is_active else ThemeColors.TEXT_MAIN_LIGHT
+        border_color = ThemeColors.PRIMARY_BLUE if is_active else ThemeColors.BORDER_LIGHT
 
         return ft.Container(
-            content=ft.Text(label, size=11, weight=ft.FontWeight.W_600 if is_active else ft.FontWeight.NORMAL, color=text_color),
+            content=ft.Row(
+                controls=[
+                    ft.Icon(icon, size=14, color=color),
+                    ft.Text(label, size=12, weight=ft.FontWeight.W_700 if is_active else ft.FontWeight.W_500, color=color),
+                ],
+                spacing=6,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            ),
             bgcolor=bg,
-            border=ft.Border.all(1, border_color),
-            border_radius=16,
-            padding=ft.Padding.symmetric(horizontal=12, vertical=6),
+            border=ft.Border.all(1.2, border_color),
+            border_radius=20,
+            padding=ft.Padding.symmetric(horizontal=12, vertical=8),
             ink=True,
-            on_click=lambda _: self._on_category_click(key),
+            on_click=lambda _: self._on_category_select(key),
         )
 
-    def _on_category_click(self, key: str) -> None:
+    def _on_category_select(self, key: str) -> None:
+        if self.selected_category == key:
+            return
         self.selected_category = key
         self.current_page = 1
         self._fetch_places()
 
     def _on_municipality_change(self, val: str) -> None:
-        self.selected_municipality = val
+        self.selected_municipality = val or "all"
         self.current_page = 1
         self._fetch_places()
 
     def _on_sort_change(self, val: str) -> None:
-        self.sort_by = val
+        self.sort_by = val or ""
         self.current_page = 1
         self._fetch_places()
 
     def _on_search_submit(self) -> None:
-        self.search_query = (self.search_field.value or "").strip()
+        self.search_query = (self.search_input.value or "").strip()
         self.current_page = 1
         self._fetch_places()
 
     def _reset_filters(self) -> None:
-        self.search_query = ""
-        self.search_field.value = ""
         self.selected_category = "all"
         self.selected_municipality = "all"
+        self.search_query = ""
         self.sort_by = ""
         self.current_page = 1
+        self.search_input.value = ""
         self._fetch_places()
 
-    def _change_page(self, page_num: int) -> None:
-        self.current_page = page_num
+    def _change_page(self, new_page: int) -> None:
+        self.current_page = new_page
         self._fetch_places()
 
-    def _load_municipalities(self) -> None:
-        async def _fetch_munis():
-            try:
-                data = await self.place_service.get_municipalities()
-                self.municipalities = data
-                self._build_content()
-                try:
-                    self.update()
-                except Exception:
-                    pass
-            except Exception:
-                pass
+    def _safe_update(self) -> None:
+        try:
+            if self.page:
+                self.update()
+        except Exception:
+            pass
 
-        asyncio.create_task(_fetch_munis())
+    def _show_place_details(self, place: Place) -> None:
+        show_place_detail_dialog(self.page, place, on_add_to_day=lambda p: self._navigate("/builder"))
 
     def _fetch_places(self) -> None:
         self.is_loading = True
         self._build_content()
-        try:
-            self.update()
-        except Exception:
-            pass
+        self._safe_update()
 
-        async def _do_query():
+        async def _worker():
+            cat = None if self.selected_category == "all" else self.selected_category
+            muni = None if self.selected_municipality == "all" else self.selected_municipality
+            search = self.search_query if self.search_query else None
+            sort = self.sort_by if self.sort_by else None
+
             try:
-                paginated = await self.place_service.get_places(
+                self.paginated_data = await self.place_service.get_places(
                     page=self.current_page,
                     page_size=self.page_size,
-                    search=self.search_query or None,
-                    category=self.selected_category if self.selected_category != "all" else None,
-                    municipality_id=self.selected_municipality if self.selected_municipality != "all" else None,
-                    sort=self.sort_by or None,
+                    category=cat,
+                    municipality=muni,
+                    search=search,
+                    sort_by=sort,
                 )
-                self.paginated_data = paginated
             except Exception:
                 self.paginated_data = None
             finally:
                 self.is_loading = False
                 self._build_content()
-                try:
-                    self.update()
-                except Exception:
-                    pass
+                self._safe_update()
 
-        asyncio.create_task(_do_query())
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(_worker())
+        except RuntimeError:
+            pass
 
-    def _show_place_details(self, place: Place) -> None:
-        if self.page:
-            show_place_detail_dialog(
-                self.page,
-                place,
-                on_add_to_day=lambda p: self._navigate_to_builder(p),
-            )
+    def _load_municipalities(self) -> None:
+        async def _worker():
+            try:
+                self.municipalities = await self.place_service.get_municipalities()
+                self._build_content()
+                self._safe_update()
+            except Exception:
+                pass
 
-    def _navigate_to_builder(self, place: Place) -> None:
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(_worker())
+        except RuntimeError:
+            pass
+
+    def _navigate(self, route: str) -> None:
         if self.on_navigate:
-            self.on_navigate("/builder")
+            self.on_navigate(route)

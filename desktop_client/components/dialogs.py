@@ -132,7 +132,11 @@ def show_place_detail_dialog(
                 content="Get Directions",
                 icon=ft.Icons.DIRECTIONS,
                 url=place.directions_url,
-                style=ft.ButtonStyle(bgcolor=ThemeColors.AZURE_PRIMARY, color=ft.Colors.WHITE),
+                style=ft.ButtonStyle(
+                    bgcolor=ThemeColors.PRIMARY_BLUE,
+                    color=ft.Colors.WHITE,
+                    shape=ft.RoundedRectangleBorder(radius=10),
+                ),
             )
         )
 
@@ -141,7 +145,11 @@ def show_place_detail_dialog(
             ft.FilledButton(
                 content="+ Add to Day",
                 icon=ft.Icons.ADD,
-                style=ft.ButtonStyle(bgcolor=ThemeColors.EMERALD_PRIMARY, color=ft.Colors.WHITE),
+                style=ft.ButtonStyle(
+                    bgcolor=ThemeColors.PRIMARY_BLUE,
+                    color=ft.Colors.WHITE,
+                    shape=ft.RoundedRectangleBorder(radius=10),
+                ),
                 on_click=handle_add,
             )
         )
@@ -219,7 +227,11 @@ def show_custom_venue_dialog(
             ft.TextButton(content="Cancel", on_click=close_dlg),
             ft.FilledButton(
                 content="Add Venue",
-                style=ft.ButtonStyle(bgcolor=ThemeColors.EMERALD_PRIMARY, color=ft.Colors.WHITE),
+                style=ft.ButtonStyle(
+                    bgcolor=ThemeColors.PRIMARY_BLUE,
+                    color=ft.Colors.WHITE,
+                    shape=ft.RoundedRectangleBorder(radius=10),
+                ),
                 on_click=handle_save,
             ),
         ],
@@ -279,7 +291,11 @@ def show_edit_stop_dialog(
             ft.TextButton(content="Cancel", on_click=close_dlg),
             ft.FilledButton(
                 content="Save Changes",
-                style=ft.ButtonStyle(bgcolor=ThemeColors.EMERALD_PRIMARY, color=ft.Colors.WHITE),
+                style=ft.ButtonStyle(
+                    bgcolor=ThemeColors.PRIMARY_BLUE,
+                    color=ft.Colors.WHITE,
+                    shape=ft.RoundedRectangleBorder(radius=10),
+                ),
                 on_click=handle_save,
             ),
         ],

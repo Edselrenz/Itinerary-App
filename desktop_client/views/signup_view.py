@@ -1,4 +1,4 @@
-"""Traveler Registration and Account Creation View."""
+"""Traveler Registration and Account Creation View conforming to Figma & Web client."""
 
 import asyncio
 from typing import Callable, Optional
@@ -24,25 +24,93 @@ class SignupView(ft.Container):
         self._build_content()
 
     def _build_content(self) -> None:
-        self.name_input = ft.TextField(
-            label="Full Name",
-            hint_text="e.g. Maria Clara",
-            prefix_icon=ft.Icons.PERSON_OUTLINE,
+        # Centered Brand Header
+        brand_header = ft.Row(
+            controls=[
+                ft.Icon(
+                    ft.Icons.AIRPLANEMODE_ACTIVE,
+                    size=26,
+                    color=ThemeColors.PRIMARY_BLUE,
+                ),
+                ft.Text(
+                    "Trip mo, trip ko",
+                    size=18,
+                    weight=ft.FontWeight.W_800,
+                    color=ThemeColors.PRIMARY_BLUE,
+                ),
+            ],
+            alignment=ft.MainAxisAlignment.CENTER,
+            spacing=8,
+        )
+
+        # Create Your Account Title & Subtitle
+        heading_group = ft.Column(
+            controls=[
+                ft.Text(
+                    "Create your account",
+                    size=24,
+                    weight=ft.FontWeight.W_800,
+                    color=ThemeColors.TEXT_BLACK,
+                ),
+                ft.Text(
+                    "Get started and plan your new adventure.",
+                    size=13,
+                    color=ThemeColors.TEXT_MUTED_LIGHT,
+                ),
+            ],
+            spacing=4,
+        )
+
+        self.first_name_input = ft.TextField(
+            label="First Name",
+            hint_text="e.g. Maria",
+            border_radius=12,
+            border_color=ThemeColors.BORDER_LIGHT,
+            focused_border_color=ThemeColors.PRIMARY_BLUE,
+            expand=True,
             autofocus=True,
+        )
+
+        self.mi_input = ft.TextField(
+            label="M.I.",
+            hint_text="C.",
+            width=70,
+            border_radius=12,
+            border_color=ThemeColors.BORDER_LIGHT,
+            focused_border_color=ThemeColors.PRIMARY_BLUE,
+        )
+
+        self.last_name_input = ft.TextField(
+            label="Last Name",
+            hint_text="e.g. Clara",
+            border_radius=12,
+            border_color=ThemeColors.BORDER_LIGHT,
+            focused_border_color=ThemeColors.PRIMARY_BLUE,
+        )
+
+        name_row = ft.Row(
+            controls=[self.first_name_input, self.mi_input],
+            spacing=8,
         )
 
         self.email_input = ft.TextField(
             label="Email Address",
             hint_text="traveler@example.com",
             prefix_icon=ft.Icons.EMAIL_OUTLINED,
+            border_radius=12,
+            border_color=ThemeColors.BORDER_LIGHT,
+            focused_border_color=ThemeColors.PRIMARY_BLUE,
         )
 
         self.password_input = ft.TextField(
             label="Password",
             password=True,
             can_reveal_password=True,
-            prefix_icon=ft.Icons.LOCK_OUTLINE,
+            prefix_icon=ft.Icons.KEY,
             helper="At least 6 characters",
+            border_radius=12,
+            border_color=ThemeColors.BORDER_LIGHT,
+            focused_border_color=ThemeColors.PRIMARY_BLUE,
         )
 
         self.confirm_password_input = ft.TextField(
@@ -50,6 +118,9 @@ class SignupView(ft.Container):
             password=True,
             can_reveal_password=True,
             prefix_icon=ft.Icons.LOCK_RESET,
+            border_radius=12,
+            border_color=ThemeColors.BORDER_LIGHT,
+            focused_border_color=ThemeColors.PRIMARY_BLUE,
         )
 
         self.error_text = ft.Text(
@@ -73,65 +144,69 @@ class SignupView(ft.Container):
             visible=False,
         )
 
-        self.submit_btn = ft.FilledButton(
-            content="Create Account",
-            icon=ft.Icons.PERSON_ADD,
-            style=ft.ButtonStyle(
-                bgcolor=ThemeColors.EMERALD_PRIMARY,
-                color=ft.Colors.WHITE,
-                padding=ft.Padding.symmetric(vertical=14),
-            ),
+        self.submit_btn = ft.Container(
+            content=ft.Text("Create Account", size=15, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
+            bgcolor=ThemeColors.PRIMARY_BLUE,
+            border_radius=12,
+            height=48,
+            alignment=ft.Alignment(0, 0),
+            ink=True,
             on_click=lambda _: self._handle_signup(),
-            width=float("inf"),
+        )
+
+        footer_links = ft.Column(
+            controls=[
+                ft.Row(
+                    controls=[
+                        ft.Text("Already have an account?", size=12, color=ThemeColors.TEXT_MUTED_LIGHT),
+                        ft.TextButton(
+                            content="Log In",
+                            style=ft.ButtonStyle(color=ThemeColors.PRIMARY_BLUE),
+                            on_click=lambda _: self._navigate("/login"),
+                        ),
+                    ],
+                    alignment=ft.MainAxisAlignment.CENTER,
+                    spacing=2,
+                ),
+                ft.TextButton(
+                    content="← Back to Welcome / Guest",
+                    style=ft.ButtonStyle(color=ThemeColors.TEXT_MUTED_LIGHT),
+                    on_click=lambda _: self._navigate("/welcome"),
+                ),
+            ],
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            spacing=2,
         )
 
         card = ft.Container(
             content=ft.Column(
                 controls=[
-                    ft.Row(
-                        controls=[
-                            ft.Container(
-                                content=ft.Icon(ft.Icons.LANDSCAPE_ROUNDED, size=28, color=ThemeColors.EMERALD_MINT),
-                                bgcolor=ThemeColors.EMERALD_DARK,
-                                border_radius=8,
-                                padding=8,
-                            ),
-                            ft.Column(
-                                controls=[
-                                    ft.Text("Join Nueva Ecija Travel", size=18, weight=ft.FontWeight.BOLD),
-                                    ft.Text("Create an account to save and sync itineraries", size=12, color=ThemeColors.TEXT_MUTED_LIGHT),
-                                ],
-                                spacing=1,
-                            ),
-                        ],
-                        spacing=12,
-                    ),
-                    ft.Divider(height=1, color=ThemeColors.BORDER_LIGHT),
+                    brand_header,
+                    ft.Container(height=4),
+                    heading_group,
                     self.error_container,
-                    self.name_input,
+                    name_row,
+                    self.last_name_input,
                     self.email_input,
                     self.password_input,
                     self.confirm_password_input,
                     ft.Container(height=4),
                     self.submit_btn,
-                    ft.Row(
-                        controls=[
-                            ft.Text("Already have an account?", size=12, color=ThemeColors.TEXT_MUTED_LIGHT),
-                            ft.TextButton(
-                                content="Sign In",
-                                on_click=lambda _: self._go_login(),
-                            ),
-                        ],
-                        alignment=ft.MainAxisAlignment.CENTER,
-                    ),
+                    ft.Container(height=4),
+                    footer_links,
                 ],
-                spacing=12,
+                spacing=8,
+                width=400,
             ),
-            width=440,
             bgcolor=ThemeColors.SURFACE_LIGHT,
-            border_radius=16,
-            border=ft.Border.all(1, ThemeColors.BORDER_LIGHT),
-            padding=32,
+            border_radius=18,
+            border=ft.Border.all(1.2, ThemeColors.BORDER_LIGHT),
+            padding=ft.Padding.symmetric(horizontal=32, vertical=28),
+            shadow=ft.BoxShadow(
+                spread_radius=1,
+                blur_radius=20,
+                color=ft.Colors.with_opacity(0.06, "#000000"),
+            ),
         )
 
         self.content = card
@@ -139,49 +214,57 @@ class SignupView(ft.Container):
     def _show_error(self, message: str) -> None:
         self.error_text.value = message
         self.error_container.visible = True
-        self.submit_btn.disabled = False
-        self.submit_btn.content = "Create Account"
+        self.update()
+
+    def _clear_error(self) -> None:
+        self.error_container.visible = False
         self.update()
 
     def _handle_signup(self) -> None:
-        name = (self.name_input.value or "").strip()
+        first_name = (self.first_name_input.value or "").strip()
+        last_name = (self.last_name_input.value or "").strip()
+        full_name = f"{first_name} {last_name}".strip() or "Traveler"
         email = (self.email_input.value or "").strip()
         pwd = (self.password_input.value or "").strip()
-        confirm = (self.confirm_password_input.value or "").strip()
+        confirm_pwd = (self.confirm_password_input.value or "").strip()
 
-        if not name or not email or not pwd:
-            self._show_error("Please fill in all required fields.")
+        if not first_name:
+            self._show_error("First name is required.")
+            return
+
+        if not last_name:
+            self._show_error("Last name is required.")
+            return
+
+        if not email:
+            self._show_error("Email address is required.")
             return
 
         if len(pwd) < 6:
-            self._show_error("Password must be at least 6 characters long.")
+            self._show_error("Password must be at least 6 characters.")
             return
 
-        if pwd != confirm:
+        if pwd != confirm_pwd:
             self._show_error("Passwords do not match.")
             return
 
-        self.error_container.visible = False
-        self.submit_btn.disabled = True
-        self.submit_btn.content = "Creating Account..."
-        self.update()
+        self._clear_error()
 
         async def _do_signup():
             try:
                 await self.auth_service.register(
                     email=email,
                     password=pwd,
-                    full_name=name,
+                    full_name=full_name,
                 )
-                if self.on_navigate:
-                    self.on_navigate("/dashboard")
+                self._navigate("/dashboard")
             except ApiClientError as err:
-                self._show_error(f"Registration failed: {err.message}")
-            except Exception as err:
-                self._show_error(f"Unexpected error: {str(err)}")
+                self._show_error(err.message or "Registration failed. Try another email.")
+            except Exception as ex:
+                self._show_error(f"Error connecting to service: {str(ex)}")
 
-        asyncio.create_task(_do_signup())
+        asyncio.run(_do_signup())
 
-    def _go_login(self) -> None:
+    def _navigate(self, route: str) -> None:
         if self.on_navigate:
-            self.on_navigate("/login")
+            self.on_navigate(route)

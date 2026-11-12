@@ -1,4 +1,4 @@
-"""Persistent desktop sidebar navigation component."""
+"""Persistent desktop sidebar navigation component matching the Web Client hierarchy."""
 
 from typing import Callable, Optional
 import flet as ft
@@ -26,12 +26,12 @@ class SidebarNav(ft.Container):
         self.session_manager = get_session_manager()
 
         self.width = 250
-        self.bgcolor = ThemeColors.SURFACE_DARK
+        self.bgcolor = ThemeColors.NAVY_GRADIENT_START
         self.border = ft.Border(
             right=ft.BorderSide(1, ThemeColors.BORDER_DARK)
         )
         self.padding = ft.Padding.all(16)
-        
+
         self._build_content()
 
     def set_active_route(self, route: str) -> None:
@@ -41,61 +41,83 @@ class SidebarNav(ft.Container):
         self.update()
 
     def _build_content(self) -> None:
-        items = [
-            ("/dashboard", ft.Icons.DASHBOARD_ROUNDED, "Dashboard"),
-            ("/places", ft.Icons.EXPLORE_ROUNDED, "Explore Places"),
+        # Core Web Tabs (matching Ionic Tabs)
+        core_tabs = [
+            ("/dashboard", ft.Icons.HOME_ROUNDED, "Home"),
+            ("/places", ft.Icons.LOCATION_ON_ROUNDED, "Map & Discover"),
+            ("/trips", ft.Icons.BOOKMARK_ROUNDED, "Saved Itineraries"),
+            ("/profile", ft.Icons.PERSON_ROUNDED, "Profile & Account"),
+        ]
+
+        # Planner Tools
+        planner_tools = [
             ("/suggested", ft.Icons.AUTO_AWESOME_ROUNDED, "Suggested Wizard"),
             ("/builder", ft.Icons.EDIT_CALENDAR_ROUNDED, "Custom Builder"),
-            ("/trips", ft.Icons.BOOKMARK_ROUNDED, "Saved Trips"),
-            ("/profile", ft.Icons.SETTINGS_ROUNDED, "Profile & Settings"),
         ]
 
         nav_buttons: list[ft.Control] = []
-        for route, icon, label in items:
+        for route, icon, label in core_tabs:
+            is_active = self.current_route == route or (route == "/dashboard" and self.current_route == "/home")
+            nav_buttons.append(self._create_nav_item(route, icon, label, is_active))
+
+        nav_buttons.append(
+            ft.Container(
+                content=ft.Text(
+                    "PLANNER WORKFLOWS",
+                    size=10,
+                    weight=ft.FontWeight.BOLD,
+                    color=ThemeColors.TEXT_MUTED_DARK,
+                ),
+                padding=ft.Padding.only(top=14, bottom=6, left=8),
+            )
+        )
+
+        for route, icon, label in planner_tools:
             is_active = self.current_route == route
             nav_buttons.append(self._create_nav_item(route, icon, label, is_active))
 
-        # Brand header
+        # Brand header with Trip mo, trip ko Airplane Icon
         brand_header = ft.Container(
             content=ft.Row(
                 controls=[
                     ft.Container(
                         content=ft.Icon(
-                            ft.Icons.LANDSCAPE_ROUNDED,
-                            size=26,
-                            color=ThemeColors.EMERALD_MINT,
+                            ft.Icons.AIRPLANEMODE_ACTIVE,
+                            size=24,
+                            color=ft.Colors.WHITE,
                         ),
-                        bgcolor=ThemeColors.EMERALD_DARK,
-                        border_radius=8,
+                        bgcolor=ThemeColors.PRIMARY_BLUE,
+                        border_radius=10,
                         padding=8,
                     ),
                     ft.Column(
                         controls=[
                             ft.Text(
-                                "Nueva Ecija",
-                                size=16,
+                                "Trip mo, trip ko",
+                                size=15,
                                 weight=ft.FontWeight.BOLD,
                                 color=ThemeColors.TEXT_MAIN_DARK,
                             ),
                             ft.Text(
-                                "Travel Platform",
+                                "Desktop Client",
                                 size=11,
-                                color=ThemeColors.TEXT_MUTED_DARK,
+                                color=ThemeColors.PRIMARY_BLUE,
+                                weight=ft.FontWeight.W_600,
                             ),
                         ],
                         spacing=1,
                     ),
                 ],
-                spacing=12,
+                spacing=10,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.Padding.only(bottom=20, top=4),
+            padding=ft.Padding.only(bottom=16, top=4),
         )
 
         # Traveler session status card
         is_guest = self.session_manager.is_guest or not self.session_manager.is_authenticated
         user_name = self.session_manager.display_name
-        badge_label = "Guest Mode" if is_guest else "Verified Traveler"
+        badge_label = "Guest Explorer" if is_guest else "Verified Traveler"
         badge_color = ThemeColors.WARM_GOLD if is_guest else ThemeColors.SUCCESS
 
         user_card = ft.Container(
@@ -143,7 +165,7 @@ class SidebarNav(ft.Container):
         )
 
         # Bottom actions: Theme toggle and Sign In / Sign Out
-        auth_action_text = "Sign In" if is_guest else "Log Out"
+        auth_action_text = "Log In" if is_guest else "Log Out"
         auth_action_icon = ft.Icons.LOGIN if is_guest else ft.Icons.LOGOUT
 
         bottom_actions = ft.Column(
@@ -161,8 +183,9 @@ class SidebarNav(ft.Container):
                             content=auth_action_text,
                             icon=auth_action_icon,
                             style=ft.ButtonStyle(
-                                bgcolor=ThemeColors.SURFACE_DARK_HOVER,
-                                color=ThemeColors.TEXT_MAIN_DARK,
+                                bgcolor=ThemeColors.PRIMARY_BLUE if is_guest else ThemeColors.SURFACE_DARK_HOVER,
+                                color=ft.Colors.WHITE,
+                                shape=ft.RoundedRectangleBorder(radius=8),
                             ),
                             on_click=lambda _: self._on_auth_click(),
                             expand=True,
@@ -178,15 +201,15 @@ class SidebarNav(ft.Container):
             controls=[
                 brand_header,
                 ft.Divider(color=ThemeColors.BORDER_DARK, height=1),
-                ft.Container(height=10),
+                ft.Container(height=8),
                 ft.Column(
                     controls=nav_buttons,
-                    spacing=6,
+                    spacing=4,
                     expand=True,
                     scroll=ft.ScrollMode.AUTO,
                 ),
                 ft.Divider(color=ThemeColors.BORDER_DARK, height=1),
-                ft.Container(height=10),
+                ft.Container(height=8),
                 bottom_actions,
             ],
             expand=True,
@@ -199,21 +222,26 @@ class SidebarNav(ft.Container):
         label: str,
         is_active: bool,
     ) -> ft.Control:
-        bg = ThemeColors.EMERALD_PRIMARY if is_active else ft.Colors.TRANSPARENT
-        text_color = ThemeColors.TEXT_MAIN_DARK if is_active else ThemeColors.TEXT_MUTED_DARK
-        icon_color = ThemeColors.EMERALD_MINT if is_active else ThemeColors.TEXT_MUTED_DARK
+        bg = ThemeColors.PRIMARY_BLUE if is_active else ft.Colors.TRANSPARENT
+        text_color = ft.Colors.WHITE if is_active else ThemeColors.TEXT_MUTED_DARK
+        icon_color = ft.Colors.WHITE if is_active else ThemeColors.TEXT_MUTED_DARK
 
         return ft.Container(
             content=ft.Row(
                 controls=[
-                    ft.Icon(icon, size=20, color=icon_color),
-                    ft.Text(label, size=13, weight=ft.FontWeight.W_600 if is_active else ft.FontWeight.NORMAL, color=text_color),
+                    ft.Icon(icon, size=18, color=icon_color),
+                    ft.Text(
+                        label,
+                        size=13,
+                        weight=ft.FontWeight.W_700 if is_active else ft.FontWeight.NORMAL,
+                        color=text_color,
+                    ),
                 ],
                 spacing=12,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
             bgcolor=bg,
-            border_radius=8,
+            border_radius=10,
             padding=ft.Padding.symmetric(horizontal=12, vertical=10),
             ink=True,
             on_click=lambda _: self._nav_clicked(route),
@@ -231,7 +259,7 @@ class SidebarNav(ft.Container):
         if self.session_manager.is_authenticated:
             self.session_manager.clear_session()
             if self.on_navigate:
-                self.on_navigate("/login")
+                self.on_navigate("/welcome")
         else:
             if self.on_navigate:
                 self.on_navigate("/login")

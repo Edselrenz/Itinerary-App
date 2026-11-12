@@ -19,21 +19,36 @@ def build():
     print(f"Root: {root_dir}")
     print(f"Source: {desktop_dir}")
 
-    # Locate flet runtime in user cache
-    flet_cache = Path.home() / ".flet" / "client" / "flet-desktop-full-1.1.2" / "flet"
-    if not flet_cache.exists():
-        # Fallback search in ~/.flet
-        flet_base = Path.home() / ".flet" / "client"
-        if flet_base.exists():
-            for sub in flet_base.iterdir():
-                cand = sub / "flet"
-                if (cand / "flet.exe").is_file():
-                    flet_cache = cand
-                    break
+    # Locate flet runtime
+    flet_cache = None
+    workspace_cache = root_dir / "build_cache" / "flet_runtime"
+    existing_dist = dist_dir / "NuevaEcijaTravel" / "flet"
+
+    if (workspace_cache / "flet.exe").is_file():
+        flet_cache = workspace_cache
+    elif (existing_dist / "flet.exe").is_file():
+        workspace_cache.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(existing_dist, workspace_cache, dirs_exist_ok=True)
+        flet_cache = workspace_cache
+    else:
+        try:
+            cand = Path.home() / ".flet" / "client" / "flet-desktop-full-1.1.2" / "flet"
+            if (cand / "flet.exe").is_file():
+                flet_cache = cand
+            else:
+                flet_base = Path.home() / ".flet" / "client"
+                if flet_base.exists():
+                    for sub in flet_base.iterdir():
+                        cand = sub / "flet"
+                        if (cand / "flet.exe").is_file():
+                            flet_cache = cand
+                            break
+        except Exception:
+            pass
 
     print(f"Flet Runtime Source: {flet_cache}")
-    if not (flet_cache / "flet.exe").is_file():
-        print("ERROR: flet.exe not found in cache. Please run flet_desktop.ensure_client_cached() first.")
+    if not flet_cache or not (flet_cache / "flet.exe").is_file():
+        print("ERROR: flet.exe not found in workspace cache or ~/.flet. Please ensure flet runtime is available.")
         sys.exit(1)
 
     # Clean previous builds

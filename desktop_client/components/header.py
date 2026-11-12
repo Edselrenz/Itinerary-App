@@ -1,4 +1,4 @@
-"""Top application header with live backend status and view breadcrumbs."""
+"""Top application header matching Web Client design system."""
 
 from typing import Callable, Optional
 import flet as ft
@@ -16,8 +16,8 @@ class TopHeader(ft.Container):
 
     def __init__(
         self,
-        title: str = "Dashboard",
-        subtitle: str = "Nueva Ecija Travel Platform",
+        title: str = "Home",
+        subtitle: str = "Trip mo, trip ko",
         on_search_click: Optional[Callable[[], None]] = None,
     ):
         super().__init__()
@@ -28,9 +28,10 @@ class TopHeader(ft.Container):
         self.session_manager = get_session_manager()
 
         self.height = 64
+        self.bgcolor = ThemeColors.SURFACE_LIGHT
         self.padding = ft.Padding.symmetric(horizontal=24, vertical=8)
         self.border = ft.Border(
-            bottom=ft.BorderSide(1, ThemeColors.BORDER_LIGHT)
+            bottom=ft.BorderSide(1.2, ThemeColors.BORDER_LIGHT)
         )
         self.is_online = True
 
@@ -56,13 +57,13 @@ class TopHeader(ft.Container):
             controls=[
                 ft.Text(
                     self.title_text,
-                    size=18,
-                    weight=ft.FontWeight.BOLD,
-                    color=ThemeColors.TEXT_MAIN_LIGHT,
+                    size=17,
+                    weight=ft.FontWeight.W_800,
+                    color=ThemeColors.TEXT_BLACK,
                 ),
                 ft.Text(
                     self.subtitle_text,
-                    size=12,
+                    size=11,
                     color=ThemeColors.TEXT_MUTED_LIGHT,
                 ),
             ],
@@ -71,8 +72,8 @@ class TopHeader(ft.Container):
         )
 
         # Server status badge
-        status_color = ThemeColors.SUCCESS if self.is_online else ThemeColors.ERROR
-        status_text = "Backend Online" if self.is_online else "Offline / Local"
+        status_color = ThemeColors.SUCCESS if self.is_online else ThemeColors.WARNING
+        status_text = "Backend Connected" if self.is_online else "Offline / Local"
         status_dot = ft.Container(
             width=8,
             height=8,
@@ -86,14 +87,14 @@ class TopHeader(ft.Container):
                     ft.Text(
                         status_text,
                         size=11,
-                        weight=ft.FontWeight.W_500,
+                        weight=ft.FontWeight.W_600,
                         color=ThemeColors.TEXT_MUTED_LIGHT,
                     ),
                 ],
                 spacing=6,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.Padding.symmetric(horizontal=10, vertical=4),
+            padding=ft.Padding.symmetric(horizontal=10, vertical=5),
             border_radius=12,
             border=ft.Border.all(1, ThemeColors.BORDER_LIGHT),
         )
@@ -108,21 +109,22 @@ class TopHeader(ft.Container):
                     ft.Icon(
                         ft.Icons.ACCOUNT_CIRCLE,
                         size=20,
-                        color=ThemeColors.EMERALD_PRIMARY,
+                        color=ThemeColors.PRIMARY_BLUE,
                     ),
                     ft.Text(
                         user_name,
                         size=12,
-                        weight=ft.FontWeight.W_500,
+                        weight=ft.FontWeight.W_600,
                         color=ThemeColors.TEXT_MAIN_LIGHT,
                     ),
                 ],
                 spacing=6,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            padding=ft.Padding.symmetric(horizontal=10, vertical=4),
-            border_radius=8,
+            padding=ft.Padding.symmetric(horizontal=10, vertical=5),
+            border_radius=10,
             bgcolor=ThemeColors.BG_LIGHT,
+            border=ft.Border.all(1, ThemeColors.BORDER_LIGHT),
         )
 
         right_actions = ft.Row(
@@ -130,7 +132,7 @@ class TopHeader(ft.Container):
                 status_pill,
                 traveler_pill,
             ],
-            spacing=12,
+            spacing=10,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
         )
 

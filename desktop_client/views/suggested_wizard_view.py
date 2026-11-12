@@ -124,21 +124,21 @@ class SuggestedWizardView(ft.Container):
         budget_cards: list[ft.Control] = []
         for b in BUDGET_PRESETS:
             is_sel = abs(self.budget_val - b["amount"]) < 1.0
-            border_col = ThemeColors.EMERALD_PRIMARY if is_sel else ThemeColors.BORDER_LIGHT
-            bg_col = ThemeColors.EMERALD_MINT if is_sel else ThemeColors.SURFACE_LIGHT
+            border_col = ThemeColors.PRIMARY_BLUE if is_sel else ThemeColors.BORDER_LIGHT
+            bg_col = ThemeColors.PRIMARY_LIGHT if is_sel else ThemeColors.SURFACE_LIGHT
 
             budget_cards.append(
                 ft.Container(
                     content=ft.Column(
                         controls=[
                             ft.Text(b["label"].split(" (")[0], size=13, weight=ft.FontWeight.BOLD, color=ThemeColors.TEXT_MAIN_LIGHT),
-                            ft.Text(f"₱{b['amount']:,.0f} / day", size=12, weight=ft.FontWeight.W_600, color=ThemeColors.EMERALD_PRIMARY),
+                            ft.Text(f"₱{b['amount']:,.0f} / day", size=12, weight=ft.FontWeight.W_700, color=ThemeColors.BUDGET_GREEN),
                         ],
                         spacing=2,
                     ),
                     bgcolor=bg_col,
                     border=ft.Border.all(2 if is_sel else 1, border_col),
-                    border_radius=10,
+                    border_radius=12,
                     padding=14,
                     expand=True,
                     ink=True,
@@ -219,14 +219,15 @@ class SuggestedWizardView(ft.Container):
                 padding=10,
             )
 
-        # Generate Action Button
+        # Generate Action Button matching .figma-solid-blue-btn
         submit_btn = ft.FilledButton(
             content="Generate Clustered Itinerary",
             icon=ft.Icons.AUTO_AWESOME,
             style=ft.ButtonStyle(
-                bgcolor=ThemeColors.EMERALD_PRIMARY,
+                bgcolor=ThemeColors.PRIMARY_BLUE,
                 color=ft.Colors.WHITE,
                 padding=ft.Padding.symmetric(horizontal=32, vertical=16),
+                shape=ft.RoundedRectangleBorder(radius=12),
             ),
             on_click=lambda _: self._start_generation(),
         )
@@ -285,7 +286,7 @@ class SuggestedWizardView(ft.Container):
         return ft.Container(
             content=ft.Column(
                 controls=[
-                    ft.ProgressRing(width=60, height=60, stroke_width=4, color=ThemeColors.EMERALD_PRIMARY),
+                    ft.ProgressRing(width=60, height=60, stroke_width=4, color=ThemeColors.PRIMARY_BLUE),
                     ft.Container(height=16),
                     ft.Text("Generating Clustered Itinerary...", size=20, weight=ft.FontWeight.BOLD),
                     ft.Text("Analyzing 2,670+ registered destinations in Nueva Ecija", size=13, color=ThemeColors.TEXT_MUTED_LIGHT),
@@ -296,9 +297,9 @@ class SuggestedWizardView(ft.Container):
                             "(e.g., Pantabangan lakeside resorts vs. Cabanatuan food spots) to minimize road time.",
                             size=12,
                             italic=True,
-                            color=ThemeColors.EMERALD_DARK,
+                            color=ThemeColors.PRIMARY_BLUE,
                         ),
-                        bgcolor=ThemeColors.EMERALD_MINT,
+                        bgcolor=ThemeColors.PRIMARY_LIGHT,
                         border_radius=8,
                         padding=12,
                         width=500,
@@ -316,17 +317,23 @@ class SuggestedWizardView(ft.Container):
         if not itin:
             return ft.Container()
 
-        # Overview banner
+        # Overview banner matching Suggested Card gradient
         overview_card = ft.Container(
             content=ft.Row(
                 controls=[
                     ft.Column(
                         controls=[
+                            ft.Container(
+                                content=ft.Text("Suggested Plan", size=10, weight=ft.FontWeight.BOLD, color=ThemeColors.SUGGESTED_BADGE_TEXT),
+                                bgcolor=ThemeColors.SUGGESTED_BADGE_BG,
+                                border_radius=6,
+                                padding=ft.Padding.symmetric(horizontal=8, vertical=3),
+                            ),
                             ft.Text(itin.title, size=20, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
-                            ft.Text(f"{itin.date_range_display} • {len(itin.days)} Days • {itin.total_stops} Total Stops", size=12, color=ThemeColors.EMERALD_MINT),
-                            ft.Text(f"Estimated Trip Cost: ₱{itin.total_estimated_cost:,.2f} (~₱{itin.daily_budget:,.2f} / day budget)", size=12, color=ThemeColors.AMBER_LIGHT),
+                            ft.Text(f"{itin.date_range_display} • {len(itin.days)} Days • {itin.total_stops} Total Stops", size=12, color=ThemeColors.PRIMARY_LIGHT),
+                            ft.Text(f"Estimated Trip Cost: ₱{itin.total_estimated_cost:,.2f} (~₱{itin.daily_budget:,.2f} / day budget)", size=12, color=ThemeColors.CUSTOM_CARD_BORDER),
                         ],
-                        spacing=3,
+                        spacing=4,
                         expand=True,
                     ),
                     ft.Row(
@@ -334,7 +341,11 @@ class SuggestedWizardView(ft.Container):
                             ft.FilledButton(
                                 content="Export Trip",
                                 icon=ft.Icons.SHARE,
-                                style=ft.ButtonStyle(bgcolor=ThemeColors.AZURE_PRIMARY, color=ft.Colors.WHITE),
+                                style=ft.ButtonStyle(
+                                    bgcolor=ThemeColors.PRIMARY_BLUE,
+                                    color=ft.Colors.WHITE,
+                                    shape=ft.RoundedRectangleBorder(radius=10),
+                                ),
                                 on_click=lambda _: self._open_export_dialog(),
                             ),
                             ft.OutlinedButton(
@@ -350,8 +361,12 @@ class SuggestedWizardView(ft.Container):
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            bgcolor=ThemeColors.EMERALD_DARK,
-            border_radius=14,
+            gradient=ft.LinearGradient(
+                begin=ft.Alignment(0, -1),
+                end=ft.Alignment(0, 1),
+                colors=[ThemeColors.NAVY_GRADIENT_START, ThemeColors.NAVY_GRADIENT_END],
+            ),
+            border_radius=16,
             padding=20,
             margin=ft.Margin.only(bottom=16),
         )
@@ -360,19 +375,19 @@ class SuggestedWizardView(ft.Container):
         day_buttons: list[ft.Control] = []
         for idx, day in enumerate(itin.days):
             is_active = idx == self.active_day_index
-            bg = ThemeColors.EMERALD_PRIMARY if is_active else ThemeColors.SURFACE_LIGHT
+            bg = ThemeColors.PRIMARY_BLUE if is_active else ThemeColors.SURFACE_LIGHT
             text_col = ft.Colors.WHITE if is_active else ThemeColors.TEXT_MAIN_LIGHT
             day_buttons.append(
                 ft.Container(
                     content=ft.Text(
                         f"Day {day.day_number} ({len(day.items)} stops)",
                         size=12,
-                        weight=ft.FontWeight.W_600 if is_active else ft.FontWeight.NORMAL,
+                        weight=ft.FontWeight.W_700 if is_active else ft.FontWeight.NORMAL,
                         color=text_col,
                     ),
                     bgcolor=bg,
-                    border=ft.Border.all(1, ThemeColors.EMERALD_PRIMARY if is_active else ThemeColors.BORDER_LIGHT),
-                    border_radius=8,
+                    border=ft.Border.all(1, ThemeColors.PRIMARY_BLUE if is_active else ThemeColors.BORDER_LIGHT),
+                    border_radius=10,
                     padding=ft.Padding.symmetric(horizontal=14, vertical=8),
                     ink=True,
                     on_click=lambda _, day_idx=idx: self._select_day(day_idx),
@@ -516,4 +531,8 @@ class SuggestedWizardView(ft.Container):
                 except Exception:
                     pass
 
-        asyncio.create_task(_do_gen())
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(_do_gen())
+        except RuntimeError:
+            asyncio.run(_do_gen())
