@@ -71,7 +71,11 @@ def build():
         f"{desktop_dir / 'components'}{os.pathsep}desktop_client/components",
         "--add-data",
         f"{desktop_dir / 'views'}{os.pathsep}desktop_client/views",
-        # Hidden imports
+        # Hidden imports and package data collection
+        "--collect-all",
+        "flet",
+        "--collect-all",
+        "flet_desktop",
         "--hidden-import",
         "desktop_client",
         "--hidden-import",
@@ -146,6 +150,18 @@ def build():
     if internal_dir.exists():
         internal_flet = internal_dir / "flet"
         shutil.copytree(flet_cache, internal_flet, dirs_exist_ok=True)
+
+    # Ensure flet package data (icons.json, cupertino_icons.json) is present in _internal
+    try:
+        import flet
+        flet_pkg_dir = Path(flet.__file__).parent
+        if (flet_pkg_dir / "controls").exists() and internal_dir.exists():
+            internal_controls = internal_dir / "flet" / "controls"
+            internal_controls.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(flet_pkg_dir / "controls", internal_controls, dirs_exist_ok=True)
+            print("Successfully copied flet/controls package data (icons.json, etc.)")
+    except Exception as e:
+        print("Warning copying flet package data:", e)
 
     # Create local storage directory
     storage_dir = out_app_dir / "storage"
