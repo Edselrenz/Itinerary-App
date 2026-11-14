@@ -94,12 +94,13 @@ class SessionManager:
     def get_refresh_token(self) -> Optional[str]:
         return self.refresh_token
 
-    def update_user(self, user: User) -> None:
+    def update_user(self, user: User, notify: bool = False) -> None:
         """Updates cached user entity and persists."""
         self.current_user = user
         if self.access_token:
             self._save_to_disk()
-        self._notify()
+        if notify:
+            self._notify()
 
     def load_session(self) -> bool:
         """Restores persisted credentials from local disk if available."""
@@ -112,7 +113,17 @@ class SessionManager:
             self.refresh_token = data.get("refresh_token")
             user_data = data.get("user")
             if user_data:
-                self.current_user = User.from_dict(user_data)
+                extra = {}
+                extra_file = self.settings.storage_dir / "profile_extra.json"
+                if extra_file.exists():
+                    try:
+                        with open(extra_file, "r", encoding="utf-8") as ef:
+                            extras_all = json.load(ef)
+                        uid = str(user_data.get("id"))
+                        extra = extras_all.get(uid, {})
+                    except Exception:
+                        pass
+                self.current_user = User.from_dict(user_data, extra=extra)
             self.is_guest = bool(data.get("is_guest", False))
             return True
         except Exception:

@@ -46,6 +46,7 @@ class ProfileView(ft.Container):
 
         self.status_msg: Optional[str] = None
         self.is_migrating = False
+        self._has_refreshed_profile = False
 
         self._build_content()
 
@@ -74,7 +75,7 @@ class ProfileView(ft.Container):
         )
 
         # 1. Identity Header Section (matching Figma Screen Profile)
-        avatar_path = self.settings.get_asset_path("default_avatar_placeholder.png")
+        avatar_path = self.settings.get_asset_path("images/default_avatar_placeholder.png")
         if not is_guest:
             name_val = user.full_name if user and user.full_name else (user.username if user else "Traveler")
             handle_val = (
@@ -82,7 +83,8 @@ class ProfileView(ft.Container):
                 if user and user.username
                 else (user.email if user and user.email else "@traveler")
             )
-            avatar_src = (user.avatar_url if user and user.avatar_url else None) or avatar_path
+            raw_avatar = user.avatar_url if user and user.avatar_url else None
+            avatar_src = self.settings.get_asset_path(raw_avatar) if raw_avatar else avatar_path
             avatar_ctrl = ft.Container(
                 content=ft.Image(
                     src=avatar_src,
@@ -119,7 +121,8 @@ class ProfileView(ft.Container):
         else:
             name_val = user.full_name if (user and user.first_name) else "Guest Explorer"
             handle_val = f"@{user.username}" if (user and user.username) else "Browsing in Guest Mode (Offline)"
-            avatar_src = user.avatar_url if (user and user.avatar_url) else None
+            raw_avatar = user.avatar_url if (user and user.avatar_url) else None
+            avatar_src = self.settings.get_asset_path(raw_avatar) if raw_avatar else None
             avatar_ctrl = ft.Container(
                 content=ft.Image(
                     src=avatar_src,
@@ -171,6 +174,96 @@ class ProfileView(ft.Container):
                 spacing=8,
             )
 
+        # Extended Profile Metadata Badges
+        profile_badges: list[ft.Control] = []
+        if user:
+            if user.email and not is_guest:
+                profile_badges.append(
+                    ft.Container(
+                        content=ft.Row(
+                            controls=[
+                                ft.Icon(ft.Icons.EMAIL_OUTLINED, size=12, color=ThemeColors.PRIMARY_BLUE),
+                                ft.Text(user.email, size=11, color=ThemeColors.TEXT_MUTED_LIGHT),
+                            ],
+                            spacing=4,
+                            tight=True,
+                        ),
+                        bgcolor=ThemeColors.BG_LIGHT,
+                        border_radius=8,
+                        padding=ft.Padding.symmetric(horizontal=8, vertical=3),
+                    )
+                )
+            if user.phone_number:
+                profile_badges.append(
+                    ft.Container(
+                        content=ft.Row(
+                            controls=[
+                                ft.Icon(ft.Icons.PHONE_OUTLINED, size=12, color=ThemeColors.PRIMARY_BLUE),
+                                ft.Text(user.phone_number, size=11, color=ThemeColors.TEXT_MUTED_LIGHT),
+                            ],
+                            spacing=4,
+                            tight=True,
+                        ),
+                        bgcolor=ThemeColors.BG_LIGHT,
+                        border_radius=8,
+                        padding=ft.Padding.symmetric(horizontal=8, vertical=3),
+                    )
+                )
+            if user.birthday:
+                profile_badges.append(
+                    ft.Container(
+                        content=ft.Row(
+                            controls=[
+                                ft.Icon(ft.Icons.CAKE_OUTLINED, size=12, color=ThemeColors.PRIMARY_BLUE),
+                                ft.Text(user.birthday, size=11, color=ThemeColors.TEXT_MUTED_LIGHT),
+                            ],
+                            spacing=4,
+                            tight=True,
+                        ),
+                        bgcolor=ThemeColors.BG_LIGHT,
+                        border_radius=8,
+                        padding=ft.Padding.symmetric(horizontal=8, vertical=3),
+                    )
+                )
+            if user.gender:
+                profile_badges.append(
+                    ft.Container(
+                        content=ft.Row(
+                            controls=[
+                                ft.Icon(ft.Icons.PERSON_OUTLINE, size=12, color=ThemeColors.PRIMARY_BLUE),
+                                ft.Text(user.gender, size=11, color=ThemeColors.TEXT_MUTED_LIGHT),
+                            ],
+                            spacing=4,
+                            tight=True,
+                        ),
+                        bgcolor=ThemeColors.BG_LIGHT,
+                        border_radius=8,
+                        padding=ft.Padding.symmetric(horizontal=8, vertical=3),
+                    )
+                )
+            if user.default_daily_budget:
+                profile_badges.append(
+                    ft.Container(
+                        content=ft.Row(
+                            controls=[
+                                ft.Icon(ft.Icons.PAYMENTS_OUTLINED, size=12, color=ThemeColors.PRIMARY_BLUE),
+                                ft.Text(f"₱{int(user.default_daily_budget):,}/day", size=11, weight=ft.FontWeight.W_600, color=ThemeColors.PRIMARY_BLUE),
+                            ],
+                            spacing=4,
+                            tight=True,
+                        ),
+                        bgcolor=ThemeColors.BG_LIGHT,
+                        border_radius=8,
+                        padding=ft.Padding.symmetric(horizontal=8, vertical=3),
+                    )
+                )
+
+        badge_row = ft.Row(
+            controls=profile_badges,
+            spacing=6,
+            wrap=True,
+        ) if profile_badges else ft.Container(height=0)
+
         identity_info = ft.Column(
             controls=[
                 ft.Text(
@@ -180,10 +273,11 @@ class ProfileView(ft.Container):
                     color=ThemeColors.TEXT_BLACK,
                 ),
                 ft.Text(handle_val, size=13, color=ThemeColors.TEXT_MUTED_LIGHT),
+                badge_row,
                 ft.Container(height=4),
                 auth_action_btn,
             ],
-            spacing=3,
+            spacing=4,
             expand=True,
         )
 
@@ -975,7 +1069,17 @@ class ProfileView(ft.Container):
                 )
                 root.destroy()
                 if f_path:
-                    current_avatar_url[0] = f_path
+                    try:
+                        import base64
+                        from pathlib import Path
+                        ext = Path(f_path).suffix.lstrip(".").lower()
+                        if ext == "jpg":
+                            ext = "jpeg"
+                        with open(f_path, "rb") as img_f:
+                            b64_str = base64.b64encode(img_f.read()).decode("ascii")
+                        current_avatar_url[0] = f"data:image/{ext};base64,{b64_str}"
+                    except Exception:
+                        current_avatar_url[0] = f_path
                     photo_preview.content = _get_avatar_content()
                     dlg.update()
             except Exception:
@@ -995,12 +1099,12 @@ class ProfileView(ft.Container):
             controls=[
                 ft.TextButton(
                     "Hiker",
-                    on_click=lambda _: _set_preset_avatar("assets/guest_hiker_hero.png"),
+                    on_click=lambda _: _set_preset_avatar(self.settings.get_asset_path("images/guest_hiker_hero.png")),
                     style=ft.ButtonStyle(padding=ft.Padding.symmetric(horizontal=8, vertical=2)),
                 ),
                 ft.TextButton(
                     "Default",
-                    on_click=lambda _: _set_preset_avatar("assets/default_avatar_placeholder.png"),
+                    on_click=lambda _: _set_preset_avatar(self.settings.get_asset_path("images/default_avatar_placeholder.png")),
                     style=ft.ButtonStyle(padding=ft.Padding.symmetric(horizontal=8, vertical=2)),
                 ),
             ],
@@ -1277,6 +1381,23 @@ class ProfileView(ft.Container):
                 loop.create_task(_run())
             except RuntimeError:
                 pass
+
+    def did_mount(self) -> None:
+        if self._has_refreshed_profile:
+            return
+        if self.session_manager.is_authenticated and not self.session_manager.is_guest:
+            self._has_refreshed_profile = True
+            async def _refresh_profile():
+                try:
+                    latest_user = await self.auth_service.get_profile()
+                    if latest_user:
+                        self._build_content()
+                        self._safe_update()
+                except Exception:
+                    pass
+
+            if self.safe_page:
+                self.safe_page.run_task(_refresh_profile)
 
     def _safe_update(self) -> None:
         try:

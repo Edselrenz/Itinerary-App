@@ -209,10 +209,13 @@ def main(page: ft.Page) -> None:
                 workflow_header._build_content()
                 dest_param = query_params.get("destination", [None])[0]
                 place_id_param = query_params.get("placeId", [None])[0]
+                restore_param = query_params.get("restore", [None])[0] == "draft" or (selected_trip is not None and getattr(selected_trip, "id", None) == "draft")
                 content_area.content = SuggestedWizardView(
                     on_navigate=navigate_to,
                     initial_destination=dest_param or "Nueva Ecija",
                     anchor_place_id=place_id_param,
+                    restore_draft=restore_param,
+                    draft_itinerary=selected_trip if (selected_trip and getattr(selected_trip, "id", None) == "draft") else None,
                 )
 
             elif base_route == "/builder":
@@ -277,10 +280,26 @@ def main(page: ft.Page) -> None:
 
         page.update()
 
-    # Session change listener
+    # Session change listener - only reload view when authentication identity actually changes
+    last_auth_identity = (
+        session_manager.is_authenticated,
+        session_manager.is_guest,
+        getattr(session_manager.current_user, "id", None),
+    )
+
     def _on_session_changed():
-        if current_route in ("/profile", "/home", "/dashboard"):
-            navigate_to(current_route, force=True)
+        nonlocal last_auth_identity
+        new_auth_identity = (
+            session_manager.is_authenticated,
+            session_manager.is_guest,
+            getattr(session_manager.current_user, "id", None),
+        )
+        if new_auth_identity != last_auth_identity:
+            last_auth_identity = new_auth_identity
+            if current_route in ("/home", "/dashboard"):
+                navigate_to(current_route, force=True)
+            elif current_route == "/profile" and not session_manager.is_authenticated and not session_manager.is_guest:
+                navigate_to("/welcome", force=True)
 
     session_manager.add_listener(_on_session_changed)
 

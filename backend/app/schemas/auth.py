@@ -13,6 +13,12 @@ class UserRegisterIn(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     email: EmailStr
     password: str = Field(..., min_length=8, max_length=128)
+    middle_initial: str | None = Field(default=None, max_length=16)
+    phone_number: str | None = Field(default=None, max_length=40)
+    birthday: str | None = Field(default=None, max_length=40)
+    gender: str | None = Field(default=None, max_length=32)
+    avatar_url: str | None = None
+    default_daily_budget: float | None = Field(default=3000.0, ge=0.0)
 
 
 class UserLoginIn(BaseModel):
@@ -40,6 +46,12 @@ class UserUpdateIn(BaseModel):
     first_name: str | None = Field(default=None, min_length=1, max_length=80)
     last_name: str | None = Field(default=None, min_length=1, max_length=80)
     username: str | None = Field(default=None, min_length=3, max_length=50)
+    middle_initial: str | None = Field(default=None, max_length=16)
+    phone_number: str | None = Field(default=None, max_length=40)
+    birthday: str | None = Field(default=None, max_length=40)
+    gender: str | None = Field(default=None, max_length=32)
+    avatar_url: str | None = None
+    default_daily_budget: float | None = Field(default=None, ge=0.0)
     current_password: str | None = Field(default=None, min_length=1, description="Required when updating password")
     new_password: str | None = Field(default=None, min_length=8, max_length=128)
 
@@ -52,6 +64,12 @@ class UserOut(BaseModel):
     last_name: str
     username_normalized: str
     email_normalized: str
+    middle_initial: str | None = None
+    phone_number: str | None = None
+    birthday: str | None = None
+    gender: str | None = None
+    avatar_url: str | None = None
+    default_daily_budget: float | None = 3000.0
     is_active: bool
     created_at: datetime
 

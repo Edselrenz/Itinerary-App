@@ -9,21 +9,32 @@ from desktop_client.config.settings import ThemeColors
 
 def show_date_range_dialog(
     page: ft.Page,
-    current_start: str,
-    current_end: str,
-    on_save: Callable[[str, str], None],
+    current_start: Optional[str] = None,
+    current_end: Optional[str] = None,
+    on_save: Optional[Callable[[str, str], None]] = None,
+    *,
+    initial_start: Optional[str] = None,
+    initial_end: Optional[str] = None,
+    on_apply: Optional[Callable[[str, str], None]] = None,
 ) -> None:
-    """Opens Figma travel date picker with quick duration presets and validation."""
+    """Opens Figma travel date picker with quick duration presets and validation.
+
+    Accepts both (page, current_start, current_end, on_save) and keyword aliases
+    initial_start, initial_end, on_apply for robust interoperability.
+    """
     today = date.today()
+    eff_start = str(current_start or initial_start or "").strip()
+    eff_end = str(current_end or initial_end or "").strip()
+    save_cb = on_save or on_apply or (lambda s, e: None)
 
     # Parse current dates or default
     try:
-        start_d = datetime.strptime(current_start, "%Y-%m-%d").date()
+        start_d = datetime.strptime(eff_start, "%Y-%m-%d").date()
     except Exception:
-        start_d = today + timedelta(days=5)
+        start_d = today + timedelta(days=1)
 
     try:
-        end_d = datetime.strptime(current_end, "%Y-%m-%d").date()
+        end_d = datetime.strptime(eff_end, "%Y-%m-%d").date()
     except Exception:
         end_d = start_d + timedelta(days=2)
 
@@ -90,8 +101,11 @@ def show_date_range_dialog(
     end_input.on_change = lambda _: _update_duration()
 
     def set_preset(num_days: int):
-        s = today + timedelta(days=3)
-        e = s + timedelta(days=num_days - 1)
+        try:
+            s = datetime.strptime((start_input.value or "").strip(), "%Y-%m-%d").date()
+        except Exception:
+            s = today
+        e = s + timedelta(days=max(0, num_days - 1))
         start_input.value = s.strftime("%Y-%m-%d")
         end_input.value = e.strftime("%Y-%m-%d")
         _update_duration()
@@ -139,7 +153,7 @@ def show_date_range_dialog(
                 error_text.update()
                 return
             close_dlg()
-            on_save(s_val, e_val)
+            save_cb(s_val, e_val)
         except Exception:
             error_text.value = "Invalid date format. Please use YYYY-MM-DD."
             error_text.visible = True

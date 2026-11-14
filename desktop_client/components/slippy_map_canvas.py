@@ -11,6 +11,7 @@ import concurrent.futures
 import math
 import os
 from pathlib import Path
+import time
 from typing import Callable, Optional
 import urllib.request
 import flet as ft
@@ -24,6 +25,7 @@ from desktop_client.models.place import Place
 # Global background tile fetcher
 _TILE_EXECUTOR = concurrent.futures.ThreadPoolExecutor(max_workers=6)
 _QUEUED_TILES: set[str] = set()
+_TILE_PATH_CACHE: dict[str, str] = {}
 
 
 def _resolve_tile_source(
@@ -33,27 +35,36 @@ def _resolve_tile_source(
     on_ready: Optional[Callable[[], None]] = None,
 ) -> str:
     """Returns local path to clean OSM tile (bundled or cached) or downloads in background with clean ESRI fallback."""
+    tile_key = f"{zoom}_{x}_{y}"
+    cached_src = _TILE_PATH_CACHE.get(tile_key)
+    if cached_src:
+        return cached_src
+
     settings = get_settings()
     rel_tile = f"tiles/{zoom}_{x}_{y}.png"
 
     # 1. Bundled assets (Zooms 8-11 pre-downloaded in desktop_client/assets/tiles)
     bundled = settings.get_asset_path(rel_tile)
     if bundled and os.path.isfile(bundled):
+        _TILE_PATH_CACHE[tile_key] = bundled
         return bundled
 
     direct_cand = settings.assets_dir / "tiles" / f"{zoom}_{x}_{y}.png"
     if direct_cand.is_file():
-        return str(direct_cand)
+        cand_str = str(direct_cand)
+        _TILE_PATH_CACHE[tile_key] = cand_str
+        return cand_str
 
     # 2. Local disk cache
     cache_dir = settings.storage_dir / "tile_cache"
     cache_dir.mkdir(parents=True, exist_ok=True)
     cache_file = cache_dir / f"{zoom}_{x}_{y}.png"
     if cache_file.is_file() and cache_file.stat().st_size > 500:
-        return str(cache_file)
+        c_str = str(cache_file)
+        _TILE_PATH_CACHE[tile_key] = c_str
+        return c_str
 
     # 3. Schedule background download from tile.openstreetmap.org with compliant User-Agent
-    tile_key = f"{zoom}_{x}_{y}"
     if tile_key not in _QUEUED_TILES:
         _QUEUED_TILES.add(tile_key)
 
@@ -70,6 +81,7 @@ def _resolve_tile_source(
                         if len(data) > 500:
                             with open(cache_file, "wb") as f:
                                 f.write(data)
+                            _TILE_PATH_CACHE[tile_key] = str(cache_file)
                             if on_ready:
                                 on_ready()
             except Exception:
@@ -211,6 +223,7 @@ class SlippyMapCanvas(ft.Container):
         self._user_location = user_location
         self._on_place_click = on_place_click
         self._on_stop_click = on_stop_click
+        self._last_pan_redraw: float = 0.0
 
         self._tile_stack = ft.Stack(width=self._map_w, height=self._map_h)
         self._vector_canvas = cv.Canvas(width=self._map_w, height=self._map_h, shapes=[])
@@ -271,6 +284,7 @@ class SlippyMapCanvas(ft.Container):
 
         gesture_layer = ft.GestureDetector(
             on_pan_update=self._handle_pan_update,
+            on_pan_end=self._handle_pan_end,
             drag_interval=16,
             content=ft.Stack(
                 width=self._map_w,
@@ -314,7 +328,29 @@ class SlippyMapCanvas(ft.Container):
         if polyline_points is not None:
             self._route_pts = list(polyline_points)
         elif len(self._route_stops) >= 2:
-            self._route_pts = fetch_osrm_road_geometry([(s.lat, s.lng) for s in self._route_stops])
+            coords = [(s.lat, s.lng) for s in self._route_stops]
+            # Immediate smooth geodesic arc so UI never freezes for 3s
+            arc_pts: list[tuple[float, float]] = []
+            for i in range(len(coords) - 1):
+                seg = generate_geodesic_arc(coords[i], coords[i + 1])
+                if arc_pts:
+                    arc_pts.extend(seg[1:])
+                else:
+                    arc_pts.extend(seg)
+            self._route_pts = arc_pts or coords
+
+            def _async_osrm():
+                try:
+                    pts = fetch_osrm_road_geometry(coords)
+                    if pts and len(pts) >= 2:
+                        self._route_pts = pts
+                        self._render_route_vectors()
+                        if self.page:
+                            self.page.update()
+                except Exception:
+                    pass
+
+            _TILE_EXECUTOR.submit(_async_osrm)
         else:
             self._route_pts = []
 
@@ -383,6 +419,12 @@ class SlippyMapCanvas(ft.Container):
         dy = float(getattr(e, "delta_y", 0.0) or 0.0)
         cx, cy = latlon_to_world_px(self.center_lat, self.center_lng, self.zoom)
         self.center_lat, self.center_lng = world_px_to_latlon(cx - dx, cy - dy, self.zoom)
+        now = time.monotonic()
+        if now - self._last_pan_redraw >= 0.045:  # Cap redraws at ~22 FPS during drag
+            self._last_pan_redraw = now
+            self.redraw()
+
+    def _handle_pan_end(self, e: ft.DragEndEvent) -> None:
         self.redraw()
 
     def _latlon_to_viewport(self, lat: float, lng: float) -> tuple[float, float]:
@@ -496,10 +538,14 @@ class SlippyMapCanvas(ft.Container):
                     )
                 )
 
-        # 2. Discovery Place Markers (with Web-App-identical Marker Clustering when zoom < 14)
+        # 2. Discovery Place Markers (with fast degree bounding-box pre-filter and marker clustering)
+        lat_span = (360.0 / (2 ** self.zoom)) * (self._map_h / 256.0) * 0.75
+        lng_span = (360.0 / (2 ** self.zoom)) * (self._map_w / 256.0) * 0.75
         visible_places: list[tuple[Place, float, float]] = []
         for p in self._places:
             if not p.latitude or not p.longitude:
+                continue
+            if abs(p.latitude - self.center_lat) > lat_span or abs(p.longitude - self.center_lng) > lng_span:
                 continue
             px, py = self._latlon_to_viewport(p.latitude, p.longitude)
             if -32 <= px <= self._map_w + 32 and -32 <= py <= self._map_h + 32:

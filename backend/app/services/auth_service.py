@@ -116,6 +116,12 @@ def register_user(db: Session, data: UserRegisterIn) -> User:
         username_normalized=norm_username,
         email_normalized=norm_email,
         password_hash=hash_password(data.password),
+        middle_initial=data.middle_initial.strip() if getattr(data, "middle_initial", None) else None,
+        phone_number=data.phone_number.strip() if getattr(data, "phone_number", None) else None,
+        birthday=data.birthday.strip() if getattr(data, "birthday", None) else None,
+        gender=data.gender.strip() if getattr(data, "gender", None) else None,
+        avatar_url=data.avatar_url.strip() if getattr(data, "avatar_url", None) else None,
+        default_daily_budget=getattr(data, "default_daily_budget", 3000.0) or 3000.0,
         is_active=True,
     )
     db.add(user)
@@ -336,6 +342,24 @@ def update_user_profile(
 
     if data.last_name is not None:
         user.last_name = data.last_name.strip()
+
+    if data.middle_initial is not None:
+        user.middle_initial = data.middle_initial.strip() if data.middle_initial else None
+
+    if data.phone_number is not None:
+        user.phone_number = data.phone_number.strip() if data.phone_number else None
+
+    if data.birthday is not None:
+        user.birthday = data.birthday.strip() if data.birthday else None
+
+    if data.gender is not None:
+        user.gender = data.gender.strip() if data.gender else None
+
+    if data.avatar_url is not None:
+        user.avatar_url = data.avatar_url.strip() if data.avatar_url else None
+
+    if data.default_daily_budget is not None:
+        user.default_daily_budget = data.default_daily_budget
 
     if data.new_password is not None:
         if not data.current_password:

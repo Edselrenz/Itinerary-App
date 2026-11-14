@@ -716,14 +716,20 @@ class PlacesView(ft.Container):
     def _on_search_change(self, val: str) -> None:
         self.search_query = val
         self._apply_filters()
+        self._build_content()
+        self._safe_update()
 
     def _clear_search(self) -> None:
         self.search_query = ""
         self._apply_filters()
+        self._build_content()
+        self._safe_update()
 
     def _select_category(self, cat_key: str) -> None:
         self.selected_category = cat_key
         self._apply_filters()
+        self._build_content()
+        self._safe_update()
 
     def _toggle_drawer(self) -> None:
         self.is_drawer_open = not self.is_drawer_open
@@ -793,7 +799,7 @@ class PlacesView(ft.Container):
         if source_param == "builder":
             self.on_navigate("/builder?draft=true", self.route_itinerary)
         elif self.route_query.startswith("/map?itineraryId=draft") or ("draft" in self.route_query):
-            self.on_navigate("/suggested", self.route_itinerary)
+            self.on_navigate("/suggested?restore=draft", self.route_itinerary)
         elif self.route_itinerary:
             self.on_navigate(f"/trips/{self.route_itinerary.id}", self.route_itinerary)
         else:
@@ -811,17 +817,36 @@ class PlacesView(ft.Container):
         if not self.safe_page:
             return
 
-        cat_chips: list[ft.Control] = []
-        for cat in CANONICAL_CATEGORIES:
-            ck = cat["key"]
-            is_c = (self.selected_category == ck)
-            cat_chips.append(
-                ft.FilterChip(
-                    label=ft.Text(cat["label"], size=11),
-                    selected=is_c,
-                    on_select=lambda e, k=ck: self._set_modal_cat(k),
-                )
+        all_cats = [{"key": "all", "label": "All Categories"}] + CANONICAL_CATEGORIES
+        cat_row = ft.Row(wrap=True, spacing=6)
+
+        def _make_pill(k: str, lbl: str):
+            is_c = (self.selected_category == k)
+            def _toggle(_):
+                self.selected_category = k
+                _rebuild_chips()
+                if dlg and dlg.content:
+                    dlg.content.update()
+
+            return ft.Container(
+                content=ft.Text(
+                    lbl,
+                    size=11,
+                    weight=ft.FontWeight.BOLD if is_c else ft.FontWeight.NORMAL,
+                    color=ft.Colors.WHITE if is_c else ThemeColors.TEXT_MAIN_LIGHT,
+                ),
+                bgcolor=ThemeColors.PRIMARY_BLUE if is_c else ThemeColors.SURFACE_LIGHT,
+                border=ft.Border.all(1, ThemeColors.PRIMARY_BLUE if is_c else ThemeColors.BORDER_LIGHT),
+                border_radius=14,
+                padding=ft.Padding.symmetric(horizontal=10, vertical=6),
+                ink=True,
+                on_click=_toggle,
             )
+
+        def _rebuild_chips():
+            cat_row.controls = [_make_pill(c["key"], c["label"]) for c in all_cats]
+
+        _rebuild_chips()
 
         muni_options = [ft.dropdown.Option("all", "All 32 Municipalities")]
         for lgu in sorted(NUEVA_ECIJA_LGUS):
@@ -854,7 +879,7 @@ class PlacesView(ft.Container):
             content=ft.Column(
                 controls=[
                     ft.Text("Categories", size=12, weight=ft.FontWeight.BOLD),
-                    ft.Row(controls=cat_chips, wrap=True, spacing=6),
+                    cat_row,
                     ft.Container(height=8),
                     muni_dropdown,
                     ft.Container(height=8),

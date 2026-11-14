@@ -173,7 +173,7 @@ if (-not $NoTunnel) {
 
         $tunnelProcesses += $cfProcess
         Write-Host "Connecting to Cloudflare edge network..." -ForegroundColor Gray
-        for ($i = 0; $i -lt 15; $i++) {
+        for ($i = 0; $i -lt 25; $i++) {
             Start-Sleep -Milliseconds 600
             if (Test-Path $cfLog) {
                 $logContent = Get-Content $cfLog -Raw -ErrorAction SilentlyContinue

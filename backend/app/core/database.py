@@ -45,6 +45,36 @@ except Exception as exc:
     fallback_url = f"sqlite:///{ROOT_DB.as_posix()}"
     engine = create_engine(fallback_url, pool_pre_ping=True, connect_args={"check_same_thread": False})
 
+
+def ensure_user_profile_columns(target_engine) -> None:
+    """Ensures extended user profile columns exist across both PostgreSQL and SQLite."""
+    try:
+        from sqlalchemy import inspect, text
+        insp = inspect(target_engine)
+        if not insp.has_table("users"):
+            return
+        existing_cols = {c["name"] for c in insp.get_columns("users")}
+        cols_to_add = [
+            ("middle_initial", "VARCHAR(16)"),
+            ("phone_number", "VARCHAR(40)"),
+            ("birthday", "VARCHAR(40)"),
+            ("gender", "VARCHAR(32)"),
+            ("avatar_url", "TEXT"),
+            ("default_daily_budget", "NUMERIC(10, 2) DEFAULT 3000.0"),
+        ]
+        with target_engine.begin() as conn:
+            for col_name, col_type in cols_to_add:
+                if col_name not in existing_cols:
+                    if target_engine.dialect.name == "postgresql":
+                        conn.execute(text(f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {col_name} {col_type};"))
+                    else:
+                        conn.execute(text(f"ALTER TABLE users ADD COLUMN {col_name} {col_type};"))
+    except Exception as e:
+        logger.warning("Auto-migration check for user profile columns skipped/failed: %s", e)
+
+
+ensure_user_profile_columns(engine)
+
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 

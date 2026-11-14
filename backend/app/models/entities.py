@@ -46,6 +46,12 @@ class User(Base):
         String(255), unique=True, index=True, nullable=False
     )
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    middle_initial: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    phone_number: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    birthday: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    gender: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    avatar_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    default_daily_budget: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True, default=3000.0)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(

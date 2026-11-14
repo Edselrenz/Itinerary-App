@@ -45,6 +45,7 @@ class TripDetailView(ft.Container):
         self.is_dirty = False
         self.feedback_message: Optional[str] = None
         self.feedback_is_error = False
+        self.is_assumptions_expanded = False
 
         self.expand = True
         self.padding = ft.Padding.all(24)
@@ -82,6 +83,12 @@ class TripDetailView(ft.Container):
             on_click=lambda _: self._enter_edit_mode(),
         )
 
+        full_builder_btn = ft.OutlinedButton(
+            content="🛠️ Open in Full Builder",
+            icon=ft.Icons.BUILD,
+            on_click=lambda _: self._open_in_builder(),
+        )
+
         export_btn = ft.OutlinedButton(
             content="Export Dossier",
             icon=ft.Icons.DOWNLOAD,
@@ -91,7 +98,7 @@ class TripDetailView(ft.Container):
         top_nav = ft.Row(
             controls=[
                 back_btn,
-                ft.Row(controls=[edit_btn, export_btn], spacing=8),
+                ft.Row(controls=[edit_btn, full_builder_btn, export_btn], spacing=8),
             ],
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
         )
@@ -152,17 +159,81 @@ class TripDetailView(ft.Container):
             ),
             border_radius=16,
             padding=20,
-            margin=ft.Margin.only(bottom=14),
+            margin=ft.Margin.only(bottom=10),
+        )
+
+        # Verified Estimated Costs Badge
+        summary = self.itinerary_service.calculate_budget_summary(itin)
+        verified_costs_card = ft.Container(
+            content=ft.Row(
+                controls=[
+                    ft.Icon(ft.Icons.PAYMENTS_OUTLINED, size=15, color=ThemeColors.BUDGET_GREEN),
+                    ft.Text(f"Verified Place Costs: {summary['display_text']}", size=11, weight=ft.FontWeight.BOLD, color=ThemeColors.BUDGET_GREEN),
+                ],
+                spacing=6,
+            ),
+            bgcolor=ThemeColors.SUCCESS_BG,
+            border_radius=8,
+            padding=ft.Padding.symmetric(horizontal=12, vertical=8),
+            margin=ft.Margin.only(bottom=10),
+        )
+
+        # Expandable Assumptions Info Box
+        assumptions_items = itin.assumptions or [
+            f"Daily target budget: ₱{itin.daily_budget:,.0f} / day",
+            "Lunch scheduled between 12:00 PM – 1:00 PM",
+            "Transit durations estimated based on standard provincial road conditions",
+        ]
+        assumptions_controls: list[ft.Control] = [
+            ft.Row(
+                controls=[
+                    ft.Row(
+                        controls=[
+                            ft.Icon(ft.Icons.LIGHTBULB_OUTLINE, size=16, color=ThemeColors.PRIMARY_BLUE),
+                            ft.Text("Trip Assumptions & Corridor Notes", size=11, weight=ft.FontWeight.BOLD, color=ThemeColors.PRIMARY_BLUE),
+                        ],
+                        spacing=6,
+                    ),
+                    ft.Icon(
+                        ft.Icons.KEYBOARD_ARROW_UP if self.is_assumptions_expanded else ft.Icons.KEYBOARD_ARROW_DOWN,
+                        size=16,
+                        color=ThemeColors.PRIMARY_BLUE,
+                    ),
+                ],
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            )
+        ]
+        if self.is_assumptions_expanded:
+            for asm in assumptions_items:
+                assumptions_controls.append(
+                    ft.Row(
+                        controls=[
+                            ft.Icon(ft.Icons.CHECK_SMALL, size=14, color=ThemeColors.PRIMARY_BLUE),
+                            ft.Text(asm, size=11, color=ThemeColors.TEXT_MUTED_LIGHT),
+                        ],
+                        spacing=4,
+                    )
+                )
+
+        assumptions_box = ft.Container(
+            content=ft.Column(controls=assumptions_controls, spacing=4),
+            bgcolor=ThemeColors.AZURE_SOFT,
+            border_radius=8,
+            padding=10,
+            margin=ft.Margin.only(bottom=12),
+            ink=True,
+            on_click=lambda _: self._toggle_assumptions(),
         )
 
         # Day Switcher Tabs
         day_buttons: list[ft.Control] = []
         for idx, day in enumerate(itin.days):
             is_active = idx == self.active_day_index
+            muni_suffix = f" • {day.title.split(': ')[1]}" if (day.title and ": " in day.title) else f" ({len(day.items)} stops)"
             day_buttons.append(
                 ft.Container(
                     content=ft.Text(
-                        f"Day {day.day_number} ({len(day.items)} stops)",
+                        f"Day {day.day_number}{muni_suffix}",
                         size=12,
                         weight=ft.FontWeight.W_700 if is_active else ft.FontWeight.NORMAL,
                         color=ft.Colors.WHITE if is_active else ThemeColors.TEXT_MAIN_LIGHT,
@@ -277,6 +348,8 @@ class TripDetailView(ft.Container):
                 top_nav,
                 ft.Container(height=8),
                 overview_card,
+                verified_costs_card,
+                assumptions_box,
                 day_tabs_row,
                 ft.Container(height=10),
                 route_banner,
@@ -287,6 +360,15 @@ class TripDetailView(ft.Container):
             scroll=ft.ScrollMode.AUTO,
             spacing=0,
         )
+
+    def _toggle_assumptions(self) -> None:
+        self.is_assumptions_expanded = not self.is_assumptions_expanded
+        self._build_content()
+        self._safe_update()
+
+    def _open_in_builder(self) -> None:
+        if self.on_navigate:
+            self.on_navigate("/builder", trip_data=self.itinerary)
 
     def _build_edit_mode(self) -> ft.Control:
         itin = self.itinerary

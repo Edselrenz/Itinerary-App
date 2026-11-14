@@ -102,47 +102,91 @@ class StopCard(ft.Container):
             padding=ft.Padding.symmetric(horizontal=8, vertical=2),
         )
 
+        rating_pill = None
+        if self.item.place and self.item.place.rating:
+            rating_pill = ft.Container(
+                content=ft.Row(
+                    controls=[
+                        ft.Icon(ft.Icons.STAR, size=11, color="#f59e0b"),
+                        ft.Text(f"{self.item.place.rating:.1f}", size=10, weight=ft.FontWeight.BOLD, color=ThemeColors.TEXT_MAIN_LIGHT),
+                    ],
+                    spacing=2,
+                    tight=True,
+                ),
+                bgcolor=ThemeColors.BG_LIGHT,
+                border_radius=6,
+                padding=ft.Padding.symmetric(horizontal=6, vertical=2),
+            )
+
+        # Thumbnail image if place is present
+        thumbnail = None
+        if self.item.place:
+            img_path = self.item.place.resolved_image_path
+            if img_path:
+                thumbnail = ft.Container(
+                    content=ft.Image(
+                        src=img_path,
+                        width=48,
+                        height=48,
+                        fit=ft.BoxFit.COVER,
+                        border_radius=8,
+                        error_content=ft.Icon(ft.Icons.PLACE, size=24, color=ThemeColors.PRIMARY_BLUE),
+                    ),
+                    width=48,
+                    height=48,
+                    border_radius=8,
+                )
+
         # Title & location
         title_text = self.item.display_title
         muni_text = "Nueva Ecija"
         if self.item.place and self.item.place.municipality_name:
             muni_text = self.item.place.municipality_name
 
+        header_controls: list[ft.Control] = [sequence_badge]
+        if thumbnail:
+            header_controls.append(thumbnail)
+
+        header_controls.append(
+            ft.Column(
+                controls=[
+                    ft.Text(
+                        title_text,
+                        size=13,
+                        weight=ft.FontWeight.BOLD,
+                        color=ThemeColors.TEXT_MAIN_LIGHT,
+                        max_lines=1,
+                        overflow=ft.TextOverflow.ELLIPSIS,
+                    ),
+                    ft.Row(
+                        controls=[
+                            ft.Icon(ft.Icons.LOCATION_ON, size=12, color=ThemeColors.PRIMARY_BLUE),
+                            ft.Text(
+                                muni_text,
+                                size=11,
+                                color=ThemeColors.TEXT_MUTED_LIGHT,
+                            ),
+                        ],
+                        spacing=3,
+                    ),
+                ],
+                spacing=2,
+                expand=True,
+            )
+        )
+
         header_row = ft.Row(
-            controls=[
-                sequence_badge,
-                ft.Column(
-                    controls=[
-                        ft.Text(
-                            title_text,
-                            size=13,
-                            weight=ft.FontWeight.BOLD,
-                            color=ThemeColors.TEXT_MAIN_LIGHT,
-                            max_lines=1,
-                            overflow=ft.TextOverflow.ELLIPSIS,
-                        ),
-                        ft.Row(
-                            controls=[
-                                ft.Icon(ft.Icons.LOCATION_ON, size=12, color=ThemeColors.PRIMARY_BLUE),
-                                ft.Text(
-                                    muni_text,
-                                    size=11,
-                                    color=ThemeColors.TEXT_MUTED_LIGHT,
-                                ),
-                            ],
-                            spacing=3,
-                        ),
-                    ],
-                    spacing=2,
-                    expand=True,
-                ),
-            ],
+            controls=header_controls,
             spacing=10,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
         )
 
+        chip_controls = [time_pill, duration_pill, cost_pill]
+        if rating_pill:
+            chip_controls.append(rating_pill)
+
         chips_row = ft.Row(
-            controls=[time_pill, duration_pill, cost_pill],
+            controls=chip_controls,
             spacing=6,
         )
 

@@ -177,44 +177,7 @@ class Place:
         resolved = resolve_place_image(self.name, self.image_url)
         if resolved:
             return resolved
-
-        st = get_settings()
-        if self.image_url:
-            if self.image_url.startswith("http://") or self.image_url.startswith("https://"):
-                return self.image_url
-            clean = self.image_url.replace("assets/", "").lstrip("/\\")
-            return st.get_asset_path(clean)
-
-        nl = self.name.lower()
-        if "minalungao" in nl:
-            return st.get_asset_path("popular_destinations/minalungao.png")
-        if "pantabangan" in nl:
-            return st.get_asset_path("popular_destinations/pantabangan_lake.png")
-        if "highland bali" in nl:
-            return st.get_asset_path("popular_destinations/highland_bali.png")
-        if "casa batik" in nl:
-            return st.get_asset_path("popular_destinations/casa_batik.png")
-        if "george point" in nl:
-            return st.get_asset_path("popular_destinations/george_point.png")
-        if "villaronte" in nl:
-            return st.get_asset_path("popular_destinations/farm_villaronte.png")
-        if "tagpuan" in nl or "gapan" in nl:
-            return st.get_asset_path("popular_destinations/tagpuan_gapan.png")
-        if "marre" in nl:
-            return st.get_asset_path("popular_destinations/lake_farm_marre.png")
-        if "pavilion" in nl:
-            return st.get_asset_path("popular_destinations/pavillion_farm.png")
-        if "la casa prime" in nl:
-            return st.get_asset_path("popular_destinations/la_casa_prime.png")
-        if "museo" in nl or "bongabon" in nl:
-            return st.get_asset_path("popular_destinations/museo_bongabon.png")
-        if "arch" in nl:
-            return st.get_asset_path("popular_destinations/nueva_ecija_arch.png")
-        if "paperflower" in nl or "rohi" in nl:
-            return st.get_asset_path("popular_destinations/rohi_paperflower.png")
-        if "samgyupsal" in nl or "thorne" in nl:
-            return st.get_asset_path("popular_destinations/thornes_samgyupsal.png")
-        return ""
+        return get_settings().get_asset_path("images/minalungao.png")
 
 
 @dataclass

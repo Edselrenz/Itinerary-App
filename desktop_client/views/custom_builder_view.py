@@ -23,6 +23,7 @@ from desktop_client.components.itinerary_route_map import ItineraryRouteMap
 from desktop_client.components.stop_card import StopCard
 from desktop_client.config.settings import BUDGET_PRESETS, CANONICAL_CATEGORIES, ThemeColors
 from desktop_client.core.commute_guide import get_leg_commute_info
+from desktop_client.core.session import get_session_manager
 from desktop_client.models.itinerary import (
     Itinerary,
     ItineraryCreatePayload,
@@ -63,21 +64,24 @@ class CustomBuilderView(ft.Container):
         draft = self.itinerary_service.get_active_draft_itinerary() if is_draft_from_wizard else None
         source_itin = existing_itinerary or draft
 
+        user = get_session_manager().current_user
+        default_b = float(user.default_daily_budget) if (user and user.default_daily_budget) else 3000.0
+
         if source_itin:
             self.trip_title = source_itin.title or "My Custom Trip"
             self.destination = source_itin.destination or "Nueva Ecija"
-            self.start_date_str = source_itin.start_date or (today + timedelta(days=5)).strftime("%Y-%m-%d")
-            self.end_date_str = source_itin.end_date or (today + timedelta(days=6)).strftime("%Y-%m-%d")
-            self.daily_budget = source_itin.daily_budget or 2500.0
+            self.start_date_str = source_itin.start_date or today.strftime("%Y-%m-%d")
+            self.end_date_str = source_itin.end_date or (today + timedelta(days=2)).strftime("%Y-%m-%d")
+            self.daily_budget = source_itin.daily_budget or default_b
             self.preferences = list(source_itin.preferences) if source_itin.preferences else ["Nature & Parks", "Food Trip"]
             self.days: list[ItineraryDay] = list(source_itin.days) if source_itin.days else []
             self.active_view = "timeline"
         else:
             self.trip_title = "My Nueva Ecija Journey"
             self.destination = "Nueva Ecija"
-            self.start_date_str = (today + timedelta(days=5)).strftime("%Y-%m-%d")
-            self.end_date_str = (today + timedelta(days=6)).strftime("%Y-%m-%d")
-            self.daily_budget = 2500.0
+            self.start_date_str = today.strftime("%Y-%m-%d")
+            self.end_date_str = (today + timedelta(days=2)).strftime("%Y-%m-%d")
+            self.daily_budget = default_b
             self.preferences = ["Nature & Parks", "Food Trip"]
             self.days = []
             self.sync_days_with_date_range()
@@ -156,6 +160,16 @@ class CustomBuilderView(ft.Container):
                         items=[],
                     )
                 )
+
+        if len(self.days) > diff and new_days:
+            # Non-destructive date trimming: salvage stops from trailing days into the last retained day
+            last_day = new_days[-1]
+            for trimmed_day in self.days[diff:]:
+                for itm in trimmed_day.items:
+                    itm.day_id = last_day.id
+                    itm.sort_order = len(last_day.items) + 1
+                    last_day.items.append(itm)
+
         self.days = new_days
         self.active_day_index = min(getattr(self, "active_day_index", 0), max(0, len(self.days) - 1))
 
@@ -960,6 +974,7 @@ class CustomBuilderView(ft.Container):
             dense=True,
             prefix=ft.Text("₱ "),
         )
+        err_text = ft.Text("", size=11, color=ThemeColors.ERROR, visible=False)
 
         day_options = [ft.dropdown.Option(str(d.day_number), f"Day {d.day_number}") for d in self.days]
         day_dropdown = ft.Dropdown(
@@ -970,19 +985,33 @@ class CustomBuilderView(ft.Container):
         )
 
         def _save_edit(_):
+            c_min = None
+            c_max = None
+            try:
+                if cost_min_field.value.strip():
+                    c_min = float(cost_min_field.value.strip())
+                if cost_max_field.value.strip():
+                    c_max = float(cost_max_field.value.strip())
+            except ValueError:
+                err_text.value = "Costs must be valid numbers."
+                err_text.visible = True
+                dlg.update()
+                return
+
+            if c_min is not None and c_max is not None and c_min > c_max:
+                err_text.value = "Min Cost cannot exceed Max Cost."
+                err_text.visible = True
+                dlg.update()
+                return
+
             item.planned_time = time_field.value.strip()
             try:
                 item.duration_minutes = int(dur_field.value.strip())
             except ValueError:
                 pass
             item.notes = notes_field.value.strip()
-            try:
-                if cost_min_field.value.strip():
-                    item.estimated_cost_min = float(cost_min_field.value.strip())
-                if cost_max_field.value.strip():
-                    item.estimated_cost_max = float(cost_max_field.value.strip())
-            except ValueError:
-                pass
+            item.estimated_cost_min = c_min
+            item.estimated_cost_max = c_max
 
             target_day_num = int(day_dropdown.value)
             current_day_num = self.days[self.active_day_index].day_number
@@ -1001,7 +1030,7 @@ class CustomBuilderView(ft.Container):
         dlg = ft.AlertDialog(
             title=ft.Text(f"Edit Stop: {item.custom_title or (item.place.name if item.place else 'Stop')}"),
             content=ft.Column(
-                controls=[day_dropdown, time_field, dur_field, ft.Row(controls=[cost_min_field, cost_max_field], spacing=8), notes_field],
+                controls=[day_dropdown, time_field, dur_field, ft.Row(controls=[cost_min_field, cost_max_field], spacing=8), notes_field, err_text],
                 tight=True,
                 spacing=10,
             ),
@@ -1015,39 +1044,82 @@ class CustomBuilderView(ft.Container):
         self.page.update()
 
     def _open_custom_venue_dialog(self) -> None:
-        """Adds off-grid custom venue geofenced to Nueva Ecija (Lat 15.15-16.15, Lng 120.70-121.40)."""
+        """Adds off-grid custom venue geofenced to Nueva Ecija with optional coordinates."""
         name_field = ft.TextField(label="Venue Name *", dense=True)
-        muni_field = ft.TextField(label="Municipality / Location", dense=True)
-        lat_field = ft.TextField(label="Latitude (15.15 – 16.15)", dense=True, value="15.5800")
-        lng_field = ft.TextField(label="Longitude (120.70 – 121.40)", dense=True, value="121.0000")
-        err_text = ft.Text("", size=11, color=ThemeColors.ERROR)
+        muni_field = ft.TextField(label="Municipality / Location Address", dense=True)
+        cost_min_field = ft.TextField(label="Min Cost (₱)", prefix=ft.Text("₱ "), dense=True)
+        cost_max_field = ft.TextField(label="Max Cost (₱)", prefix=ft.Text("₱ "), dense=True)
+        time_field = ft.TextField(label="Planned Time", value=self._calc_next_time(self.days[self.active_day_index]), dense=True)
+        dur_field = ft.TextField(label="Duration (mins)", value="90", dense=True)
+        notes_field = ft.TextField(label="Notes / Special Instructions", multiline=True, dense=True)
+        lat_field = ft.TextField(label="Latitude (optional)", hint_text="e.g. 15.5800", dense=True)
+        lng_field = ft.TextField(label="Longitude (optional)", hint_text="e.g. 121.0000", dense=True)
+        err_text = ft.Text("", size=11, color=ThemeColors.ERROR, visible=False)
 
         def _add_venue(_):
             name = name_field.value.strip()
             if not name:
                 err_text.value = "Venue Name is required."
-                dlg.update()
-                return
-            try:
-                lat = float(lat_field.value.strip())
-                lng = float(lng_field.value.strip())
-                if not (15.10 <= lat <= 16.25 and 120.65 <= lng <= 121.50):
-                    err_text.value = "Coordinates outside Nueva Ecija (Lat 15.15–16.15, Lng 120.70–121.40)."
-                    dlg.update()
-                    return
-            except ValueError:
-                err_text.value = "Please enter valid numeric coordinates."
+                err_text.visible = True
                 dlg.update()
                 return
 
+            c_min = None
+            c_max = None
+            try:
+                if cost_min_field.value.strip():
+                    c_min = float(cost_min_field.value.strip())
+                if cost_max_field.value.strip():
+                    c_max = float(cost_max_field.value.strip())
+            except ValueError:
+                err_text.value = "Cost values must be numbers."
+                err_text.visible = True
+                dlg.update()
+                return
+
+            if c_min is not None and c_max is not None and c_min > c_max:
+                err_text.value = "Min Cost cannot exceed Max Cost."
+                err_text.visible = True
+                dlg.update()
+                return
+
+            lat = None
+            lng = None
+            if lat_field.value.strip() or lng_field.value.strip():
+                try:
+                    lat = float(lat_field.value.strip())
+                    lng = float(lng_field.value.strip())
+                    if not (15.10 <= lat <= 16.25 and 120.65 <= lng <= 121.50):
+                        err_text.value = "Coordinates outside Nueva Ecija (Lat 15.10–16.25, Lng 120.65–121.50)."
+                        err_text.visible = True
+                        dlg.update()
+                        return
+                except ValueError:
+                    err_text.value = "Please enter valid numeric coordinates."
+                    err_text.visible = True
+                    dlg.update()
+                    return
+
+            try:
+                dur = int(dur_field.value.strip())
+            except ValueError:
+                dur = 90
+
             active_day = self.days[self.active_day_index]
+            muni = muni_field.value.strip()
+            notes = notes_field.value.strip()
+            eff_notes = notes or (f"Custom venue in {muni}" if muni else None)
+
             new_item = ItineraryItem(
                 id=str(uuid.uuid4()),
                 day_id=active_day.id,
                 custom_title=name,
                 sort_order=len(active_day.items) + 1,
-                planned_time=self._calc_next_time(active_day),
-                duration_minutes=90,
+                planned_time=time_field.value.strip() or self._calc_next_time(active_day),
+                duration_minutes=dur,
+                estimated_cost_min=c_min,
+                estimated_cost_max=c_max,
+                notes=eff_notes,
                 custom_lat=lat,
                 custom_lng=lng,
             )
@@ -1060,7 +1132,20 @@ class CustomBuilderView(ft.Container):
 
         dlg = ft.AlertDialog(
             title=ft.Text("Add Off-Grid Custom Venue"),
-            content=ft.Column(controls=[name_field, muni_field, ft.Row(controls=[lat_field, lng_field], spacing=8), err_text], tight=True, spacing=8),
+            content=ft.Column(
+                controls=[
+                    name_field,
+                    muni_field,
+                    ft.Row(controls=[cost_min_field, cost_max_field], spacing=8),
+                    ft.Row(controls=[time_field, dur_field], spacing=8),
+                    notes_field,
+                    ft.Row(controls=[lat_field, lng_field], spacing=8),
+                    err_text,
+                ],
+                tight=True,
+                spacing=8,
+                width=450,
+            ),
             actions=[
                 ft.TextButton("Cancel", on_click=lambda _: setattr(dlg, "open", False) or self.page.update()),
                 ft.FilledButton("Add Venue", on_click=_add_venue),

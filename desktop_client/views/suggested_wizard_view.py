@@ -50,6 +50,8 @@ class SuggestedWizardView(ft.Container):
         on_navigate: Optional[Callable[..., None]] = None,
         initial_destination: Optional[str] = None,
         anchor_place_id: Optional[str] = None,
+        restore_draft: bool = False,
+        draft_itinerary: Optional[Itinerary] = None,
     ):
         super().__init__()
         self.on_navigate = on_navigate
@@ -79,18 +81,17 @@ class SuggestedWizardView(ft.Container):
         today = date.today()
         self.title_val = "Suggested Nueva Ecija Itinerary"
         self.destination_val = dest
-        self.start_date_val = (today + timedelta(days=7)).strftime("%Y-%m-%d")
-        self.end_date_val = (today + timedelta(days=9)).strftime("%Y-%m-%d")
+        self.start_date_val = today.strftime("%Y-%m-%d")
+        self.end_date_val = (today + timedelta(days=2)).strftime("%Y-%m-%d")
         user = get_session_manager().current_user
-        self.budget_val = float(user.default_daily_budget) if (user and user.default_daily_budget) else 2500.0
+        self.budget_val = float(user.default_daily_budget) if (user and user.default_daily_budget) else 3000.0
         self.pacing_val = "moderate"
-        self.travel_mode_val = "drive"  # 'drive', 'motorcycle', 'transit'
+        self.travel_mode_val = "DRIVE"  # 'DRIVE', 'TWO_WHEELER', 'WALK'
         self.min_rating_val = 0.0
-        self.selected_categories: set[str] = {
-            "nature_park",
-            "tourist_attraction",
-            "restaurant",
-            "museum_cultural",
+        self.selected_preferences: set[str] = {
+            "Nature & Parks",
+            "Food Trip",
+            "Culture & History",
         }
 
         # Execution & Result State
@@ -102,10 +103,11 @@ class SuggestedWizardView(ft.Container):
         self.is_assumptions_expanded = False
 
         # Restore draft if returning from map view
-        existing_draft = self.itinerary_service.get_active_draft_itinerary()
-        if existing_draft and existing_draft.days and not anchor_place_id:
-            self.generated_itinerary = existing_draft
-            self.view_mode = "itinerary"
+        if (restore_draft or draft_itinerary) and not anchor_place_id:
+            existing_draft = draft_itinerary or self.itinerary_service.get_active_draft_itinerary()
+            if existing_draft and existing_draft.days:
+                self.generated_itinerary = existing_draft
+                self.view_mode = "itinerary"
 
         # Nearby Amenities State
         self.nearby_category = "restaurant"
@@ -187,9 +189,9 @@ class SuggestedWizardView(ft.Container):
 
         # Travel Mode Selector (Drive, Motorcycle, Transit)
         modes = [
-            ("drive", "Drive / Private Car", ft.Icons.DIRECTIONS_CAR),
-            ("motorcycle", "Motorcycle / Tricycle", ft.Icons.TWO_WHEELER),
-            ("transit", "Commute / Bus / Jeep", ft.Icons.DIRECTIONS_BUS),
+            ("DRIVE", "Drive / Private Car", ft.Icons.DIRECTIONS_CAR),
+            ("TWO_WHEELER", "Motorcycle / Tricycle", ft.Icons.TWO_WHEELER),
+            ("WALK", "Walking / Transit", ft.Icons.DIRECTIONS_WALK),
         ]
         mode_cards = []
         for m_key, m_label, m_icon in modes:
@@ -219,7 +221,16 @@ class SuggestedWizardView(ft.Container):
 
         travel_mode_row = ft.Row(controls=mode_cards, spacing=10)
 
-        # Budget Presets Cards
+        # Budget Target: Numeric input + Presets
+        budget_field = ft.TextField(
+            label="Daily Budget (₱)",
+            value=str(int(self.budget_val)),
+            prefix=ft.Text("₱ "),
+            width=180,
+            border_radius=10,
+            dense=True,
+            on_change=lambda e: self._on_budget_input(e.control.value),
+        )
         budget_cards: list[ft.Control] = []
         for b in BUDGET_PRESETS:
             is_sel = abs(self.budget_val - b["amount"]) < 1.0
@@ -230,22 +241,29 @@ class SuggestedWizardView(ft.Container):
                 ft.Container(
                     content=ft.Column(
                         controls=[
-                            ft.Text(b["label"].split(" (")[0], size=13, weight=ft.FontWeight.BOLD, color=ThemeColors.TEXT_MAIN_LIGHT),
-                            ft.Text(f"₱{b['amount']:,.0f} / day", size=12, weight=ft.FontWeight.W_700, color=ThemeColors.EMERALD_PRIMARY),
+                            ft.Text(b["label"].split(" (")[0], size=12, weight=ft.FontWeight.BOLD, color=ThemeColors.TEXT_MAIN_LIGHT),
+                            ft.Text(f"₱{b['amount']:,.0f} / day", size=11, weight=ft.FontWeight.W_700, color=ThemeColors.EMERALD_PRIMARY),
                         ],
                         spacing=2,
                     ),
                     bgcolor=bg_col,
                     border=ft.Border.all(2 if is_sel else 1, border_col),
                     border_radius=12,
-                    padding=14,
+                    padding=10,
                     expand=True,
                     ink=True,
                     on_click=lambda _, amt=b["amount"]: self._set_budget(amt),
                 )
             )
 
-        budget_row = ft.Row(controls=budget_cards, spacing=12)
+        budget_row = ft.Row(
+            controls=[
+                budget_field,
+                ft.Row(controls=budget_cards, spacing=8, expand=True),
+            ],
+            spacing=12,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        )
 
         # Pacing Options
         pacing_cards: list[ft.Control] = []
@@ -302,28 +320,43 @@ class SuggestedWizardView(ft.Container):
             )
         rating_row = ft.Row(controls=rating_chips, spacing=8)
 
-        # Category Preferences Chips (Multi-Select)
-        category_chips: list[ft.Control] = []
-        for cat in CANONICAL_CATEGORIES:
-            is_active = cat["key"] in self.selected_categories
+        # 5 Figma Traveler Preference Pills (Multi-Select)
+        figma_prefs = [
+            ("Nature & Parks", ft.Icons.LANDSCAPE),
+            ("Food Trip", ft.Icons.RESTAURANT),
+            ("Culture & History", ft.Icons.MUSEUM),
+            ("Shopping", ft.Icons.SHOPPING_BAG),
+            ("Resort", ft.Icons.POOL),
+        ]
+        preference_chips: list[ft.Control] = []
+        for pref_label, pref_icon in figma_prefs:
+            is_active = pref_label in self.selected_preferences
             bg = ThemeColors.PRIMARY_BLUE if is_active else ThemeColors.SURFACE_LIGHT
             text_col = ft.Colors.WHITE if is_active else ThemeColors.TEXT_MAIN_LIGHT
+            icon_col = ft.Colors.WHITE if is_active else ThemeColors.PRIMARY_BLUE
             border_col = ThemeColors.PRIMARY_BLUE if is_active else ThemeColors.BORDER_LIGHT
 
-            category_chips.append(
+            preference_chips.append(
                 ft.Container(
-                    content=ft.Text(cat["label"], size=11, weight=ft.FontWeight.W_600 if is_active else ft.FontWeight.NORMAL, color=text_col),
+                    content=ft.Row(
+                        controls=[
+                            ft.Icon(pref_icon, size=14, color=icon_col),
+                            ft.Text(pref_label, size=11, weight=ft.FontWeight.W_600 if is_active else ft.FontWeight.NORMAL, color=text_col),
+                        ],
+                        spacing=6,
+                        tight=True,
+                    ),
                     bgcolor=bg,
                     border=ft.Border.all(1, border_col),
                     border_radius=16,
-                    padding=ft.Padding.symmetric(horizontal=12, vertical=6),
+                    padding=ft.Padding.symmetric(horizontal=14, vertical=8),
                     ink=True,
-                    on_click=lambda _, k=cat["key"]: self._toggle_category(k),
+                    on_click=lambda _, p=pref_label: self._toggle_preference(p),
                 )
             )
 
-        categories_wrap = ft.Row(
-            controls=category_chips,
+        preferences_wrap = ft.Row(
+            controls=preference_chips,
             wrap=True,
             spacing=8,
             run_spacing=8,
@@ -380,7 +413,7 @@ class SuggestedWizardView(ft.Container):
                     rating_row,
                     ft.Container(height=6),
                     ft.Text("Step 6: Traveler Preferences & Interests", size=14, weight=ft.FontWeight.BOLD),
-                    categories_wrap,
+                    preferences_wrap,
                     ft.Container(height=14),
                     error_container,
                     ft.Row(controls=[submit_btn], alignment=ft.MainAxisAlignment.CENTER),
@@ -604,10 +637,11 @@ class SuggestedWizardView(ft.Container):
             is_active = idx == self.active_day_index
             bg = ThemeColors.PRIMARY_BLUE if is_active else ThemeColors.SURFACE_LIGHT
             text_col = ft.Colors.WHITE if is_active else ThemeColors.TEXT_MAIN_LIGHT
+            muni_suffix = f" • {day.title.split(': ')[1]}" if (day.title and ": " in day.title) else f" ({len(day.items)} stops)"
             day_buttons.append(
                 ft.Container(
                     content=ft.Text(
-                        f"Day {day.day_number} ({len(day.items)} stops)",
+                        f"Day {day.day_number}{muni_suffix}",
                         size=12,
                         weight=ft.FontWeight.W_700 if is_active else ft.FontWeight.NORMAL,
                         color=text_col,
@@ -960,19 +994,27 @@ class SuggestedWizardView(ft.Container):
         self._build_content()
         self._safe_update()
 
+    def _on_budget_input(self, val: str) -> None:
+        try:
+            self.budget_val = float(str(val).replace(",", "").strip())
+        except Exception:
+            pass
+
     def _set_pacing(self, key: str) -> None:
         self.pacing_val = key
         self._build_content()
         self._safe_update()
 
-    def _toggle_category(self, key: str) -> None:
-        if key in self.selected_categories:
-            if len(self.selected_categories) > 1:
-                self.selected_categories.remove(key)
+    def _toggle_preference(self, pref: str) -> None:
+        if pref in self.selected_preferences:
+            self.selected_preferences.remove(pref)
         else:
-            self.selected_categories.add(key)
+            self.selected_preferences.add(pref)
         self._build_content()
         self._safe_update()
+
+    def _toggle_category(self, key: str) -> None:
+        self._toggle_preference(key)
 
     def _select_day(self, day_idx: int) -> None:
         self.active_day_index = day_idx
@@ -1021,7 +1063,7 @@ class SuggestedWizardView(ft.Container):
                     start_date=self.start_date_val,
                     end_date=self.end_date_val,
                     daily_budget=self.budget_val,
-                    preferences=list(self.selected_categories),
+                    preferences=list(self.selected_preferences),
                     pacing=self.pacing_val,
                     travel_mode=self.travel_mode_val.upper(),
                     save_immediately=False,

@@ -178,15 +178,33 @@ class Settings:
         self.storage_dir.mkdir(parents=True, exist_ok=True)
 
     def get_asset_path(self, rel_path: str) -> str:
-        """Returns string path to bundled asset, fallback to project asset or relative path."""
-        clean_rel = rel_path.lstrip("/\\")
-        p = self.assets_dir / clean_rel
-        if p.is_file():
-            return str(p)
-        proj_p = Path(__file__).resolve().parent.parent.parent / "Project" / "src" / "assets" / clean_rel
-        if proj_p.is_file():
-            return str(proj_p)
-        return str(p)
+        """Resolves bundled asset path across assets/, assets/images/, and assets/images/popular_destinations/."""
+        if not rel_path:
+            return ""
+        clean_rel = str(rel_path).strip()
+        if clean_rel.startswith(("http://", "https://", "data:image/")):
+            return clean_rel
+        if os.path.isabs(clean_rel) and os.path.isfile(clean_rel):
+            return clean_rel
+
+        clean_rel = clean_rel.lstrip("/\\")
+        if clean_rel.startswith("assets/"):
+            clean_rel = clean_rel[len("assets/"):].lstrip("/\\")
+
+        fname = Path(clean_rel).name
+        candidates = [
+            self.assets_dir / clean_rel,
+            self.assets_dir / "images" / clean_rel,
+            self.assets_dir / "images" / fname,
+            self.assets_dir / "images" / "popular_destinations" / fname,
+            self.assets_dir / "popular_destinations" / fname,
+            Path(__file__).resolve().parent.parent.parent / "Project" / "src" / "assets" / clean_rel,
+            Path(__file__).resolve().parent.parent.parent / "Project" / "src" / "assets" / "images" / fname,
+        ]
+        for cand in candidates:
+            if cand.is_file():
+                return str(cand)
+        return str(self.assets_dir / "images" / fname)
 
 
 _settings_instance: Settings | None = None
@@ -251,51 +269,47 @@ class ThemePalette:
 
 
 def resolve_place_image(place_name: str, image_url: str | None = None) -> str | None:
-    """Resolves local asset photography path for places to prevent generic icon placeholders."""
+    """Resolves local high-resolution photography path for places across assets/images/ and popular_destinations/."""
     settings = get_settings()
     if image_url:
         clean_url = str(image_url).strip()
-        if clean_url.startswith(("assets/", "/assets/", "popular_destinations/")):
-            rel = clean_url.replace("assets/images/", "popular_destinations/").replace("assets/", "")
-            p = settings.assets_dir / rel
-            if p.is_file():
-                return str(p)
-            p2 = settings.assets_dir / "popular_destinations" / Path(clean_url).name
-            if p2.is_file():
-                return str(p2)
-            proj_p = settings.base_dir.parent / "Project" / "src" / clean_url.lstrip("/")
-            if proj_p.is_file():
-                return str(proj_p)
-        elif clean_url.startswith("http://") or clean_url.startswith("https://"):
+        if clean_url.startswith(("http://", "https://", "data:image/")):
             return clean_url
+        resolved = settings.get_asset_path(clean_url)
+        if resolved and os.path.isfile(resolved):
+            return resolved
 
     name_lower = (place_name or "").lower().strip()
     mapping = {
-        "minalungao": "popular_destinations/minalungao.png",
-        "pantabangan lake": "popular_destinations/pantabangan_lake.png",
-        "pantabangan": "popular_destinations/pantabangan_lake.png",
-        "highland bali": "popular_destinations/highland_bali.png",
-        "george point": "popular_destinations/george_point.png",
-        "casa batik": "popular_destinations/casa_batik.png",
-        "tagpuan": "popular_destinations/tagpuan_gapan.png",
-        "lumang gapan": "popular_destinations/tagpuan_gapan.png",
-        "rohi": "popular_destinations/rohi_paperflower.png",
-        "paperflower": "popular_destinations/rohi_paperflower.png",
-        "museo de bongabon": "popular_destinations/museo_bongabon.png",
-        "bongabon": "popular_destinations/museo_bongabon.png",
-        "thornes": "popular_destinations/thornes_samgyupsal.png",
-        "samgyupsal": "popular_destinations/thornes_samgyupsal.png",
-        "pavilion": "popular_destinations/pavillion_farm.png",
-        "villaronte": "popular_destinations/farm_villaronte.png",
-        "carabao": "popular_destinations/farm_villaronte.png",
-        "la casa prime": "popular_destinations/la_casa_prime.png",
-        "lake farm": "popular_destinations/lake_farm_marre.png",
+        "minalungao": "images/minalungao.png",
+        "pantabangan lake": "images/pantabangan_lake.png",
+        "pantabangan": "images/pantabangan_lake.png",
+        "highland bali": "images/highland_bali.png",
+        "george point": "images/george_point.png",
+        "casa batik": "images/casa_batik.png",
+        "tagpuan": "images/tagpuan_gapan.png",
+        "lumang gapan": "images/tagpuan_gapan.png",
+        "gapan": "images/tagpuan_gapan.png",
+        "rohi": "images/rohi_paperflower.png",
+        "paperflower": "images/rohi_paperflower.png",
+        "museo de bongabon": "images/museo_bongabon.png",
+        "bongabon": "images/museo_bongabon.png",
+        "thornes": "images/thornes_samgyupsal.png",
+        "samgyupsal": "images/thornes_samgyupsal.png",
+        "pavilion": "images/pavillion_farm.png",
+        "villaronte": "images/farm_villaronte.png",
+        "carabao": "images/farm_villaronte.png",
+        "la casa prime": "images/la_casa_prime.png",
+        "lake farm": "images/lake_farm_marre.png",
+        "marre": "images/lake_farm_marre.png",
+        "nueva ecija": "images/nueva_ecija_arch.png",
     }
     for kw, rel_path in mapping.items():
         if kw in name_lower:
-            p = settings.assets_dir / rel_path
-            if p.is_file():
-                return str(p)
+            p = settings.get_asset_path(rel_path)
+            if p and os.path.isfile(p):
+                return p
 
-    return None
+    default_img = settings.get_asset_path("images/minalungao.png")
+    return default_img if os.path.isfile(default_img) else None
 

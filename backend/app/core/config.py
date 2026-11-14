@@ -21,12 +21,20 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int = 7
     cors_origins: list[str] = [
         "http://localhost:8100",
+        "http://127.0.0.1:8100",
         "http://localhost:4200",
-        "capacitor://localhost",
+        "http://127.0.0.1:4200",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
         "http://localhost",
+        "http://127.0.0.1",
+        "capacitor://localhost",
         "https://edselrenz.github.io",
+        "https://ne-itinerary-api.edselrenz0.workers.dev",
     ]
-    cors_origin_regex: str | None = r"^https://edselrenz\.github\.io$"
+    cors_origin_regex: str | None = (
+        r"^(https://.*\.workers\.dev|https://.*\.ngrok-free\.dev|https://.*\.trycloudflare\.com|https://edselrenz\.github\.io|http://localhost:\d+|http://127\.0\.0\.1:\d+)$"
+    )
     google_oauth_client_id: str = ""
     enable_apple_auth: bool = False
     default_dest_radius_km: float = 25.0

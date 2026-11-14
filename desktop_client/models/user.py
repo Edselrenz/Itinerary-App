@@ -233,6 +233,18 @@ class UserUpdatePayload:
             payload["last_name"] = last.strip()
         if self.username is not None and len(self.username.strip()) >= 3:
             payload["username"] = self.username.strip()
+        if self.middle_initial is not None:
+            payload["middle_initial"] = self.middle_initial.strip() if self.middle_initial else None
+        if self.phone_number is not None:
+            payload["phone_number"] = self.phone_number.strip() if self.phone_number else None
+        if self.birthday is not None:
+            payload["birthday"] = self.birthday.strip() if self.birthday else None
+        if self.gender is not None:
+            payload["gender"] = self.gender.strip() if self.gender else None
+        if self.avatar_url is not None:
+            payload["avatar_url"] = self.avatar_url
+        if self.default_daily_budget is not None:
+            payload["default_daily_budget"] = self.default_daily_budget
         if self.current_password and self.new_password:
             payload["current_password"] = self.current_password
             payload["new_password"] = self.new_password

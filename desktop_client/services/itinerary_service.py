@@ -116,6 +116,22 @@ class ItineraryService:
         is_targeting_muni = bool(target_dest and "nueva ecija" not in target_dest and "province" not in target_dest)
 
         prefs = [p.lower() for p in (request.preferences or [])]
+        PREF_MAP = {
+            "nature": {"nature_park", "tourist_attraction"},
+            "nature & parks": {"nature_park", "tourist_attraction"},
+            "food": {"restaurant", "cafe"},
+            "food trip": {"restaurant", "cafe"},
+            "culture": {"museum_cultural", "church_religious"},
+            "culture & history": {"museum_cultural", "church_religious"},
+            "shopping": {"shopping_market", "convenience_store"},
+            "resort": {"resort_swimming", "hotel_accommodation"},
+        }
+        pref_cats: set[str] = set()
+        for pr in prefs:
+            for k, cats in PREF_MAP.items():
+                if k in pr:
+                    pref_cats.update(cats)
+
         daily_budget = request.daily_budget if request.daily_budget and request.daily_budget > 0 else None
 
         # Filter by destination municipality if specific
@@ -124,6 +140,13 @@ class ItineraryService:
             muni_matches = [p for p in curated_pool if target_dest in str(p.get("municipality_name", "")).lower()]
             if muni_matches:
                 matched_pool = muni_matches
+
+        # Filter by min_rating if requested
+        min_r = float(request.min_rating or 0.0)
+        if min_r > 0:
+            filtered_by_r = [p for p in matched_pool if float(p.get("rating") or 4.5) >= min_r]
+            if filtered_by_r:
+                matched_pool = filtered_by_r
 
         # Score candidates
         def score_place(p: dict[str, Any]) -> float:
@@ -135,7 +158,10 @@ class ItineraryService:
             if is_targeting_muni and target_dest in p_muni:
                 score += 15.0
 
-            if prefs:
+            if pref_cats:
+                if p_cat in pref_cats:
+                    score += 25.0
+            elif prefs:
                 for pr in prefs:
                     if pr in p_cat:
                         score += 25.0
@@ -158,12 +184,23 @@ class ItineraryService:
         used_names: set[str] = set()
         used_coords: list[tuple[float, float]] = []
 
+        def _clean_name(name: str) -> str:
+            n = (name or "").lower()
+            for w in ("viewdeck", "viewpoint", "resort", "park", "hotel", "cafe", "restaurant", "farm", "lake", "de", "the"):
+                n = n.replace(w, "")
+            return "".join(c for c in n if c.isalnum())
+
+        def is_mountain_hike(p: dict[str, Any]) -> bool:
+            nm = str(p.get("name", "")).lower()
+            tags = " ".join(str(t).lower() for t in p.get("tags", []))
+            return ("mt." in nm or "mount " in nm or "hike" in nm or "trail" in nm or "peak" in nm or "mountain" in tags)
+
         def is_dup(p: dict[str, Any]) -> bool:
             p_id = str(p.get("id", ""))
             if p_id in used_ids:
                 return True
-            norm_name = str(p.get("name", "")).lower().replace(" ", "")
-            if len(norm_name) >= 4 and norm_name in used_names:
+            c_name = _clean_name(str(p.get("name", "")))
+            if len(c_name) >= 4 and c_name in used_names:
                 return True
             lat = float(p.get("latitude") or 0.0)
             lng = float(p.get("longitude") or 0.0)
@@ -174,9 +211,9 @@ class ItineraryService:
 
         def mark_used(p: dict[str, Any]):
             used_ids.add(str(p.get("id", "")))
-            norm_name = str(p.get("name", "")).lower().replace(" ", "")
-            if len(norm_name) >= 4:
-                used_names.add(norm_name)
+            c_name = _clean_name(str(p.get("name", "")))
+            if len(c_name) >= 4:
+                used_names.add(c_name)
             lat = float(p.get("latitude") or 0.0)
             lng = float(p.get("longitude") or 0.0)
             if lat != 0.0 and lng != 0.0:
@@ -194,6 +231,14 @@ class ItineraryService:
             day_id = str(uuid.uuid4())
 
             day_places: list[dict[str, Any]] = []
+
+            # Lock anchor place as Stop 1 of Day 1 (UC-S1)
+            if d_idx == 0 and request.anchor_place_id:
+                anchor_match = next((p for p in curated_pool if str(p.get("id")) == str(request.anchor_place_id)), None)
+                if anchor_match:
+                    day_places.append(anchor_match)
+                    mark_used(anchor_match)
+
             candidates = [p for p in matched_pool if not is_dup(p)]
             if is_single_day:
                 candidates = [p for p in candidates if not is_lodging(str(p.get("category", "")).lower())]
@@ -203,6 +248,8 @@ class ItineraryService:
                 if is_single_day:
                     extra = [p for p in extra if not is_lodging(str(p.get("category", "")).lower())]
                 candidates.extend(extra)
+
+            hike_count = sum(1 for dp in day_places if is_mountain_hike(dp))
 
             while len(day_places) < target_stops and candidates:
                 slot = len(day_places)
@@ -216,8 +263,23 @@ class ItineraryService:
                         mark_used(selected)
                         continue
 
-                selected = candidates.pop(0)
+                # Max 1 mountain hike per day
+                selected = None
+                for idx, c in enumerate(candidates):
+                    if is_mountain_hike(c) and hike_count >= 1:
+                        continue
+                    selected = candidates.pop(idx)
+                    break
+
+                if selected is None:
+                    if candidates:
+                        selected = candidates.pop(0)
+                    else:
+                        break
+
                 if not any(dp.get("id") == selected.get("id") for dp in day_places):
+                    if is_mountain_hike(selected):
+                        hike_count += 1
                     day_places.append(selected)
                     mark_used(selected)
 
@@ -228,12 +290,29 @@ class ItineraryService:
             day_places.sort(key=sort_key)
 
             items: list[ItineraryItem] = []
-            time_slots = ["09:30 AM - 11:30 AM", "12:00 PM - 02:00 PM", "03:00 PM - 05:00 PM", "06:00 PM - 08:30 PM"]
+            cur_time = datetime.strptime("09:30 AM", "%I:%M %p")
+            primary_muni = None
 
             for s_idx, p_data in enumerate(day_places):
                 item_id = str(uuid.uuid4())
                 place_obj = Place.from_dict(p_data)
-                planned_time = p_data.get("default_time") or time_slots[min(s_idx, len(time_slots) - 1)]
+                if not primary_muni and p_data.get("municipality_name"):
+                    primary_muni = p_data.get("municipality_name")
+
+                dur_mins = int(p_data.get("default_duration_minutes") or (90 if is_dining(str(p_data.get("category", "")).lower()) else 120))
+                end_time = cur_time + timedelta(minutes=dur_mins)
+                planned_time = f"{cur_time.strftime('%I:%M %p')} - {end_time.strftime('%I:%M %p')}"
+
+                dist_m = None
+                dur_s = None
+                if s_idx > 0:
+                    prev_p = day_places[s_idx - 1]
+                    p_lat, p_lng = float(prev_p.get("latitude") or 0.0), float(prev_p.get("longitude") or 0.0)
+                    c_lat, c_lng = float(p_data.get("latitude") or 0.0), float(p_data.get("longitude") or 0.0)
+                    if p_lat and p_lng and c_lat and c_lng:
+                        raw_dist = haversine_distance_meters(p_lat, p_lng, c_lat, c_lng)
+                        dist_m = int(raw_dist * 1.28)
+                        dur_s = max(15 * 60, min(120 * 60, int(dist_m / 11.11)))
 
                 items.append(
                     ItineraryItem(
@@ -243,13 +322,18 @@ class ItineraryService:
                         custom_title=p_data.get("name"),
                         sort_order=s_idx + 1,
                         planned_time=planned_time,
-                        duration_minutes=p_data.get("default_duration_minutes", 120),
+                        duration_minutes=dur_mins,
                         notes=f"Recommended based on local popularity and cluster proximity in {p_data.get('municipality_name', 'Nueva Ecija')}.",
                         estimated_cost_min=p_data.get("estimated_cost_min"),
                         estimated_cost_max=p_data.get("estimated_cost_max"),
                         place=place_obj,
+                        travel_distance_meters=dist_m,
+                        travel_duration_seconds=dur_s,
                     )
                 )
+
+                transit_mins = int((dur_s or (30 * 60)) / 60)
+                cur_time = end_time + timedelta(minutes=transit_mins)
 
             # Calculate day polylines and leg metrics
             coords: list[tuple[float, float]] = [
@@ -259,13 +343,14 @@ class ItineraryService:
             ]
             day_polyline = encode_polyline(coords) if len(coords) >= 2 else None
 
+            muni_title = primary_muni or (request.destination or "Nueva Ecija")
             days.append(
                 ItineraryDay(
                     id=day_id,
                     itinerary_id=itinerary_id,
                     day_number=d_idx + 1,
                     travel_date=date_str,
-                    title=f"Day {d_idx + 1}",
+                    title=f"Day {d_idx + 1}: {muni_title}",
                     items=items,
                     day_overview_polyline=day_polyline,
                 )
