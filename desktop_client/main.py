@@ -94,9 +94,15 @@ def main(page: ft.Page) -> None:
         nonlocal current_route, selected_trip
 
         # Pending Changes Guard: check if active view has unsaved modifications
-        if not force and content_area and content_area.content and route != current_route:
+        if (
+            not force
+            and content_area
+            and content_area.content
+            and route != current_route
+        ):
             has_unsaved = getattr(content_area.content, "has_unsaved_changes", None)
             if callable(has_unsaved) and has_unsaved():
+
                 def _confirm_discard(_):
                     dlg.open = False
                     page.update()
@@ -109,10 +115,17 @@ def main(page: ft.Page) -> None:
                     page.update()
 
                 dlg = ft.AlertDialog(
-                    title=ft.Row([
-                        ft.Icon(ft.Icons.WARNING_ROUNDED, color=ThemeColors.WARNING),
-                        ft.Text("Discard Unsaved Changes?", weight=ft.FontWeight.BOLD),
-                    ], spacing=10),
+                    title=ft.Row(
+                        [
+                            ft.Icon(
+                                ft.Icons.WARNING_ROUNDED, color=ThemeColors.WARNING
+                            ),
+                            ft.Text(
+                                "Discard Unsaved Changes?", weight=ft.FontWeight.BOLD
+                            ),
+                        ],
+                        spacing=10,
+                    ),
                     content=ft.Text(
                         "You have unsaved changes in your itinerary. If you leave now, your changes will be discarded.",
                         size=13,
@@ -137,12 +150,16 @@ def main(page: ft.Page) -> None:
             selected_trip = trip_data
 
         # Full-screen standalone views (no sidebar shell)
-        if route in ("/welcome", "/guest", "/login", "/signup") or route.startswith("/welcome"):
+        if route in ("/welcome", "/guest", "/login", "/signup") or route.startswith(
+            "/welcome"
+        ):
             if route == "/guest":
                 page.controls = [GuestView(on_navigate=navigate_to)]
             elif route.startswith("/welcome"):
                 is_logout = "logout=1" in route or "loggedOut=true" in route
-                page.controls = [WelcomeView(on_navigate=navigate_to, is_after_logout=is_logout)]
+                page.controls = [
+                    WelcomeView(on_navigate=navigate_to, is_after_logout=is_logout)
+                ]
             elif route == "/login":
                 page.controls = [LoginView(on_navigate=navigate_to)]
             elif route == "/signup":
@@ -173,15 +190,23 @@ def main(page: ft.Page) -> None:
             header.set_header_context("Home", "Where are you going next?")
             content_area.content = DashboardView(on_navigate=navigate_to)
         elif route == "/places":
-            header.set_header_context("Map & Discover", "Explore 2,670+ destinations across 32 LGUs")
+            header.set_header_context(
+                "Map & Discover", "Explore 2,670+ destinations across 32 LGUs"
+            )
             content_area.content = PlacesView(on_navigate=navigate_to)
         elif route == "/suggested":
-            header.set_header_context("Suggested Itinerary Wizard", "Automated Proximity Clustering")
+            header.set_header_context(
+                "Suggested Itinerary Wizard", "Automated Proximity Clustering"
+            )
             if "/suggested" not in cached_views:
-                cached_views["/suggested"] = SuggestedWizardView(on_navigate=navigate_to)
+                cached_views["/suggested"] = SuggestedWizardView(
+                    on_navigate=navigate_to
+                )
             content_area.content = cached_views["/suggested"]
         elif route == "/builder":
-            header.set_header_context("Custom Itinerary Builder", "Interactive Stop-by-Stop Scheduling")
+            header.set_header_context(
+                "Custom Itinerary Builder", "Interactive Stop-by-Stop Scheduling"
+            )
             if pre_added_place or "/builder" not in cached_views:
                 cached_views["/builder"] = CustomBuilderView(
                     on_navigate=navigate_to,
@@ -189,7 +214,9 @@ def main(page: ft.Page) -> None:
                 )
             content_area.content = cached_views["/builder"]
         elif route == "/trips":
-            header.set_header_context("Saved Itineraries", "Your Planned Trips in Nueva Ecija")
+            header.set_header_context(
+                "Saved Itineraries", "Your Planned Trips in Nueva Ecija"
+            )
             content_area.content = SavedTripsView(
                 on_navigate=navigate_to,
                 on_select_trip=lambda it: navigate_to(f"/trips/{it.id}", it),
@@ -207,7 +234,9 @@ def main(page: ft.Page) -> None:
                 guest_storage = get_guest_storage()
                 trip_obj = guest_storage.get_itinerary(trip_id)
             if trip_obj:
-                header.set_header_context(f"Trip: {trip_obj.title}", "Chronological Timeline & Export")
+                header.set_header_context(
+                    f"Trip: {trip_obj.title}", "Chronological Timeline & Export"
+                )
                 content_area.content = TripDetailView(
                     itinerary=trip_obj,
                     on_back=lambda: navigate_to("/trips"),
