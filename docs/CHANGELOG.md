@@ -5,6 +5,63 @@ All notable changes to the Nueva Ecija Travel Itinerary project are documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.51.1] - 2026-11-14
+### Fixed
+- **`SuggestedWizardView` Constructor Signature Remediation (`51.7`)**:
+  - Resolved `TypeError: SuggestedWizardView.__init__() got an unexpected keyword argument 'initial_destination'` encountered when navigating to `/suggested` from the Home dashboard or place detail modal.
+  - Updated `SuggestedWizardView.__init__` in `desktop_client/views/suggested_wizard_view.py` to accept `initial_destination: Optional[str] = None` and `anchor_place_id: Optional[str] = None`.
+  - Added municipal context auto-resolution: when `anchor_place_id` is supplied without an explicit destination (or default `"Nueva Ecija"`), automatically resolves the town name from `place_service.get_loaded_places()` matching the canonical web behavior.
+  - Forwarded `min_rating` and `anchor_place_id` into `SuggestedItineraryRequest` payload during clustered itinerary generation.
+  - Added unit test in `desktop_client/tests/test_parity_services_and_components.py` verifying instantiation with routing parameters.
+
+## [0.51.0] - 2026-11-14
+### Fixed
+- **Clean OpenStreetMap Raster Tiles & Local Disk Cache (`51.1`)**:
+  - Replaced watermarked CartoDB Voyager tiles (`API KEY REQUIRED`) with authentic, un-watermarked OpenStreetMap raster tiles matching the canonical web client.
+  - Pre-bundled 93 provincial overview tiles (Zooms 8–11) in `desktop_client/assets/tiles/` for instant, offline, zero-latency map rendering without network requests.
+  - Implemented dynamic asynchronous tile downloader with local disk cache (`~/.nueva_ecija_travel/tile_cache/`) using compliant `User-Agent: NuevaEcijaTravel/1.0 (+https://edselrenz.github.io/Itinerary-App)` to eliminate Flutter/Dart HTTP 403 access blocks.
+  - Added clean ESRI World Street Map interim fallback for newly requested deep-zoom tiles while downloads complete in the background.
+  - Eliminated CartoDB attribution and watermarks, matching web attribution `"© OpenStreetMap contributors • OSRM"`.
+- **Map View Top Bar & Category Pills Parity (`51.4`)**:
+  - Fixed empty top search container bug by passing `content=card_content` to `ft.Container`.
+  - Added full row of 17 category filter pills with matching icons (`All Places`, `Attractions`, `Nature & Parks`, `Resorts & Pools`, `Hotels & Stays`, etc.) conforming to web client `.quick-category-pills`.
+  - Formatted bottom list view toggle pill to `List View ({count})` (e.g. `List View (2673)`) matching web client.
+  - Prevented duplicate POI merging in `merge_places_into_cache()` to accurately reflect the 2,673 POI catalog count.
+- **PlaceService, Asset Bundling & Itinerary Storage Parity (`51.2`)**:
+  - Fixed offline `PaginatedPlaces` crash by supplying `total_pages=`.
+  - Resolved municipality UUID vs. name parameter routing, sending clean town names as `municipality_name` to eliminate FastAPI 422 errors.
+  - Preserved full 2,673 POI catalog in-memory via `_osm_places_cache`, `get_loaded_places()`, and `merge_places_into_cache()`.
+  - Added multi-path asset resolution checking `sys._MEIPASS`, `exe_dir / "assets"`, and `exe_dir / "_internal" / "assets"`.
+  - Updated `SuggestedItineraryRequest` with `min_rating`, `include_live_places`, and `anchor_place_id`.
+  - Prevented premature saving of draft suggested itineraries during generation (`save_immediately=False`).
+  - Added `"days"` serialization to `ItineraryService.update_itinerary()` ensuring modified stops are saved.
+- **Views & Navigation Defect Remediation (`51.3`)**:
+  - Fixed missing `import urllib.parse` in `main.py` which caused login and route dispatching to fail with `name 'urllib' is not defined`.
+  - Fixed missing `import asyncio` in `trip_detail_view.py`.
+  - Fixed `check_backend_loop()` calling `check_host_health()` with 0 arguments.
+  - Added query parameter parsing on `/suggested`, `/builder`, `/map`, `/places`, and `/trips/{id}` routes.
+  - Handled both `on_add_to_day` and `on_add_to_trip` keyword arguments in place detail dialogs.
+  - Fixed notification bell guest mode crash in `dashboard_view.py` and capped saved itineraries preview to 2 cards.
+  - Passed `middle_initial` to `auth_service.register()` in `signup_view.py`.
+  - Wired guest trip migration to `auth_service.migrate_guest_trips()` in `profile_view.py`.
+  - Fixed `update_itinerary()` call in `trip_detail_view.py` and removed invalid `latitude`/`longitude` kwargs on `ItineraryItem`.
+  - Added Haversine transit buffers (15–120 min) to `_auto_schedule_active_day()` in `custom_builder_view.py`.
+### Added
+- **Full-Bleed Map View Parity (`51.4`)**:
+  - Completely transformed `places_view.py` into a full-bleed map experience:
+    - Floating Top Search & 17 Category Filter Pills Bar (`.map-top-bar`) with clear button and Multi-Select Filter Modal.
+    - Floating Right Controls: `[✨ Live OSM]`, `[🎯 Locate Me]`, and `[🧭 Reset Province View]`.
+    - Floating Bottom-Center `"List View (N places)"` pill opening a collapsible POI list drawer.
+    - Follow-Route Navigation Mode (`is_follow_route_mode = True` when `?itineraryId=...&day=...`) with Day Switcher pills, `[Show Nearby POIs]` toggle, and bottom Stop Carousel with Google Maps Navigation launcher.
+- **Dead Code Cleanup (`51.5`)**:
+  - Safely deleted legacy unreferenced files: `sidebar.py`, `header.py`, and `interactive_map.py`.
+### Verified
+- **Automated Verification & Packaging (`51.6`)**:
+  - Desktop client pytest suite: 47/47 tests passed (0 failures) in 2.03s.
+  - Canonical web Vitest suite: 32/32 test files, 348/348 unit tests green [100%] with zero edits in `Project/`.
+  - Windows standalone distribution executable compiled cleanly via `NuevaEcijaTravel.spec` with `assets/data/osm_places.json` bundled at root and `_internal/assets`.
+  - All 12 End-to-End Acceptance Gates verified.
+
 ## [0.50.0] - 2026-11-14
 ### Fixed
 - **Desktop Client QA v3 Remediation & Pure-Flet Slippy Map Architecture (Phase 50)**:

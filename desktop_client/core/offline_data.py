@@ -384,29 +384,47 @@ _CACHED_ALL_PLACES: Optional[list[dict[str, Any]]] = None
 
 
 def load_osm_places() -> list[dict[str, Any]]:
-    """Loads curated OpenStreetMap places from bundled or local assets."""
+    """Loads curated OpenStreetMap places (2,673 POIs) from bundled, frozen, or repo assets."""
     global _CACHED_ALL_PLACES
-    if _CACHED_ALL_PLACES is not None:
+    if _CACHED_ALL_PLACES is not None and len(_CACHED_ALL_PLACES) > 100:
         return _CACHED_ALL_PLACES
 
+    import sys
     settings = get_settings()
-    asset_file = settings.assets_dir / "data" / "osm_places.json"
-    if not asset_file.is_file():
-        proj_file = settings.base_dir.parent / "Project" / "src" / "assets" / "data" / "osm_places.json"
-        if proj_file.is_file():
-            asset_file = proj_file
+    here = Path(__file__).resolve()
+    candidates = [
+        settings.assets_dir / "data" / "osm_places.json",
+        here.parent.parent / "assets" / "data" / "osm_places.json",
+        here.parent.parent.parent / "Project" / "src" / "assets" / "data" / "osm_places.json",
+        Path.cwd() / "desktop_client" / "assets" / "data" / "osm_places.json",
+        Path.cwd() / "Project" / "src" / "assets" / "data" / "osm_places.json",
+    ]
+    if getattr(sys, "frozen", False):
+        exe_dir = Path(sys.executable).parent
+        meipass = Path(getattr(sys, "_MEIPASS", ""))
+        candidates = [
+            exe_dir / "assets" / "data" / "osm_places.json",
+            exe_dir / "_internal" / "assets" / "data" / "osm_places.json",
+            exe_dir / "_internal" / "desktop_client" / "assets" / "data" / "osm_places.json",
+            meipass / "assets" / "data" / "osm_places.json",
+            meipass / "desktop_client" / "assets" / "data" / "osm_places.json",
+            *candidates,
+        ]
 
     raw_osm: list[dict[str, Any]] = []
-    if asset_file.is_file():
-        try:
-            with open(asset_file, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                if isinstance(data, list):
-                    raw_osm = data
-                elif isinstance(data, dict) and "places" in data:
-                    raw_osm = data["places"]
-        except Exception:
-            raw_osm = []
+    for cand in candidates:
+        if cand.is_file():
+            try:
+                with open(cand, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    if isinstance(data, list) and len(data) > 0:
+                        raw_osm = data
+                        break
+                    elif isinstance(data, dict) and "places" in data:
+                        raw_osm = data["places"]
+                        break
+            except Exception:
+                continue
 
     # Merge: Put canonical curated places at top
     merged: list[dict[str, Any]] = [p.to_dict() for p in CANONICAL_OFFLINE_PLACES]

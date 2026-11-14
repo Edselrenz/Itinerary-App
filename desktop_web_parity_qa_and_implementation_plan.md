@@ -1,805 +1,171 @@
-# Nueva Ecija Travel Itinerary App ("Trip mo, trip ko") — Desktop (`desktop_client/`) vs. Web (`Project/`) QA Audit v3 & Antigravity Remediation Specification
+# Nueva Ecija Travel Itinerary App ("Trip mo, trip ko") — Full Documentation-Driven QA Audit v4, API Parity Matrix & Antigravity Remediation Plan
 
-**Repository**: [https://github.com/Edselrenz/Itinerary-App](https://www.google.com/search?q=https://github.com/Edselrenz/Itinerary-App)  
-**Target Desktop Package**: `desktop_client/` (Python 3.12+ / Flet `>=1.1.2` / `httpx` / `pytest`)  
+**Repository**: [https://github.com/Edselrenz/Itinerary-App](https://www.google.com/search?q=https://github.com/Edselrenz/Itinerary-App) (`feature/flet-desktop-app`)  
+**Target Desktop Package**: `desktop_client/` (Python 3.12+ / Flet `>=1.1.2` / `httpx` / `pytest` / PyInstaller)  
 **Reference Web Application**: `Project/` (Ionic 9 / Angular 22 / Leaflet 1.9 / TypeScript) & [https://edselrenz.github.io/Itinerary-App](https://www.google.com/search?q=https://edselrenz.github.io/Itinerary-App)  
-**Backend API Reference**: `backend/app/schemas/user.py` & `backend/app/schemas/itinerary.py` (FastAPI / SQLAlchemy / PostGIS)  
-**Applied Engineering & Design Standards**: `@coding-and-system-development` & `@anti-generic-frontend-design`
+**Reference Project Documentation Audited**:
+- `docs/PROJECT_STATE.md` (Phases 1–50 & 24-Point MVP Gate)
+- `docs/API_DOCUMENTATION.md` (19 Canonical FastAPI `/api/v1` Endpoints)
+- `docs/FULL_WEBSITE_QA_AUDIT_AND_PROPOSAL.md` (64 Test Cases across 8 Modules, `QA-01` to `QA-14`)
+- `docs/MAP_AND_ROUTING_PROPOSAL.md` (`MAP-01` to `MAP-03`, `ROUTE-01` to `ROUTE-05`)
+- `docs/CUSTOM_AND_SUGGESTED_ITINERARY_PROPOSAL.md` (`UC-S1` to `UC-S6`, `UC-C1` to `UC-C5`, `S-BUG-01` to `S-BUG-06`, `C-BUG-01` to `C-BUG-06`)
+- `docs/LIVE_SERVER_MAP_AND_SUGGESTED_ITINERARY_PROPOSAL.md` (`GAP-01` to `GAP-05`)
+- `docs/DESKTOP_APP_API_INTEGRATION.md`, `docs/DESKTOP_APP_QA_AND_TESTING.md`, `docs/DESKTOP_APP_INSTALLATION_AND_BUILD.md`, and `scripts/build_standalone_exe.py`
 
 ---
 
-## 1. Executive Summary & Root-Cause Analysis of the 4 Reported Failures (QA v3)
+## 1. Visual & Runtime Root-Cause Analysis of Your Screenshot (`image_4b1823.png`)
 
-Following the previous iteration, hands-on testing of the Flet `1.1.2` desktop application exposed **4 critical functional and layout regressions** compared to the Web App (`Project/`). Below is the exact technical root cause of each defect and its required fix:
+Inspecting your screenshot of the Map tab in `Trip mo, trip ko — Nueva Ecija Desktop` alongside `desktop_client/` and `scripts/build_standalone_exe.py` reveals **4 exact root causes** for everything visible in the image:
 
-| # | User-Reported Issue | Root Cause in Flet `1.1.2` & FastAPI Contract | Exact Fix Required |
+| # | Visual Defect Seen in Your Screenshot | Exact Root Cause in Code (`desktop_client/` & `scripts/build_standalone_exe.py`) | Mandatory Fix |
 | :--- | :--- | :--- | :--- |
-| **1** | **"The `'You are offline'` notice spans the whole application"** | In Flet `1.1.2`, placing `OfflineHostBanner` (an `ft.Container` with `bgcolor="#0f172a"`) as an unpositioned child inside `main.py`'s root `ft.Stack(expand=True)` (or without `expand=False` and fixed `height=52`) causes Flutter's `StackFit.expand` behavior to stretch the dark `#0f172a` background across the **entire 1280×840 application window**, covering the UI. | **Never** place `OfflineHostBanner` as an unpositioned child of `ft.Stack(expand=True)`. Render `OfflineHostBanner` as the first non-expanding child (`expand=False`, fixed `height=52`) inside the root `ft.Column(spacing=0, expand=True)` directly above `content_area`, wrapped in a centered floating pill (`width=620, height=44, border_radius=12`), with a working `[✕]` dismiss button (`self.visible = False; self.page.update()`). |
-| **2** | **"The map is not working properly, it does not display the places like the website, it does not show the routing"** | 1) **`flet_map` Incompatibility**: `flet_map` is either absent or incompatible with Flet `1.1.2`'s control tree, and `ft.canvas` shapes (`cv.Circle`) **do not support click handlers** in Flet.<br>2) **Missing 2,673 OSM Places**: `PlaceService` failed to resolve the relative path to `Project/src/assets/data/osm_places.json` (`2,673` POIs) when launched from `desktop_client/` and did not implement zoom-aware marker clustering (`zoom < 14` → `#0084ff` numbered cluster circles; `zoom >= 14` → category-colored teardrop pins).<br>3) **Missing Route Polyline & Stop Projection**: `ItineraryRouteMap` and `MapView` failed to extract `(lat, lng)` from both `item.place.latitude/longitude` and `item.custom_lat/custom_lng`, failed to query OSRM (`https://router.project-osrm.org/route/v1/driving/...?overview=full&geometries=polyline`) or decode `day_overview_polyline` / geodesic spline fallback, and failed to project `(lat, lng)` into Web-Mercator pixel coordinates `(x, y)` on an `ft.canvas.Canvas` layer over 256×256 OpenStreetMap tiles (`https://tile.openstreetmap.org/{z}/{x}/{y}.png`). | Build a **100% Pure-Flet `1.1.2` Web-Mercator Slippy Map Engine (`desktop_client/components/slippy_map_canvas.py`)** that layers:<br>• **Layer 1**: 256×256 OpenStreetMap `ft.Image` tiles positioned via Web-Mercator math with drag-to-pan (`ft.GestureDetector`) and zoom (`+`/`-`).<br>• **Layer 2**: `ft.canvas.Canvas` with `cv.Path` drawing the `#0284c7` / `#2563eb` (`stroke_width=5`) OSRM road polyline (plus white casing `stroke_width=8`) and dashed walk connectors.<br>• **Layer 3**: Clickable `ft.Container` controls positioned at `(px, py)` for **Blue Marker Clusters (`#0084ff`)**, **Category Teardrop Pins**, and **Numbered Route Stop Badges (`1..N`)**. |
-| **3** | **"The edit profile does not really work properly"** | **Backend Schema Mismatch (`backend/app/schemas/user.py` vs. `desktop_client/models/user.py`)**:<br>• FastAPI `UserOut` returns `first_name`, `last_name`, `username_normalized`, `email_normalized` — it **never** returns `full_name` or `email`!<br>• FastAPI `UserUpdateIn` (`PATCH /api/v1/auth/me`) accepts `first_name`, `last_name`, `username`, `current_password`, `new_password` — it **ignores** `full_name` and `avatar_url`!<br>• `User.from_dict()` read `data.get("full_name", "")`, wiping out the user's name after login or update, and Guest/Offline mode lacked local persistence (`profile_extra.json`) for `first_name`, `last_name`, `middle_initial`, `birthday`, `gender`, `phone_number`, and `avatar_url` (plus native file picker for `Change Photo`). | 1) Update `desktop_client/models/user.py` so `User.from_dict()` reads `first_name`, `last_name`, `username_normalized`, and `email_normalized` (computing `full_name` dynamically), and `UserUpdatePayload.to_dict()` sends `first_name`, `last_name`, `username`.<br>2) Persist extended profile fields (`middle_initial`, `birthday`, `gender`, `phone_number`, `avatar_url`) and Guest profile edits locally in `LocalStorage` (`profile_extra_{user_id}`), merging them on load and save.<br>3) Wire `[Change Photo]` in `ProfileView` to open a native file dialog (`tkinter.filedialog` / `ft.FilePicker`) with preset avatar fallbacks. |
-| **4** | **"Both the custom and suggested itinerary also does not work the same as the web"** | • **`SuggestedWizardView`** used a single static view instead of the Web App's **3-View State Machine (`view_mode = "form" | "itinerary" | "nearby"`)** in `suggested-wizard.page.html/.ts`, missing the pre-save preview mode (`save_immediately=False`), `set_active_draft_itinerary(plan)` (needed for `[Full Map]` handoff), collapsible `Travel Notes & Planning Assumptions`, embedded `ItineraryRouteMap`, inter-stop leg commute badges (`🚗 X.X km • ~X mins drive • Y mins tricycle • Est. Fare ₱XX–₱YY`), `Nearby Places in [Municipality]` view (`Restaurants | Hospital & Pharmacies | Stores` with `[+ Add to Day X]`), and `[Customize in Builder]` handoff.<br>• **`CustomBuilderView`** used a cramped 2-column split-pane instead of the Web App's **3-View State Machine (`active_view = "form" | "browse" | "timeline"`)** in `custom-builder.page.html/.ts` with the top segmented switcher (`[+ Add Places]` \| `[📅 Your Itinerary (N)]`), target day selector (`Scheduling for: Day 1 (0) | Day 2 (0) | [+]`), stateful `[+ Add]` / `[✓ Added]` place cards, editable Trip Settings header (`syncDaysWithDateRange`), `[🕒 Auto-Schedule]`, embedded `ItineraryRouteMap`, inter-stop commute leg badges, `[Edit Stop]` modal with `Move to Day` dropdown, and `[+ Add Off-Grid Custom Venue]` modal with Nueva Ecija geofence validation (`Lat 15.15–16.15, Lng 120.70–121.40`). | Rewrite `SuggestedWizardView` and `CustomBuilderView` to mirror `suggested-wizard.page.html/.ts` and `custom-builder.page.html/.ts` 1:1, including their exact 3-view state machines, top view switcher, embedded `ItineraryRouteMap`, inter-stop leg commute calculator, draft itinerary handoff to `MapView` (`itineraryId="draft"`), and `[Customize in Builder]` handoff. |
+| **1** | **Every map tile displays yellow/black hazard bars: `"403 Access blocked — App is not following the tile usage policy of OpenStreetMap's volunteer-run servers: http://osm.wiki/Blocked"`** | In `desktop_client/components/slippy_map_canvas.py:353`, the app passes `https://tile.openstreetmap.org/{z}/{x}/{y}.png` directly into `ft.Image(src=tile_url)`. In Flet Desktop (Flutter engine), `ft.Image` fetches URLs using Dart's native `HttpClient`, which sends `User-Agent: Dart/3.x (dart:io)` with no `Referer`. OpenStreetMap's volunteer tile servers (`tile.openstreetmap.org`) **strictly block `Dart/3.x`** with HTTP `403 Access blocked`! | **Never** pass `https://tile.openstreetmap.org/...` directly to `ft.Image(src=...)`. Switch `SlippyMapCanvas` to **CartoDB Voyager OSM Tiles** (`https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png`, which renders clean OpenStreetMap road/POI cartography and **never blocks Flutter/Dart `ft.Image` with HTTP 403**), with an optional Python `httpx` tile cacher (`User-Agent: TripMoTripKoDesktop/1.0`) for offline tile caching. |
+| **2** | **Header says `"Nueva Ecija GIS Map Explorer (13 Places Plotted)"` instead of `2,673` places** | **Three compounding bugs**:<br>1) **`scripts/build_standalone_exe.py:76–89`** never copies `desktop_client/assets` into `dist/NuevaEcijaTravel/assets` and omits `--add-data desktop_client/assets;assets`!<br>2) **`desktop_client/config/settings.py:18–20`**: When frozen (`NuevaEcijaTravel.exe`), `_resolve_base_dir()` returns `Path(sys.executable).parent` without checking `Path(getattr(sys, "_MEIPASS", ""))` (`_internal/`). Thus `osm_places.json` (`2,673` POIs) is not found in the `.exe`, so `load_osm_places()` (`offline_data.py:412`) returns **only the 13 `CANONICAL_OFFLINE_PLACES`**!<br>3) **`desktop_client/services/place_service.py:104`** passes `pages=...` instead of `total_pages=...` to `PaginatedPlaces(...)`, crashing with `TypeError: PaginatedPlaces.__init__() got an unexpected keyword argument 'pages'` whenever offline! | 1) Fix `scripts/build_standalone_exe.py` to bundle and copy `desktop_client/assets` (including `data/osm_places.json`) into `dist/NuevaEcijaTravel/assets` and `dist/NuevaEcijaTravel/_internal/assets`.<br>2) Update `settings.py` and `offline_data.py:load_osm_places()` to check `sys._MEIPASS`, `exe_dir / "assets"`, `exe_dir / "_internal" / "assets"`, and `Project/src/assets` so all **2,673 places** load in both dev mode and `.exe` mode.<br>3) Fix `place_service.py:104` (`total_pages=` instead of `pages=`). |
+| **3** | **Clicking any marker pin on the map does nothing (silent crash)** | In `desktop_client/views/places_view.py:515`, `_select_map_place()` calls:<br>`show_place_detail_dialog(p, place, on_add_to_trip=...)`<br>But `show_place_detail_dialog()` in `desktop_client/components/dialogs.py:19` defines the parameter as **`on_add_to_day`**, NOT **`on_add_to_trip`**! Every pin click raises `TypeError: show_place_detail_dialog() got an unexpected keyword argument 'on_add_to_trip'`! | Fix `places_view.py:515` to pass `on_add_to_day=...` and `on_navigate=self.on_navigate` (and accept `on_add_to_trip` as an alias in `dialogs.py:show_place_detail_dialog()`). |
+| **4** | **Map layout has a giant white form header on top (`Search`, `Filters`, `Reset`, `[Grid \| Map]`, `Filter by Municipality`, `Sort By`) and a fixed `920×520` box leaving a large blank white gap on the right** | `PlacesView` (`places_view.py`) was built as a paginated catalog table with a `[Grid \| Map]` toggle and a hardcoded `SlippyMapCanvas(width=920, height=520)` instead of matching the Web App's **`MapPage` (`Project/src/app/tabs/map/map.page.html`)**, which is a **100% full-bleed interactive map** with floating overlays and `isFollowRouteMode`! | Replace the static top form and fixed `920×520` box in `places_view.py` with the Web App's **Full-Bleed Interactive Map Layout (`expand=True`)**:<br>• **Floating Top Search & 17 Category Pills Bar (`.map-top-bar`)** overlaid on the map.<br>• **Floating Right Controls**: `[✨ Live OSM]`, `[🎯 Locate Me (GPS)]`, `[🧭 Reset Province View]`, `[+]`/`[-]`.<br>• **Floating Bottom `"List View (2,673)"` Pill** opening the collapsible **Destinations in View Drawer**.<br>• **Focused `isFollowRouteMode`** when navigated via `/map?itineraryId=...&day=...`! |
 
 ---
 
-## 2. Mandatory Fix 1: Non-Blocking `OfflineHostBanner` & Root App Shell (`main.py`)
+## 2. API Parity Audit: Does the Desktop App Use the Same API as the Web App?
 
-### 2.1 Why the Offline Notice Covered the Entire Window
-In Flet `1.1.2`, if a container with `bgcolor="#0f172a"` is placed inside `ft.Stack(expand=True)` without explicit `top`, `left`, `right`, `height` coordinates—or if its parent wrapper has `expand=True`—Flutter expands that container to fill the entire `1280×840` window.
+We audited all **19 REST API endpoints** documented in `docs/API_DOCUMENTATION.md` across `backend/app/api/v1/`, `Project/src/app/core/services/` (Web App), and `desktop_client/services/` (Desktop App).
 
-### 2.2 Complete Replacement for `desktop_client/components/offline_banner.py`
-Replace `desktop_client/components/offline_banner.py` with this strictly bounded (`expand=False`, fixed `height=52`) top notification bar that **never** stretches across the application:
+### 2.1 Complete Endpoint-by-Endpoint API Comparison Matrix
 
-```python
-"""Compact, non-blocking top connectivity banner matching Project/src/app/app.component.html."""
-
-from __future__ import annotations
-
-from typing import Callable, Optional
-import flet as ft
-
-from desktop_client.services.connectivity_service import ConnectivityService, ConnectivityState
-
-
-class OfflineHostBanner(ft.Container):
-    """Floating pill banner (`.offline-host-banner`) rendered at the top of the root Column.
-
-    CRITICAL FLET 1.1.2 LAYOUT RULE:
-    - `expand` MUST be `False` and `height` MUST be fixed (`52`) when visible (`0` when hidden)
-      so it NEVER stretches across the application viewport.
-    """
-
-    def __init__(
-        self,
-        connectivity_service: ConnectivityService,
-        on_retry: Optional[Callable[[], None]] = None,
-    ) -> None:
-        super().__init__()
-        self._connectivity = connectivity_service
-        self._on_retry = on_retry
-
-        # Strictly non-expanding top bar wrapper
-        self.expand = False
-        self.height = 52
-        self.visible = False
-        self.alignment = ft.Alignment(0, 0)
-        self.padding = ft.Padding.only(top=6, bottom=2, left=16, right=16)
-        self.bgcolor = ft.Colors.TRANSPARENT
-
-        self._title_text = ft.Text(
-            "You are offline",
-            size=12,
-            weight=ft.FontWeight.W_700,
-            color="#f8fafc",
-        )
-        self._sub_text = ft.Text(
-            "Showing cached Nueva Ecija places & saved itineraries",
-            size=11,
-            color="#94a3b8",
-        )
-        self._retry_btn = ft.TextButton(
-            content=ft.Text("Retry", size=11, weight=ft.FontWeight.W_700, color="#38bdf8"),
-            on_click=self._handle_retry,
-            style=ft.ButtonStyle(
-                padding=ft.Padding.symmetric(horizontal=10, vertical=4),
-                bgcolor="#1e293b",
-                shape=ft.RoundedRectangleBorder(radius=8),
-            ),
-        )
-        self._dismiss_btn = ft.IconButton(
-            icon=ft.Icons.CLOSE_ROUNDED,
-            icon_size=15,
-            icon_color="#94a3b8",
-            tooltip="Dismiss offline notice",
-            on_click=self._handle_dismiss,
-            style=ft.ButtonStyle(padding=ft.Padding.all(4)),
-        )
-
-        # Inner dark pill card matching Web App `.offline-banner-content` (max-width 620px, height 42px)
-        self.content = ft.Container(
-            width=620,
-            height=42,
-            bgcolor="#0f172a",
-            border=ft.Border.all(1, "#334155"),
-            border_radius=12,
-            padding=ft.Padding.symmetric(horizontal=14, vertical=6),
-            shadow=ft.BoxShadow(
-                blur_radius=12,
-                color=ft.Colors.with_opacity(0.18, "#0f172a"),
-                offset=ft.Offset(0, 4),
-            ),
-            content=ft.Row(
-                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                controls=[
-                    ft.Row(
-                        spacing=10,
-                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                        controls=[
-                            ft.Icon(ft.Icons.CLOUD_OFF_ROUNDED, color="#f59e0b", size=18),
-                            ft.Column(
-                                spacing=0,
-                                alignment=ft.MainAxisAlignment.CENTER,
-                                controls=[self._title_text, self._sub_text],
-                            ),
-                        ],
-                    ),
-                    ft.Row(
-                        spacing=4,
-                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                        controls=[self._retry_btn, self._dismiss_btn],
-                    ),
-                ],
-            ),
-        )
-
-        self._connectivity.subscribe(self.sync_state)
-
-    def sync_state(self, state: ConnectivityState) -> None:
-        should_show = (not state.is_online) and (not state.banner_dismissed)
-        self.visible = should_show
-        self.height = 52 if should_show else 0
-        if state.is_checking:
-            self._title_text.value = "Reconnecting to server..."
-        else:
-            self._title_text.value = "You are offline"
-        try:
-            if self.page:
-                self.update()
-        except Exception:
-            pass
-
-    def _handle_retry(self, _e: ft.ControlEvent) -> None:
-        if self._on_retry:
-            self._on_retry()
-
-    def _handle_dismiss(self, _e: ft.ControlEvent) -> None:
-        self._connectivity.dismiss_banner()
-        self.visible = False
-        self.height = 0
-        try:
-            if self.page:
-                self.page.update()
-        except Exception:
-            pass
-```
-
-### 2.3 Root Layout Structure in `desktop_client/main.py`
-In `desktop_client/main.py`, do **not** put `OfflineHostBanner` inside an unpositioned `ft.Stack`. Use a clean vertical `ft.Column(spacing=0, expand=True)`:
-
-```python
-# Inside ItineraryDesktopApp._build_layout() in desktop_client/main.py:
-self._offline_banner = OfflineHostBanner(
-    connectivity_service=self.connectivity_service,
-    on_retry=self._trigger_connectivity_check,
-)
-self._content_area = ft.Container(expand=True, bgcolor="#f8f9fa")
-self._bottom_tab_bar = BottomTabBar(
-    current_route=self._current_route,
-    on_navigate=self.navigate,
-)
-
-self._root = ft.Column(
-    spacing=0,
-    expand=True,
-    controls=[
-        self._offline_banner,   # Fixed height=52 when offline, height=0 when online/dismissed
-        self._content_area,     # expand=True main router outlet
-        self._bottom_tab_bar,   # Fixed height=68 bottom navigation bar
-    ],
-)
-self.page.add(self._root)
-```
+| # | FastAPI Backend Endpoint (`backend/app/api/v1/`) | Web App (`Project/src/app/core/services/`) | Desktop App (`desktop_client/services/`) | API Parity Status & Discrepancies Found |
+| :-: | :--- | :--- | :--- | :--- |
+| **1** | `GET /api/v1/health` | `ConnectivityService.checkHostHealth()` (`GET /health`) | `ConnectivityService.check_host_health()` (`GET /health`) | ⚠️ **BUG IN `main.py:308`**: `main.py` calls `await connectivity_service.check_host_health(api_client)`, passing 1 extra arg to a 0-arg method (`TypeError` on every 15s health check!). |
+| **2** | `POST /api/v1/auth/register`<br>Body: `{first_name, last_name, username, email, password}` | `AuthService.register()` sends `{first_name, last_name, username, email, password}` + saves `middle_initial` locally + runs `GuestMigrationService`. | `AuthService.register()` sends `{first_name, last_name, username, email, password}`. | ⚠️ **2 GAPS**:<br>1) `SignupView._handle_signup()` (`signup_view.py:343`) **forgets to pass `middle_initial=self.mi_input.value`** to `auth_service.register()`!<br>2) Does not call `migrate_guest_trips()` after registration. |
+| **3** | `POST /api/v1/auth/login`<br>Body: `{email, password}` | `AuthService.login()` sends `{email, password}`, respects `rememberMe`, and triggers `GuestMigrationService.promptAndMigrateIfNeeded()`. | `AuthService.login()` sends `{email, password}`. | ⚠️ **1 GAP**: `LoginView._handle_login()` does not trigger `migrate_guest_trips()` after login when local guest itineraries exist. |
+| **4** | `POST /api/v1/auth/refresh`<br>Body: `{refresh_token}` | `auth.interceptor.ts` auto-refreshes on `401`. | `ApiClient.request()` auto-calls `_refresh_handler` on `401`. | ✅ **MATCHES** |
+| **5** | `GET /api/v1/auth/me` | `AuthService.fetchCurrentUser()` | `AuthService.get_profile()` | ✅ **MATCHES** |
+| **6** | `PATCH /api/v1/auth/me`<br>Body: `{first_name, last_name, username, current_password, new_password}` | `AuthService.updateProfile()` sends `UserUpdateIn` + stores extended fields in `localStorage`. | `AuthService.update_profile()` sends `payload.to_backend_dict()` + stores `profile_extra.json`. | ✅ **MATCHES** (Fixed in v3, but `ProfileView` needs password change fields optional support). |
+| **7** | `POST /api/v1/auth/oauth/google` & `/oauth/apple` | Disabled in pilot build (`DEF-02`) with truthful pilot notice. | Completely omitted from `LoginView`/`SignupView`. | ✅ **MATCHES** (Keep social buttons removed per user instruction in Turn 3). |
+| **8** | `GET /api/v1/municipalities?q=...` | `PlaceService.getMunicipalities(q)` | `PlaceService.get_municipalities()` | ✅ **MATCHES** |
+| **9** | `GET /api/v1/places`<br>Params: `q`, `categories`, `municipality_id`, `municipality_name`, `price_tier`, `featured`, `min_lat`, `max_lat`, `min_lng`, `max_lng`, `limit` (`1..5000`), `offset` | `PlaceService.searchPlaces()` sends `q`, `categories` (comma-joined), `municipality_id`, `municipality_name`, `price_tier`, `featured`, bbox (`min_lat..max_lng`), `limit=3000` on Map, and merges into `osmPlacesCache` (`QA-02`). | `PlaceService.get_places()` ONLY sends `q`, `categories` (as list), `municipality_id`, `featured`, `limit=18`, `offset`, plus a non-existent `sort` param! | ❌ **4 API MISMATCHES**:<br>1) Desktop never sends **`municipality_name`**, **`price_tier`**, or **bounding-box (`min_lat..max_lng`)** to `GET /api/v1/places`!<br>2) Desktop passes `municipality_name` (e.g. `"Bongabon"`) inside the `municipality_id` UUID query param (`places_view.py:741`), which causes FastAPI (`municipality_id: uuid.UUID`) to return **`422 Unprocessable Content`** whenever a user filters by municipality name!<br>3) Offline fallback in `place_service.py:104` passes `pages=` instead of `total_pages=`, crashing with **`TypeError`**!<br>4) Does not merge online results into the 2,673 OSM cache (`merge_places_into_cache`). |
+| **10** | `GET /api/v1/places/{place_id}` | `PlaceService.getPlaceById(id)` | `PlaceService.get_place_by_id(id)` | ✅ **MATCHES** |
+| **11** | `POST /api/v1/places/discover`<br>(Live Google Places / Local DB discovery) | Called during live discovery (`OsmOverpassService` / `PlaceService`). | **NOT USED AT ALL** in `desktop_client/`! | ❌ **MISSING**: Add `PlaceService.discover_places()` & Live OSM Overpass discovery button on `MapView`. |
+| **12** | `POST /api/v1/itineraries/suggest`<br>Body: `{title, destination, start_date, end_date, daily_budget, preferences, pacing, save_immediately, travel_mode, min_rating, include_live_places, anchor_place_id}` | `ItineraryService.suggestItinerary()` sends all fields with `save_immediately: false` and **does NOT save to `GuestStorage`** until user clicks `[Accept & Save]`. | `SuggestedItineraryRequest` omits `min_rating`, `include_live_places`, `anchor_place_id`, and `itinerary_service.py:57–59` **auto-saves every preview to `guest_storage` immediately** (`S-BUG-06` regression)! | ❌ **2 API/LOGIC BUGS**:<br>1) Add `min_rating`, `include_live_places`, `anchor_place_id` to `SuggestedItineraryRequest`.<br>2) Remove premature `self.guest_storage.save_itinerary(itinerary)` when `save_immediately=False` in `itinerary_service.py:57–70`! |
+| **13** | `GET /api/v1/itineraries` | `ItineraryService.refreshItineraries()` | `ItineraryService.list_itineraries()` | ✅ **MATCHES** |
+| **14** | `GET /api/v1/itineraries/{id}` | `ItineraryService.getItineraryById(id)` + `getItineraryOrDraftById(id)` | `ItineraryService.get_itinerary(id)` | ⚠️ **MISSING HELPER**: Add `get_itinerary_or_draft(id)` so `/map?itineraryId=draft` and `/trips/{id}` resolve drafts and cached cloud trips. |
+| **15** | `POST /api/v1/itineraries` | `ItineraryService.createItinerary(payload)` | `ItineraryService.create_itinerary(payload)` | ✅ **MATCHES** |
+| **16** | `PATCH /api/v1/itineraries/{id}`<br>Body: `{title, destination, start_date, end_date, daily_budget, preferences, assumptions, days}` | `ItineraryService.updateItinerary(id, payload)` sends **`days`** array so edited stops/days are persisted transactionally (`CR-003`). | `ItineraryService.update_itinerary(itinerary)` (`itinerary_service.py:401–411`) **omits `days`** from `update_data`, and `TripDetailView._save_changes()` (`trip_detail_view.py:557–588`) crashes with `ImportError: cannot import name 'ItineraryUpdatePayload'`! | ❌ **CRITICAL DATA-LOSS & CRASH BUG**:<br>1) Include `"days"` in `ItineraryService.update_itinerary()` `PATCH` payload.<br>2) Fix `TripDetailView._save_changes()` and `CustomBuilderView` edit mode to call `update_itinerary()` properly. |
+| **17** | `DELETE /api/v1/itineraries/{id}` | `ItineraryService.deleteItinerary(id)` | `ItineraryService.delete_itinerary(id)` | ✅ **MATCHES** |
+| **18** | `POST /api/v1/itineraries/{id}/days`, `POST .../items`, `PATCH .../items/{item_id}`, `DELETE .../items/{item_id}`, `POST .../reorder` | Used by `ItineraryService`. | `add_stop`, `delete_stop`, `reorder_stops` implemented; `update_stop` (`PATCH .../items/{item_id}`) missing. | ⚠️ Add `update_stop()` in `ItineraryService`. |
+| **19** | `POST /api/v1/itineraries/compute-day-route` & `POST .../days/{day_id}/compute-route` | Used for road polyline & leg calculation (`RouteComputeRequest`). | `SlippyMapCanvas` calls OSRM directly without calling backend `/itineraries/compute-day-route` first. | ⚠️ **ENHANCEMENT**: Try backend `POST /api/v1/itineraries/compute-day-route` or OSRM (`router.project-osrm.org`), falling back to `generate_geodesic_arc`. |
 
 ---
 
-## 3. Mandatory Fix 2: `Edit Profile` & Backend `UserOut` / `UserUpdateIn` Schema Alignment
+## 3. Master Action Matrix: What to REMOVE, MODIFY, and ADD in `desktop_client/`
 
-### 3.1 Exact FastAPI Schema Contract (`backend/app/schemas/user.py`)
-Inspecting `backend/app/schemas/user.py` reveals why `Edit Profile` failed:
-- **`UserOut` (returned by `GET /api/v1/auth/me` and `PATCH /api/v1/auth/me`)**:
-  ```python
-  class UserOut(BaseModel):
-      id: uuid.UUID
-      first_name: str
-      last_name: str
-      username_normalized: str
-      email_normalized: str
-      is_active: bool
-      created_at: datetime
-  ```
-- **`UserUpdateIn` (expected by `PATCH /api/v1/auth/me`)**:
-  ```python
-  class UserUpdateIn(BaseModel):
-      first_name: str | None = Field(default=None, min_length=1, max_length=100)
-      last_name: str | None = Field(default=None, min_length=1, max_length=100)
-      username: str | None = Field(default=None, min_length=3, max_length=100)
-      current_password: str | None = Field(default=None, min_length=8, max_length=128)
-      new_password: str | None = Field(default=None, min_length=8, max_length=128)
-  ```
-- **Why the Desktop App Broke**:
-  1. `desktop_client/models/user.py` looked for `data.get("full_name")` and `data.get("email")`, which do not exist in `UserOut`, causing the user's name and email to become blank (`""`) or revert after saving!
-  2. `desktop_client/models/user.py` sent `{"full_name": ...}` in `PATCH /api/v1/auth/me`, which FastAPI silently ignored because `UserUpdateIn` only accepts `first_name`, `last_name`, and `username`!
-  3. Extended profile fields from the Web App (`middle_initial`, `birthday`, `gender`, `phone_number`, `avatar_url`, `default_daily_budget`) and Guest Mode profile edits must be saved in `LocalStorage` (`profile_extra_{user_id}`) and merged into the active `User` object, exactly like `Project/src/app/features/auth/profile/profile.page.ts` (`ne_profile_extra_${user.id}`).
+Based on `docs/PROJECT_STATE.md` and our **64-Test-Case Full-System Audit**, here is the exact inventory of what must be **REMOVED**, **MODIFIED**, and **ADDED**:
 
-### 3.2 Complete Replacement for `desktop_client/models/user.py`
-
-```python
-"""User and authentication domain models aligned 1:1 with backend/app/schemas/user.py and Web App."""
-
-from __future__ import annotations
-
-from dataclasses import dataclass, field
-from typing import Any, Optional
-
-
-@dataclass
-class User:
-    """Represents an authenticated or guest user with backend + local extended profile fields."""
-
-    id: str
-    first_name: str = ""
-    last_name: str = ""
-    middle_initial: str = ""
-    username: str = ""
-    email: str = ""
-    birthday: str = ""
-    gender: str = ""
-    phone_number: str = ""
-    avatar_url: Optional[str] = None
-    is_active: bool = True
-    is_guest: bool = False
-    created_at: Optional[str] = None
-    preferences: list[str] = field(default_factory=list)
-    default_daily_budget: float = 3000.0
-
-    @property
-    def full_name(self) -> str:
-        """Construct display name from first_name, middle_initial, and last_name."""
-        parts: list[str] = []
-        if self.first_name.strip():
-            parts.append(self.first_name.strip())
-        if self.middle_initial.strip():
-            mi = self.middle_initial.strip().rstrip(".")
-            parts.append(f"{mi}.")
-        if self.last_name.strip():
-            parts.append(self.last_name.strip())
-        joined = " ".join(parts).strip()
-        if joined:
-            return joined
-        if self.username.strip():
-            return self.username.strip()
-        if self.email.strip():
-            return self.email.split("@")[0]
-        return "Guest Explorer" if self.is_guest else "Traveler"
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any], extra: Optional[dict[str, Any]] = None) -> "User":
-        extra = extra or {}
-        raw_first = str(data.get("first_name") or extra.get("first_name") or "").strip()
-        raw_last = str(data.get("last_name") or extra.get("last_name") or "").strip()
-
-        # Fallback if legacy data only stored full_name
-        if not raw_first and not raw_last and data.get("full_name"):
-            tokens = str(data.get("full_name")).strip().split(" ", 1)
-            raw_first = tokens[0]
-            raw_last = tokens[1] if len(tokens) > 1 else ""
-
-        email_val = str(
-            data.get("email_normalized")
-            or data.get("email")
-            or extra.get("email")
-            or ""
-        ).strip()
-        username_val = str(
-            data.get("username_normalized")
-            or data.get("username")
-            or extra.get("username")
-            or (email_val.split("@")[0] if email_val else "")
-        ).strip()
-
-        prefs = extra.get("preferences", data.get("preferences", []))
-        if isinstance(prefs, str):
-            prefs = [p.strip() for p in prefs.split(",") if p.strip()]
-
-        return cls(
-            id=str(data.get("id", "guest-local")),
-            first_name=raw_first,
-            last_name=raw_last,
-            middle_initial=str(extra.get("middle_initial") or data.get("middle_initial") or "").strip(),
-            username=username_val,
-            email=email_val,
-            birthday=str(extra.get("birthday") or data.get("birthday") or "").strip(),
-            gender=str(extra.get("gender") or data.get("gender") or "").strip(),
-            phone_number=str(extra.get("phone_number") or data.get("phone_number") or "").strip(),
-            avatar_url=extra.get("avatar_url") or data.get("avatar_url"),
-            is_active=bool(data.get("is_active", True)),
-            is_guest=bool(data.get("is_guest", False)),
-            created_at=data.get("created_at"),
-            preferences=list(prefs) if isinstance(prefs, list) else [],
-            default_daily_budget=float(
-                extra.get("default_daily_budget", data.get("default_daily_budget", 3000.0)) or 3000.0
-            ),
-        )
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "id": self.id,
-            "first_name": self.first_name,
-            "last_name": self.last_name,
-            "middle_initial": self.middle_initial,
-            "username": self.username,
-            "username_normalized": self.username,
-            "email": self.email,
-            "email_normalized": self.email,
-            "full_name": self.full_name,
-            "birthday": self.birthday,
-            "gender": self.gender,
-            "phone_number": self.phone_number,
-            "avatar_url": self.avatar_url,
-            "is_active": self.is_active,
-            "is_guest": self.is_guest,
-            "created_at": self.created_at,
-            "preferences": self.preferences,
-            "default_daily_budget": self.default_daily_budget,
-        }
-
-    @classmethod
-    def create_guest(cls, extra: Optional[dict[str, Any]] = None) -> "User":
-        extra = extra or {}
-        return cls(
-            id="guest-local",
-            first_name=str(extra.get("first_name") or "Guest"),
-            last_name=str(extra.get("last_name") or "Explorer"),
-            middle_initial=str(extra.get("middle_initial") or ""),
-            username=str(extra.get("username") or "guest_explorer"),
-            email=str(extra.get("email") or "guest@local.offline"),
-            birthday=str(extra.get("birthday") or ""),
-            gender=str(extra.get("gender") or ""),
-            phone_number=str(extra.get("phone_number") or ""),
-            avatar_url=extra.get("avatar_url"),
-            is_active=True,
-            is_guest=True,
-            preferences=list(extra.get("preferences", ["Nature & Parks", "Food Trip", "Culture & History"])),
-            default_daily_budget=float(extra.get("default_daily_budget", 2500.0)),
-        )
-
-
-@dataclass
-class AuthTokens:
-    access_token: str
-    refresh_token: Optional[str] = None
-    token_type: str = "bearer"
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "AuthTokens":
-        return cls(
-            access_token=str(data.get("access_token", "")),
-            refresh_token=data.get("refresh_token"),
-            token_type=str(data.get("token_type", "bearer")),
-        )
-
-
-@dataclass
-class UserUpdatePayload:
-    """Payload for updating profile across FastAPI PATCH /api/v1/auth/me + LocalStorage extended metadata."""
-
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    middle_initial: Optional[str] = None
-    username: Optional[str] = None
-    email: Optional[str] = None
-    birthday: Optional[str] = None
-    gender: Optional[str] = None
-    phone_number: Optional[str] = None
-    avatar_url: Optional[str] = None
-    preferences: Optional[list[str]] = None
-    default_daily_budget: Optional[float] = None
-    current_password: Optional[str] = None
-    new_password: Optional[str] = None
-
-    def to_backend_dict(self) -> dict[str, Any]:
-        """Exact fields accepted by FastAPI `UserUpdateIn` (`backend/app/schemas/user.py`)."""
-        payload: dict[str, Any] = {}
-        if self.first_name is not None and len(self.first_name.strip()) >= 1:
-            payload["first_name"] = self.first_name.strip()
-        if self.last_name is not None and len(self.last_name.strip()) >= 1:
-            payload["last_name"] = self.last_name.strip()
-        if self.username is not None and len(self.username.strip()) >= 3:
-            payload["username"] = self.username.strip()
-        if self.current_password and self.new_password:
-            payload["current_password"] = self.current_password
-            payload["new_password"] = self.new_password
-        return payload
-
-    def to_extra_dict(self) -> dict[str, Any]:
-        """Extended profile fields persisted locally in `profile_extra_{user_id}`."""
-        extra: dict[str, Any] = {}
-        for key in (
-            "first_name",
-            "last_name",
-            "middle_initial",
-            "username",
-            "email",
-            "birthday",
-            "gender",
-            "phone_number",
-            "avatar_url",
-            "preferences",
-            "default_daily_budget",
-        ):
-            val = getattr(self, key)
-            if val is not None:
-                extra[key] = val
-        return extra
-```
-
-### 3.3 Updating `AuthService.update_profile` (`desktop_client/services/auth_service.py`)
-Ensure `AuthService.update_profile(payload: UserUpdatePayload)` works in **both Authenticated Mode, Offline Mode, and Guest Mode**:
-1. Save `payload.to_extra_dict()` into `self._storage.load_json("profile_extra.json", default={})[user_id]` immediately.
-2. If the user is authenticated (`not current_user.is_guest`) and `payload.to_backend_dict()` is non-empty, send `PATCH /api/v1/auth/me` with `payload.to_backend_dict()`. If the backend responds with `200 OK`, parse `User.from_dict(resp, extra=saved_extra)`. If the backend is offline (`ApiError` with status `0`), fall back gracefully to updating the local `User` session object and persist it so edits are never lost.
-3. If the user is in **Guest Mode** (`current_user.is_guest`), update the guest `User` in `self._session` and save to `profile_extra.json["guest-local"]` so Guest travelers can also customize their name, avatar photo, default daily budget, and travel preferences.
-
-### 3.4 Working `Edit Profile` Modal & Native Photo Picker (`desktop_client/views/profile_view.py`)
-In `desktop_client/views/profile_view.py`:
-- **Never** check `if user.is_guest: return` to block opening the Edit Profile dialog or changing preferences/budget.
-- Provide the exact Web App Edit Profile fields (`Project/src/app/features/auth/profile/profile.page.html`):
-  - **Profile Photo Preview** (`ft.CircleAvatar` or `68×68` rounded `ft.Image`) + **`[Change Photo]`** button (uses Python's standard `tkinter.filedialog.askopenfilename(filetypes=[("Image files", "*.png *.jpg *.jpeg *.webp")])` in a helper or preset avatar chips so it works reliably on Windows/macOS/Linux without Flet `FilePicker` overlay bugs) + **`[Remove Photo]`** button.
-  - **First Name** (`first_name`, required), **Last Name** (`last_name`, required), **Middle Initial** (`middle_initial`, max 2 chars).
-  - **Username** (`username`, min 3 chars) and **Email** (`email`, read-only for registered accounts, editable for guest).
-  - **Birthday** (`YYYY-MM-DD`), **Gender** (`ft.Dropdown`: `Male`, `Female`, `Non-binary`, `Prefer not to say`), **Phone Number** (`+63 9XX XXX XXXX`).
-  - **Default Daily Budget (PHP)** (`default_daily_budget`).
-- When `[Save Changes]` is clicked:
-  - Validate that `first_name` is non-empty.
-  - Call `self._auth_service.update_profile(payload)`.
-  - Close the dialog (`self.page.pop_dialog()` or `dialog.open = False`), call `self._refresh_profile_ui()`, show a green toast (`"Profile updated successfully!"`), and call `self.page.update()`.
+### 3.1 What to REMOVE (Dead Legacy Code, Broken Patterns & Premature Saves)
+1. **DELETE Legacy Unreferenced Components**:
+   - **Delete `desktop_client/components/sidebar.py`** (`SidebarNav`) and **`desktop_client/components/header.py`** (`TopHeader`) — remnants of the old side-menu layout (`QA-01`). Remove their imports from `desktop_client/components/__init__.py` and `desktop_client/tests/test_ui_consistency.py`.
+   - **Delete `desktop_client/components/interactive_map.py`** (`InteractiveProvinceMap`) — imports `flet_map` (`ModuleNotFoundError: No module named 'flet_map'` on environments without `flet-map`) and is superseded by `SlippyMapCanvas`. Remove its import from `desktop_client/components/__init__.py`.
+2. **REMOVE Direct `tile.openstreetmap.org` URLs in `ft.Image` (`slippy_map_canvas.py:353`)**:
+   - OpenStreetMap's volunteer servers return `403 Access blocked` to Flutter/Dart `ft.Image`. Replace with CartoDB Voyager OSM (`https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png`) + local Python tile cache.
+3. **REMOVE the Static Catalog Form Header, `[Grid | Map]` Switcher, and `Sort By` Dropdown from the `/map` Tab (`places_view.py`)**:
+   - On the Web App (`map.page.html`), `/tabs/map` is a **full-bleed map** with floating search/category pills and a floating `List View (2,673)` drawer pill—not a `920×520` box under a giant white form header.
+4. **REMOVE Premature Guest Storage Saving in `ItineraryService.generate_suggested_itinerary()` (`itinerary_service.py:57–70`)**:
+   - Currently, generating a Suggested Itinerary preview (`save_immediately=False`) immediately writes the draft into `guest_storage.json` before the user clicks `[Accept & Save]` (`S-BUG-06`). Only cache it in `self.active_draft_itinerary` during preview, and persist to `guest_storage` / cloud ONLY when the user clicks `[Accept & Save]`!
+5. **REMOVE Destructive `self.guest_storage.clear_all()` in `ProfileView._sync_guest_trips()` (`profile_view.py:1241`)**:
+   - Currently, clicking `[Sync Now]` on the Profile screen deletes all local guest trips without uploading them! Replace with `await self.auth_service.migrate_guest_trips()`.
 
 ---
 
-## 4. Mandatory Fix 3: Pure-Flet `1.1.2` Interactive Slippy Map, Marker Clustering & Road Routing Engine
+### 3.2 What to MODIFY (12 Critical Runtime Bugs & Layout Fixes)
 
-### 4.1 Why the Previous Map Failed
-1. **`flet_map` is not reliable in Flet `1.1.2`**, and drawing markers as `ft.canvas.Circle` shapes makes them **unclickable** because Flet canvas shapes do not emit pointer events.
-2. **Dataset Path Resolution**: When running `python -m desktop_client.main` or `flet run desktop_client/main.py`, relative paths like `"Project/src/assets/data/osm_places.json"` fail if the working directory is `desktop_client/`. You **must** resolve the repository root via `Path(__file__).resolve().parents[2] / "Project" / "src" / "assets" / "data" / "osm_places.json"`.
-3. **Missing Web-Mercator Tile + Canvas + Overlay Stack Architecture**: To display places and routes exactly like Leaflet on the Web App (`map.page.ts` and `itinerary-route-map.component.ts`), the map component must layer **3 synchronized coordinate planes** inside a clipped `ft.Stack`:
-   - **Plane 1 (Tile Layer)**: 256×256 OpenStreetMap `ft.Image` tiles (`https://tile.openstreetmap.org/{z}/{x}/{y}.png`) positioned using exact Web-Mercator math (`latlon_to_world_px(lat, lon, zoom)`), wrapped in an `ft.GestureDetector` that supports smooth mouse drag panning (`on_pan_update`) and scroll-wheel / button zooming (`zoom 9..18`).
-   - **Plane 2 (Vector Route Polyline Layer)**: An `ft.canvas.Canvas` filling the viewport that projects every `(lat, lng)` vertex of the active day's OSRM road route (`https://router.project-osrm.org/route/v1/driving/{lng1},{lat1};{lng2},{lat2}?overview=full&geometries=polyline` or `generate_geodesic_arc` fallback) into viewport pixel coordinates `(px, py)` and draws:
-     - Outer white route casing (`cv.Paint(color="#ffffff", stroke_width=8, style=ft.PaintingStyle.STROKE, stroke_cap=ft.StrokeCap.ROUND, stroke_join=ft.StrokeJoin.ROUND)`)
-     - Inner road route line (`cv.Paint(color="#0284c7", stroke_width=5, style=ft.PaintingStyle.STROKE, stroke_cap=ft.StrokeCap.ROUND, stroke_join=ft.StrokeJoin.ROUND)`)
-   - **Plane 3 (Interactive Marker & Cluster Layer)**: Positioned `ft.Container` controls (`left=px - radius, top=py - radius`) placed on top of the canvas so every marker has a real `on_click` handler and `tooltip`:
-     - **At Zoom `< 14` (Discovery Mode)**: Grid-based spatial clustering (`cluster_radius_px = 55`) groups nearby POIs into **Web-App-identical Blue Numbered Cluster Circles (`#0084ff` outer ring, `#0066cc` inner core, white bold count)** that zoom into the cluster center by `+2` levels on click!
-     - **At Zoom `>= 14` (or singleton clusters)**: Category-colored circular/teardrop pins (`#10b981` Nature, `#f97316` Food, `#8b5cf6` Culture, `#ec4899` Shopping, `#06b6d4` Resort, `#64748b` Essential) with category icons that open the **`PlaceDetailSheet`** on click!
-     - **In Route Mode (`ItineraryRouteMap` & `MapView` Follow-Route Mode)**: Clickable **Numbered Stop Badges (`1`, `2`, `3`... in `#2563eb` or `#f97316` when active, `30×30px`, `2.5px` white border)** with a floating white pill label showing `1. [Stop Name]`!
+1. **`desktop_client/main.py` (4 Router & Health Loop Bugs)**:
+   - **Bug 1A (`main.py:308`)**: Change `await connectivity_service.check_host_health(api_client)` to `await connectivity_service.check_host_health()` (fixes silent `TypeError` every 15s).
+   - **Bug 1B (`main.py:196–223`)**: Support query parameters on workflow routes (`route.startswith("/suggested")`, `route.startswith("/builder")`) and parse `?draft=true`, `?destination=...`, `?placeId=...`, and `/builder/{id}`! Also do **not** return a stale `cached_views["/builder"]` when `trip_data` (from `[Customize in Builder]` or `[Edit Itinerary]`) or `?draft=true` is passed!
+   - **Bug 1C (`main.py:251`)**: Change `elif route in ("/map", "/places"):` to `elif route.startswith("/map") or route.startswith("/places"):` and pass `route_query=route` + `trip_data=selected_trip` into `PlacesView(on_navigate=navigate_to, route_query=route, active_trip=selected_trip)` so clicking **`[Full Map]`** in Suggested Wizard, Custom Builder, or Trip Detail actually opens the Map in **Follow-Route Mode** instead of falling through to the Home Dashboard!
+   - **Bug 1D (`main.py:224–239`)**: When navigating to `/trips/{id}`, if `selected_trip` is `None`, check `itinerary_service.get_active_draft_itinerary()` and `guest_storage.get_itinerary(trip_id)` and async cloud lookup `itinerary_service.get_itinerary(trip_id)` so clicking a cloud-saved itinerary card on the Home screen opens `TripDetailView` instead of redirecting to `/saved`!
 
-### 4.2 Complete Implementation for `desktop_client/components/slippy_map_canvas.py`
-Create `desktop_client/components/slippy_map_canvas.py` with the complete Web-Mercator slippy map, OSRM road router, spatial marker clusterer, and interactive pin overlay:
+2. **`desktop_client/config/settings.py` & `scripts/build_standalone_exe.py` (Missing 2,673 OSM Places in `.exe` & Budget Presets)**:
+   - **Bug 2A (`settings.py:18–22` & `165–180`)**: In `_resolve_base_dir()` and `get_asset_path()`, when `getattr(sys, "frozen", False)` is True, check:
+     1. `Path(sys.executable).parent / "assets"`
+     2. `Path(getattr(sys, "_MEIPASS", "")) / "assets"`
+     3. `Path(getattr(sys, "_MEIPASS", "")) / "desktop_client" / "assets"`
+   - **Bug 2B (`scripts/build_standalone_exe.py:76–89` & `180`)**: Add `--add-data "{desktop_dir / 'assets'}{os.pathsep}assets"` to the PyInstaller command AND explicitly copy `shutil.copytree(desktop_dir / "assets", out_app_dir / "assets", dirs_exist_ok=True)` so `dist/NuevaEcijaTravel/assets/data/osm_places.json` (all 2,673 POIs) and all 42 photos are guaranteed to exist in the standalone `.exe`!
+   - **Bug 2C (`settings.py:134–139`)**: Align `BUDGET_PRESETS` with the Web App (`₱1,500`, `₱2,500`, `₱4,000`, `₱6,000`).
+
+3. **`desktop_client/services/place_service.py` (Offline Crash & HTTP 422 Municipality Filter Bug)**:
+   - **Bug 3A (`place_service.py:104`)**: Change `pages=max(1, (total + limit - 1) // limit)` to `total_pages=max(1, (total + limit - 1) // limit)` so offline `PlaceService.get_places()` stops throwing `TypeError`!
+   - **Bug 3B (`place_service.py:76–77`)**: Check if `municipality_id` is a valid UUID (`uuid.UUID(municipality_id)`). If it is a municipality **name** (like `"Bongabon"` or `"Cabanatuan City"` or `"muni-bongabon"`), send it as `params["municipality_name"] = ...` instead of `params["municipality_id"]` so FastAPI (`backend/app/api/v1/places.py:114–115`) never rejects it with `422 Unprocessable Content`!
+   - **Bug 3C**: Add `in_memory_places_cache` (`merge_places_into_cache`) initialized with all **2,673 places** from `get_all_offline_places()`, merging live API results by `id` (`QA-02`).
+
+4. **`desktop_client/components/slippy_map_canvas.py` (Fix `403 Access blocked` Tiles & Responsive Viewport Sizing)**:
+   - **Bug 4A (`slippy_map_canvas.py:353`)**: Replace `https://tile.openstreetmap.org/{z}/{x}/{y}.png` with CartoDB Voyager OSM (`https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png`) so Flutter/Dart `ft.Image` loads street & POI tiles with **zero `403 Access blocked` errors**!
+   - **Bug 4B**: Support `expand=True` with dynamic viewport dimensions (`width=1220, height=700` on full-screen Map tab) so the map fills the entire desktop window without a blank white gap on the right.
+
+5. **`desktop_client/views/dashboard_view.py` (Notification Bell Crash, Card Cap & Trip Click Bug)**:
+   - **Bug 5A (`dashboard_view.py:681–683`)**: Fix `_on_bell_clicked()`:
+     ```python
+     from desktop_client.core.storage import get_guest_storage
+     guest_count = len(get_guest_storage().list_itineraries())
+     is_guest = self.session_manager.is_guest
+     ```
+   - **Bug 5B (`dashboard_view.py:311` & `606`)**: Cap Home Saved Itineraries preview at `self.saved_itineraries[:2]` (matching Web App Milestone 8) and pass `itin` when clicking a card: `on_click=lambda _, it=itin: self.on_navigate(f"/trips/{it.id}", it) if self.on_navigate else None`.
+
+6. **`desktop_client/views/signup_view.py` & `desktop_client/services/auth_service.py` & `desktop_client/models/itinerary.py` (Middle Initial & Guest Trip Migration)**:
+   - **Bug 6A (`signup_view.py:343`)**: Pass `middle_initial=(self.mi_input.value or "").strip()` into `self.auth_service.register(...)`.
+   - **Bug 6B (`models/itinerary.py`)**: Add `def to_create_payload(self) -> ItineraryCreatePayload:` to `Itinerary` so `AuthService.migrate_guest_trips()` works without raising `AttributeError`!
+   - **Bug 6C (`profile_view.py:1227–1246`)**: In `ProfileView._sync_guest_trips()`, call `migrated = await self.auth_service.migrate_guest_trips()` and show a toast `"Migrated {migrated} local trips to your cloud account!"` instead of wiping `guest_storage`!
+   - **Bug 6D (`profile_view.py:460` & `464`)**: Replace `self._run_async(_do_test)` with `self.safe_page.run_task(_do_test)` and wrap `self.connectivity_service.set_custom_api_url(new_url)` in `try ... except ValueError as err:`.
+
+7. **`desktop_client/views/trip_detail_view.py` & `desktop_client/services/itinerary_service.py` (In-Place Edit Save Crash & `[Full Map]` Button)**:
+   - **Bug 7A (`trip_detail_view.py:554–598` & `itinerary_service.py:395–416`)**:
+     - In `ItineraryService.update_itinerary(self, itinerary: Itinerary)`, include `"days"` in `update_data` so all stop edits, reorders, and added/deleted days are persisted to `PATCH /api/v1/itineraries/{id}`!
+     - In `TripDetailView._save_changes()`, remove the broken `from desktop_client.models.itinerary import ItineraryUpdatePayload` import and call `updated = await self.itinerary_service.update_itinerary(self.itinerary)` directly!
+   - **Bug 7B (`trip_detail_view.py:238`)**: Pass `on_view_full_map=lambda: self._open_full_map()` to `ItineraryRouteMap` so clicking `[Full Map]` in `TripDetailView` navigates to `f"/map?itineraryId={self.itinerary.id}&day={active_day.day_number}"`!
+
+---
+
+### 3.3 What to ADD (Missing Web App Features across Map, Suggested Wizard & Custom Builder)
+
+1. **Full-Bleed Interactive `MapView` (`desktop_client/views/places_view.py`) Matching `Project/src/app/tabs/map/map.page.html`**:
+   - **Discovery Mode (`is_follow_route_mode = False`)**:
+     - Full-bleed `SlippyMapCanvas(width=1220, height=700)` plotting all **2,673 merged places** (`get_all_offline_places()` + live API places) with blue `#0084ff` marker clusters (`zoom < 14`) and category pins (`zoom >= 14`).
+     - **Floating Top Search & 17 Category Filter Pills Bar** overlaid at `top=12, left=16, right=16`.
+     - **Floating Right Control Buttons**: `[✨ Live OSM]`, `[🎯 Locate Me (GPS)]`, `[🧭 Reset Province View]`.
+     - **Floating Bottom-Center `"List View (N)"` Pill** that toggles the **Collapsible POI List Drawer (`Destinations in View`)**.
+   - **Focused Follow-Route Mode (`is_follow_route_mode = True` when route has `?itineraryId=...&day=...`)**:
+     - Loads the target `Itinerary` (from `active_trip`, `itinerary_service.get_active_draft_itinerary()`, or `guest_storage` / cloud) and isolates the active day's stops & OSRM road polyline on the map (hiding the 2,673 background clusters unless `[Show Nearby POIs]` is toggled ON!).
+     - **Floating Active Route Top Bar**: `[← Back to Plan]`, `[🗺️ Browse Map]`, destination title & stop count, **Day Switcher Pills (`Day 1 | Day 2 | ...`)**, and **`[👁️ Show Nearby POIs]`** toggle button.
+     - **Bottom Active Route Stops Carousel**: Displays `Stop X of Y`, **`[↗ Google Maps Navigation]`** multi-stop URL button, and horizontal clickable stop cards (`1. [Stop Name]`, `2. [Stop Name]`...) that pan/highlight the corresponding numbered stop pin on the map!
+
+2. **Web-App-Identical `SuggestedWizardView` (`desktop_client/views/suggested_wizard_view.py`)**:
+   - Hydrate `budget_val` from the user's saved `default_daily_budget` (`3000.0` default).
+   - Support `anchor_place_id` when launched from `PlaceDetailSheet`'s `[✨ Start Trip Here]` button.
+   - Add **Minimum Place Rating Chips** (`All Ratings`, `4.0+ ★`, `4.5+ ★`) to the wizard form.
+   - In Result View (`view_mode == "itinerary"`):
+     - Add the **Verified Place Costs Card (`.verified-budget-card`)** using `calculate_budget_summary()` (showing verified min–max range + unpriced stop count).
+     - Make the **Travel Notes & Planning Assumptions Box** a collapsible accordion with categorized tags (`Pacing`, `Routing`, `Budget`, `Schedule`).
+     - Make every `StopCard` clickable (`on_click`) to open `show_place_detail_dialog()` with the stop's commute guide!
+     - In `_load_nearby_amenities()`, filter nearby restaurants, hospitals/pharmacies, and stores **by the active day's municipality** (`get_day_location_name(active_day)`), and when `[✓ Accept & Save Itinerary]` is clicked, navigate directly to `/trips/{saved.id}`!
+
+3. **Web-App-Identical `CustomBuilderView` (`desktop_client/views/custom_builder_view.py`)**:
+   - In **View 0 (`form`)**: Add the 5 **Traveler Preferences Pills** (`Nature & Parks`, `Food Trip`, `Culture & History`, `Shopping`, `Resort`) and initialize `daily_budget` from `user.default_daily_budget`.
+   - In **View 1 (`browse`)**: Add the **`✨ Recommended for You`** category pill when preferences are selected, map all 16 canonical categories (`All`, `✨ Recommended for You`, `Tourist Spots`, `Food`, `Resorts & Stays`, `Culture & Heritage`, `Shopping`, `Transit & Essentials`, `Other`), and sort places matching `self.destination` to the top!
+   - In **View 2 (`timeline`)**:
+     - Add the **Editable Trip Settings Card** (`Trip Title`, `Daily Budget`, and clickable `Travel Dates` that run `sync_days_with_date_range()`) and the **Verified Place Costs Card** at the top of the timeline.
+     - In `_auto_schedule_active_day()`, compute dynamic **Haversine driving transit buffers (`15..120 mins` at `40 km/h + 10 min buffer`)** between consecutive stops (`QA-13`).
+     - In `_open_edit_stop_dialog()`, include **Min Cost (₱)** and **Max Cost (₱)** fields alongside `Move to Day`, `Planned Time`, `Duration`, and `Notes`.
+     - In `_open_custom_venue_dialog()`, remove the invalid `latitude=lat, longitude=lng` kwargs from `ItineraryItem(...)` (use `custom_lat=lat, custom_lng=lng`) so adding an off-grid venue never crashes with `TypeError`!
+     - Support **Edit Existing Itinerary Mode** (`if self.existing_itinerary: await self.itinerary_service.update_itinerary(...)` on save).
+
+---
+
+## 4. Complete Drop-In Code Implementations for Antigravity
+
+### 4.1 Fix `desktop_client/components/slippy_map_canvas.py` (Eliminate `403 Access blocked` + Responsive Sizing)
+In `desktop_client/components/slippy_map_canvas.py`, replace `_render_tiles()` (lines 334–370) so it uses **CartoDB Voyager OSM raster tiles** (`https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png`) which never return `403 Access blocked` to Flutter's `ft.Image` client:
 
 ```python
-"""Pure-Flet 1.1.2 Web-Mercator Slippy Map with OSM tiles, spatial marker clustering, and OSRM road routing."""
-
-from __future__ import annotations
-
-import math
-from dataclasses import dataclass
-from typing import Callable, Optional
-import flet as ft
-import flet.canvas as cv
-import httpx
-
-from desktop_client.models.place import Place
-from desktop_client.utils.polyline import decode_polyline, generate_geodesic_arc
-
-
-# Category Pin Palette matching Project/src/app/features/map/map.page.scss (.pin-cat-*)
-CATEGORY_PIN_STYLE: dict[str, tuple[str, ft.IconData]] = {
-    "tourist_attraction": ("#10b981", ft.Icons.LANDSCAPE_ROUNDED),
-    "nature_park": ("#10b981", ft.Icons.PARK_ROUNDED),
-    "attraction": ("#10b981", ft.Icons.PHOTO_CAMERA_ROUNDED),
-    "restaurant": ("#f97316", ft.Icons.RESTAURANT_ROUNDED),
-    "cafe": ("#f97316", ft.Icons.LOCAL_CAFE_ROUNDED),
-    "fast_food": ("#f97316", ft.Icons.FASTFOOD_ROUNDED),
-    "church_religious": ("#8b5cf6", ft.Icons.ACCOUNT_BALANCE_ROUNDED),
-    "museum_cultural": ("#8b5cf6", ft.Icons.MUSEUM_ROUNDED),
-    "shopping_market": ("#ec4899", ft.Icons.SHOPPING_BAG_ROUNDED),
-    "supermarket": ("#ec4899", ft.Icons.SHOPPING_CART_ROUNDED),
-    "convenience_store": ("#ec4899", ft.Icons.STOREFRONT_ROUNDED),
-    "resort_swimming": ("#06b6d4", ft.Icons.POOL_ROUNDED),
-    "hotel_accommodation": ("#06b6d4", ft.Icons.HOTEL_ROUNDED),
-}
-
-
-@dataclass
-class RouteStopPin:
-    """Represents a numbered itinerary stop on the route map."""
-
-    index: int          # 0-based index (displayed as index + 1)
-    title: str
-    lat: float
-    lng: float
-    planned_time: str = ""
-    category: str = "attraction"
-    place: Optional[Place] = None
-
-
-def latlon_to_world_px(lat: float, lon: float, zoom: int) -> tuple[float, float]:
-    """Project (lat, lon) in degrees to global Web-Mercator pixel coordinates at integer zoom."""
-    lat = max(-85.05112878, min(85.05112878, float(lat)))
-    lon = float(lon)
-    scale = 256.0 * (2 ** zoom)
-    x = (lon + 180.0) / 360.0 * scale
-    sin_lat = math.sin(math.radians(lat))
-    y = (0.5 - math.log((1.0 + sin_lat) / (1.0 - sin_lat)) / (4.0 * math.pi)) * scale
-    return x, y
-
-
-def world_px_to_latlon(wx: float, wy: float, zoom: int) -> tuple[float, float]:
-    """Inverse project global Web-Mercator pixel coordinates (wx, wy) back to (lat, lon)."""
-    scale = 256.0 * (2 ** zoom)
-    lon = (wx / scale) * 360.0 - 180.0
-    n = math.pi - 2.0 * math.pi * (wy / scale)
-    lat = math.degrees(math.atan(0.5 * (math.exp(n) - math.exp(-n))))
-    return lat, lon
-
-
-def fetch_osrm_road_geometry(coords: list[tuple[float, float]], timeout: float = 3.0) -> list[tuple[float, float]]:
-    """Fetch road-following geometry from public OSRM API for a sequence of (lat, lng) stops.
-    Falls back to smooth 24-point geodesic arcs if offline or OSRM times out.
-    """
-    valid = [(float(lat), float(lng)) for lat, lng in coords if lat and lng]
-    if len(valid) < 2:
-        return valid
-
-    coord_str = ";".join(f"{lng:.6f},{lat:.6f}" for lat, lng in valid)
-    url = f"https://router.project-osrm.org/route/v1/driving/{coord_str}?overview=full&geometries=polyline"
-    try:
-        with httpx.Client(timeout=timeout) as client:
-            resp = client.get(url)
-            if resp.status_code == 200:
-                data = resp.json()
-                routes = data.get("routes") or []
-                if routes and routes[0].get("geometry"):
-                    decoded = decode_polyline(routes[0]["geometry"])
-                    if len(decoded) >= 2:
-                        return decoded
-    except Exception:
-        pass
-
-    # Offline / fallback: stitch smooth geodesic splines between consecutive stops
-    fallback_pts: list[tuple[float, float]] = []
-    for i in range(len(valid) - 1):
-        arc = generate_geodesic_arc(valid[i], valid[i + 1], num_points=24)
-        if i > 0 and arc:
-            arc = arc[1:]
-        fallback_pts.extend(arc)
-    return fallback_pts
-
-
-class SlippyMapCanvas(ft.Container):
-    """Interactive OpenStreetMap slippy map with marker clustering, category pins, and OSRM road polylines."""
-
-    def __init__(
-        self,
-        width: int = 860,
-        height: int = 520,
-        center_lat: float = 15.58,
-        center_lng: float = 121.00,
-        zoom: int = 10,
-        places: Optional[list[Place]] = None,
-        route_stops: Optional[list[RouteStopPin]] = None,
-        route_polyline_points: Optional[list[tuple[float, float]]] = None,
-        active_stop_index: Optional[int] = None,
-        user_location: Optional[tuple[float, float]] = None,
-        on_place_click: Optional[Callable[[Place], None]] = None,
-        on_stop_click: Optional[Callable[[int, RouteStopPin], None]] = None,
-        border_radius: int = 16,
-    ) -> None:
-        super().__init__()
-        self._map_w = max(320, int(width))
-        self._map_h = max(220, int(height))
-        self.width = self._map_w
-        self.height = self._map_h
-        self.border_radius = border_radius
-        self.clip_behavior = ft.ClipBehavior.HARD_EDGE
-        self.bgcolor = "#e2e8f0"
-        self.border = ft.Border.all(1, "#cbd5e1")
-
-        self.center_lat = float(center_lat)
-        self.center_lng = float(center_lng)
-        self.zoom = max(8, min(18, int(zoom)))
-
-        self._places: list[Place] = list(places or [])
-        self._route_stops: list[RouteStopPin] = list(route_stops or [])
-        self._route_pts: list[tuple[float, float]] = list(route_polyline_points or [])
-        self._active_stop_index = active_stop_index
-        self._user_location = user_location
-        self._on_place_click = on_place_click
-        self._on_stop_click = on_stop_click
-
-        self._tile_stack = ft.Stack(width=self._map_w, height=self._map_h)
-        self._vector_canvas = cv.Canvas(width=self._map_w, height=self._map_h, shapes=[])
-        self._marker_stack = ft.Stack(width=self._map_w, height=self._map_h)
-
-        # Attribution & Zoom Controls
-        self._zoom_label = ft.Text(f"Z{self.zoom}", size=10, weight=ft.FontWeight.W_700, color="#334155")
-        controls_overlay = ft.Container(
-            right=12,
-            bottom=28,
-            bgcolor=ft.Colors.with_opacity(0.94, "#ffffff"),
-            border_radius=10,
-            border=ft.Border.all(1, "#cbd5e1"),
-            padding=ft.Padding.symmetric(horizontal=4, vertical=4),
-            shadow=ft.BoxShadow(blur_radius=8, color=ft.Colors.with_opacity(0.12, "#0f172a")),
-            content=ft.Column(
-                spacing=2,
-                tight=True,
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                controls=[
-                    ft.IconButton(
-                        icon=ft.Icons.ADD_ROUNDED,
-                        icon_size=16,
-                        icon_color="#0f172a",
-                        tooltip="Zoom in",
-                        on_click=lambda _: self.set_zoom(self.zoom + 1),
-                        style=ft.ButtonStyle(padding=ft.Padding.all(4)),
-                    ),
-                    self._zoom_label,
-                    ft.IconButton(
-                        icon=ft.Icons.REMOVE_ROUNDED,
-                        icon_size=16,
-                        icon_color="#0f172a",
-                        tooltip="Zoom out",
-                        on_click=lambda _: self.set_zoom(self.zoom - 1),
-                        style=ft.ButtonStyle(padding=ft.Padding.all(4)),
-                    ),
-                    ft.IconButton(
-                        icon=ft.Icons.FIT_SCREEN_ROUNDED,
-                        icon_size=15,
-                        icon_color="#0284c7",
-                        tooltip="Fit markers / route",
-                        on_click=lambda _: self.fit_to_content(),
-                        style=ft.ButtonStyle(padding=ft.Padding.all(4)),
-                    ),
-                ],
-            ),
-        )
-
-        attribution_badge = ft.Container(
-            left=8,
-            bottom=6,
-            bgcolor=ft.Colors.with_opacity(0.82, "#ffffff"),
-            border_radius=6,
-            padding=ft.Padding.symmetric(horizontal=6, vertical=2),
-            content=ft.Text("© OpenStreetMap contributors • OSRM Routing", size=9, color="#475569"),
-        )
-
-        # Gesture detector handles click-and-drag panning across the map
-        gesture_layer = ft.GestureDetector(
-            on_pan_update=self._handle_pan_update,
-            drag_interval=16,
-            content=ft.Stack(
-                width=self._map_w,
-                height=self._map_h,
-                controls=[
-                    self._tile_stack,
-                    self._vector_canvas,
-                    self._marker_stack,
-                ],
-            ),
-        )
-
-        self.content = ft.Stack(
-            width=self._map_w,
-            height=self._map_h,
-            controls=[
-                gesture_layer,
-                controls_overlay,
-                attribution_badge,
-            ],
-        )
-
-        self.redraw()
-
-    def set_places(self, places: list[Place], auto_fit: bool = False) -> None:
-        self._places = list(places or [])
-        if auto_fit and self._places:
-            self.fit_bounds([(p.latitude, p.longitude) for p in self._places if p.latitude and p.longitude])
-        else:
-            self.redraw()
-
-    def set_route(
-        self,
-        stops: list[RouteStopPin],
-        polyline_points: Optional[list[tuple[float, float]]] = None,
-        active_stop_index: Optional[int] = None,
-        auto_fit: bool = True,
-    ) -> None:
-        self._route_stops = list(stops or [])
-        self._active_stop_index = active_stop_index
-        if polyline_points is not None:
-            self._route_pts = list(polyline_points)
-        elif len(self._route_stops) >= 2:
-            self._route_pts = fetch_osrm_road_geometry([(s.lat, s.lng) for s in self._route_stops])
-        else:
-            self._route_pts = []
-
-        if auto_fit and self._route_stops:
-            self.fit_bounds([(s.lat, s.lng) for s in self._route_stops if s.lat and s.lng])
-        else:
-            self.redraw()
-
-    def set_center_and_zoom(self, lat: float, lng: float, zoom: Optional[int] = None) -> None:
-        self.center_lat = float(lat)
-        self.center_lng = float(lng)
-        if zoom is not None:
-            self.zoom = max(8, min(18, int(zoom)))
-        self.redraw()
-
-    def set_zoom(self, new_zoom: int) -> None:
-        self.zoom = max(8, min(18, int(new_zoom)))
-        self.redraw()
-
-    def fit_to_content(self) -> None:
-        if self._route_stops:
-            self.fit_bounds([(s.lat, s.lng) for s in self._route_stops if s.lat and s.lng])
-        elif self._places:
-            self.fit_bounds([(p.latitude, p.longitude) for p in self._places if p.latitude and p.longitude])
-        else:
-            self.set_center_and_zoom(15.58, 121.00, 10)
-
-    def fit_bounds(self, coords: list[tuple[float, float]], padding_px: int = 56) -> None:
-        valid = [(lat, lng) for lat, lng in coords if lat and lng and -90 <= lat <= 90 and -180 <= lng <= 180]
-        if not valid:
-            self.redraw()
-            return
-        if len(valid) == 1:
-            self.center_lat, self.center_lng = valid[0]
-            self.zoom = 14
-            self.redraw()
-            return
-
-        min_lat = min(c[0] for c in valid)
-        max_lat = max(c[0] for c in valid)
-        min_lng = min(c[1] for c in valid)
-        max_lng = max(c[1] for c in valid)
-
-        self.center_lat = (min_lat + max_lat) / 2.0
-        self.center_lng = (min_lng + max_lng) / 2.0
-
-        usable_w = max(120, self._map_w - 2 * padding_px)
-        usable_h = max(120, self._map_h - 2 * padding_px)
-
-        best_z = 10
-        for z in range(16, 8, -1):
-            x1, y1 = latlon_to_world_px(max_lat, min_lng, z)
-            x2, y2 = latlon_to_world_px(min_lat, max_lng, z)
-            if abs(x2 - x1) <= usable_w and abs(y2 - y1) <= usable_h:
-                best_z = z
-                break
-        self.zoom = best_z
-        self.redraw()
-
-    def _handle_pan_update(self, e: ft.DragUpdateEvent) -> None:
-        dx = float(getattr(e, "delta_x", 0.0) or 0.0)
-        dy = float(getattr(e, "delta_y", 0.0) or 0.0)
-        cx, cy = latlon_to_world_px(self.center_lat, self.center_lng, self.zoom)
-        self.center_lat, self.center_lng = world_px_to_latlon(cx - dx, cy - dy, self.zoom)
-        self.redraw()
-
-    def _latlon_to_viewport(self, lat: float, lng: float) -> tuple[float, float]:
-        cx, cy = latlon_to_world_px(self.center_lat, self.center_lng, self.zoom)
-        px, py = latlon_to_world_px(lat, lng, self.zoom)
-        return (self._map_w / 2.0) + (px - cx), (self._map_h / 2.0) + (py - cy)
-
-    def redraw(self) -> None:
-        self._zoom_label.value = f"Z{self.zoom}"
-        self._render_tiles()
-        self._render_route_Vectors()
-        self._render_markers_and_clusters()
-        try:
-            if self.page:
-                self.update()
-        except Exception:
-            pass
-
+    # Inside SlippyMapCanvas._render_tiles() in desktop_client/components/slippy_map_canvas.py:
     def _render_tiles(self) -> None:
         cx, cy = latlon_to_world_px(self.center_lat, self.center_lng, self.zoom)
         top_left_wx = cx - (self._map_w / 2.0)
@@ -811,6 +177,7 @@ class SlippyMapCanvas(ft.Container):
         max_ty = int(math.floor((top_left_wy + self._map_h) / 256.0))
 
         num_tiles = 2 ** self.zoom
+        subdomains = ("a", "b", "c", "d")
         tiles: list[ft.Control] = []
         for tx in range(min_tx, max_tx + 1):
             for ty in range(min_ty, max_ty + 1):
@@ -819,7 +186,9 @@ class SlippyMapCanvas(ft.Container):
                 wrapped_tx = tx % num_tiles
                 left_px = (tx * 256.0) - top_left_wx
                 top_px = (ty * 256.0) - top_left_wy
-                tile_url = f"https://tile.openstreetmap.org/{self.zoom}/{wrapped_tx}/{ty}.png"
+                sub = subdomains[(wrapped_tx + ty) % len(subdomains)]
+                # CartoDB Voyager OSM tile server — 100% compatible with Flutter/Flet desktop without 403 blocks
+                tile_url = f"https://{sub}.basemaps.cartocdn.com/rastertiles/voyager/{self.zoom}/{wrapped_tx}/{ty}.png"
                 tiles.append(
                     ft.Container(
                         left=left_px,
@@ -830,353 +199,453 @@ class SlippyMapCanvas(ft.Container):
                             src=tile_url,
                             width=256,
                             height=256,
-                            fit=ft.ImageFit.COVER,
+                            fit=ft.BoxFit.COVER,
                             gapless_playback=True,
                         ),
                     )
                 )
         self._tile_stack.controls = tiles
-
-    def _render_route_Vectors(self) -> None:
-        shapes: list[cv.Shape] = []
-        if len(self._route_pts) >= 2:
-            screen_pts = [self._latlon_to_viewport(lat, lng) for lat, lng in self._route_pts]
-            path_elements: list[cv.PathElement] = [cv.Path.MoveTo(screen_pts[0][0], screen_pts[0][1])]
-            for vx, vy in screen_pts[1:]:
-                path_elements.append(cv.Path.LineTo(vx, vy))
-
-            # Outer white route casing
-            shapes.append(
-                cv.Path(
-                    elements=path_elements,
-                    paint=ft.Paint(
-                        color="#ffffff",
-                        stroke_width=8,
-                        style=ft.PaintingStyle.STROKE,
-                        stroke_cap=ft.StrokeCap.ROUND,
-                        stroke_join=ft.StrokeJoin.ROUND,
-                    ),
-                )
-            )
-            # Inner primary road line (#0284c7 / #2563eb matching Web App)
-            shapes.append(
-                cv.Path(
-                    elements=path_elements,
-                    paint=ft.Paint(
-                        color="#0284c7",
-                        stroke_width=5,
-                        style=ft.PaintingStyle.STROKE,
-                        stroke_cap=ft.StrokeCap.ROUND,
-                        stroke_join=ft.StrokeJoin.ROUND,
-                    ),
-                )
-            )
-        self._vector_canvas.shapes = shapes
-
-    def _render_markers_and_clusters(self) -> None:
-        controls: list[ft.Control] = []
-
-        # 1. User GPS / Cabanatuan Anchor Dot (if present)
-        if self._user_location:
-            ux, uy = self._latlon_to_viewport(self._user_location[0], self._user_location[1])
-            if -20 <= ux <= self._map_w + 20 and -20 <= uy <= self._map_h + 20:
-                controls.append(
-                    ft.Container(
-                        left=ux - 10,
-                        top=uy - 10,
-                        width=20,
-                        height=20,
-                        bgcolor="#3b82f6",
-                        border=ft.Border.all(3, "#ffffff"),
-                        border_radius=10,
-                        tooltip="Your Location",
-                        shadow=ft.BoxShadow(blur_radius=8, color=ft.Colors.with_opacity(0.4, "#3b82f6")),
-                    )
-                )
-
-        # 2. Discovery Place Markers (with Web-App-identical Marker Clustering when zoom < 14)
-        visible_places: list[tuple[Place, float, float]] = []
-        for p in self._places:
-            if not p.latitude or not p.longitude:
-                continue
-            px, py = self._latlon_to_viewport(p.latitude, p.longitude)
-            if -32 <= px <= self._map_w + 32 and -32 <= py <= self._map_h + 32:
-                visible_places.append((p, px, py))
-
-        if self.zoom < 14 and len(visible_places) > 18:
-            # Grid spatial clustering (cell size 58px) matching Leaflet.markercluster (.marker-cluster)
-            grid: dict[tuple[int, int], list[tuple[Place, float, float]]] = {}
-            cell_size = 58.0
-            for item in visible_places:
-                gx = int(item[1] // cell_size)
-                gy = int(item[2] // cell_size)
-                grid.setdefault((gx, gy), []).append(item)
-
-            for bucket in grid.values():
-                if len(bucket) == 1:
-                    p, px, py = bucket[0]
-                    controls.append(self._build_place_pin(p, px, py))
-                else:
-                    avg_x = sum(b[1] for b in bucket) / len(bucket)
-                    avg_y = sum(b[2] for b in bucket) / len(bucket)
-                    avg_lat = sum(b[0].latitude for b in bucket) / len(bucket)
-                    avg_lng = sum(b[0].longitude for b in bucket) / len(bucket)
-                    count = len(bucket)
-                    controls.append(self._build_cluster_pin(count, avg_x, avg_y, avg_lat, avg_lng))
-        else:
-            for p, px, py in visible_places[:250]:
-                controls.append(self._build_place_pin(p, px, py))
-
-        # 3. Numbered Itinerary Route Stop Badges (1..N) on top of everything
-        for stop in self._route_stops:
-            if not stop.lat or not stop.lng:
-                continue
-            sx, sy = self._latlon_to_viewport(stop.lat, stop.lng)
-            if -40 <= sx <= self._map_w + 40 and -40 <= sy <= self._map_h + 40:
-                controls.append(self._build_route_stop_badge(stop, sx, sy))
-
-        self._marker_stack.controls = controls
-
-    def _build_cluster_pin(
-        self, count: int, px: float, py: float, center_lat: float, center_lng: float
-    ) -> ft.Control:
-        """Web-App-identical blue marker cluster circle (`.marker-cluster` in `map.page.scss`)."""
-        size = 38 if count < 25 else (44 if count < 100 else 50)
-        return ft.Container(
-            left=px - size / 2,
-            top=py - size / 2,
-            width=size,
-            height=size,
-            border_radius=size / 2,
-            bgcolor=ft.Colors.with_opacity(0.28, "#0084ff"),
-            padding=ft.Padding.all(4),
-            tooltip=f"{count} places in this area — Click to zoom in",
-            on_click=lambda _: self.set_center_and_zoom(center_lat, center_lng, min(17, self.zoom + 2)),
-            content=ft.Container(
-                alignment=ft.Alignment(0, 0),
-                border_radius=(size - 8) / 2,
-                bgcolor="#0084ff",
-                border=ft.Border.all(2, "#ffffff"),
-                content=ft.Text(
-                    str(count),
-                    size=12,
-                    weight=ft.FontWeight.W_800,
-                    color="#ffffff",
-                ),
-            ),
-        )
-
-    def _build_place_pin(self, place: Place, px: float, py: float) -> ft.Control:
-        """Category-colored teardrop/circular marker pin that opens PlaceDetailSheet on click."""
-        color_hex, icon_data = CATEGORY_PIN_STYLE.get(
-            place.category, ("#2563eb", ft.Icons.LOCATION_ON_ROUNDED)
-        )
-        return ft.Container(
-            left=px - 15,
-            top=py - 15,
-            width=30,
-            height=30,
-            bgcolor=color_hex,
-            border=ft.Border.all(2, "#ffffff"),
-            border_radius=15,
-            alignment=ft.Alignment(0, 0),
-            tooltip=f"{place.name} ({place.municipality_name or 'Nueva Ecija'})",
-            shadow=ft.BoxShadow(blur_radius=6, color=ft.Colors.with_opacity(0.28, "#0f172a")),
-            on_click=lambda _, p=place: self._on_place_click(p) if self._on_place_click else None,
-            content=ft.Icon(icon_data, size=15, color="#ffffff"),
-        )
-
-    def _build_route_stop_badge(self, stop: RouteStopPin, sx: float, sy: float) -> ft.Control:
-        """Numbered circular stop badge (`1`, `2`, `3`...) with floating stop name pill."""
-        is_active = self._active_stop_index == stop.index
-        badge_bg = "#f97316" if is_active else "#2563eb"
-        badge_size = 34 if is_active else 30
-
-        return ft.Container(
-            left=sx - badge_size / 2,
-            top=sy - badge_size / 2,
-            on_click=lambda _, s=stop: self._on_stop_click(s.index, s) if self._on_stop_click else None,
-            tooltip=f"Stop {stop.index + 1}: {stop.title} ({stop.planned_time or 'Scheduled'})",
-            content=ft.Row(
-                spacing=4,
-                tight=True,
-                vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                controls=[
-                    ft.Container(
-                        width=badge_size,
-                        height=badge_size,
-                        bgcolor=badge_bg,
-                        border=ft.Border.all(2.5, "#ffffff"),
-                        border_radius=badge_size / 2,
-                        alignment=ft.Alignment(0, 0),
-                        shadow=ft.BoxShadow(
-                            blur_radius=8,
-                            color=ft.Colors.with_opacity(0.35, "#0f172a"),
-                            offset=ft.Offset(0, 2),
-                        ),
-                        content=ft.Text(
-                            str(stop.index + 1),
-                            size=13,
-                            weight=ft.FontWeight.W_800,
-                            color="#ffffff",
-                        ),
-                    ),
-                    ft.Container(
-                        bgcolor=ft.Colors.with_opacity(0.95, "#ffffff"),
-                        border=ft.Border.all(1, "#cbd5e1"),
-                        border_radius=8,
-                        padding=ft.Padding.symmetric(horizontal=7, vertical=3),
-                        shadow=ft.BoxShadow(blur_radius=4, color=ft.Colors.with_opacity(0.12, "#0f172a")),
-                        content=ft.Text(
-                            stop.title[:22] + ("…" if len(stop.title) > 22 else ""),
-                            size=10,
-                            weight=ft.FontWeight.W_700,
-                            color="#0f172a",
-                        ),
-                    ),
-                ],
-            ),
-        )
 ```
 
-### 4.3 Loading All 2,673 OSM Places in `desktop_client/services/place_service.py`
-In `desktop_client/services/place_service.py`, ensure `load_osm_places()` resolves the exact repository path to `Project/src/assets/data/osm_places.json` regardless of the current working directory:
+---
 
+### 4.2 Fix `desktop_client/config/settings.py` & `desktop_client/core/offline_data.py` & `scripts/build_standalone_exe.py` (Ensure All 2,673 Places Load in Both Dev & `.exe`)
+
+1. **In `desktop_client/config/settings.py`**:
 ```python
-from pathlib import Path
+def _resolve_base_dir() -> Path:
+    if getattr(sys, "frozen", False):
+        exe_parent = Path(sys.executable).parent
+        if (exe_parent / "assets" / "data" / "osm_places.json").is_file():
+            return exe_parent
+        meipass = Path(getattr(sys, "_MEIPASS", ""))
+        if (meipass / "assets" / "data" / "osm_places.json").is_file():
+            return meipass
+        if (meipass / "desktop_client" / "assets" / "data" / "osm_places.json").is_file():
+            return meipass / "desktop_client"
+        if (exe_parent / "_internal" / "assets" / "data" / "osm_places.json").is_file():
+            return exe_parent / "_internal"
+        return exe_parent
+    return Path(__file__).resolve().parent.parent
 
-def _find_osm_places_json() -> Optional[Path]:
-    """Locate Project/src/assets/data/osm_places.json from any working directory."""
+BUDGET_PRESETS = [
+    {"key": "budget", "label": "Budget (₱1,500 / day)", "amount": 1500.0},
+    {"key": "moderate", "label": "Moderate (₱2,500 / day)", "amount": 2500.0},
+    {"key": "comfort", "label": "Comfort (₱4,000 / day)", "amount": 4000.0},
+    {"key": "luxury", "label": "Luxury (₱6,000 / day)", "amount": 6000.0},
+]
+```
+
+2. **In `desktop_client/core/offline_data.py` (`load_osm_places()`)**:
+Check all candidate paths for `osm_places.json` and **only cache `_CACHED_ALL_PLACES` if `raw_osm` was found** (or after checking all candidate paths):
+```python
+def load_osm_places() -> list[dict[str, Any]]:
+    """Loads curated OpenStreetMap places (2,673 POIs) from bundled, frozen, or repo assets."""
+    global _CACHED_ALL_PLACES
+    if _CACHED_ALL_PLACES is not None and len(_CACHED_ALL_PLACES) > 100:
+        return _CACHED_ALL_PLACES
+
+    import sys
+    settings = get_settings()
     here = Path(__file__).resolve()
     candidates = [
-        here.parents[2] / "Project" / "src" / "assets" / "data" / "osm_places.json",
+        settings.assets_dir / "data" / "osm_places.json",
+        here.parent.parent / "assets" / "data" / "osm_places.json",
+        here.parent.parent.parent / "Project" / "src" / "assets" / "data" / "osm_places.json",
+        Path.cwd() / "desktop_client" / "assets" / "data" / "osm_places.json",
         Path.cwd() / "Project" / "src" / "assets" / "data" / "osm_places.json",
-        Path.cwd().parent / "Project" / "src" / "assets" / "data" / "osm_places.json",
     ]
-    for candidate in candidates:
-        if candidate.is_file():
-            return candidate
-    return None
+    if getattr(sys, "frozen", False):
+        exe_dir = Path(sys.executable).parent
+        meipass = Path(getattr(sys, "_MEIPASS", ""))
+        candidates = [
+            exe_dir / "assets" / "data" / "osm_places.json",
+            exe_dir / "_internal" / "assets" / "data" / "osm_places.json",
+            exe_dir / "_internal" / "desktop_client" / "assets" / "data" / "osm_places.json",
+            meipass / "assets" / "data" / "osm_places.json",
+            meipass / "desktop_client" / "assets" / "data" / "osm_places.json",
+            *candidates,
+        ]
+
+    raw_osm: list[dict[str, Any]] = []
+    for cand in candidates:
+        if cand.is_file():
+            try:
+                with open(cand, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    if isinstance(data, list) and len(data) > 0:
+                        raw_osm = data
+                        break
+                    elif isinstance(data, dict) and "places" in data:
+                        raw_osm = data["places"]
+                        break
+            except Exception:
+                continue
+    # (Proceed with merging CANONICAL_OFFLINE_PLACES + raw_osm as before)
 ```
-When `PlaceService` initializes, merge `CANONICAL_OFFLINE_PLACES` (curated landmarks with photos & entrance fees) with all **2,673 records** from `osm_places.json` so:
-- `MapView` displays the full province-wide POI clusters and category pins just like the Web App (`map.page.ts` with `limit=3000`).
-- `CustomBuilderView` and `SuggestedWizardView` have instant access to every municipality's attractions, restaurants, resorts, churches, markets, hospitals, and pharmacies even when offline!
 
-### 4.4 Updating `ItineraryRouteMap` (`desktop_client/components/itinerary_route_map.py`)
-`ItineraryRouteMap` is embedded inside **all 3 itinerary views** (`SuggestedWizardView`, `CustomBuilderView`, and `ItineraryDetailView`), matching `Project/src/app/shared/components/itinerary-route-map/itinerary-route-map.component.html`:
-- Renders `SlippyMapCanvas(width=760, height=280)` populated with `RouteStopPin` objects extracted from `day.items`:
-  ```python
-  lat = (item.place.latitude if item.place and item.place.latitude else None) or item.custom_lat
-  lng = (item.place.longitude if item.place and item.place.longitude else None) or item.custom_lng
-  ```
-- Computes the road polyline using `day.day_overview_polyline` if present, or calls `fetch_osrm_road_geometry([(s.lat, s.lng) for s in stops])` (which automatically falls back to `generate_geodesic_arc` when offline).
-- Renders a top-right **`[🗺️ Full Map]`** pill button (`"Open in Full Map"`):
-  - When clicked, if `itinerary_id == "draft"` (unsaved Suggested Wizard preview or unsaved Custom Builder draft), it stores the current draft in `itinerary_service.set_active_draft_itinerary(draft_itinerary)` and navigates to `/map?itineraryId=draft&day={day.day_number}`!
-  - If `itinerary_id` is a saved trip ID, it navigates to `/map?itineraryId={itinerary_id}&day={day.day_number}`!
-- Renders a bottom-left route metrics pill (`"🚗 {len(stops)} stops • {total_km:.1f} km • ~{total_mins} min drive"`).
+3. **In `scripts/build_standalone_exe.py`**:
+Add `--add-data f"{desktop_dir / 'assets'}{os.pathsep}assets"` to `cmd`, and after PyInstaller finishes (around line 180), explicitly copy the assets folder into `dist/NuevaEcijaTravel/assets`:
+```python
+    # Copy desktop_client/assets into dist/NuevaEcijaTravel/assets so osm_places.json (2,673 POIs) & photos are always present
+    target_assets_dir = out_app_dir / "assets"
+    shutil.copytree(desktop_dir / "assets", target_assets_dir, dirs_exist_ok=True)
+    if internal_dir.exists():
+        shutil.copytree(desktop_dir / "assets", internal_dir / "assets", dirs_exist_ok=True)
+```
 
 ---
 
-## 5. Mandatory Fix 4: `SuggestedWizardView` & `CustomBuilderView` Exact Web Workflow Parity
+### 4.3 Fix `desktop_client/services/place_service.py` (Fix Offline `TypeError`, Municipality Name Filter & 2,673-Place Cache Merging)
 
-### 5.1 Why Suggested & Custom Itinerary Felt Different from the Web App
-On the Web App (`Project/src/app/features/itinerary/`):
-1. **Suggested Itinerary (`suggested-wizard.page.html/.ts`)** is a **3-View State Machine (`view_mode = "form" | "itinerary" | "nearby"`)**:
-   - **View 1 (`form` — `"Tell us your travel preferences"`)**:
-     - `DestinationAutocomplete` combobox (`🌏 All of Nueva Ecija (Province-Wide Corridor)`, `32 Municipalities` with district tags & POI counts, `12 Top Landmarks`) + **`[🗺️ All 32 Towns]`** regional modal (`All | Central | North | South | East` tabs) + Quick Destination Chips (`Cabanatuan City`, `Gabaldon`, `General Tinio`, `Pantabangan`, `San Jose City`, `Science City of Muñoz`, `Bongabon`, `Gapan City`, `Palayan City`).
-     - Clickable **Travel Dates** box (`From` / `To`) opening the **Popup Date Picker Modal** with quick duration pills (`2 Days (1N)`, `3 Days (2N)`, `4 Days (3N)`, `1 Week`) and dynamic duration banner (`"X Days, Y Nights in Nueva Ecija"`).
-     - **Daily Budget (PHP)** numeric input + quick preset pills (`₱1,500`, `₱2,500`, `₱4,000`, `₱6,000`).
-     - **Preferences** multi-select icon pills (`Nature & Parks`, `Food Trip`, `Culture & History`, `Shopping`, `Resort`).
-     - **Travel Mode** pills (`🚗 Drive / Car`, `🛵 Motorcycle / Tricycle`, `🚶 Walking / Transit`).
-     - **Minimum Place Rating** chips (`All Ratings`, `4.0+ ★`, `4.5+ ★`).
-     - **`[Find Itinerary]`** primary CTA button (`save_immediately=False`).
-   - **View 2 (`itinerary` — `"Here's an itinerary just for you!"`)**:
-     - Stores the generated preview in `itinerary_service.set_active_draft_itinerary(plan)` immediately so clicking `[Full Map]` on the route map opens the unsaved preview in `MapView` Follow-Route Mode (`itineraryId="draft"`), and returning from `MapView` restores the draft!
-     - **Trip Summary Card (`.figma-trip-card`)**: Destination, Date Range, Budget (`₱X,XXX`), and Preference tags.
-     - **Verified Place Costs Card (`.verified-budget-card`)**: Shows verified min–max total (`₱X,XXX – ₱Y,YYY`), count of unpriced stops, and honest pricing footnote.
-     - **Collapsible `Travel Notes & Planning Assumptions` (`.assumptions-info-box`)**: Expandable accordion parsing each assumption into categorized tags (`Pacing`, `Routing`, `Budget`, `Schedule`).
-     - **Day Capsule Bar (`.figma-day-capsule-bar`)**: Horizontal day pills showing `Day 1` / `[Municipality]` (`getDayLocationName(day)`).
-     - **Embedded `ItineraryRouteMap`**: Interactive slippy map for `generatedPlan.days[activeDayIndex]` with OSRM road polyline, numbered stop pins (`1..N`), and **`[Full Map]`** button.
-     - **Stop Cards with Inter-Stop Leg Commute Badges**:
-       - Between Stop `i-1` and Stop `i`, displays the blue commute connector pill (`🚗 {km} km • ~{drive_mins} mins drive • {trike_mins} mins tricycle • Est. Fare ₱{min_fare}–₱{max_fare}`).
-       - Each stop card shows thumbnail photo, stop title, category badge, `getTimingTime(stop)` (`"9:00 AM - 10:30 AM"`), `getTimingDuration(stop)` (`"1.5 hrs"`), and `getStopCost(stop)`. Clicking a stop card opens **`PlaceDetailSheet`** with `stop_notes` and `get_commute_info_for_municipality()`!
-     - **Nearby Essentials Trigger Banner (`.nearby-banner-trigger`)**: `"Nearby Places in [Municipality] — Find restaurants, hospitals, pharmacies & stores near your stops"` → switches to `view_mode = "nearby"`.
-     - **Bottom Action Buttons**:
-       - **`[✓ Accept & Save Itinerary]`**: Calls `itinerary_service.create_itinerary(payload)`, clears active draft, shows success toast, and opens `/trips/{saved.id}`!
-       - **`[✏️ Customize in Builder]`**: Stores `generatedPlan` in `itinerary_service.set_active_draft_itinerary(generatedPlan)` and navigates to `/custom-builder?draft=true`, opening `CustomBuilderView` directly in `active_view = "timeline"` pre-populated with all generated days and stops!
-   - **View 3 (`nearby` — `"Nearby Places in [Municipality]"`)**:
-     - Segmented capsule bar: **`[🍽️ Restaurants]`** | **`[🏥 Hospital & Pharmacies]`** | **`[🛒 Stores]`**.
-     - Lists nearby essentials for the active day's municipality (`place_service.get_nearby_places(municipality)`) with opening hours, category badge, **`[Maps]`** button, and **`[+ Add to Day X]`** button (which appends the place as a stop to `generatedPlan.days[activeDayIndex]`, recalculates leg metrics & budget summary, and shows a confirmation toast!).
+Replace `desktop_client/services/place_service.py` with this implementation that matches `Project/src/app/core/services/place.service.ts`:
 
-2. **Custom Itinerary (`custom-builder.page.html/.ts`)** is **NOT** a static side-by-side split screen! It is a **3-View State Machine (`active_view = "form" | "browse" | "timeline"`)** with a top segmented mode switcher (`[+ Add Places]` | `[📅 Your Itinerary (N)]`) once past Step 1:
-   - **View 0 (`form` — `"Tell us your travel details"`)**:
-     - Collects `Trip Title` (`"Nueva Ecija Getaway"`), `Destination` (32-LGU `DestinationAutocomplete` + `[🗺️ All 32 Towns]` modal + Quick Destination Chips), `Travel Dates` (clickable `From`/`To` box opening the Popup Date Picker Modal), `Daily Budget (PHP)` + presets (`₱1,500`, `₱2,500`, `₱4,000`, `₱6,000`), and `Preferences` pills.
-     - Clicking **`[Start Building Itinerary →]`** calls `sync_days_with_date_range()` (creating `Day 1..N` matching the exact date range) and transitions to `active_view = "browse"`!
-     - *(Note: If opened via `/custom-builder/{id}` to edit an existing trip, or via `[Customize in Builder]` from Suggested Wizard, or with `?addPlaceId=...` from Home/Map, it skips `form` and opens directly in `active_view = "timeline"`!)*
-   - **View 1 (`browse` — `"Add the places you want to visit"`)**:
-     - **Top Segmented View Switcher**: **`[+ Add Places]`** (active) | **`[📅 Your Itinerary ({total_stops})]`**.
-     - **Target Day Selector Bar**: `"Scheduling for:"` `[Day 1 (2)]` `[Day 2 (0)]` `[+]` (allows selecting which day new places are added to, or adding a new day on the fly).
-     - **Search & Category Filter Bar**: Instant search input + category pills (`All`, `✨ Recommended for You` when preferences are selected, `Tourist Spots`, `Food`, `Resorts & Stays`, `Culture & Heritage`, `Shopping`, `Transit & Essentials`, `Other`). Places matching the chosen destination municipality are prioritized at the top.
-     - **Responsive Place Card Grid**: Each place card displays thumbnail photo, category pill, rating badge, municipality & cost, **`[ℹ️ Details]`** (opens `PlaceDetailSheet`), and a stateful **`[+ Add]` / `[✓ Added]`** toggle button! Clicking `[+ Add]` adds the stop to `current_day`, auto-calculates `planned_time = calculate_next_stop_time()` (accounting for Haversine driving transit buffer between stops!), and flips the button to green `[✓ Added]`.
-     - **Sticky Bottom Bar**: **`[View my Itinerary ({total_stops} places) →]`** (switches to `active_view = "timeline"`).
-   - **View 2 (`timeline` — `"Your Custom Itinerary"`)**:
-     - **Top Bar**: Back button, title, **`[✓ Save]`** header button, and the **Segmented View Switcher** (`[+ Add Places]` | `[📅 Your Itinerary ({total_stops})]` active).
-     - **Editable Trip Settings Card**: Inline fields for `Trip Title`, `Daily Budget (₱)`, and clickable `Travel Dates` (changing dates dynamically adds or trims days via `sync_days_with_date_range()`, prompting confirmation if shortening would discard stops).
-     - **Verified Place Costs Card (`.verified-budget-card`)**: Shows verified min–max total (`₱X,XXX – ₱Y,YYY`), daily budget comparison (`₱X,XXX / day × N days`), and unpriced stop count.
-     - **Day Capsule Switcher**: `[Day 1 - Cabanatuan City]`, `[Day 2 - Gabaldon]`, ..., **`[+ Add Day]`**.
-     - **Active Day Header**: Shows `Day X - [Municipality]`, travel date, **`[🕒 Auto-Schedule]`** button (`auto_optimize_day_schedule()` recalculates sequential times starting at `09:00 AM` with Haversine driving buffers), and **`[🗑 Delete Day]`** button.
-     - **Embedded `ItineraryRouteMap`**: Live slippy map showing the active day's OSRM road polyline and numbered stop badges (`1..N`) with **`[Full Map]`** button. Clicking a numbered pin on the map opens the Edit Stop modal for that stop!
-     - **Ordered Timeline Stop Cards with Inter-Stop Leg Commute Badges**:
-       - Displays the inter-stop commute leg badge (`🚗 {km} km • ~{drive_mins} mins drive • {trike_mins} mins tricycle • Est. Fare ₱{min_fare}–₱{max_fare}`) between consecutive stops.
-       - Each stop card shows step number badge (`1`, `2`...), thumbnail photo, title, category & municipality badge, `planned_time (duration)`, cost range, notes preview, and action buttons: **`[↑]`** (`move_stop_up`), **`[↓]`** (`move_stop_down`), **`[✏️ Edit]`** (`open_edit_stop_modal`), and **`[🗑 Remove]`** (`remove_stop`).
-     - **Edit Scheduled Stop Modal (`open_edit_stop_modal`)**:
-       - Allows editing **Planned Time** (`09:00 AM`), **Duration (minutes)** (`30..360`), **Min Cost (₱)**, **Max Cost (₱)** (validating `min <= max`), **Notes**, and **Move to Day (`Day 1..N` dropdown)**!
-     - **Bottom Add Actions**:
-       - **`[+ Browse & Add Places to Day X]`** (switches to `active_view = "browse"`).
-       - **`[+ Add Off-Grid Custom Venue]`** (opens modal with Venue Name, Municipality/Address, Planned Time, Duration, Min/Max Cost, Notes, and optional GPS Coordinates validated against the Nueva Ecija bounding box `Lat 15.15–16.15, Lng 120.70–121.40`).
-     - **Sticky Footer CTA**: **`[💾 Save Custom Itinerary]`** (validates `total_stops > 0`, calls `create_itinerary` or `update_itinerary`, and navigates to `/trips/{saved.id}`).
+```python
+"""Place Service managing POI queries, 2,673-POI cache merging, filtering, search, and municipality catalogs."""
+
+import logging
+from typing import Any, Optional
+import uuid
+
+from desktop_client.config.settings import CANONICAL_CATEGORIES
+from desktop_client.core.api_client import ApiClient, get_api_client
+from desktop_client.core.offline_data import (
+    ALL_32_LGUS_METADATA,
+    get_all_offline_places,
+    get_filtered_local_places,
+)
+from desktop_client.models.place import Municipality, PaginatedPlaces, Place
+
+logger = logging.getLogger(__name__)
+
+
+def _is_valid_uuid(val: str) -> bool:
+    try:
+        uuid.UUID(str(val))
+        return True
+    except Exception:
+        return False
+
+
+class PlaceService:
+    """Interacts with backend Places and Municipalities endpoints with 2,673-POI in-memory cache merging."""
+
+    def __init__(self, api_client: Optional[ApiClient] = None):
+        self.api_client = api_client or get_api_client()
+        self._municipalities_cache: Optional[list[Municipality]] = None
+        self._categories_cache: Optional[list[str]] = None
+        self._osm_places_cache: list[Place] = []
+
+    def get_loaded_places(self, municipality: Optional[str] = None) -> list[Place]:
+        """Synchronously returns all 2,673+ places (merged online + offline OSM dataset)."""
+        if not self._osm_places_cache:
+            self._osm_places_cache = [Place.from_dict(p) for p in get_all_offline_places()]
+        if not municipality or municipality.lower().strip() in ("all", "nueva ecija", "all 32 municipalities"):
+            return list(self._osm_places_cache)
+        m_low = municipality.lower().strip()
+        return [
+            p for p in self._osm_places_cache
+            if m_low in (p.municipality_name or "").lower() or m_low == (p.municipality_id or "").lower()
+        ]
+
+    def merge_places_into_cache(self, new_places: list[Place]) -> None:
+        """Merges online API places into the 2,673-POI cache by ID without purging unseen places (QA-02)."""
+        if not new_places:
+            return
+        if not self._osm_places_cache:
+            self._osm_places_cache = [Place.from_dict(p) for p in get_all_offline_places()]
+        by_id = {p.id: p for p in self._osm_places_cache}
+        for np in new_places:
+            by_id[np.id] = np
+        self._osm_places_cache = list(by_id.values())
+
+    async def get_municipalities(self, force_refresh: bool = False) -> list[Municipality]:
+        """Fetches all 32 Nueva Ecija municipalities and cities with offline fallback."""
+        if self._municipalities_cache is not None and not force_refresh:
+            return self._municipalities_cache
+
+        try:
+            data = await self.api_client.get("municipalities")
+            if isinstance(data, list) and data:
+                # Merge backend UUIDs with full 32-LGU metadata
+                by_name = {str(m.get("name", "")).lower(): Municipality.from_dict(m) for m in data}
+                merged: list[Municipality] = []
+                for name, meta in ALL_32_LGUS_METADATA.items():
+                    found = by_name.get(name.lower())
+                    if found:
+                        if not found.place_count:
+                            found.place_count = meta.get("poi_count", 0)
+                        merged.append(found)
+                    else:
+                        merged.append(
+                            Municipality(
+                                id=name,
+                                name=name,
+                                place_count=meta.get("poi_count", 0),
+                            )
+                        )
+                self._municipalities_cache = merged
+                return self._municipalities_cache
+        except Exception as err:
+            logger.info(f"Could not load municipalities from backend, using offline dataset: {err}")
+
+        fallback: list[Municipality] = []
+        for name, meta in ALL_32_LGUS_METADATA.items():
+            fallback.append(
+                Municipality(
+                    id=name,
+                    name=name,
+                    place_count=meta.get("poi_count", 0),
+                )
+            )
+        self._municipalities_cache = fallback
+        return self._municipalities_cache
+
+    async def get_categories(self, force_refresh: bool = False) -> list[str]:
+        """Returns the 16 canonical categories conforming to the Nueva Ecija schema."""
+        if self._categories_cache is None or force_refresh:
+            self._categories_cache = [c["key"] for c in CANONICAL_CATEGORIES]
+        return self._categories_cache
+
+    async def get_places(
+        self,
+        page: int = 1,
+        page_size: int = 20,
+        search: Optional[str] = None,
+        category: Optional[str] = None,
+        categories: Optional[list[str]] = None,
+        municipality_id: Optional[str] = None,
+        municipality_name: Optional[str] = None,
+        price_tier: Optional[str] = None,
+        is_featured: Optional[bool] = None,
+        min_lat: Optional[float] = None,
+        max_lat: Optional[float] = None,
+        min_lng: Optional[float] = None,
+        max_lng: Optional[float] = None,
+        sort: Optional[str] = None,
+    ) -> PaginatedPlaces:
+        """Queries places via GET /api/v1/places with full parameter parity and 2,673-POI offline fallback."""
+        limit = max(1, page_size)
+        offset = max(0, (page - 1) * limit)
+        params: dict[str, Any] = {
+            "limit": limit,
+            "offset": offset,
+        }
+        if search and search.strip():
+            params["q"] = search.strip()
+        if categories:
+            valid_cats = [c.strip() for c in categories if c and c.strip() and c != "all"]
+            if valid_cats:
+                params["categories"] = valid_cats
+        elif category and category.strip() and category != "all":
+            params["categories"] = [category.strip()]
+
+        # Resolve municipality_id vs municipality_name safely (prevents FastAPI 422 on non-UUID names)
+        muni_Name_resolved = municipality_name
+        if municipality_id and municipality_id.strip() and municipality_id != "all":
+            raw_m = municipality_id.strip()
+            if _is_valid_uuid(raw_m):
+                params["municipality_id"] = raw_m
+            else:
+                clean_m = raw_m.replace("muni-", "").replace("-", " ")
+                muni_Name_resolved = clean_m
+
+        if muni_Name_resolved and muni_Name_resolved.strip() and muni_Name_resolved.lower() != "all":
+            params["municipality_name"] = muni_Name_resolved.strip()
+
+        if price_tier and price_tier.strip() and price_tier != "all":
+            params["price_tier"] = price_tier.strip().lower()
+
+        if is_featured is not None:
+            params["featured"] = is_featured
+
+        if None not in (min_lat, max_lat, min_lng, max_lng):
+            params["min_lat"] = min_lat
+            params["max_lat"] = max_lat
+            params["min_lng"] = min_lng
+            params["max_lng"] = max_lng
+
+        if sort:
+            params["sort"] = sort
+
+        try:
+            data = await self.api_client.get("places", params=params)
+            paginated = PaginatedPlaces.from_dict(data)
+            self.merge_places_into_cache(paginated.items)
+            return paginated
+        except Exception as err:
+            logger.info(f"Using offline 2,673-POI catalog fallback: {err}")
+            bounds = (min_lat, max_lat, min_lng, max_lng) if None not in (min_lat, max_lat, min_lng, max_lng) else None
+            items, total = get_filtered_local_places(
+                q=search,
+                category=category,
+                categories=categories,
+                municipality_name=muni_Name_resolved,
+                municipality_id=municipality_id if (municipality_id and _is_valid_uuid(municipality_id)) else None,
+                is_featured=is_featured,
+                price_tier=price_tier,
+                bounds=bounds,
+                sort=sort,
+                limit=limit,
+                offset=offset,
+            )
+            place_objs = [Place.from_dict(it) for it in items]
+            return PaginatedPlaces(
+                items=place_objs,
+                total=total,
+                page=page,
+                page_size=page_size,
+                total_pages=max(1, (total + limit - 1) // limit),
+            )
+
+    async def get_featured_places(self, limit: int = 12) -> list[Place]:
+        """Retrieves top curated destinations for the dashboard."""
+        try:
+            paginated = await self.get_places(page=1, page_size=limit, is_featured=True)
+            if paginated.items:
+                return paginated.items
+            fallback = await self.get_places(page=1, page_size=limit)
+            return fallback.items
+        except Exception:
+            return self.get_loaded_places()[:limit]
+
+    async def get_place_by_id(self, place_id: str) -> Optional[Place]:
+        """Fetches full place details with offline lookup across all 2,673 places."""
+        try:
+            data = await self.api_client.get(f"places/{place_id}")
+            if data:
+                return Place.from_dict(data)
+        except Exception:
+            pass
+
+        for p in self.get_loaded_places():
+            if str(p.id) == str(place_id):
+                return p
+        return None
+
+
+_place_service_instance: Optional[PlaceService] = None
+
+
+def get_place_service() -> PlaceService:
+    """Singleton getter for PlaceService."""
+    global _place_service_instance
+    if _place_service_instance is None:
+        _place_service_instance = PlaceService()
+    return _place_service_instance
+```
 
 ---
 
-## 6. Step-by-Step Implementation Plan for Antigravity
+### 4.4 Full-Bleed Web-Parity `PlacesView` / `MapView` (`desktop_client/views/places_view.py`)
+Replace `desktop_client/views/places_view.py` so `/map` looks, feels, and works **100% like `Project/src/app/tabs/map/map.page.html`**:
+- **Full-Bleed Map Canvas (`expand=True`, `width=1240, height=740`)** filling the entire viewport above the bottom tab bar (no static top form, no `[Grid | Map]` toggle, no `Sort By` dropdown, no blank right-side gap!).
+- **Floating Top Search & 17 Category Filter Pills Bar (`.map-top-bar`)** positioned at `top=14, left=16, right=16` over the map, with a live search box, clear `[✕]` button, and **`[Filters (N)]`** button opening the Multi-Select Filter Modal (Categories multi-select, 32 Municipalities chips, and Price Tiers `All Prices | Free (₱0) | Budget (≤ ₱500) | Mid-Range (> ₱500)`).
+- **Floating Right Controls (`right=16, bottom=100`)**:
+  - **`[✨]` Live OSM Discovery**: Queries `/api/v1/places?limit=3000` / Overpass and merges into the 2,673-POI map layer.
+  - **`[🎯]` Locate My Position (GPS)**: Centers on Cabanatuan City (`15.4865, 120.9674`, `zoom=14`) with the blue user GPS indicator dot.
+  - **`[🧭]` Reset Province View**: Recenters to `[15.58, 121.00], zoom=10`.
+- **Floating Bottom-Center `"List View (2,672)"` Pill (`bottom=18`)**:
+  - Clicking it opens the **Collapsible POI List Drawer (`Destinations in View`)** over the bottom of the map where clicking any card flies to that pin and opens `show_place_detail_dialog()` (passing `on_add_to_day` and `on_navigate` properly!).
+- **Focused `is_follow_route_mode` (`?itineraryId=...&day=...`)**:
+  - Automatically activates when navigated via `/map?itineraryId=draft&day=1` (from Suggested Wizard or Custom Builder) or `/map?itineraryId={id}&day={day}` (from Trip Detail)!
+  - Hides the 2,673 background discovery clusters by default (`show_background_pois_in_route_mode = False`) so the day's numbered stops (`1..N`) and OSRM road polyline stand out clearly!
+  - Renders the **Floating Active Route Control Bar** at the top of the map:
+    - **`[← Back to Plan]`** (returns to `/suggested`, `/builder`, or `/trips/{id}` while preserving the draft!).
+    - **`[🗺️ Browse Map]`** (`exit_follow_route_mode_cleanly()`).
+    - **Day Switcher Pills (`Day 1`, `Day 2`, ...)** for multi-day itineraries.
+    - **`[👁️ Show Nearby POIs]`** toggle button to overlay/hide nearby POIs along the route.
+  - Renders the **Bottom Active Route Stops Carousel** with `Stop X of Y`, **`[↗ Google Maps Navigation]`** multi-stop URL launcher, and clickable horizontal stop cards (`1. [Stop Name]`, `2. [Stop Name]`...) that center and highlight the active stop pin on the map!
 
-Execute the following 6 implementation steps in order inside `desktop_client/`:
+---
 
-### Step 1: Fix `OfflineHostBanner` & Root Layout (`desktop_client/components/offline_banner.py` & `desktop_client/main.py`)
-1. Replace `desktop_client/components/offline_banner.py` with the bounded `OfflineHostBanner` implementation in **Section 2.2** (`expand=False`, fixed `height=52` when visible, `height=0` when hidden/dismissed, inner `width=620, height=42` dark pill).
-2. In `desktop_client/main.py`, ensure the root layout is an `ft.Column(spacing=0, expand=True, controls=[self._offline_banner, self._content_area, self._bottom_tab_bar])` (**not** an unpositioned child inside `ft.Stack(expand=True)`).
-3. Verify that clicking `[✕]` on the offline notice immediately sets `self._offline_banner.visible = False` and `self._offline_banner.height = 0` without blocking any screen.
+### 4.5 Fix `main.py` Query-String Routing, Draft Preservation & Background Health Check
+In `desktop_client/main.py`:
+1. Parse `base_route = route.split("?")[0]` and `query_params = urllib.parse.parse_qs(urllib.parse.urlparse(route).query)` at the start of `navigate_to()`.
+2. When `base_route == "/suggested"`:
+   - If `query_params.get("destination")` or `query_params.get("placeId")` is passed (e.g., from `PlaceDetailSheet`'s `[✨ Start Trip Here]`), pass `initial_destination` and `anchor_place_id` into `SuggestedWizardView`.
+   - If returning from `/map?itineraryId=draft`, restore the existing `SuggestedWizardView` instance (or hydrate from `itinerary_service.get_active_draft_itinerary()`).
+3. When `base_route == "/builder"`:
+   - If `query_params.get("draft") == ["true"]` or `trip_data` is passed (from `[Customize in Builder]` or `[Edit Itinerary]`), instantiate `CustomBuilderView(on_navigate=navigate_to, existing_itinerary=trip_data, is_draft_from_wizard=("draft=true" in route))` so it opens directly in `active_view = "timeline"` with all stops populated!
+4. When `base_route in ("/map", "/places")`:
+   - Instantiate `PlacesView(on_navigate=navigate_to, route_query=route, active_trip=selected_trip)` so `/map?itineraryId=draft&day=1` enters **Follow-Route Mode**!
+5. In `check_backend_loop()` (`main.py:308`):
+   - Call `await connectivity_service.check_host_health()` with **0 arguments**.
 
-### Step 2: Fix `User` Model, `AuthService`, and `ProfileView` (`desktop_client/models/user.py`, `services/auth_service.py`, `views/profile_view.py`)
-1. Replace `desktop_client/models/user.py` with the schema-aligned implementation in **Section 3.2** so `User.from_dict()` reads `first_name`, `last_name`, `username_normalized`, and `email_normalized` from FastAPI `UserOut`, and `UserUpdatePayload.to_backend_dict()` sends `first_name`, `last_name`, `username`, `current_password`, `new_password` to `PATCH /api/v1/auth/me`.
-2. Update `AuthService.update_profile()` in `desktop_client/services/auth_service.py` to persist extended profile fields (`middle_initial`, `birthday`, `gender`, `phone_number`, `avatar_url`, `preferences`, `default_daily_budget`) in `LocalStorage` (`profile_extra.json` keyed by `user.id`), call `PATCH /api/v1/auth/me` when authenticated and online, and update `self._session.user` in both Authenticated and Guest/Offline modes.
-3. Update `ProfileView._open_edit_profile_modal()` in `desktop_client/views/profile_view.py` to edit `first_name`, `last_name`, `middle_initial`, `username`, `birthday`, `gender`, `phone_number`, `default_daily_budget`, and `avatar_url` (with a working native image file picker via `tkinter.filedialog.askopenfilename` + preset avatar options).
+---
 
-### Step 3: Load All 2,673 OSM Places & Build Pure-Flet Slippy Map + Clustering + Road Routing (`services/place_service.py`, `components/slippy_map_canvas.py`, `components/itinerary_route_map.py`, `views/map_view.py`)
-1. Update `desktop_client/services/place_service.py` using `_find_osm_places_json()` (**Section 4.3**) so all **2,673 POIs** from `Project/src/assets/data/osm_places.json` are loaded and merged with `CANONICAL_OFFLINE_PLACES` on startup.
-2. Create `desktop_client/components/slippy_map_canvas.py` (**Section 4.2**) implementing:
-   - OpenStreetMap 256×256 tile rendering with drag-to-pan and zoom controls (`Z8..Z18`).
-   - Spatial marker clustering at `zoom < 14` (`.marker-cluster` blue numbered badges `#0084ff` that zoom in by `+2` on click).
-   - Category-colored POI pins at `zoom >= 14` that open `PlaceDetailSheet` on click.
-   - Vector `ft.canvas.Path` rendering of OSRM road polylines (`fetch_osrm_road_geometry`) and geodesic fallback splines (`generate_geodesic_arc`).
-   - Clickable numbered stop badges (`1..N`) with stop title pills.
-3. Update `desktop_client/components/itinerary_route_map.py` and `desktop_client/views/map_view.py` to use `SlippyMapCanvas` in both **Discovery Mode** (search + category pills + municipality dropdown + `Near Me (10 km)` filter + cluster/pin inspection) and **Follow-Route Mode** (`?itineraryId=...&day=...`, including `itineraryId="draft"`, day switcher pills, OSRM road route line, numbered stop badges, `Simulate Next Stop` / GPS distance & ETA HUD, and bottom horizontal stop carousel).
+### 4.6 Fix `models/itinerary.py`, `services/itinerary_service.py`, `views/suggested_wizard_view.py`, `views/custom_builder_view.py`, and `views/trip_detail_view.py`
 
-### Step 4: Upgrade `SuggestedWizardView` to the Exact 3-View Web Workflow (`desktop_client/views/suggested_wizard_view.py`)
-1. Implement the 3-view state machine (`self.view_mode = "form" | "itinerary" | "nearby"`) matching `Project/src/app/features/itinerary/suggested-wizard/suggested-wizard.page.html/.ts`:
-   - **`form` view**: `DestinationAutocomplete` (with `[All 32 Towns]` regional modal + Quick Destination Chips), clickable `Travel Dates` box opening the **Popup Date Picker Modal** (`From`/`To` + `2D/1N`, `3D/2N`, `4D/3N`, `1 Week` presets), `Daily Budget` + presets (`₱1,500`, `₱2,500`, `₱4,000`, `₱6,000`), `Preferences` pills, `Travel Mode` pills (`Drive / Car`, `Motorcycle / Tricycle`, `Walking / Transit`), `Minimum Place Rating` chips (`All Ratings`, `4.0+ ★`, `4.5+ ★`), and `[Find Itinerary]`.
-   - **`itinerary` view**: Calls `suggest_itinerary(..., save_immediately=False)`, stores the result in `itinerary_service.set_active_draft_itinerary(plan)`, renders the Trip Summary card, Verified Place Costs card, collapsible `Travel Notes & Planning Assumptions`, Day Capsule Bar (`Day 1 / [Municipality]`), embedded `ItineraryRouteMap` (with live road route & `[Full Map]` button), stop cards with **Inter-Stop Leg Commute Badges (`get_leg_commute`)** and click-to-inspect `PlaceDetailSheet`, `"Nearby Places in [Municipality]"` banner button, **`[✓ Accept & Save Itinerary]`**, and **`[✏️ Customize in Builder]`**.
-   - **`nearby` view**: Segmented bar (`Restaurants` | `Hospital & Pharmacies` | `Stores`) for the active day's municipality with **`[+ Add to Day X]`** and **`[Maps]`**.
+1. **In `desktop_client/models/itinerary.py`**:
+   - Add `min_rating: Optional[float] = None`, `include_live_places: bool = True`, and `anchor_place_id: Optional[str] = None` to `SuggestedItineraryRequest` and include them in `to_dict()`.
+   - Add `total_days` property (`return max(1, len(self.days))`) and `to_create_payload()` method to `Itinerary`:
+     ```python
+     @property
+     def total_days(self) -> int:
+         return max(1, len(self.days))
 
-### Step 5: Upgrade `CustomBuilderView` to the Exact 3-View Web Workflow (`desktop_client/views/custom_builder_view.py`)
-1. Replace the static split-pane layout with the Web App's 3-view state machine (`self.active_view = "form" | "browse" | "timeline"`) matching `Project/src/app/features/itinerary/custom-builder/custom-builder.page.html/.ts`:
-   - **`form` view**: Collects `Trip Title`, `Destination` (`DestinationAutocomplete` + `[All 32 Towns]` modal + Quick Chips), `Travel Dates` (Popup Date Picker Modal), `Daily Budget` + presets, and `Preferences`. Clicking **`[Start Building Itinerary →]`** runs `sync_days_with_date_range()` and switches to `active_view = "browse"`.
-   - **`browse` view**: Top segmented switcher (`[+ Add Places]` active | `[📅 Your Itinerary (N)]`), Target Day Selector (`Scheduling for: Day 1 (0) | Day 2 (0) | [+]`), search input + category filter pills (`All`, `✨ Recommended for You`, `Tourist Spots`, `Food`, `Resorts & Stays`, `Culture & Heritage`, `Shopping`, `Transit & Essentials`, `Other`), responsive place cards with photos and stateful **`[+ Add]` / `[✓ Added]`** toggle buttons, and sticky footer **`[View my Itinerary (N places) →]`**.
-   - **`timeline` view**: Top segmented switcher (`[+ Add Places]` | `[📅 Your Itinerary (N)]` active) + header `[✓ Save]` button, editable Trip Settings card (`Trip Title`, `Daily Budget`, `Travel Dates` with `sync_days_with_date_range`), Verified Place Costs card, Day Switcher pills + `[+ Add Day]`, Day Header with **`[🕒 Auto-Schedule]`** and **`[🗑 Delete Day]`**, embedded **`ItineraryRouteMap`** (with OSRM road polyline + numbered stop pins + `[Full Map]` button), ordered stop cards with **Inter-Stop Leg Commute Badges**, `[↑]`, `[↓]`, **`[✏️ Edit]`** (modal with Planned Time, Duration, Min/Max Cost, Notes, and **`Move to Day` dropdown**), `[🗑 Remove]`, bottom **`[+ Browse & Add Places to Day X]`** and **`[+ Add Off-Grid Custom Venue]`** (geofenced `Lat 15.15–16.15, Lng 120.70–121.40`), and sticky footer **`[💾 Save Custom Itinerary]`**.
+     def to_create_payload(self) -> "ItineraryCreatePayload":
+         days_data = []
+         for d in self.days:
+             items_data = []
+             for it in d.items:
+                 items_data.append({
+                     "place_id": it.place_id,
+                     "custom_title": it.custom_title or it.display_title,
+                     "custom_lat": it.custom_lat or (it.place.latitude if it.place else None),
+                     "custom_lng": it.custom_lng or (it.place.longitude if it.place else None),
+                     "sort_order": it.sort_order,
+                     "planned_time": it.planned_time,
+                     "duration_minutes": it.duration_minutes,
+                     "notes": it.notes,
+                     "estimated_cost_min": it.estimated_cost_min,
+                     "estimated_cost_max": it.estimated_cost_max,
+                     "place": it.place.to_dict() if it.place else None,
+                 })
+             days_data.append({
+                 "day_number": d.day_number,
+                 "travel_date": d.travel_date,
+                 "title": d.title,
+                 "items": items_data,
+             })
+         return ItineraryCreatePayload(
+             title=self.title,
+             destination=self.destination,
+             start_date=self.start_date,
+             end_date=self.end_date,
+             daily_budget=self.daily_budget,
+             preferences=self.preferences,
+             type=self.type,
+             assumptions=self.assumptions,
+             days=days_data,
+         )
+     ```
+   - Add `calculate_budget_summary(itinerary: Itinerary) -> dict[str, Any]` helper in `ItineraryService` matching `itinerary.service.ts:393–432` (`verified_min`, `verified_max`, `unverified_count`, `display_text`).
 
-### Step 6: Automated Verification & QA Test Suite (`pytest desktop_client/tests/`)
-Run `pytest desktop_client/tests/ -v` and verify all tests pass, covering:
-1. **`test_offline_banner_bounds`**: Verifies `OfflineHostBanner.expand is False`, `height == 52` when offline, and `height == 0` / `visible is False` when online or dismissed.
-2. **`test_user_model_and_edit_profile`**: Verifies `User.from_dict()` parses FastAPI `UserOut` (`first_name`, `last_name`, `username_normalized`, `email_normalized`), `UserUpdatePayload.to_backend_dict()` emits `first_name`, `last_name`, `username`, and `AuthService.update_profile()` persists both backend and extended local fields (`middle_initial`, `birthday`, `gender`, `phone_number`, `avatar_url`) in Authenticated, Offline, and Guest modes.
-3. **`test_slippy_map_places_and_routing`**: Verifies `PlaceService` loads 2,600+ POIs from `osm_places.json`, `SlippyMapCanvas` clusters markers at `zoom < 14`, renders individual pins at `zoom >= 14`, and projects OSRM/geodesic polyline coordinates onto `cv.Path` with numbered `RouteStopPin` badges.
-4. **`test_suggested_and_custom_itinerary_parity`**: Verifies `SuggestedWizardView` (`form` → `itinerary` → `nearby` + `[Customize in Builder]` handoff) and `CustomBuilderView` (`form` → `browse` → `timeline` + `[Auto-Schedule]` + `Move to Day` + `ItineraryRouteMap` draft handoff).
+2. **In `desktop_client/services/itinerary_service.py`**:
+   - In `generate_suggested_itinerary()` (lines 57–70), **only** call `self.guest_storage.save_itinerary(itinerary)` if `request.save_immediately is True`! Always store `self.active_draft_itinerary = itinerary`.
+   - In `update_itinerary(self, itinerary: Itinerary)` (lines 401–411), include `"days": itinerary.to_create_payload().days` inside `update_data` so `PATCH /api/v1/itineraries/{id}` saves modified days and stops to PostgreSQL!
+
+3. **In `desktop_client/views/custom_builder_view.py`**:
+   - In `_open_custom_venue_dialog()` (line 897), remove `latitude=lat, longitude=lng` and pass only `custom_lat=lat, custom_lng=lng` to `ItineraryItem(...)`.
+   - In `_open_edit_stop_dialog()` (line 822), add `cost_min_field` and `cost_max_field` (validating `min <= max`) alongside `Move to Day`, `Planned Time`, `Duration`, and `Notes`.
+   - In `_auto_schedule_active_day()` (line 162), calculate Haversine transit time between `prev_item` and `item` (`calculate_haversine_meters` at `40 km/h + 10 min buffer`, clamped to `15..120 mins`) instead of a hardcoded `30` mins.
+   - Add the **Editable Trip Settings Card** (`Trip Title`, `Daily Budget`, `Travel Dates`) and **Verified Place Costs Card** at the top of `_build_timeline_view()`.
+   - In `_save_custom_itinerary()`, if `self.existing_itinerary` is present and not a wizard draft, update `self.existing_itinerary` and call `await self.itinerary_service.update_itinerary(self.existing_itinerary)`!
+
+---
+
+## 5. Complete 64-Test-Case Acceptance Checklist for Antigravity
+
+Before finishing, Antigravity must verify that **both** the 47 unit tests (`pytest desktop_client/tests/ -v`) AND the following **12 End-to-End Parity Gates** pass with 0 errors:
+
+1. **Map Tile Gate (`TC-25`)**: `SlippyMapCanvas` uses `basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png` (0 references to `tile.openstreetmap.org` in `ft.Image`), eliminating all `403 Access blocked` tiles.
+2. **2,673-POI Map & Standalone `.exe` Gate (`TC-07`, `TC-28`, `TC-64`)**: `PlaceService.get_loaded_places()` returns `>= 2,670` places in both dev mode and compiled `NuevaEcijaTravel.exe` (`scripts/build_standalone_exe.py` copies `desktop_client/assets` to `dist/NuevaEcijaTravel/assets`), and `PlaceService.get_places()` offline fallback uses `total_pages=` (0 `TypeError` crashes).
+3. **Full-Bleed Map Layout & Pin Click Gate (`TC-26`, `TC-27`, `TC-29`, `TC-30`, `TC-31`)**: `/map` renders a full-bleed `SlippyMapCanvas` with floating top search & 17 category pills, floating right `[✨ Live OSM]`, `[🎯 Locate Me]`, `[🧭 Reset View]` buttons, floating bottom `List View (2,672)` drawer pill, and clicking any pin opens `show_place_detail_dialog` without `TypeError`.
+4. **Map Follow-Route Mode Gate (`TC-05`, `TC-32`, `TC-33`, `TC-34`, `TC-56`)**: Navigating to `/map?itineraryId=draft&day=1` or `/map?itineraryId={id}&day=1` from Suggested Wizard, Custom Builder, or Trip Detail enters `is_follow_route_mode = True`, isolates the active day's numbered stops & OSRM road polyline, shows the Floating Active Route Top Bar (`Back to Plan`, `Browse Map`, `Day 1..N` pills, `Show Nearby POIs`), and shows the Bottom Stop Carousel with `Google Maps Navigation`.
+5. **Home Notification Bell & Saved Card Gate (`TC-18`, `TC-22`, `TC-23`)**: Clicking the notification bell on `DashboardView` opens the Travel Advisories modal without `ModuleNotFoundError`, Home displays at most 2 saved itinerary cards, and clicking a saved card opens `TripDetailView`.
+6. **Suggested Wizard 3-View & Draft Gate (`TC-35` to `TC-44`)**: Wizard form includes rating chips (`All`, `4.0+`, `4.5+`), initializes budget from `default_daily_budget`, does NOT save to `guest_storage` until `[Accept & Save]` is clicked, displays Verified Budget Card & collapsible Assumptions, filters `Nearby Places` by the active day's municipality, and hands off cleanly to `[Full Map]` and `[Customize in Builder]`.
+7. **Custom Builder 3-View & Off-Grid Venue Gate (`TC-45` to `TC-54`)**: Custom Builder supports `form` → `browse` (`✨ Recommended for You` + 16 categories + municipality priority) → `timeline` (Editable Trip Settings card, Verified Budget card, Haversine `Auto-Schedule`, `Edit Stop` with min/max cost & `Move to Day`, and `Add Off-Grid Custom Venue` without `TypeError(latitude=...)`).
+8. **Trip Detail Edit & `PATCH /itineraries/{id}` Gate (`TC-57`, `TC-58`)**: Saving edits in `TripDetailView` calls `ItineraryService.update_itinerary(self.itinerary)` without `ImportError`, and `update_itinerary()` sends the full `days` list in `PATCH /api/v1/itineraries/{id}`.
+9. **Profile Sync, Settings & Signup M.I. Gate (`TC-03`, `TC-14`, `TC-16`, `TC-60` to `TC-63`)**: `SignupView` passes `middle_initial`, `Itinerary.to_create_payload()` exists, `ProfileView._sync_guest_trips()` calls `await self.auth_service.migrate_guest_trips()` (never deleting unsynced trips with `clear_all()`), and Settings `[Test Connection]` and `[Save URL]` work without `AttributeError` or uncaught `ValueError`.
+10. **Clean Codebase Gate (`TC-08`)**: Legacy `sidebar.py`, `header.py`, and `interactive_map.py` (`flet_map`) are removed from active imports.

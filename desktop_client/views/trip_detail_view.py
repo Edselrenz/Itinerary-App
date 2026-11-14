@@ -1,5 +1,6 @@
 """Itinerary Detail, Multi-Stop Route Navigation, and In-Place Editor View."""
 
+import asyncio
 from datetime import datetime
 from typing import Callable, Optional
 import urllib.parse
@@ -29,10 +30,12 @@ class TripDetailView(ft.Container):
         self,
         itinerary: Itinerary,
         on_back: Optional[Callable[[], None]] = None,
+        on_navigate: Optional[Callable[..., None]] = None,
     ):
         super().__init__()
         self.itinerary = itinerary
         self.on_back = on_back
+        self.on_navigate = on_navigate
         self.itinerary_service = get_itinerary_service()
         self.active_day_index = 0
 
@@ -239,6 +242,7 @@ class TripDetailView(ft.Container):
                 day=active_day,
                 initial_expanded=(len(active_day.items) >= 2),
                 height_expanded=190,
+                on_view_full_map=lambda: self._open_full_map(),
             )
         else:
             route_banner = ft.Container()
@@ -551,41 +555,15 @@ class TripDetailView(ft.Container):
 
         show_custom_venue_dialog(self.safe_page, handle_custom)
 
+    def _open_full_map(self) -> None:
+        if self.on_navigate:
+            day_num = self.itinerary.days[self.active_day_index].day_number if self.itinerary.days else 1
+            self.on_navigate(f"/map?itineraryId={self.itinerary.id}&day={day_num}", self.itinerary)
+
     def _save_changes(self) -> None:
         async def _do_save():
             try:
-                from desktop_client.models.itinerary import ItineraryUpdatePayload
-                days_payload = []
-                for d in self.itinerary.days:
-                    items_payload = []
-                    for itm in d.items:
-                        items_payload.append({
-                            "place_id": itm.place_id,
-                            "custom_title": itm.custom_title,
-                            "sort_order": itm.sort_order,
-                            "planned_time": itm.planned_time,
-                            "duration_minutes": itm.duration_minutes,
-                            "notes": itm.notes,
-                            "estimated_cost_min": itm.estimated_cost_min,
-                            "estimated_cost_max": itm.estimated_cost_max,
-                            "place": itm.place.to_dict() if itm.place else None,
-                        })
-                    days_payload.append({
-                        "day_number": d.day_number,
-                        "travel_date": d.travel_date,
-                        "title": d.title,
-                        "items": items_payload,
-                    })
-
-                payload = ItineraryUpdatePayload(
-                    title=self.itinerary.title,
-                    destination=self.itinerary.destination,
-                    start_date=self.itinerary.start_date,
-                    end_date=self.itinerary.end_date,
-                    daily_budget=self.itinerary.daily_budget,
-                    days=days_payload,
-                )
-                updated = await self.itinerary_service.update_itinerary(self.itinerary.id, payload)
+                updated = await self.itinerary_service.update_itinerary(self.itinerary)
                 self.itinerary = updated
                 self.is_dirty = False
                 self.is_edit_mode = False

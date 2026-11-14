@@ -15,7 +15,10 @@ from desktop_client.core.offline_data import (
 )
 from desktop_client.models.itinerary import ItineraryItem
 from desktop_client.models.place import Place
-from desktop_client.services.favorites_service import FavoritesService, get_favorites_service
+from desktop_client.services.favorites_service import (
+    FavoritesService,
+    get_favorites_service,
+)
 from desktop_client.views.guest_view import GuestView
 from desktop_client.views.suggested_wizard_view import SuggestedWizardView
 from desktop_client.views.trip_detail_view import TripDetailView
@@ -74,13 +77,25 @@ def test_haversine_distance_and_leg_commute():
     stop1 = ItineraryItem(
         id="s1",
         day_id="d1",
-        place=Place(id="p1", name="Cabanatuan Plaza", category="tourist_attraction", latitude=15.4859, longitude=120.9673),
+        place=Place(
+            id="p1",
+            name="Cabanatuan Plaza",
+            category="tourist_attraction",
+            latitude=15.4859,
+            longitude=120.9673,
+        ),
         sort_order=1,
     )
     stop2 = ItineraryItem(
         id="s2",
         day_id="d1",
-        place=Place(id="p2", name="Rohi Cafe Bongabon", category="cafe", latitude=15.6315, longitude=121.1440),
+        place=Place(
+            id="p2",
+            name="Rohi Cafe Bongabon",
+            category="cafe",
+            latitude=15.6315,
+            longitude=121.1440,
+        ),
         sort_order=2,
     )
 
@@ -104,7 +119,14 @@ def test_favorites_service_lifecycle(tmp_path, monkeypatch):
     initial = fav_service.get_favorites()
     assert len(initial) >= 3  # Rohi, Museo, Minalungao
 
-    test_place = Place(id="dest-new-spot", name="New Test Spot", category="cafe", latitude=15.63, longitude=121.14, municipality_name="Bongabon")
+    test_place = Place(
+        id="dest-new-spot",
+        name="New Test Spot",
+        category="cafe",
+        latitude=15.63,
+        longitude=121.14,
+        municipality_name="Bongabon",
+    )
     assert not fav_service.is_favorite("dest-new-spot")
 
     # Toggle on
@@ -132,7 +154,7 @@ def test_theme_palette_switching():
 
 
 def test_guest_and_wizard_views_instantiation():
-    """Verify GuestView and SuggestedWizardView can be instantiated cleanly."""
+    """Verify GuestView and SuggestedWizardView can be instantiated cleanly with all routing parameters."""
     guest = GuestView()
     assert guest is not None
 
@@ -140,6 +162,16 @@ def test_guest_and_wizard_views_instantiation():
     assert wizard is not None
     assert wizard.view_mode == "form"
     assert wizard.destination_val == "Nueva Ecija"
+
+    # Test initialization with initial_destination and anchor_place_id
+    wizard_with_params = SuggestedWizardView(
+        on_navigate=lambda route: None,
+        initial_destination="Bongabon",
+        anchor_place_id="dest-bongabon-01",
+    )
+    assert wizard_with_params is not None
+    assert wizard_with_params.destination_val == "Bongabon"
+    assert wizard_with_params.anchor_place_id == "dest-bongabon-01"
 
 
 def test_trip_detail_view_edit_mode_and_guard():
@@ -270,9 +302,14 @@ def test_clean_auth_view_no_demo_persona():
     assert welcome is not None
 
 
-def test_interactive_province_map_and_route_map():
-    """Validates InteractiveProvinceMap GIS engine and embedded ItineraryRouteMap card."""
-    from desktop_client.components.interactive_map import InteractiveProvinceMap
+def test_slippy_map_canvas_and_route_map():
+    """Validates SlippyMapCanvas raster engine and embedded ItineraryRouteMap card."""
+    from desktop_client.components.slippy_map_canvas import (
+        SlippyMapCanvas,
+        latlon_to_world_px,
+        world_px_to_latlon,
+        RouteStopPin,
+    )
     from desktop_client.components.itinerary_route_map import ItineraryRouteMap
     from desktop_client.models.place import Place
     from desktop_client.models.itinerary import ItineraryDay, ItineraryItem
@@ -297,32 +334,39 @@ def test_interactive_province_map_and_route_map():
     ]
 
     clicked_place = []
-    map_ctrl = InteractiveProvinceMap(
+    canvas_map = SlippyMapCanvas(
+        width=800,
+        height=500,
+        center_lat=15.58,
+        center_lng=121.00,
+        zoom=10,
         places=sample_places,
-        on_marker_click=lambda p: clicked_place.append(p),
+        on_place_click=lambda p: clicked_place.append(p),
     )
-    assert map_ctrl is not None
-    assert map_ctrl.center_lat == 15.58
-    assert map_ctrl.zoom == 10.0
+    assert canvas_map is not None
+    assert canvas_map.zoom == 10
+    assert canvas_map.center_lat == 15.58
+    assert canvas_map.center_lng == 121.00
 
     # Controls testing
-    map_ctrl.center_on_hub()
-    map_ctrl.recenter()
-    assert map_ctrl.center_lat == 15.58
+    canvas_map.recenter_province()
+    assert canvas_map.center_lat == 15.58
+    assert canvas_map.center_lng == 121.00
 
-    # Route setting
-    map_ctrl.set_route([
-        {"order": 1, "title": "Stop 1", "latitude": 15.30, "longitude": 121.14},
-        {"order": 2, "title": "Stop 2", "latitude": 15.81, "longitude": 121.15},
-    ])
-    assert len(map_ctrl.route_stops) == 2
+    # Route setting with auto_fit
+    pins = [
+        RouteStopPin(index=0, title="Stop 1", lat=15.30, lng=121.14),
+        RouteStopPin(index=1, title="Stop 2", lat=15.81, lng=121.15),
+    ]
+    canvas_map.set_route(pins, auto_fit=True)
+    assert len(canvas_map._route_stops) == 2
+    assert len(canvas_map._route_pts) >= 2
 
-    # Canvas fallback toggle
-    assert map_ctrl.use_canvas_fallback is False
-    map_ctrl.toggle_canvas_mode()
-    assert map_ctrl.use_canvas_fallback is True
-    map_ctrl.toggle_canvas_mode()
-    assert map_ctrl.use_canvas_fallback is False
+    # Coordinate projection roundtrip test
+    wx, wy = latlon_to_world_px(15.58, 121.00, 10)
+    rev_lat, rev_lng = world_px_to_latlon(wx, wy, 10)
+    assert abs(rev_lat - 15.58) < 0.001
+    assert abs(rev_lng - 121.00) < 0.001
 
     # ItineraryRouteMap test
     day = ItineraryDay(
@@ -365,42 +409,3 @@ def test_interactive_province_map_and_route_map():
     assert route_map.is_expanded is False
     route_map.toggle_expand()
     assert route_map.is_expanded is True
-
-    # Pure-Flet SlippyMapCanvas Test
-    from desktop_client.components.slippy_map_canvas import (
-        SlippyMapCanvas,
-        latlon_to_world_px,
-        world_px_to_latlon,
-        RouteStopPin,
-    )
-
-    # 1. Coordinate projection roundtrip test
-    wx, wy = latlon_to_world_px(15.58, 121.00, 10)
-    rev_lat, rev_lng = world_px_to_latlon(wx, wy, 10)
-    assert abs(rev_lat - 15.58) < 0.001
-    assert abs(rev_lng - 121.00) < 0.001
-
-    # 2. SlippyMapCanvas initialization and clustering
-    canvas_map = SlippyMapCanvas(
-        width=800,
-        height=500,
-        center_lat=15.58,
-        center_lng=121.00,
-        zoom=10,
-        places=sample_places,
-    )
-    assert canvas_map.zoom == 10
-    assert canvas_map.center_lat == 15.58
-    assert canvas_map.center_lng == 121.00
-
-    # 3. Route Pin test
-    pins = [
-        RouteStopPin(index=0, title="Stop 1", lat=15.30, lng=121.14),
-        RouteStopPin(index=1, title="Stop 2", lat=15.81, lng=121.15),
-    ]
-    canvas_map.set_route(pins, auto_fit=True)
-    assert len(canvas_map._route_stops) == 2
-    assert len(canvas_map._route_pts) >= 2  # Road or geodesic polyline populated
-
-
-

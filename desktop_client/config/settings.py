@@ -17,7 +17,17 @@ from dataclasses import dataclass, field
 
 def _resolve_base_dir() -> Path:
     if getattr(sys, "frozen", False):
-        return Path(sys.executable).parent
+        exe_parent = Path(sys.executable).parent
+        if (exe_parent / "assets" / "data" / "osm_places.json").is_file():
+            return exe_parent
+        meipass = Path(getattr(sys, "_MEIPASS", ""))
+        if (meipass / "assets" / "data" / "osm_places.json").is_file():
+            return meipass
+        if (meipass / "desktop_client" / "assets" / "data" / "osm_places.json").is_file():
+            return meipass / "desktop_client"
+        if (exe_parent / "_internal" / "assets" / "data" / "osm_places.json").is_file():
+            return exe_parent / "_internal"
+        return exe_parent
     return Path(__file__).resolve().parent.parent
 
 
@@ -132,10 +142,10 @@ PACING_OPTIONS = [
 ]
 
 BUDGET_PRESETS = [
-    {"key": "backpacker", "label": "Backpacker (₱1,000 / day)", "amount": 1000.0},
+    {"key": "budget", "label": "Budget (₱1,500 / day)", "amount": 1500.0},
     {"key": "moderate", "label": "Moderate (₱2,500 / day)", "amount": 2500.0},
-    {"key": "comfort", "label": "Comfort (₱5,000 / day)", "amount": 5000.0},
-    {"key": "luxury", "label": "Luxury (₱10,000+ / day)", "amount": 10000.0},
+    {"key": "comfort", "label": "Comfort (₱4,000 / day)", "amount": 4000.0},
+    {"key": "luxury", "label": "Luxury (₱6,000 / day)", "amount": 6000.0},
 ]
 
 

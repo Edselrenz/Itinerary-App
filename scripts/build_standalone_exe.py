@@ -86,6 +86,10 @@ def build():
         f"{desktop_dir / 'components'}{os.pathsep}desktop_client/components",
         "--add-data",
         f"{desktop_dir / 'views'}{os.pathsep}desktop_client/views",
+        "--add-data",
+        f"{desktop_dir / 'assets'}{os.pathsep}assets",
+        "--add-data",
+        f"{desktop_dir / 'assets'}{os.pathsep}desktop_client/assets",
         # Hidden imports and package data collection
         "--collect-all",
         "flet",
@@ -177,6 +181,13 @@ def build():
             print("Successfully copied flet/controls package data (icons.json, etc.)")
     except Exception as e:
         print("Warning copying flet package data:", e)
+
+    # Copy desktop_client/assets into dist/NuevaEcijaTravel/assets so osm_places.json (2,673 POIs) & photos are always present
+    target_assets_dir = out_app_dir / "assets"
+    shutil.copytree(desktop_dir / "assets", target_assets_dir, dirs_exist_ok=True)
+    if internal_dir.exists():
+        shutil.copytree(desktop_dir / "assets", internal_dir / "assets", dirs_exist_ok=True)
+    print("Successfully copied desktop_client/assets (2,673 OSM places + photos) to output distribution")
 
     # Create local storage directory
     storage_dir = out_app_dir / "storage"

@@ -31,7 +31,6 @@ imports:
  &#8226;   <a href="#desktop_client.components.bottom_tab_bar">desktop_client.components.bottom_tab_bar</a>
  &#8226;   <a href="#desktop_client.components.date_range_dialog">desktop_client.components.date_range_dialog</a>
  &#8226;   <a href="#desktop_client.components.destination_picker">desktop_client.components.destination_picker</a>
- &#8226;   <a href="#desktop_client.components.interactive_map">desktop_client.components.interactive_map</a>
  &#8226;   <a href="#desktop_client.components.itinerary_route_map">desktop_client.components.itinerary_route_map</a>
  &#8226;   <a href="#desktop_client.components.offline_banner">desktop_client.components.offline_banner</a>
  &#8226;   <a href="#desktop_client.components.slippy_map_canvas">desktop_client.components.slippy_map_canvas</a>
@@ -516,6 +515,7 @@ imports:
  &#8226;   <a href="#traceback">traceback</a>
  &#8226;   <a href="#types">types</a>
  &#8226;   <a href="#typing">typing</a>
+ &#8226;   <a href="#urllib.parse">urllib.parse</a>
  &#8226;   <a href="#warnings">warnings</a>
  &#8226;   <a href="#weakref">weakref</a>
 
@@ -1043,17 +1043,6 @@ imported by:
  &#8226;   <a href="#xml.etree.ElementTree">xml.etree.ElementTree</a>
  &#8226;   <a href="#yaml.constructor">yaml.constructor</a>
  &#8226;   <a href="#zstandard">zstandard</a>
-
-  </div>
-
-</div>
-
-<div class="node">
-  <a name="'desktop_client.core.guest_storage'"></a>
-  <a target="code" href="" type="text/plain"><tt>'desktop_client.core.guest_storage'</tt></a>
-<span class="moduletype">MissingModule</span>  <div class="import">
-imported by:
-    <a href="#desktop_client.views.dashboard_view">desktop_client.views.dashboard_view</a>
 
   </div>
 
@@ -4276,6 +4265,7 @@ imported by:
  &#8226;   <a href="#desktop_client.models.user">desktop_client.models.user</a>
  &#8226;   <a href="#desktop_client.services.auth_service">desktop_client.services.auth_service</a>
  &#8226;   <a href="#desktop_client.views.custom_builder_view">desktop_client.views.custom_builder_view</a>
+ &#8226;   <a href="#desktop_client.views.places_view">desktop_client.views.places_view</a>
  &#8226;   <a href="#doctest">doctest</a>
  &#8226;   <a href="#flet.components.component">flet.components.component</a>
  &#8226;   <a href="#flet.components.hooks.use_callback">flet.components.hooks.use_callback</a>
@@ -8160,7 +8150,6 @@ imported by:
  &#8226;   <a href="#asyncio.unix_events">asyncio.unix_events</a>
  &#8226;   <a href="#asyncio.windows_events">asyncio.windows_events</a>
  &#8226;   <a href="#asyncio.windows_utils">asyncio.windows_utils</a>
- &#8226;   <a href="#desktop_client.components.interactive_map">desktop_client.components.interactive_map</a>
  &#8226;   <a href="#desktop_client.components.offline_banner">desktop_client.components.offline_banner</a>
  &#8226;   <a href="#desktop_client.components.splash_overlay">desktop_client.components.splash_overlay</a>
  &#8226;   <a href="#desktop_client.core.api_client">desktop_client.core.api_client</a>
@@ -8172,6 +8161,7 @@ imported by:
  &#8226;   <a href="#desktop_client.views.saved_trips_view">desktop_client.views.saved_trips_view</a>
  &#8226;   <a href="#desktop_client.views.signup_view">desktop_client.views.signup_view</a>
  &#8226;   <a href="#desktop_client.views.suggested_wizard_view">desktop_client.views.suggested_wizard_view</a>
+ &#8226;   <a href="#desktop_client.views.trip_detail_view">desktop_client.views.trip_detail_view</a>
  &#8226;   <a href="#dns._asyncio_backend">dns._asyncio_backend</a>
  &#8226;   <a href="#dns.asyncbackend">dns.asyncbackend</a>
  &#8226;   <a href="#dns.quic._asyncio">dns.quic._asyncio</a>
@@ -11001,6 +10991,7 @@ imported by:
  &#8226;   <a href="#concurrent.futures.interpreter">concurrent.futures.interpreter</a>
  &#8226;   <a href="#concurrent.futures.process">concurrent.futures.process</a>
  &#8226;   <a href="#concurrent.futures.thread">concurrent.futures.thread</a>
+ &#8226;   <a href="#desktop_client.components.slippy_map_canvas">desktop_client.components.slippy_map_canvas</a>
  &#8226;   <a href="#flet.app">flet.app</a>
  &#8226;   <a href="#flet.controls.page">flet.controls.page</a>
  &#8226;   <a href="#flet.messaging.connection">flet.messaging.connection</a>
@@ -13790,12 +13781,10 @@ imports:
     <a href="#desktop_client">desktop_client</a>
  &#8226;   <a href="#desktop_client.components.bottom_tab_bar">desktop_client.components.bottom_tab_bar</a>
  &#8226;   <a href="#desktop_client.components.dialogs">desktop_client.components.dialogs</a>
- &#8226;   <a href="#desktop_client.components.header">desktop_client.components.header</a>
- &#8226;   <a href="#desktop_client.components.interactive_map">desktop_client.components.interactive_map</a>
  &#8226;   <a href="#desktop_client.components.itinerary_route_map">desktop_client.components.itinerary_route_map</a>
  &#8226;   <a href="#desktop_client.components.offline_banner">desktop_client.components.offline_banner</a>
  &#8226;   <a href="#desktop_client.components.place_card">desktop_client.components.place_card</a>
- &#8226;   <a href="#desktop_client.components.sidebar">desktop_client.components.sidebar</a>
+ &#8226;   <a href="#desktop_client.components.slippy_map_canvas">desktop_client.components.slippy_map_canvas</a>
  &#8226;   <a href="#desktop_client.components.splash_overlay">desktop_client.components.splash_overlay</a>
  &#8226;   <a href="#desktop_client.components.stop_card">desktop_client.components.stop_card</a>
  &#8226;   <a href="#desktop_client.components.workflow_header">desktop_client.components.workflow_header</a>
@@ -13807,12 +13796,9 @@ imported by:
  &#8226;   <a href="#desktop_client.components.date_range_dialog">desktop_client.components.date_range_dialog</a>
  &#8226;   <a href="#desktop_client.components.destination_picker">desktop_client.components.destination_picker</a>
  &#8226;   <a href="#desktop_client.components.dialogs">desktop_client.components.dialogs</a>
- &#8226;   <a href="#desktop_client.components.header">desktop_client.components.header</a>
- &#8226;   <a href="#desktop_client.components.interactive_map">desktop_client.components.interactive_map</a>
  &#8226;   <a href="#desktop_client.components.itinerary_route_map">desktop_client.components.itinerary_route_map</a>
  &#8226;   <a href="#desktop_client.components.offline_banner">desktop_client.components.offline_banner</a>
  &#8226;   <a href="#desktop_client.components.place_card">desktop_client.components.place_card</a>
- &#8226;   <a href="#desktop_client.components.sidebar">desktop_client.components.sidebar</a>
  &#8226;   <a href="#desktop_client.components.slippy_map_canvas">desktop_client.components.slippy_map_canvas</a>
  &#8226;   <a href="#desktop_client.components.splash_overlay">desktop_client.components.splash_overlay</a>
  &#8226;   <a href="#desktop_client.components.stop_card">desktop_client.components.stop_card</a>
@@ -13921,52 +13907,6 @@ imported by:
 </div>
 
 <div class="node">
-  <a name="desktop_client.components.header"></a>
-  <a target="code" href="///C:/Users/Edward/Desktop/CaseStudy/desktop_client/components/header.py" type="text/plain"><tt>desktop_client.components.header</tt></a>
-<span class="moduletype">SourceModule</span>  <div class="import">
-imports:
-    <a href="#desktop_client.components">desktop_client.components</a>
- &#8226;   <a href="#desktop_client.config.settings">desktop_client.config.settings</a>
- &#8226;   <a href="#desktop_client.core.api_client">desktop_client.core.api_client</a>
- &#8226;   <a href="#desktop_client.core.session">desktop_client.core.session</a>
- &#8226;   <a href="#flet">flet</a>
- &#8226;   <a href="#typing">typing</a>
-
-  </div>
-  <div class="import">
-imported by:
-    <a href="#desktop_client.components">desktop_client.components</a>
-
-  </div>
-
-</div>
-
-<div class="node">
-  <a name="desktop_client.components.interactive_map"></a>
-  <a target="code" href="///C:/Users/Edward/Desktop/CaseStudy/desktop_client/components/interactive_map.py" type="text/plain"><tt>desktop_client.components.interactive_map</tt></a>
-<span class="moduletype">SourceModule</span>  <div class="import">
-imports:
-    <a href="#asyncio">asyncio</a>
- &#8226;   <a href="#desktop_client.components">desktop_client.components</a>
- &#8226;   <a href="#desktop_client.config.settings">desktop_client.config.settings</a>
- &#8226;   <a href="#desktop_client.core.polyline">desktop_client.core.polyline</a>
- &#8226;   <a href="#desktop_client.models.place">desktop_client.models.place</a>
- &#8226;   <a href="#flet">flet</a>
- &#8226;   <a href="#flet_map">flet_map</a>
- &#8226;   <a href="#math">math</a>
- &#8226;   <a href="#typing">typing</a>
-
-  </div>
-  <div class="import">
-imported by:
-    <a href="#desktop_client.components">desktop_client.components</a>
- &#8226;   <a href="#main.py">main.py</a>
-
-  </div>
-
-</div>
-
-<div class="node">
   <a name="desktop_client.components.itinerary_route_map"></a>
   <a target="code" href="///C:/Users/Edward/Desktop/CaseStudy/desktop_client/components/itinerary_route_map.py" type="text/plain"><tt>desktop_client.components.itinerary_route_map</tt></a>
 <span class="moduletype">SourceModule</span>  <div class="import">
@@ -14039,45 +13979,31 @@ imported by:
 </div>
 
 <div class="node">
-  <a name="desktop_client.components.sidebar"></a>
-  <a target="code" href="///C:/Users/Edward/Desktop/CaseStudy/desktop_client/components/sidebar.py" type="text/plain"><tt>desktop_client.components.sidebar</tt></a>
-<span class="moduletype">SourceModule</span>  <div class="import">
-imports:
-    <a href="#desktop_client.components">desktop_client.components</a>
- &#8226;   <a href="#desktop_client.config.settings">desktop_client.config.settings</a>
- &#8226;   <a href="#desktop_client.core.session">desktop_client.core.session</a>
- &#8226;   <a href="#flet">flet</a>
- &#8226;   <a href="#typing">typing</a>
-
-  </div>
-  <div class="import">
-imported by:
-    <a href="#desktop_client.components">desktop_client.components</a>
-
-  </div>
-
-</div>
-
-<div class="node">
   <a name="desktop_client.components.slippy_map_canvas"></a>
   <a target="code" href="///C:/Users/Edward/Desktop/CaseStudy/desktop_client/components/slippy_map_canvas.py" type="text/plain"><tt>desktop_client.components.slippy_map_canvas</tt></a>
 <span class="moduletype">SourceModule</span>  <div class="import">
 imports:
     <a href="#__future__">__future__</a>
+ &#8226;   <a href="#concurrent.futures">concurrent.futures</a>
  &#8226;   <a href="#dataclasses">dataclasses</a>
  &#8226;   <a href="#desktop_client.components">desktop_client.components</a>
+ &#8226;   <a href="#desktop_client.config.settings">desktop_client.config.settings</a>
  &#8226;   <a href="#desktop_client.core.polyline">desktop_client.core.polyline</a>
  &#8226;   <a href="#desktop_client.models.place">desktop_client.models.place</a>
  &#8226;   <a href="#flet">flet</a>
  &#8226;   <a href="#flet.canvas">flet.canvas</a>
  &#8226;   <a href="#httpx">httpx</a>
  &#8226;   <a href="#math">math</a>
+ &#8226;   <a href="#os">os</a>
+ &#8226;   <a href="#pathlib">pathlib</a>
  &#8226;   <a href="#typing">typing</a>
+ &#8226;   <a href="#urllib.request">urllib.request</a>
 
   </div>
   <div class="import">
 imported by:
-    <a href="#desktop_client.components.itinerary_route_map">desktop_client.components.itinerary_route_map</a>
+    <a href="#desktop_client.components">desktop_client.components</a>
+ &#8226;   <a href="#desktop_client.components.itinerary_route_map">desktop_client.components.itinerary_route_map</a>
  &#8226;   <a href="#desktop_client.views.places_view">desktop_client.views.places_view</a>
  &#8226;   <a href="#main.py">main.py</a>
 
@@ -14187,12 +14113,10 @@ imported by:
  &#8226;   <a href="#desktop_client.components.date_range_dialog">desktop_client.components.date_range_dialog</a>
  &#8226;   <a href="#desktop_client.components.destination_picker">desktop_client.components.destination_picker</a>
  &#8226;   <a href="#desktop_client.components.dialogs">desktop_client.components.dialogs</a>
- &#8226;   <a href="#desktop_client.components.header">desktop_client.components.header</a>
- &#8226;   <a href="#desktop_client.components.interactive_map">desktop_client.components.interactive_map</a>
  &#8226;   <a href="#desktop_client.components.itinerary_route_map">desktop_client.components.itinerary_route_map</a>
  &#8226;   <a href="#desktop_client.components.offline_banner">desktop_client.components.offline_banner</a>
  &#8226;   <a href="#desktop_client.components.place_card">desktop_client.components.place_card</a>
- &#8226;   <a href="#desktop_client.components.sidebar">desktop_client.components.sidebar</a>
+ &#8226;   <a href="#desktop_client.components.slippy_map_canvas">desktop_client.components.slippy_map_canvas</a>
  &#8226;   <a href="#desktop_client.components.splash_overlay">desktop_client.components.splash_overlay</a>
  &#8226;   <a href="#desktop_client.components.stop_card">desktop_client.components.stop_card</a>
  &#8226;   <a href="#desktop_client.components.workflow_header">desktop_client.components.workflow_header</a>
@@ -14269,8 +14193,7 @@ imports:
   </div>
   <div class="import">
 imported by:
-    <a href="#desktop_client.components.header">desktop_client.components.header</a>
- &#8226;   <a href="#desktop_client.core">desktop_client.core</a>
+    <a href="#desktop_client.core">desktop_client.core</a>
  &#8226;   <a href="#desktop_client.services.auth_service">desktop_client.services.auth_service</a>
  &#8226;   <a href="#desktop_client.services.itinerary_service">desktop_client.services.itinerary_service</a>
  &#8226;   <a href="#desktop_client.services.place_service">desktop_client.services.place_service</a>
@@ -14290,6 +14213,7 @@ imported by:
 imports:
     <a href="#dataclasses">dataclasses</a>
  &#8226;   <a href="#desktop_client.core">desktop_client.core</a>
+ &#8226;   <a href="#desktop_client.core.polyline">desktop_client.core.polyline</a>
  &#8226;   <a href="#math">math</a>
  &#8226;   <a href="#re">re</a>
  &#8226;   <a href="#typing">typing</a>
@@ -14300,6 +14224,7 @@ imported by:
     <a href="#desktop_client.components.dialogs">desktop_client.components.dialogs</a>
  &#8226;   <a href="#desktop_client.components.itinerary_route_map">desktop_client.components.itinerary_route_map</a>
  &#8226;   <a href="#desktop_client.views.custom_builder_view">desktop_client.views.custom_builder_view</a>
+ &#8226;   <a href="#desktop_client.views.places_view">desktop_client.views.places_view</a>
  &#8226;   <a href="#desktop_client.views.suggested_wizard_view">desktop_client.views.suggested_wizard_view</a>
  &#8226;   <a href="#desktop_client.views.trip_detail_view">desktop_client.views.trip_detail_view</a>
  &#8226;   <a href="#main.py">main.py</a>
@@ -14371,6 +14296,7 @@ imports:
  &#8226;   <a href="#desktop_client.core">desktop_client.core</a>
  &#8226;   <a href="#json">json</a>
  &#8226;   <a href="#pathlib">pathlib</a>
+ &#8226;   <a href="#sys">sys</a>
  &#8226;   <a href="#typing">typing</a>
 
   </div>
@@ -14381,7 +14307,6 @@ imported by:
  &#8226;   <a href="#desktop_client.services.itinerary_service">desktop_client.services.itinerary_service</a>
  &#8226;   <a href="#desktop_client.services.place_service">desktop_client.services.place_service</a>
  &#8226;   <a href="#desktop_client.views.custom_builder_view">desktop_client.views.custom_builder_view</a>
- &#8226;   <a href="#desktop_client.views.places_view">desktop_client.views.places_view</a>
  &#8226;   <a href="#main.py">main.py</a>
 
   </div>
@@ -14402,9 +14327,10 @@ imports:
   </div>
   <div class="import">
 imported by:
-    <a href="#desktop_client.components.interactive_map">desktop_client.components.interactive_map</a>
- &#8226;   <a href="#desktop_client.components.slippy_map_canvas">desktop_client.components.slippy_map_canvas</a>
+    <a href="#desktop_client.components.slippy_map_canvas">desktop_client.components.slippy_map_canvas</a>
+ &#8226;   <a href="#desktop_client.core.commute_guide">desktop_client.core.commute_guide</a>
  &#8226;   <a href="#desktop_client.services.itinerary_service">desktop_client.services.itinerary_service</a>
+ &#8226;   <a href="#desktop_client.views.custom_builder_view">desktop_client.views.custom_builder_view</a>
  &#8226;   <a href="#main.py">main.py</a>
 
   </div>
@@ -14426,9 +14352,7 @@ imports:
   </div>
   <div class="import">
 imported by:
-    <a href="#desktop_client.components.header">desktop_client.components.header</a>
- &#8226;   <a href="#desktop_client.components.sidebar">desktop_client.components.sidebar</a>
- &#8226;   <a href="#desktop_client.core">desktop_client.core</a>
+    <a href="#desktop_client.core">desktop_client.core</a>
  &#8226;   <a href="#desktop_client.services.auth_service">desktop_client.services.auth_service</a>
  &#8226;   <a href="#desktop_client.services.itinerary_service">desktop_client.services.itinerary_service</a>
  &#8226;   <a href="#desktop_client.views.dashboard_view">desktop_client.views.dashboard_view</a>
@@ -14460,6 +14384,7 @@ imported by:
     <a href="#desktop_client.core">desktop_client.core</a>
  &#8226;   <a href="#desktop_client.services.auth_service">desktop_client.services.auth_service</a>
  &#8226;   <a href="#desktop_client.services.itinerary_service">desktop_client.services.itinerary_service</a>
+ &#8226;   <a href="#desktop_client.views.dashboard_view">desktop_client.views.dashboard_view</a>
  &#8226;   <a href="#desktop_client.views.profile_view">desktop_client.views.profile_view</a>
  &#8226;   <a href="#main.py">main.py</a>
 
@@ -14513,6 +14438,7 @@ imported by:
  &#8226;   <a href="#desktop_client.services.itinerary_service">desktop_client.services.itinerary_service</a>
  &#8226;   <a href="#desktop_client.views.custom_builder_view">desktop_client.views.custom_builder_view</a>
  &#8226;   <a href="#desktop_client.views.dashboard_view">desktop_client.views.dashboard_view</a>
+ &#8226;   <a href="#desktop_client.views.places_view">desktop_client.views.places_view</a>
  &#8226;   <a href="#desktop_client.views.saved_trips_view">desktop_client.views.saved_trips_view</a>
  &#8226;   <a href="#desktop_client.views.suggested_wizard_view">desktop_client.views.suggested_wizard_view</a>
  &#8226;   <a href="#desktop_client.views.trip_detail_view">desktop_client.views.trip_detail_view</a>
@@ -14536,7 +14462,6 @@ imports:
   <div class="import">
 imported by:
     <a href="#desktop_client.components.dialogs">desktop_client.components.dialogs</a>
- &#8226;   <a href="#desktop_client.components.interactive_map">desktop_client.components.interactive_map</a>
  &#8226;   <a href="#desktop_client.components.itinerary_route_map">desktop_client.components.itinerary_route_map</a>
  &#8226;   <a href="#desktop_client.components.place_card">desktop_client.components.place_card</a>
  &#8226;   <a href="#desktop_client.components.slippy_map_canvas">desktop_client.components.slippy_map_canvas</a>
@@ -14684,6 +14609,7 @@ imported by:
  &#8226;   <a href="#desktop_client.services.auth_service">desktop_client.services.auth_service</a>
  &#8226;   <a href="#desktop_client.views.custom_builder_view">desktop_client.views.custom_builder_view</a>
  &#8226;   <a href="#desktop_client.views.dashboard_view">desktop_client.views.dashboard_view</a>
+ &#8226;   <a href="#desktop_client.views.places_view">desktop_client.views.places_view</a>
  &#8226;   <a href="#desktop_client.views.saved_trips_view">desktop_client.views.saved_trips_view</a>
  &#8226;   <a href="#desktop_client.views.suggested_wizard_view">desktop_client.views.suggested_wizard_view</a>
  &#8226;   <a href="#desktop_client.views.trip_detail_view">desktop_client.views.trip_detail_view</a>
@@ -14705,6 +14631,7 @@ imports:
  &#8226;   <a href="#desktop_client.services">desktop_client.services</a>
  &#8226;   <a href="#logging">logging</a>
  &#8226;   <a href="#typing">typing</a>
+ &#8226;   <a href="#uuid">uuid</a>
 
   </div>
   <div class="import">
@@ -14773,6 +14700,7 @@ imports:
  &#8226;   <a href="#desktop_client.config.settings">desktop_client.config.settings</a>
  &#8226;   <a href="#desktop_client.core.commute_guide">desktop_client.core.commute_guide</a>
  &#8226;   <a href="#desktop_client.core.offline_data">desktop_client.core.offline_data</a>
+ &#8226;   <a href="#desktop_client.core.polyline">desktop_client.core.polyline</a>
  &#8226;   <a href="#desktop_client.models.itinerary">desktop_client.models.itinerary</a>
  &#8226;   <a href="#desktop_client.models.place">desktop_client.models.place</a>
  &#8226;   <a href="#desktop_client.services.itinerary_service">desktop_client.services.itinerary_service</a>
@@ -14797,11 +14725,11 @@ imported by:
   <a target="code" href="///C:/Users/Edward/Desktop/CaseStudy/desktop_client/views/dashboard_view.py" type="text/plain"><tt>desktop_client.views.dashboard_view</tt></a>
 <span class="moduletype">SourceModule</span>  <div class="import">
 imports:
-    <a href="#'desktop_client.core.guest_storage'">'desktop_client.core.guest_storage'</a>
- &#8226;   <a href="#asyncio">asyncio</a>
+    <a href="#asyncio">asyncio</a>
  &#8226;   <a href="#desktop_client.components.dialogs">desktop_client.components.dialogs</a>
  &#8226;   <a href="#desktop_client.config.settings">desktop_client.config.settings</a>
  &#8226;   <a href="#desktop_client.core.session">desktop_client.core.session</a>
+ &#8226;   <a href="#desktop_client.core.storage">desktop_client.core.storage</a>
  &#8226;   <a href="#desktop_client.models.itinerary">desktop_client.models.itinerary</a>
  &#8226;   <a href="#desktop_client.models.place">desktop_client.models.place</a>
  &#8226;   <a href="#desktop_client.services.itinerary_service">desktop_client.services.itinerary_service</a>
@@ -14814,7 +14742,6 @@ imports:
   <div class="import">
 imported by:
     <a href="#desktop_client.views">desktop_client.views</a>
- &#8226;   <a href="#desktop_client.views.places_view">desktop_client.views.places_view</a>
  &#8226;   <a href="#desktop_client.views.suggested_wizard_view">desktop_client.views.suggested_wizard_view</a>
  &#8226;   <a href="#main.py">main.py</a>
 
@@ -14871,18 +14798,21 @@ imported by:
   <a target="code" href="///C:/Users/Edward/Desktop/CaseStudy/desktop_client/views/places_view.py" type="text/plain"><tt>desktop_client.views.places_view</tt></a>
 <span class="moduletype">SourceModule</span>  <div class="import">
 imports:
-    <a href="#asyncio">asyncio</a>
+    <a href="#__future__">__future__</a>
+ &#8226;   <a href="#asyncio">asyncio</a>
  &#8226;   <a href="#desktop_client.components.dialogs">desktop_client.components.dialogs</a>
  &#8226;   <a href="#desktop_client.components.place_card">desktop_client.components.place_card</a>
  &#8226;   <a href="#desktop_client.components.slippy_map_canvas">desktop_client.components.slippy_map_canvas</a>
  &#8226;   <a href="#desktop_client.config.settings">desktop_client.config.settings</a>
- &#8226;   <a href="#desktop_client.core.offline_data">desktop_client.core.offline_data</a>
+ &#8226;   <a href="#desktop_client.core.commute_guide">desktop_client.core.commute_guide</a>
+ &#8226;   <a href="#desktop_client.models.itinerary">desktop_client.models.itinerary</a>
  &#8226;   <a href="#desktop_client.models.place">desktop_client.models.place</a>
+ &#8226;   <a href="#desktop_client.services.itinerary_service">desktop_client.services.itinerary_service</a>
  &#8226;   <a href="#desktop_client.services.place_service">desktop_client.services.place_service</a>
  &#8226;   <a href="#desktop_client.views">desktop_client.views</a>
- &#8226;   <a href="#desktop_client.views.dashboard_view">desktop_client.views.dashboard_view</a>
  &#8226;   <a href="#flet">flet</a>
  &#8226;   <a href="#typing">typing</a>
+ &#8226;   <a href="#urllib.parse">urllib.parse</a>
 
   </div>
   <div class="import">
@@ -15014,7 +14944,8 @@ imported by:
   <a target="code" href="///C:/Users/Edward/Desktop/CaseStudy/desktop_client/views/trip_detail_view.py" type="text/plain"><tt>desktop_client.views.trip_detail_view</tt></a>
 <span class="moduletype">SourceModule</span>  <div class="import">
 imports:
-    <a href="#datetime">datetime</a>
+    <a href="#asyncio">asyncio</a>
+ &#8226;   <a href="#datetime">datetime</a>
  &#8226;   <a href="#desktop_client.components.dialogs">desktop_client.components.dialogs</a>
  &#8226;   <a href="#desktop_client.components.itinerary_route_map">desktop_client.components.itinerary_route_map</a>
  &#8226;   <a href="#desktop_client.components.stop_card">desktop_client.components.stop_card</a>
@@ -23920,12 +23851,9 @@ imported by:
  &#8226;   <a href="#desktop_client.components.date_range_dialog">desktop_client.components.date_range_dialog</a>
  &#8226;   <a href="#desktop_client.components.destination_picker">desktop_client.components.destination_picker</a>
  &#8226;   <a href="#desktop_client.components.dialogs">desktop_client.components.dialogs</a>
- &#8226;   <a href="#desktop_client.components.header">desktop_client.components.header</a>
- &#8226;   <a href="#desktop_client.components.interactive_map">desktop_client.components.interactive_map</a>
  &#8226;   <a href="#desktop_client.components.itinerary_route_map">desktop_client.components.itinerary_route_map</a>
  &#8226;   <a href="#desktop_client.components.offline_banner">desktop_client.components.offline_banner</a>
  &#8226;   <a href="#desktop_client.components.place_card">desktop_client.components.place_card</a>
- &#8226;   <a href="#desktop_client.components.sidebar">desktop_client.components.sidebar</a>
  &#8226;   <a href="#desktop_client.components.slippy_map_canvas">desktop_client.components.slippy_map_canvas</a>
  &#8226;   <a href="#desktop_client.components.splash_overlay">desktop_client.components.splash_overlay</a>
  &#8226;   <a href="#desktop_client.components.stop_card">desktop_client.components.stop_card</a>
@@ -32499,8 +32427,7 @@ imports:
   </div>
   <div class="import">
 imported by:
-    <a href="#desktop_client.components.interactive_map">desktop_client.components.interactive_map</a>
- &#8226;   <a href="#flet_map.circle_layer">flet_map.circle_layer</a>
+    <a href="#flet_map.circle_layer">flet_map.circle_layer</a>
  &#8226;   <a href="#flet_map.map">flet_map.map</a>
  &#8226;   <a href="#flet_map.map_layer">flet_map.map_layer</a>
  &#8226;   <a href="#flet_map.marker_layer">flet_map.marker_layer</a>
@@ -39835,7 +39762,6 @@ imported by:
  &#8226;   <a href="#asyncio.windows_events">asyncio.windows_events</a>
  &#8226;   <a href="#click._termui_impl">click._termui_impl</a>
  &#8226;   <a href="#cryptography.hazmat.primitives.asymmetric.rsa">cryptography.hazmat.primitives.asymmetric.rsa</a>
- &#8226;   <a href="#desktop_client.components.interactive_map">desktop_client.components.interactive_map</a>
  &#8226;   <a href="#desktop_client.components.slippy_map_canvas">desktop_client.components.slippy_map_canvas</a>
  &#8226;   <a href="#desktop_client.core.commute_guide">desktop_client.core.commute_guide</a>
  &#8226;   <a href="#desktop_client.core.polyline">desktop_client.core.polyline</a>
@@ -49385,6 +49311,7 @@ imported by:
  &#8226;   <a href="#ctypes._aix">ctypes._aix</a>
  &#8226;   <a href="#ctypes.macholib.dyld">ctypes.macholib.dyld</a>
  &#8226;   <a href="#ctypes.util">ctypes.util</a>
+ &#8226;   <a href="#desktop_client.components.slippy_map_canvas">desktop_client.components.slippy_map_canvas</a>
  &#8226;   <a href="#desktop_client.config.settings">desktop_client.config.settings</a>
  &#8226;   <a href="#desktop_client.core.connectivity_service">desktop_client.core.connectivity_service</a>
  &#8226;   <a href="#desktop_client.views.guest_view">desktop_client.views.guest_view</a>
@@ -50100,6 +50027,7 @@ imported by:
  &#8226;   <a href="#anyio._core._fileio">anyio._core._fileio</a>
  &#8226;   <a href="#click._termui_impl">click._termui_impl</a>
  &#8226;   <a href="#desktop_client.components.dialogs">desktop_client.components.dialogs</a>
+ &#8226;   <a href="#desktop_client.components.slippy_map_canvas">desktop_client.components.slippy_map_canvas</a>
  &#8226;   <a href="#desktop_client.components.splash_overlay">desktop_client.components.splash_overlay</a>
  &#8226;   <a href="#desktop_client.config.settings">desktop_client.config.settings</a>
  &#8226;   <a href="#desktop_client.core.connectivity_service">desktop_client.core.connectivity_service</a>
@@ -71257,6 +71185,7 @@ imported by:
  &#8226;   <a href="#dataclasses">dataclasses</a>
  &#8226;   <a href="#decimal">decimal</a>
  &#8226;   <a href="#desktop_client.config.settings">desktop_client.config.settings</a>
+ &#8226;   <a href="#desktop_client.core.offline_data">desktop_client.core.offline_data</a>
  &#8226;   <a href="#dis">dis</a>
  &#8226;   <a href="#dns._asyncio_backend">dns._asyncio_backend</a>
  &#8226;   <a href="#dns.rdtypes.ANY.NSEC3">dns.rdtypes.ANY.NSEC3</a>
@@ -72818,12 +72747,9 @@ imported by:
  &#8226;   <a href="#desktop_client.components.date_range_dialog">desktop_client.components.date_range_dialog</a>
  &#8226;   <a href="#desktop_client.components.destination_picker">desktop_client.components.destination_picker</a>
  &#8226;   <a href="#desktop_client.components.dialogs">desktop_client.components.dialogs</a>
- &#8226;   <a href="#desktop_client.components.header">desktop_client.components.header</a>
- &#8226;   <a href="#desktop_client.components.interactive_map">desktop_client.components.interactive_map</a>
  &#8226;   <a href="#desktop_client.components.itinerary_route_map">desktop_client.components.itinerary_route_map</a>
  &#8226;   <a href="#desktop_client.components.offline_banner">desktop_client.components.offline_banner</a>
  &#8226;   <a href="#desktop_client.components.place_card">desktop_client.components.place_card</a>
- &#8226;   <a href="#desktop_client.components.sidebar">desktop_client.components.sidebar</a>
  &#8226;   <a href="#desktop_client.components.slippy_map_canvas">desktop_client.components.slippy_map_canvas</a>
  &#8226;   <a href="#desktop_client.components.splash_overlay">desktop_client.components.splash_overlay</a>
  &#8226;   <a href="#desktop_client.components.stop_card">desktop_client.components.stop_card</a>
@@ -74628,6 +74554,7 @@ imported by:
  &#8226;   <a href="#desktop_client.core.api_client">desktop_client.core.api_client</a>
  &#8226;   <a href="#desktop_client.core.connectivity_service">desktop_client.core.connectivity_service</a>
  &#8226;   <a href="#desktop_client.core.polyline">desktop_client.core.polyline</a>
+ &#8226;   <a href="#desktop_client.views.places_view">desktop_client.views.places_view</a>
  &#8226;   <a href="#desktop_client.views.trip_detail_view">desktop_client.views.trip_detail_view</a>
  &#8226;   <a href="#dns._ddr">dns._ddr</a>
  &#8226;   <a href="#dns.asyncquery">dns.asyncquery</a>
@@ -74648,6 +74575,7 @@ imported by:
  &#8226;   <a href="#httpx._urls">httpx._urls</a>
  &#8226;   <a href="#jwt.jwks_client">jwt.jwks_client</a>
  &#8226;   <a href="#logging.handlers">logging.handlers</a>
+ &#8226;   <a href="#main.py">main.py</a>
  &#8226;   <a href="#markdown_it.common.normalize_url">markdown_it.common.normalize_url</a>
  &#8226;   <a href="#mdurl._encode">mdurl._encode</a>
  &#8226;   <a href="#mimetypes">mimetypes</a>
@@ -74734,7 +74662,8 @@ imports:
   </div>
   <div class="import">
 imported by:
-    <a href="#flet_desktop">flet_desktop</a>
+    <a href="#desktop_client.components.slippy_map_canvas">desktop_client.components.slippy_map_canvas</a>
+ &#8226;   <a href="#flet_desktop">flet_desktop</a>
  &#8226;   <a href="#http.cookiejar">http.cookiejar</a>
  &#8226;   <a href="#httpx._auth">httpx._auth</a>
  &#8226;   <a href="#httpx._models">httpx._models</a>
@@ -74812,6 +74741,7 @@ imported by:
  &#8226;   <a href="#desktop_client.core.storage">desktop_client.core.storage</a>
  &#8226;   <a href="#desktop_client.models.itinerary">desktop_client.models.itinerary</a>
  &#8226;   <a href="#desktop_client.services.itinerary_service">desktop_client.services.itinerary_service</a>
+ &#8226;   <a href="#desktop_client.services.place_service">desktop_client.services.place_service</a>
  &#8226;   <a href="#desktop_client.views.custom_builder_view">desktop_client.views.custom_builder_view</a>
  &#8226;   <a href="#desktop_client.views.suggested_wizard_view">desktop_client.views.suggested_wizard_view</a>
  &#8226;   <a href="#desktop_client.views.trip_detail_view">desktop_client.views.trip_detail_view</a>

@@ -206,6 +206,10 @@ class Itinerary:
         return sum(len(day.items) for day in self.days)
 
     @property
+    def total_days(self) -> int:
+        return max(1, len(self.days))
+
+    @property
     def total_estimated_cost(self) -> float:
         return sum(day.total_day_cost for day in self.days)
 
@@ -253,6 +257,42 @@ class Itinerary:
             "is_guest": self.is_guest,
         }
 
+    def to_create_payload(self) -> "ItineraryCreatePayload":
+        days_data = []
+        for d in self.days:
+            items_data = []
+            for it in d.items:
+                items_data.append({
+                    "place_id": it.place_id,
+                    "custom_title": it.custom_title or it.display_title,
+                    "custom_lat": it.custom_lat or (it.place.latitude if it.place else None),
+                    "custom_lng": it.custom_lng or (it.place.longitude if it.place else None),
+                    "sort_order": it.sort_order,
+                    "planned_time": it.planned_time,
+                    "duration_minutes": it.duration_minutes,
+                    "notes": it.notes,
+                    "estimated_cost_min": it.estimated_cost_min,
+                    "estimated_cost_max": it.estimated_cost_max,
+                    "place": it.place.to_dict() if it.place else None,
+                })
+            days_data.append({
+                "day_number": d.day_number,
+                "travel_date": d.travel_date,
+                "title": d.title,
+                "items": items_data,
+            })
+        return ItineraryCreatePayload(
+            title=self.title,
+            destination=self.destination,
+            start_date=self.start_date,
+            end_date=self.end_date,
+            daily_budget=self.daily_budget,
+            preferences=self.preferences,
+            type=self.type,
+            assumptions=self.assumptions,
+            days=days_data,
+        )
+
 
 @dataclass
 class SuggestedItineraryRequest:
@@ -267,9 +307,12 @@ class SuggestedItineraryRequest:
     pacing: str = "moderate"
     travel_mode: str = "DRIVE"
     save_immediately: bool = False
+    min_rating: Optional[float] = None
+    include_live_places: bool = True
+    anchor_place_id: Optional[str] = None
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        res: dict[str, Any] = {
             "title": self.title,
             "destination": self.destination,
             "start_date": self.start_date,
@@ -279,7 +322,13 @@ class SuggestedItineraryRequest:
             "pacing": self.pacing,
             "travel_mode": self.travel_mode,
             "save_immediately": self.save_immediately,
+            "include_live_places": self.include_live_places,
         }
+        if self.min_rating is not None:
+            res["min_rating"] = self.min_rating
+        if self.anchor_place_id is not None:
+            res["anchor_place_id"] = self.anchor_place_id
+        return res
 
 
 @dataclass

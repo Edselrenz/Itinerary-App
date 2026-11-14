@@ -461,12 +461,12 @@ class ProfileView(ft.Container):
 
         def _save_url(_):
             new_url = (api_url_input.value or "").strip()
-            ok = self.connectivity_service.set_custom_api_url(new_url)
-            if ok:
+            try:
+                self.connectivity_service.set_custom_api_url(new_url)
                 api_status.value = f"Saved custom URL: {new_url}"
                 api_status.color = ThemeColors.SUCCESS
-            else:
-                api_status.value = "Invalid URL (must start with http:// or https://)"
+            except ValueError as err:
+                api_status.value = str(err)
                 api_status.color = ThemeColors.ERROR
             dlg.update()
 
@@ -1231,14 +1231,7 @@ class ProfileView(ft.Container):
 
         async def _run():
             try:
-                trips = self.guest_storage.list_itineraries()
-                for trip in trips:
-                    trip.user_id = (
-                        self.session_manager.current_user.id
-                        if self.session_manager.current_user
-                        else ""
-                    )
-                self.guest_storage.clear_all()
+                migrated = await self.auth_service.migrate_guest_trips()
             finally:
                 self.is_migrating = False
                 self._build_content()

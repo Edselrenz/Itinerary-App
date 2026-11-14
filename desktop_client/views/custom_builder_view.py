@@ -160,16 +160,31 @@ class CustomBuilderView(ft.Container):
         self.active_day_index = min(getattr(self, "active_day_index", 0), max(0, len(self.days) - 1))
 
     def _auto_schedule_active_day(self, _=None) -> None:
-        """Sequential planned_time recalculation starting at 09:00 AM with Haversine buffers."""
+        """Sequential planned_time recalculation starting at 09:00 AM with dynamic Haversine driving buffers."""
         if not self.days or self.active_day_index >= len(self.days):
             return
         day = self.days[self.active_day_index]
         if not day.items:
             return
 
+        from desktop_client.core.polyline import haversine_distance_meters
+
         self.is_dirty = True
         current_minutes = 9 * 60  # 09:00 AM
         for idx, item in enumerate(day.items):
+            if idx > 0:
+                prev = day.items[idx - 1]
+                p1_lat = getattr(prev, "custom_lat", None) or (prev.place.latitude if prev.place else None)
+                p1_lng = getattr(prev, "custom_lng", None) or (prev.place.longitude if prev.place else None)
+                p2_lat = getattr(item, "custom_lat", None) or (item.place.latitude if item.place else None)
+                p2_lng = getattr(item, "custom_lng", None) or (item.place.longitude if item.place else None)
+                if p1_lat and p1_lng and p2_lat and p2_lng:
+                    dist_km = haversine_distance_meters(float(p1_lat), float(p1_lng), float(p2_lat), float(p2_lng)) / 1000.0
+                    transit_mins = max(15, min(120, int((dist_km / 40.0) * 60 + 10)))
+                else:
+                    transit_mins = 30
+                current_minutes += transit_mins
+
             hrs = (current_minutes // 60) % 24
             mins = current_minutes % 60
             ampm = "AM" if hrs < 12 else "PM"
@@ -179,7 +194,7 @@ class CustomBuilderView(ft.Container):
             item.planned_time = f"{display_hrs:02d}:{mins:02d} {ampm}"
             item.sort_order = idx + 1
             dur = item.duration_minutes or 90
-            current_minutes += dur + 30
+            current_minutes += dur
             # Midday dining anchor adjustment
             if 11 * 60 <= current_minutes < 12 * 60 and idx < len(day.items) - 1:
                 current_minutes = 13 * 60
@@ -820,10 +835,22 @@ class CustomBuilderView(ft.Container):
             self._safe_update()
 
     def _open_edit_stop_dialog(self, item: ItineraryItem) -> None:
-        """Edit stop modal with Move to Day dropdown support."""
+        """Edit stop modal with Move to Day dropdown and cost range support."""
         time_field = ft.TextField(label="Planned Time", value=item.planned_time or "09:00 AM", dense=True)
         dur_field = ft.TextField(label="Duration (mins)", value=str(item.duration_minutes or 90), dense=True)
         notes_field = ft.TextField(label="Notes", value=item.notes or "", dense=True, multiline=True)
+        cost_min_field = ft.TextField(
+            label="Min Cost (₱)",
+            value=str(int(item.estimated_cost_min)) if item.estimated_cost_min is not None else "",
+            dense=True,
+            prefix=ft.Text("₱ "),
+        )
+        cost_max_field = ft.TextField(
+            label="Max Cost (₱)",
+            value=str(int(item.estimated_cost_max)) if item.estimated_cost_max is not None else "",
+            dense=True,
+            prefix=ft.Text("₱ "),
+        )
 
         day_options = [ft.dropdown.Option(str(d.day_number), f"Day {d.day_number}") for d in self.days]
         day_dropdown = ft.Dropdown(
@@ -840,6 +867,13 @@ class CustomBuilderView(ft.Container):
             except ValueError:
                 pass
             item.notes = notes_field.value.strip()
+            try:
+                if cost_min_field.value.strip():
+                    item.estimated_cost_min = float(cost_min_field.value.strip())
+                if cost_max_field.value.strip():
+                    item.estimated_cost_max = float(cost_max_field.value.strip())
+            except ValueError:
+                pass
 
             target_day_num = int(day_dropdown.value)
             current_day_num = self.days[self.active_day_index].day_number
@@ -857,7 +891,11 @@ class CustomBuilderView(ft.Container):
 
         dlg = ft.AlertDialog(
             title=ft.Text(f"Edit Stop: {item.custom_title or (item.place.name if item.place else 'Stop')}"),
-            content=ft.Column(controls=[day_dropdown, time_field, dur_field, notes_field], tight=True, spacing=10),
+            content=ft.Column(
+                controls=[day_dropdown, time_field, dur_field, ft.Row(controls=[cost_min_field, cost_max_field], spacing=8), notes_field],
+                tight=True,
+                spacing=10,
+            ),
             actions=[
                 ft.TextButton("Cancel", on_click=lambda _: setattr(dlg, "open", False) or self.page.update()),
                 ft.FilledButton("Save", on_click=_save_edit),
@@ -901,8 +939,6 @@ class CustomBuilderView(ft.Container):
                 sort_order=len(active_day.items) + 1,
                 planned_time=self._calc_next_time(active_day),
                 duration_minutes=90,
-                latitude=lat,
-                longitude=lng,
                 custom_lat=lat,
                 custom_lng=lng,
             )

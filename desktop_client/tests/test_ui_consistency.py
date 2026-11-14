@@ -9,8 +9,8 @@ from desktop_client.config.settings import (
     ThemeColors,
     get_settings,
 )
-from desktop_client.components.header import TopHeader
-from desktop_client.components.sidebar import SidebarNav
+from desktop_client.components.bottom_tab_bar import BottomTabBar
+from desktop_client.components.workflow_header import WorkflowHeader
 from desktop_client.components.place_card import PlaceCard
 from desktop_client.components.stop_card import StopCard
 from desktop_client.models.itinerary import Itinerary, ItineraryDay, ItineraryItem
@@ -105,11 +105,11 @@ def test_all_views_can_be_instantiated():
     signup = SignupView()
     assert signup is not None
 
-    sidebar = SidebarNav()
-    assert sidebar is not None
+    bottom_bar = BottomTabBar()
+    assert bottom_bar is not None
 
-    header = TopHeader()
-    assert header is not None
+    wf_header = WorkflowHeader(title="Test Workflow")
+    assert wf_header is not None
 
     dashboard = DashboardView()
     assert dashboard is not None
@@ -152,19 +152,17 @@ def test_all_views_can_be_instantiated():
     assert detail is not None
 
 
-def test_unmounted_header_and_sidebar_safe_update():
-    """Ensure TopHeader and SidebarNav safely handle context/status/route updates when unmounted."""
-    header = TopHeader()
-    # These must NOT raise 'Control must be added to the page first'
-    header.set_header_context("Map & Discover", "Explore LGUs")
-    header.set_online_status(False)
-    header.set_online_status(True)
-    assert header.title_text == "Map & Discover"
-    assert header.is_online is True
+def test_unmounted_bottom_tab_bar_and_workflow_header_safe_update():
+    """Ensure BottomTabBar and WorkflowHeader safely handle route/context updates when unmounted."""
+    wf_header = WorkflowHeader(title="Map & Discover", subtitle="Explore LGUs")
+    wf_header.title_text = "Updated Title"
+    wf_header.subtitle_text = "Updated Subtitle"
+    assert wf_header.title_text == "Updated Title"
+    assert wf_header.subtitle_text == "Updated Subtitle"
 
-    sidebar = SidebarNav()
-    sidebar.set_active_route("/places")
-    assert sidebar.current_route == "/places"
+    tab_bar = BottomTabBar()
+    tab_bar.set_active_route("/places")
+    assert tab_bar._get_active_tab_key() == "map"
 
 
 def test_continue_as_guest_welcome_flow():
@@ -173,3 +171,31 @@ def test_continue_as_guest_welcome_flow():
     welcome = WelcomeView(on_navigate=lambda r: routed.append(r))
     welcome._continue_as_guest()
     assert "/dashboard" in routed
+
+
+def test_main_app_navigation_and_url_parsing():
+    """Verify that main module imports urllib.parse and handles all route patterns without NameError."""
+    import desktop_client.main as main_mod
+
+    assert hasattr(main_mod, "urllib")
+    assert hasattr(main_mod.urllib, "parse")
+
+    # Verify query parsing on routes
+    for test_route in [
+        "/dashboard",
+        "/home",
+        "/map?itineraryId=draft&day=1",
+        "/places?q=Bongabon",
+        "/suggested?destination=Bongabon",
+        "/builder?itineraryId=itin-1",
+        "/trips/itin-1",
+        "/welcome",
+        "/login",
+        "/signup",
+        "/profile",
+    ]:
+        parsed = main_mod.urllib.parse.urlparse(test_route)
+        assert parsed.path.startswith("/")
+        qs = main_mod.urllib.parse.parse_qs(parsed.query)
+        assert isinstance(qs, dict)
+

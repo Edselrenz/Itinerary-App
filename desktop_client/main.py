@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 import sys
 from typing import Optional
+import urllib.parse
 import flet as ft
 
 # Auto-detect bundled flet view in frozen standalone builds
@@ -193,46 +194,53 @@ def main(page: ft.Page) -> None:
             return
 
         # 2. Workflow Views (Modal creation & detail with contextual header)
-        if route in ("/suggested", "/builder") or route.startswith("/trips/"):
+        parsed_url = urllib.parse.urlparse(route)
+        base_route = parsed_url.path
+        query_params = urllib.parse.parse_qs(parsed_url.query)
+
+        if base_route in ("/suggested", "/builder") or base_route.startswith("/trips/"):
             bottom_tab_bar.visible = False
 
-            if route == "/suggested":
+            if base_route == "/suggested":
                 workflow_header.visible = True
                 workflow_header.title_text = "Suggested Itinerary Wizard"
                 workflow_header.subtitle_text = "Automated Proximity & Corridor Clustering"
                 workflow_header.on_back = lambda: navigate_to("/home")
                 workflow_header._build_content()
-                if "/suggested" not in cached_views:
-                    cached_views["/suggested"] = SuggestedWizardView(
-                        on_navigate=navigate_to
-                    )
-                content_area.content = cached_views["/suggested"]
+                dest_param = query_params.get("destination", [None])[0]
+                place_id_param = query_params.get("placeId", [None])[0]
+                content_area.content = SuggestedWizardView(
+                    on_navigate=navigate_to,
+                    initial_destination=dest_param or "Nueva Ecija",
+                    anchor_place_id=place_id_param,
+                )
 
-            elif route == "/builder":
+            elif base_route == "/builder":
                 workflow_header.visible = True
                 workflow_header.title_text = "Custom Itinerary Builder"
                 workflow_header.subtitle_text = "Interactive Stop-by-Stop Scheduling"
                 workflow_header.on_back = lambda: navigate_to("/home")
                 workflow_header._build_content()
-                if pre_added_place or "/builder" not in cached_views:
-                    cached_views["/builder"] = CustomBuilderView(
-                        on_navigate=navigate_to,
-                        pre_added_place=pre_added_place,
-                    )
-                content_area.content = cached_views["/builder"]
+                is_draft_wizard = query_params.get("draft", ["false"])[0].lower() == "true"
+                content_area.content = CustomBuilderView(
+                    on_navigate=navigate_to,
+                    pre_added_place=pre_added_place,
+                    existing_itinerary=selected_trip,
+                    is_draft_from_wizard=is_draft_wizard,
+                )
 
-            elif route.startswith("/trips/"):
+            elif base_route.startswith("/trips/"):
                 # Trip detail view embeds its own back bar
                 workflow_header.visible = False
-                trip_id = route.split("/trips/")[1].split("?")[0].strip()
+                trip_id = base_route.split("/trips/")[1].strip()
                 trip_obj = selected_trip
                 if not trip_obj:
-                    guest_storage = get_guest_storage()
-                    trip_obj = guest_storage.get_itinerary(trip_id)
+                    trip_obj = itinerary_service.get_itinerary_or_draft(trip_id)
                 if trip_obj:
                     content_area.content = TripDetailView(
                         itinerary=trip_obj,
                         on_back=lambda: navigate_to("/saved"),
+                        on_navigate=navigate_to,
                     )
                 else:
                     navigate_to("/saved")
@@ -244,18 +252,22 @@ def main(page: ft.Page) -> None:
         # 3. Primary 4-Tab Views (Home, Map, Saved, Profile)
         workflow_header.visible = False
         bottom_tab_bar.visible = True
-        bottom_tab_bar.set_active_route(route)
+        bottom_tab_bar.set_active_route(base_route)
 
-        if route in ("/dashboard", "/home"):
+        if base_route in ("/dashboard", "/home"):
             content_area.content = DashboardView(on_navigate=navigate_to)
-        elif route in ("/map", "/places"):
-            content_area.content = PlacesView(on_navigate=navigate_to)
-        elif route in ("/saved", "/trips"):
+        elif base_route in ("/map", "/places"):
+            content_area.content = PlacesView(
+                on_navigate=navigate_to,
+                route_query=route,
+                active_trip=selected_trip,
+            )
+        elif base_route in ("/saved", "/trips"):
             content_area.content = SavedTripsView(
                 on_navigate=navigate_to,
                 on_select_trip=lambda it: navigate_to(f"/trips/{it.id}", it),
             )
-        elif route == "/profile":
+        elif base_route == "/profile":
             content_area.content = ProfileView(
                 on_navigate=navigate_to,
                 on_toggle_theme=toggle_theme,
@@ -305,7 +317,7 @@ def main(page: ft.Page) -> None:
     async def check_backend_loop():
         while True:
             try:
-                await connectivity_service.check_host_health(api_client)
+                await connectivity_service.check_host_health()
             except Exception:
                 pass
             await asyncio.sleep(15)

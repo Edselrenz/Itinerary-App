@@ -4,10 +4,8 @@ from desktop_client.components.bottom_tab_bar import BottomTabBar
 from desktop_client.components.offline_banner import OfflineHostBanner
 from desktop_client.components.splash_overlay import SplashOverlay
 from desktop_client.components.workflow_header import WorkflowHeader
-from desktop_client.components.interactive_map import InteractiveProvinceMap
 from desktop_client.components.itinerary_route_map import ItineraryRouteMap
-from desktop_client.components.sidebar import SidebarNav
-from desktop_client.components.header import TopHeader
+from desktop_client.components.slippy_map_canvas import SlippyMapCanvas
 from desktop_client.components.place_card import PlaceCard
 from desktop_client.components.stop_card import StopCard
 from desktop_client.components.dialogs import (
@@ -23,10 +21,8 @@ __all__ = [
     "OfflineHostBanner",
     "SplashOverlay",
     "WorkflowHeader",
-    "InteractiveProvinceMap",
     "ItineraryRouteMap",
-    "SidebarNav",
-    "TopHeader",
+    "SlippyMapCanvas",
     "PlaceCard",
     "StopCard",
     "show_place_detail_dialog",

@@ -44,9 +44,15 @@ class SuggestedWizardView(ft.Container):
     - Nearby amenities discovery and one-click injection.
     """
 
-    def __init__(self, on_navigate: Optional[Callable[..., None]] = None):
+    def __init__(
+        self,
+        on_navigate: Optional[Callable[..., None]] = None,
+        initial_destination: Optional[str] = None,
+        anchor_place_id: Optional[str] = None,
+    ):
         super().__init__()
         self.on_navigate = on_navigate
+        self.anchor_place_id = anchor_place_id
         self.itinerary_service = get_itinerary_service()
         self.place_service = get_place_service()
 
@@ -57,10 +63,21 @@ class SuggestedWizardView(ft.Container):
         # State Machine: 'form', 'itinerary', 'nearby'
         self.view_mode = "form"
 
+        # Resolve initial destination
+        dest = initial_destination or "Nueva Ecija"
+        if self.anchor_place_id and (not initial_destination or initial_destination == "Nueva Ecija"):
+            try:
+                loaded = self.place_service.get_loaded_places()
+                anchor_match = next((p for p in loaded if p.id == self.anchor_place_id), None)
+                if anchor_match and anchor_match.municipality_name:
+                    dest = anchor_match.municipality_name
+            except Exception:
+                pass
+
         # Wizard Form State
         today = date.today()
         self.title_val = "Suggested Nueva Ecija Itinerary"
-        self.destination_val = "Nueva Ecija"
+        self.destination_val = dest
         self.start_date_val = (today + timedelta(days=7)).strftime("%Y-%m-%d")
         self.end_date_val = (today + timedelta(days=9)).strftime("%Y-%m-%d")
         self.budget_val = 2500.0
@@ -939,6 +956,8 @@ class SuggestedWizardView(ft.Container):
                     pacing=self.pacing_val,
                     travel_mode=self.travel_mode_val.upper(),
                     save_immediately=False,
+                    min_rating=self.min_rating_val if self.min_rating_val > 0 else None,
+                    anchor_place_id=self.anchor_place_id,
                 )
                 itin = await self.itinerary_service.generate_suggested_itinerary(req)
                 self.generated_itinerary = itin

@@ -18,10 +18,12 @@ def show_place_detail_dialog(
     place: Place,
     on_add_to_day: Optional[Callable[[Place], None]] = None,
     on_navigate: Optional[Callable[..., None]] = None,
+    on_add_to_trip: Optional[Callable[[Place], None]] = None,
 ) -> None:
     """Displays comprehensive place modal with editorial summary, honest pricing,
     operating hours, commute guide, favorites toggle, and action CTAs.
     """
+    effective_add_to_day = on_add_to_day or on_add_to_trip
     fav_service = get_favorites_service()
     is_fav = fav_service.is_favorite(place.id)
 
@@ -30,8 +32,8 @@ def show_place_detail_dialog(
 
     def handle_add(_=None):
         page.pop_dialog()
-        if on_add_to_day:
-            on_add_to_day(place)
+        if effective_add_to_day:
+            effective_add_to_day(place)
         elif on_navigate:
             on_navigate("/builder", pre_added_place=place)
 

@@ -7,14 +7,80 @@ and Project/src/app/shared/components/itinerary-route-map/itinerary-route-map.co
 from __future__ import annotations
 
 from dataclasses import dataclass
+import concurrent.futures
 import math
+import os
+from pathlib import Path
 from typing import Callable, Optional
+import urllib.request
 import flet as ft
 import flet.canvas as cv
 import httpx
 
+from desktop_client.config.settings import get_settings
 from desktop_client.core.polyline import decode_polyline, generate_geodesic_arc
 from desktop_client.models.place import Place
+
+# Global background tile fetcher
+_TILE_EXECUTOR = concurrent.futures.ThreadPoolExecutor(max_workers=6)
+_QUEUED_TILES: set[str] = set()
+
+
+def _resolve_tile_source(
+    zoom: int,
+    x: int,
+    y: int,
+    on_ready: Optional[Callable[[], None]] = None,
+) -> str:
+    """Returns local path to clean OSM tile (bundled or cached) or downloads in background with clean ESRI fallback."""
+    settings = get_settings()
+    rel_tile = f"tiles/{zoom}_{x}_{y}.png"
+
+    # 1. Bundled assets (Zooms 8-11 pre-downloaded in desktop_client/assets/tiles)
+    bundled = settings.get_asset_path(rel_tile)
+    if bundled and os.path.isfile(bundled):
+        return bundled
+
+    direct_cand = settings.assets_dir / "tiles" / f"{zoom}_{x}_{y}.png"
+    if direct_cand.is_file():
+        return str(direct_cand)
+
+    # 2. Local disk cache
+    cache_dir = settings.storage_dir / "tile_cache"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    cache_file = cache_dir / f"{zoom}_{x}_{y}.png"
+    if cache_file.is_file() and cache_file.stat().st_size > 500:
+        return str(cache_file)
+
+    # 3. Schedule background download from tile.openstreetmap.org with compliant User-Agent
+    tile_key = f"{zoom}_{x}_{y}"
+    if tile_key not in _QUEUED_TILES:
+        _QUEUED_TILES.add(tile_key)
+
+        def _fetch():
+            url = f"https://tile.openstreetmap.org/{zoom}/{x}/{y}.png"
+            req = urllib.request.Request(
+                url,
+                headers={"User-Agent": "NuevaEcijaTravel/1.0 (+https://edselrenz.github.io/Itinerary-App; contact: edselrenz0@gmail.com)"},
+            )
+            try:
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    if resp.status == 200:
+                        data = resp.read()
+                        if len(data) > 500:
+                            with open(cache_file, "wb") as f:
+                                f.write(data)
+                            if on_ready:
+                                on_ready()
+            except Exception:
+                pass
+            finally:
+                _QUEUED_TILES.discard(tile_key)
+
+        _TILE_EXECUTOR.submit(_fetch)
+
+    # 4. Clean fallback while downloading: ESRI World Street Map (clean, zero watermark, never blocked by Flutter)
+    return f"https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{zoom}/{y}/{x}"
 
 
 # Category Pin Palette matching Project/src/app/features/map/map.page.scss (.pin-cat-*)
@@ -200,7 +266,7 @@ class SlippyMapCanvas(ft.Container):
             bgcolor=ft.Colors.with_opacity(0.82, "#ffffff"),
             border_radius=6,
             padding=ft.Padding.symmetric(horizontal=6, vertical=2),
-            content=ft.Text("© OpenStreetMap contributors • OSRM Routing", size=9, color="#475569"),
+            content=ft.Text("© OpenStreetMap contributors • OSRM", size=9, color="#475569"),
         )
 
         gesture_layer = ft.GestureDetector(
@@ -263,6 +329,10 @@ class SlippyMapCanvas(ft.Container):
         if zoom is not None:
             self.zoom = max(8, min(18, int(zoom)))
         self.redraw()
+
+    def recenter_province(self) -> None:
+        """Recenters to default Nueva Ecija provincial coordinates (15.58, 121.00, zoom 10)."""
+        self.set_center_and_zoom(15.58, 121.00, 10)
 
     def set_zoom(self, new_zoom: int) -> None:
         self.zoom = max(8, min(18, int(new_zoom)))
@@ -350,7 +420,8 @@ class SlippyMapCanvas(ft.Container):
                 wrapped_tx = tx % num_tiles
                 left_px = (tx * 256.0) - top_left_wx
                 top_px = (ty * 256.0) - top_left_wy
-                tile_url = f"https://tile.openstreetmap.org/{self.zoom}/{wrapped_tx}/{ty}.png"
+                # Load authentic clean OSM tile (bundled or local cache), or clean ESRI fallback
+                tile_src = _resolve_tile_source(self.zoom, wrapped_tx, ty, on_ready=self.redraw)
                 tiles.append(
                     ft.Container(
                         left=left_px,
@@ -358,7 +429,7 @@ class SlippyMapCanvas(ft.Container):
                         width=256,
                         height=256,
                         content=ft.Image(
-                            src=tile_url,
+                            src=tile_src,
                             width=256,
                             height=256,
                             fit=ft.BoxFit.COVER,

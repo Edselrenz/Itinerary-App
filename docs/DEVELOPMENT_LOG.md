@@ -4639,7 +4639,88 @@ NEXT STEPS:
      - Executed canonical web client unit test suite: `npm --prefix Project run test:unit` -> **32 test files passed, 348 unit tests passed in 26.36s [100% GREEN, ZERO EDITS in Project/]**.
      - Compiled standalone Windows distribution executable via `python -m PyInstaller NuevaEcijaTravel.spec --clean -y`.
 - **Next Step**:
-  - Present final verification summary report to the user detailing resolution of all 4 defect items.
+  - Proceed with Phase 51 (QA Audit v4 Remediation & Full-Bleed Map Parity).
+
+---
+
+## Session 117: Desktop Client QA Audit v4 Remediation & Full-Bleed Map Parity (Phase 51)
+- **Date & Time**: 2026-11-14 13:10:00 (Local)
+- **Objective**:
+  - Remediate all visual and functional defects identified in QA Audit v4 and screenshot `image_4b1823.png`.
+  - Step 51.1: CartoDB Voyager OSM tiles in `SlippyMapCanvas` to permanently eliminate HTTP 403 access blocks from Flutter/Dart `ft.Image`.
+  - Step 51.2: PlaceService, models, and offline storage parity (`total_pages`, municipality UUID vs. name, 2,673 POI cache merging, `_MEIPASS` asset resolution).
+  - Step 51.3: Views & navigation bugfixes (router health loop, dashboard bell, signup M.I., guest trip migration, off-grid venue arguments).
+  - Step 51.4: Full-bleed `MapView` in `places_view.py` with floating search/category bar, floating right buttons, floating bottom drawer, and Follow-Route mode.
+  - Step 51.5: Dead legacy code deletion (`sidebar.py`, `header.py`, `interactive_map.py`).
+  - Step 51.6: Automated verification (47 desktop tests + 348 web tests), standalone packaging, and 12-gate acceptance audit.
+- **Tasks Performed & Implementation Ledger**:
+  1. **Step 51.1 (CartoDB Voyager OSM Tiles in `SlippyMapCanvas`)**:
+     - In `desktop_client/components/slippy_map_canvas.py`: Replaced `tile.openstreetmap.org` with CartoDB Voyager OSM raster tiles (`https://{sub}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png` with subdomains `a`, `b`, `c`, `d`).
+     - Added responsive viewport dimensions (`width=1240, height=740`, `expand=True`).
+     - Updated attribution badge to "© OpenStreetMap contributors, © CARTO".
+     - Added `recenter_province()` convenience method.
+  2. **Step 51.2 (PlaceService, Asset Bundling & Itinerary Storage Parity)**:
+     - In `desktop_client/services/place_service.py`: Fixed `total_pages=` offline fallback crash. Implemented safe municipality routing (known town names in `ALL_32_LGUS_METADATA` routed to `municipality_name` to eliminate FastAPI 422, while IDs/UUIDs remain `municipality_id`). Preserved full 2,673 POI catalog with `_osm_places_cache`, `get_loaded_places()`, and `merge_places_into_cache()`. Added `categories`, `price_tier`, `min_lat..max_lng`.
+     - In `desktop_client/config/settings.py` & `desktop_client/core/offline_data.py`: Added multi-path asset resolution checking `sys._MEIPASS`, `exe_dir / "assets"`, and `exe_dir / "_internal" / "assets"`.
+     - In `desktop_client/models/itinerary.py`: Added `total_days` property and `to_create_payload()`. Extended `SuggestedItineraryRequest` with `min_rating`, `include_live_places`, and `anchor_place_id`.
+     - In `desktop_client/services/itinerary_service.py`: Prevented premature storage save in `generate_suggested_itinerary` (`save_immediately=False`). Included `"days"` serialization in `update_itinerary()`.
+  3. **Step 51.3 (Views & Navigation Defect Remediation)**:
+     - In `desktop_client/main.py`: Fixed `check_backend_loop()` to call `check_host_health()` with 0 args. Added query param parsing on `/suggested`, `/builder`, `/map`, `/places`, and `/trips/{id}`.
+     - In `desktop_client/components/dialogs.py`: Supported both `on_add_to_day` and `on_add_to_trip` kwargs.
+     - In `desktop_client/views/dashboard_view.py`: Fixed notification bell guest mode crash (`is_guest` property). Capped saved trips preview to 2 cards.
+     - In `desktop_client/views/signup_view.py`: Passed `middle_initial` to `register()`.
+     - In `desktop_client/views/profile_view.py`: Wired `_sync_guest_trips()` to `await auth_service.migrate_guest_trips()`.
+     - In `desktop_client/views/trip_detail_view.py`: Removed invalid `ItineraryUpdatePayload` import, called `update_itinerary(self.itinerary)` directly. Wired `[Full Map]` launcher to `/map?itineraryId=...&day=...`.
+     - In `desktop_client/views/custom_builder_view.py`: Removed invalid `latitude`/`longitude` kwargs on `ItineraryItem`. Added dynamic Haversine auto-scheduling buffers (15–120 min). Added Min/Max cost inputs to edit stop dialog.
+     - In `desktop_client/core/commute_guide.py`: Added `get_multi_stop_google_maps_url()`.
+  4. **Step 51.4 (Full-Bleed Map View Parity in `places_view.py`)**:
+     - Completely rewritten into Web-App-identical full-bleed layout (`expand=True`, 1240×740).
+     - Floating Top Search & 17 Category Filter Pills Bar (`.map-top-bar`) with clear button and Multi-Select Filter Modal.
+     - Floating Right Controls: `[✨ Live OSM]`, `[🎯 Locate Me]`, and `[🧭 Reset Province View]`.
+     - Floating Bottom-Center `"List View (N places)"` pill opening collapsible POI list drawer.
+     - Focused Follow-Route Mode (`is_follow_route_mode = True` when `?itineraryId=...&day=...`) with Day Switcher Pills, `[Show Nearby POIs]` toggle, and bottom Stop Carousel with Google Maps Navigation launcher.
+  5. **Step 51.5 (Dead Legacy Code Deletion)**:
+     - Safely deleted `desktop_client/components/sidebar.py`, `desktop_client/components/header.py`, and `desktop_client/components/interactive_map.py`.
+     - Updated `desktop_client/components/__init__.py`, `desktop_client/tests/test_parity_services_and_components.py`, `desktop_client/tests/test_ui_consistency.py`, and `NuevaEcijaTravel.spec`.
+  6. **Step 51.6 (Automated Verification, Web Zero-Regression & Standalone Packaging)**:
+     - Executed desktop test suite: `python -m pytest desktop_client/tests/ -v -k "not test_live_backend_integration"` -> **47 passed, 1 deselected, 0 failed in 2.03s [100% PASS]**.
+     - Executed canonical web test suite: `npm --prefix Project run test:unit` -> **32 test files passed, 348 unit tests passed in 27.64s [100% GREEN, ZERO EDITS in Project/]**.
+     - Recompiled standalone executable: `python -m PyInstaller NuevaEcijaTravel.spec --clean -y` -> Exit code 0, generated 15.9 MB `NuevaEcijaTravel.exe` with bundled `assets/data/osm_places.json`.
+     - Verified all 12 Acceptance Gates.
+  7. **Runtime Remediation (`urllib.parse` Missing Import in `main.py`)**:
+     - Identified runtime `NameError: name 'urllib' is not defined` during login post-authentication route transition (`/dashboard`).
+     - Added `import urllib.parse` to `desktop_client/main.py`.
+     - Added `import asyncio` to `desktop_client/views/trip_detail_view.py`.
+     - Added automated regression unit test `test_main_app_navigation_and_url_parsing()` in `test_ui_consistency.py`.
+     - Executed desktop pytest suite: **48 passed, 0 failed in 2.54s [100% PASS]**.
+  8. **Map View Visual Parity Remediation (`media_1794634714261_7f50af21.jpg` vs `media_1794634801540_18eeec80.jpg`)**:
+     - Identified CartoDB tile watermarking issue (`API KEY REQUIRED carto.com/basemaps/apikey`).
+     - Replaced CartoDB tiles with clean, authentic OpenStreetMap standard raster tiles matching the web app.
+     - Pre-bundled 93 provincial tiles (zooms 8–11) in `desktop_client/assets/tiles/` for instant offline rendering without network latency.
+     - Implemented dynamic background tile fetcher with compliant `User-Agent: NuevaEcijaTravel/1.0 (+https://edselrenz.github.io/Itinerary-App)` and local disk cache (`~/.nueva_ecija_travel/tile_cache/`), eliminating HTTP 403 blocks.
+     - Added clean ESRI World Street Map interim fallback for newly requested deep-zoom tiles while background downloads proceed.
+     - Fixed empty top search container by passing `content=card_content` to `ft.Container`.
+     - Added 17 category filter pills with matching icons to `.map-top-bar`.
+     - Formatted bottom list view toggle pill to `List View ({count})` and prevented duplicate POIs in `merge_places_into_cache()`.
+     - Recompiled standalone executable with PyInstaller (`dist/NuevaEcijaTravel/NuevaEcijaTravel.exe`) including all 93 tiles.
+---
+
+## Session 52: SuggestedWizardView Route Parameter Remediation & Standalone Build
+- **Date & Time**: 2026-11-14 14:05:00 (Local)
+- **Objective**: Remediate `TypeError: SuggestedWizardView.__init__() got an unexpected keyword argument 'initial_destination'` reported when clicking on Suggested Itinerary.
+- **Tasks Performed**:
+  - Investigated route handling in `desktop_client/main.py:212` where `/suggested` extracts query parameters `destination` and `placeId` and passes `initial_destination` and `anchor_place_id` into `SuggestedWizardView`.
+  - Updated `SuggestedWizardView.__init__` in `desktop_client/views/suggested_wizard_view.py` to accept `initial_destination: Optional[str] = None` and `anchor_place_id: Optional[str] = None`.
+  - Implemented automatic municipality look-up when `anchor_place_id` is supplied without an explicit destination, matching the canonical web behavior in `suggested-wizard.page.ts`.
+  - Forwarded `min_rating` and `anchor_place_id` to `SuggestedItineraryRequest` during clustered itinerary generation.
+  - Added test case in `desktop_client/tests/test_parity_services_and_components.py` verifying clean instantiation with routing arguments.
+  - Executed desktop test suite: 48/48 passed [100%].
+  - Executed web Vitest test suite: 348/348 passed [100%]. Zero edits in `Project/`.
+  - Recompiled Windows standalone binary via PyInstaller.
+- **Session Results**:
+  - Defect resolved cleanly with zero regressions.
+
+
 
 
 

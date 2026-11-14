@@ -345,6 +345,7 @@ class SignupView(ft.Container):
                     password=pwd,
                     first_name=first_name,
                     last_name=last_name,
+                    middle_initial=(self.mi_input.value or "").strip(),
                     username=username or f"{first_name.lower()}_{last_name.lower()}",
                 )
                 self._navigate("/dashboard")

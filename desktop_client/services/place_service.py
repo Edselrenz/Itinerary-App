@@ -1,22 +1,68 @@
-"""Place Service managing POI queries, filtering, search, and municipality catalogs."""
+"""Place Service managing POI queries, 2,673-POI cache merging, filtering, search, and municipality catalogs."""
 
 import logging
 from typing import Any, Optional
+import uuid
 
 from desktop_client.config.settings import CANONICAL_CATEGORIES
 from desktop_client.core.api_client import ApiClient, get_api_client
+from desktop_client.core.offline_data import (
+    ALL_32_LGUS_METADATA,
+    get_all_offline_places,
+    get_filtered_local_places,
+)
 from desktop_client.models.place import Municipality, PaginatedPlaces, Place
 
 logger = logging.getLogger(__name__)
 
 
+def _is_valid_uuid(val: Any) -> bool:
+    try:
+        uuid.UUID(str(val))
+        return True
+    except Exception:
+        return False
+
+
 class PlaceService:
-    """Interacts with backend Places and Municipalities endpoints."""
+    """Interacts with backend Places and Municipalities endpoints with 2,673-POI in-memory cache merging."""
 
     def __init__(self, api_client: Optional[ApiClient] = None):
         self.api_client = api_client or get_api_client()
         self._municipalities_cache: Optional[list[Municipality]] = None
         self._categories_cache: Optional[list[str]] = None
+        self._osm_places_cache: list[Place] = []
+
+    def get_loaded_places(self, municipality: Optional[str] = None) -> list[Place]:
+        """Synchronously returns all 2,673+ places (merged online + offline OSM dataset)."""
+        if not self._osm_places_cache:
+            self._osm_places_cache = [Place.from_dict(p) for p in get_all_offline_places()]
+        if not municipality or municipality.lower().strip() in ("all", "nueva ecija", "all 32 municipalities"):
+            return list(self._osm_places_cache)
+        m_low = municipality.lower().strip()
+        return [
+            p for p in self._osm_places_cache
+            if m_low in (p.municipality_name or "").lower() or m_low == (p.municipality_id or "").lower()
+        ]
+
+    def merge_places_into_cache(self, new_places: list[Place]) -> None:
+        """Merges online API places into the 2,673-POI cache by ID and name without duplicating places (QA-02)."""
+        if not new_places:
+            return
+        if not self._osm_places_cache:
+            self._osm_places_cache = [Place.from_dict(p) for p in get_all_offline_places()]
+        by_id = {p.id: p for p in self._osm_places_cache}
+        by_name = {p.name.lower().strip(): p.id for p in self._osm_places_cache}
+        for np in new_places:
+            norm_name = np.name.lower().strip()
+            if np.id in by_id:
+                by_id[np.id] = np
+            elif norm_name in by_name:
+                existing_id = by_name[norm_name]
+                by_id[existing_id] = np
+            else:
+                by_id[np.id] = np
+        self._osm_places_cache = list(by_id.values())
 
     async def get_municipalities(self, force_refresh: bool = False) -> list[Municipality]:
         """Fetches all 32 Nueva Ecija municipalities and cities with offline fallback."""
@@ -26,21 +72,34 @@ class PlaceService:
         try:
             data = await self.api_client.get("municipalities")
             if isinstance(data, list) and data:
-                self._municipalities_cache = [Municipality.from_dict(m) for m in data]
+                by_name = {str(m.get("name", "")).lower(): Municipality.from_dict(m) for m in data}
+                merged: list[Municipality] = []
+                for name, meta in ALL_32_LGUS_METADATA.items():
+                    found = by_name.get(name.lower())
+                    if found:
+                        if not found.place_count:
+                            found.place_count = meta.get("poi_count", 0)
+                        merged.append(found)
+                    else:
+                        merged.append(
+                            Municipality(
+                                id=name,
+                                name=name,
+                                place_count=meta.get("poi_count", 0),
+                            )
+                        )
+                self._municipalities_cache = merged
                 return self._municipalities_cache
         except Exception as err:
             logger.info(f"Could not load municipalities from backend, using offline dataset: {err}")
 
-        from desktop_client.core.offline_data import ALL_32_LGUS_METADATA
         fallback: list[Municipality] = []
         for name, meta in ALL_32_LGUS_METADATA.items():
             fallback.append(
                 Municipality(
-                    id=f"muni-{name.lower().replace(' ', '-')}",
+                    id=name,
                     name=name,
-                    district=meta.get("district", "Central"),
-                    is_city=meta.get("is_city", False),
-                    poi_count=meta.get("poi_count", 0),
+                    place_count=meta.get("poi_count", 0),
                 )
             )
         self._municipalities_cache = fallback
@@ -58,11 +117,18 @@ class PlaceService:
         page_size: int = 20,
         search: Optional[str] = None,
         category: Optional[str] = None,
+        categories: Optional[list[str]] = None,
         municipality_id: Optional[str] = None,
+        municipality_name: Optional[str] = None,
+        price_tier: Optional[str] = None,
         is_featured: Optional[bool] = None,
+        min_lat: Optional[float] = None,
+        max_lat: Optional[float] = None,
+        min_lng: Optional[float] = None,
+        max_lng: Optional[float] = None,
         sort: Optional[str] = None,
     ) -> PaginatedPlaces:
-        """Queries places with multi-criteria filtering mapped to backend parameters, falling back offline."""
+        """Queries places via GET /api/v1/places with full parameter parity and 2,673-POI offline fallback."""
         limit = max(1, page_size)
         offset = max(0, (page - 1) * limit)
         params: dict[str, Any] = {
@@ -71,26 +137,61 @@ class PlaceService:
         }
         if search and search.strip():
             params["q"] = search.strip()
-        if category and category.strip() and category != "all":
+        if categories:
+            valid_cats = [c.strip() for c in categories if c and c.strip() and c != "all"]
+            if valid_cats:
+                params["categories"] = valid_cats
+        elif category and category.strip() and category != "all":
             params["categories"] = [category.strip()]
+
+        # Resolve municipality_id vs municipality_name safely (prevents FastAPI 422 on non-UUID town names)
         if municipality_id and municipality_id.strip() and municipality_id != "all":
-            params["municipality_id"] = municipality_id.strip()
+            raw_m = municipality_id.strip()
+            # If a town name was passed (e.g. "Bongabon", "Pantabangan"), route to municipality_name
+            is_known_town_name = (
+                raw_m in ALL_32_LGUS_METADATA
+                or any(raw_m.lower() == k.lower() for k in ALL_32_LGUS_METADATA)
+            )
+            if is_known_town_name:
+                municipality_name = raw_m
+            else:
+                params["municipality_id"] = raw_m
+
+        if municipality_name and municipality_name.strip() and municipality_name.lower() != "all":
+            params["municipality_name"] = municipality_name.strip()
+
+        if price_tier and price_tier.strip() and price_tier != "all":
+            params["price_tier"] = price_tier.strip().lower()
+
         if is_featured is not None:
             params["featured"] = is_featured
+
+        if None not in (min_lat, max_lat, min_lng, max_lng):
+            params["min_lat"] = min_lat
+            params["max_lat"] = max_lat
+            params["min_lng"] = min_lng
+            params["max_lng"] = max_lng
+
         if sort:
             params["sort"] = sort
 
         try:
             data = await self.api_client.get("places", params=params)
-            return PaginatedPlaces.from_dict(data)
+            paginated = PaginatedPlaces.from_dict(data)
+            self.merge_places_into_cache(paginated.items)
+            return paginated
         except Exception as err:
-            logger.info(f"Using offline place catalog fallback: {err}")
-            from desktop_client.core.offline_data import get_filtered_local_places
+            logger.info(f"Using offline 2,673-POI catalog fallback: {err}")
+            bounds = (min_lat, max_lat, min_lng, max_lng) if None not in (min_lat, max_lat, min_lng, max_lng) else None
             items, total = get_filtered_local_places(
                 q=search,
                 category=category,
-                municipality_id=municipality_id,
+                categories=categories,
+                municipality_name=muni_name_resolved,
+                municipality_id=municipality_id if (municipality_id and _is_valid_uuid(municipality_id)) else None,
                 is_featured=is_featured,
+                price_tier=price_tier,
+                bounds=bounds,
                 sort=sort,
                 limit=limit,
                 offset=offset,
@@ -101,10 +202,10 @@ class PlaceService:
                 total=total,
                 page=page,
                 page_size=page_size,
-                pages=max(1, (total + limit - 1) // limit),
+                total_pages=max(1, (total + limit - 1) // limit),
             )
 
-    async def get_featured_places(self, limit: int = 6) -> list[Place]:
+    async def get_featured_places(self, limit: int = 12) -> list[Place]:
         """Retrieves top curated destinations for the dashboard."""
         try:
             paginated = await self.get_places(page=1, page_size=limit, is_featured=True)
@@ -113,10 +214,10 @@ class PlaceService:
             fallback = await self.get_places(page=1, page_size=limit)
             return fallback.items
         except Exception:
-            return []
+            return self.get_loaded_places()[:limit]
 
     async def get_place_by_id(self, place_id: str) -> Optional[Place]:
-        """Fetches full place details including editorial summary and GIS data with offline lookup."""
+        """Fetches full place details with offline lookup across all 2,673 places."""
         try:
             data = await self.api_client.get(f"places/{place_id}")
             if data:
@@ -124,10 +225,9 @@ class PlaceService:
         except Exception:
             pass
 
-        from desktop_client.core.offline_data import get_all_offline_places
-        for p in get_all_offline_places():
-            if str(p.get("id")) == str(place_id):
-                return Place.from_dict(p)
+        for p in self.get_loaded_places():
+            if str(p.id) == str(place_id):
+                return p
         return None
 
 

@@ -1382,14 +1382,58 @@ px cap sync android): **Exit code 0 (6 plugins synchronized)**.
   - [x] View 0 (`form`): Trip title, destination, dates, budget presets, preferences. `[Start Building Itinerary →]` -> `sync_days_with_date_range()` -> switches to `browse`. (If editing existing trip or draft from wizard, starts in `timeline`).
   - [x] View 1 (`browse`): Top segmented switcher (`[+ Add Places]` active | `[📅 Your Itinerary (N)]`), target day selector (`Scheduling for: Day 1 (0) | Day 2 (0) | [+]`), search & category pills, place card grid with stateful `[+ Add]` / `[✓ Added]` buttons (with auto-calculated time and travel buffer), sticky footer `[View my Itinerary (N places) →]`.
   - [x] View 2 (`timeline`): Top segmented switcher (`[+ Add Places]` | `[📅 Your Itinerary (N)]` active) + `[✓ Save]` button, editable Trip Settings card (dates, title, budget), verified place costs card, day capsule switcher + `[+ Add Day]`, active day header with `[🕒 Auto-Schedule]` and `[🗑 Delete Day]`, embedded `ItineraryRouteMap` (with OSRM route & `[Full Map]` button), ordered stop cards with inter-stop leg commute badges, `[↑]`, `[↓]`, `[✏️ Edit]` (with `Move to Day` dropdown), `[🗑 Remove]`, `[+ Browse & Add Places to Day X]`, `[+ Add Off-Grid Custom Venue]` (geofenced), and sticky footer `[💾 Save Custom Itinerary]`.
-- [x] **50.6 (Step 6: Automated Verification & Standalone Packaging)**:
-  - [x] Author and run dedicated test cases in `desktop_client/tests/`:
-    - [x] `test_offline_banner_bounds`: Verifies `expand is False`, `height == 52` when visible, `height == 0` when hidden/dismissed.
-    - [x] `test_user_model_and_edit_profile`: Verifies `User.from_dict()`, `UserUpdatePayload`, and `AuthService.update_profile()` in Authenticated, Offline, and Guest modes.
-    - [x] `test_slippy_map_places_and_routing`: Verifies 2,673 POIs loading, marker clustering at `zoom < 14`, category pins at `zoom >= 14`, and OSRM/geodesic polyline projection with stop badges.
-    - [x] `test_suggested_and_custom_itinerary_parity`: Verifies 3-view workflows for both Suggested Wizard and Custom Builder.
-  - [x] Run complete test suites (`pytest` desktop [47 passed, 1 deselected] + `vitest` web [348 passed]).
-  - [x] Recompile PyInstaller standalone distribution binary `dist/NuevaEcijaTravel/NuevaEcijaTravel.exe`.
+## Phase 51: Desktop Client QA Audit v4 Remediation & Full-Bleed Map Parity
+- [x] **51.1 (CartoDB Voyager OSM Tiles & Eliminating HTTP 403 Blocks)**:
+  - [x] Update `desktop_client/components/slippy_map_canvas.py`: Replace `tile.openstreetmap.org` with CartoDB Voyager OSM raster tiles (`https://{sub}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png` with subdomains `a`, `b`, `c`, `d`).
+  - [x] Add dynamic/responsive viewport sizing (`width=1240, height=740`, `expand=True`) so map canvas fills entire container without blank right-side gaps.
+- [x] **51.2 (PlaceService, Asset Bundling & Itinerary Storage Parity)**:
+  - [x] Update `desktop_client/services/place_service.py`:
+    - [x] Fix offline `PaginatedPlaces` crash: change `pages=` to `total_pages=`.
+    - [x] Resolve municipality UUID vs. name: if `municipality_id` is a town name or `muni-...` slug, send as `municipality_name` to eliminate FastAPI 422 errors.
+    - [x] Add `_osm_places_cache`, `get_loaded_places()`, and `merge_places_into_cache()` preserving all 2,673 POIs in memory (`QA-02`).
+  - [x] Update `desktop_client/config/settings.py` & `desktop_client/core/offline_data.py`:
+    - [x] Check `sys._MEIPASS`, `exe_dir / "assets"`, and `exe_dir / "_internal" / "assets"` so all 2,673 POIs load in both dev mode and packaged `.exe`.
+    - [x] Update `scripts/build_standalone_exe.py` to copy `desktop_client/assets` into `dist/NuevaEcijaTravel/assets`.
+  - [x] Update `desktop_client/models/itinerary.py`:
+    - [x] Add `total_days` property and `to_create_payload()` method on `Itinerary`.
+    - [x] Add `min_rating`, `include_live_places`, and `anchor_place_id` to `SuggestedItineraryRequest`.
+  - [x] Update `desktop_client/services/itinerary_service.py`:
+    - [x] Remove premature `guest_storage.save_itinerary()` write during suggested preview (`save_immediately=False`).
+    - [x] Include `"days"` payload in `update_itinerary()` so modified days and stops are persisted in cloud PATCH.
+- [x] **51.3 (Views & Navigation Defect Remediation)**:
+  - [x] Update `desktop_client/main.py`:
+    - [x] Fix `check_backend_loop()`: call `check_host_health()` with 0 arguments.
+    - [x] Parse query parameters (`?draft=true`, `?destination=...`, `?placeId=...`, `?itineraryId=...&day=...`).
+    - [x] Forward `route_query` and `active_trip` to `PlacesView` to trigger Follow-Route mode when navigating to `/map`.
+  - [x] Update `desktop_client/components/dialogs.py`:
+    - [x] Support both `on_add_to_day` and `on_add_to_trip` keyword arguments in `show_place_detail_dialog()`.
+  - [x] Update `desktop_client/views/dashboard_view.py`:
+    - [x] Fix notification bell: import `get_guest_storage` from `desktop_client.core.storage` and access `is_guest` as a property.
+    - [x] Cap Home Saved Itineraries preview to 2 cards, passing `itin` object on click.
+  - [x] Update `desktop_client/views/signup_view.py`: Pass `middle_initial` to `auth_service.register()`.
+  - [x] Update `desktop_client/views/profile_view.py`: Fix `_sync_guest_trips()` to call `await self.auth_service.migrate_guest_trips()`.
+  - [x] Update `desktop_client/views/trip_detail_view.py`:
+    - [x] Remove broken `ItineraryUpdatePayload` import; call `update_itinerary(self.itinerary)` directly.
+    - [x] Wire `[Full Map]` button to navigate to `f"/map?itineraryId={self.itinerary.id}&day={active_day.day_number}"`.
+  - [x] Update `desktop_client/views/custom_builder_view.py`:
+    - [x] In `_open_custom_venue_dialog()`, remove invalid `latitude=lat, longitude=lng` kwargs from `ItineraryItem`.
+    - [x] In `_auto_schedule_active_day()`, compute Haversine transit buffers (15–120 min).
+    - [x] In `_open_edit_stop_dialog()`, add Min/Max Cost input fields.
+- [x] **51.4 (Full-Bleed Map View Parity in `places_view.py`)**:
+  - [x] Replace static catalog header and fixed 920×520 box with full-bleed `SlippyMapCanvas` (`expand=True`, `1240×740`).
+  - [x] Discovery Mode: Floating top search & 17 category filter pills bar, floating right buttons (`Live OSM`, `Locate Me`, `Reset`), floating bottom `List View (2,672)` drawer pill.
+  - [x] Focused Follow-Route Mode (`is_follow_route_mode = True` when `?itineraryId=...&day=...`):
+    - [x] Isolate active day's stops and OSRM road polyline (hiding background clusters unless `[Show Nearby POIs]` is toggled).
+    - [x] Floating Active Route Top Bar: `[← Back to Plan]`, `[🗺️ Browse Map]`, Day Switcher pills (`Day 1 | Day 2 | ...`), and `[Show Nearby POIs]` toggle.
+    - [x] Bottom Active Route Stops Carousel: `Stop X of Y`, `[↗ Google Maps Navigation]` multi-stop launcher, and clickable horizontal stop cards.
+- [x] **51.5 (Clean Codebase & Dead Code Removal)**:
+  - [x] Delete legacy files: `desktop_client/components/sidebar.py`, `desktop_client/components/header.py`, `desktop_client/components/interactive_map.py`.
+  - [x] Clean up imports in `components/__init__.py` and tests.
+- [x] **51.6 (Automated Verification, Web Zero-Regression & Standalone Packaging)**:
+  - [x] Run full desktop test suite: `python -m pytest desktop_client/tests/ -v -k "not test_live_backend_integration"` (47/47 passed).
+  - [x] Run canonical web test suite: `npm --prefix Project run test:unit` (verify 348 tests green, 0 edits in `Project/`).
+  - [x] Recompile PyInstaller standalone distribution binary: `python -m PyInstaller NuevaEcijaTravel.spec --clean -y`.
+  - [x] Verify all 12 End-to-End Acceptance Gates.
 
 
 

@@ -308,7 +308,7 @@ class DashboardView(ft.Container):
                 )
             )
         else:
-            for itin in self.saved_itineraries[:4]:
+            for itin in self.saved_itineraries[:2]:
                 saved_cards.append(self._create_itinerary_card(itin))
 
         saved_column = ft.Column(
@@ -603,7 +603,7 @@ class DashboardView(ft.Container):
             border_radius=16,
             padding=14,
             ink=True,
-            on_click=lambda _: self._navigate(f"/trips/{itin.id}"),
+            on_click=lambda _, it=itin: self._navigate(f"/trips/{it.id}", it),
         )
 
     def _on_search_change(self, val: str) -> None:
@@ -678,9 +678,9 @@ class DashboardView(ft.Container):
         if not self.safe_page:
             return
 
-        from desktop_client.core.guest_storage import get_guest_storage
-        guest_count = get_guest_storage().get_itinerary_count()
-        is_guest = self.session_manager.is_guest()
+        from desktop_client.core.storage import get_guest_storage
+        guest_count = len(get_guest_storage().list_itineraries())
+        is_guest = self.session_manager.is_guest
 
         notif_items = [
             # 1. Weather & Cash Advisory

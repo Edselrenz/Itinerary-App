@@ -54,7 +54,7 @@ class ItineraryService:
                     timeout=self.settings.itinerary_gen_timeout_seconds,
                 )
                 itinerary = Itinerary.from_dict(data)
-                if not self.session_manager.is_authenticated:
+                if request.save_immediately and not self.session_manager.is_authenticated:
                     itinerary.is_guest = True
                     self.guest_storage.save_itinerary(itinerary)
                 self.active_draft_itinerary = itinerary
@@ -64,8 +64,9 @@ class ItineraryService:
 
         # Offline clustering fallback
         itinerary = await self.generate_offline_suggested_itinerary(request)
-        if request.save_immediately or not self.session_manager.is_authenticated:
-            itinerary.is_guest = True
+        if request.save_immediately:
+            if not self.session_manager.is_authenticated:
+                itinerary.is_guest = True
             self.guest_storage.save_itinerary(itinerary)
         self.active_draft_itinerary = itinerary
         return itinerary
@@ -392,6 +393,12 @@ class ItineraryService:
         )
         return self.guest_storage.save_itinerary(new_itin)
 
+    def get_itinerary_or_draft(self, itinerary_id: str) -> Optional[Itinerary]:
+        """Resolves an itinerary by ID from draft memory or guest storage."""
+        if itinerary_id == "draft" or (self.active_draft_itinerary and self.active_draft_itinerary.id == itinerary_id):
+            return self.active_draft_itinerary
+        return self.guest_storage.get_itinerary(itinerary_id)
+
     async def update_itinerary(self, itinerary: Itinerary) -> Itinerary:
         """Saves changes to an itinerary, falling back to local storage on network failure."""
         if itinerary.is_guest or not self.session_manager.is_authenticated:
@@ -406,6 +413,7 @@ class ItineraryService:
             "daily_budget": itinerary.daily_budget,
             "preferences": itinerary.preferences,
             "assumptions": itinerary.assumptions,
+            "days": itinerary.to_create_payload().days,
         }
         try:
             data = await self.api_client.patch(f"itineraries/{itinerary.id}", json_data=update_data)
