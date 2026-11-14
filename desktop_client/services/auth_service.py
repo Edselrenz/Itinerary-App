@@ -73,29 +73,28 @@ class AuthService:
         data = await self.api_client.post("auth/login", json_data=payload)
 
         token_resp = AuthTokenResponse.from_dict(data)
-        if not token_resp.user:
-            self.session_manager.set_authenticated_session(
-                access_token=token_resp.access_token,
-                refresh_token=token_resp.refresh_token,
-                user=User(id="", email=email),
-                persist=remember_me,
-            )
-            user = await self.get_profile()
-            self.session_manager.update_user(user)
-            return user
-
-        user_id = token_resp.user.id
-        extra = self._load_profile_extra(user_id)
-        if extra:
-            token_resp.user = User.from_dict(token_resp.user.to_dict(), extra=extra)
+        user = token_resp.user or User(id="", email=email)
 
         self.session_manager.set_authenticated_session(
             access_token=token_resp.access_token,
             refresh_token=token_resp.refresh_token,
-            user=token_resp.user,
+            user=user,
             persist=remember_me,
         )
-        return token_resp.user
+
+        try:
+            me_user = await self.get_profile()
+            if me_user:
+                user = me_user
+        except Exception:
+            user_id = user.id
+            if user_id:
+                extra = self._load_profile_extra(user_id)
+                if extra:
+                    user = User.from_dict(user.to_dict(), extra=extra)
+                    self.session_manager.update_user(user)
+
+        return user
 
     async def register(
         self,
@@ -209,6 +208,16 @@ class AuthService:
             user_id = str(data.get("id", ""))
             extra = self._load_profile_extra(user_id)
             user = User.from_dict(data, extra=extra)
+            # Persist fresh profile metadata to local cache
+            db_profile_extra = {
+                "middle_initial": user.middle_initial,
+                "phone_number": user.phone_number,
+                "birthday": user.birthday,
+                "gender": user.gender,
+                "avatar_url": user.avatar_url,
+                "default_daily_budget": user.default_daily_budget,
+            }
+            self._save_profile_extra(user_id, db_profile_extra)
             self.session_manager.update_user(user)
             return user
         except Exception:

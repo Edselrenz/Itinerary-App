@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, Callable, Optional
 import flet as ft
 
+from desktop_client.components.date_range_dialog import show_date_range_dialog
 from desktop_client.config.settings import ThemeColors, get_settings
 from desktop_client.core.commute_guide import get_commute_info_for_municipality
 from desktop_client.core.export import export_to_ics, export_to_json, export_to_text

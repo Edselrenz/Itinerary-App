@@ -41,13 +41,14 @@ class User:
         self.full_name = self._compute_full_name()
 
     def _compute_full_name(self) -> str:
-        """Construct display name from first_name, middle_initial, and last_name."""
+        """Construct display name from first_name, middle_initial (if not N/A), and last_name."""
         parts: list[str] = []
         if self.first_name and self.first_name.strip():
             parts.append(self.first_name.strip())
         if self.middle_initial and self.middle_initial.strip():
             mi = self.middle_initial.strip().rstrip(".")
-            parts.append(f"{mi}.")
+            if mi.upper() not in ("N/A", "NA", "NONE", "-"):
+                parts.append(f"{mi}.")
         if self.last_name and self.last_name.strip():
             parts.append(self.last_name.strip())
         joined = " ".join(parts).strip()
@@ -85,21 +86,38 @@ class User:
             or (email_val.split("@")[0] if email_val else "")
         ).strip()
 
-        prefs = extra.get("preferences", data.get("preferences", []))
+        prefs = data.get("preferences") or extra.get("preferences", [])
         if isinstance(prefs, str):
             prefs = [p.strip() for p in prefs.split(",") if p.strip()]
+
+        def _pick(field_name: str, default_val: str = "") -> str:
+            db_val = data.get(field_name)
+            if db_val is not None and str(db_val).strip() != "":
+                return str(db_val).strip()
+            ex_val = extra.get(field_name)
+            if ex_val is not None and str(ex_val).strip() != "":
+                return str(ex_val).strip()
+            return default_val
+
+        db_avatar = data.get("avatar_url")
+        ex_avatar = extra.get("avatar_url")
+        resolved_avatar = (
+            str(db_avatar).strip()
+            if (db_avatar and str(db_avatar).strip())
+            else (str(ex_avatar).strip() if (ex_avatar and str(ex_avatar).strip()) else "assets/images/pattranite_avatar.jpg")
+        )
 
         return cls(
             id=str(data.get("id", "guest-local")),
             first_name=raw_first,
             last_name=raw_last,
-            middle_initial=str(extra.get("middle_initial") or data.get("middle_initial") or "").strip(),
+            middle_initial=_pick("middle_initial", "N/A"),
             username=username_val,
             email=email_val,
-            birthday=str(extra.get("birthday") or data.get("birthday") or "").strip(),
-            gender=str(extra.get("gender") or data.get("gender") or "").strip(),
-            phone_number=str(extra.get("phone_number") or data.get("phone_number") or "").strip(),
-            avatar_url=extra.get("avatar_url") or data.get("avatar_url"),
+            birthday=_pick("birthday", "May 23, 2000"),
+            gender=_pick("gender", "Female"),
+            phone_number=_pick("phone_number", "+66 81 234 5678"),
+            avatar_url=resolved_avatar,
             role=str(data.get("role", "traveler")),
             is_active=bool(data.get("is_active", True)),
             is_guest=bool(data.get("is_guest", False)),
@@ -108,7 +126,9 @@ class User:
             updated_at=str(data.get("updated_at")) if data.get("updated_at") else None,
             preferences=list(prefs) if isinstance(prefs, list) else [],
             default_daily_budget=float(
-                extra.get("default_daily_budget", data.get("default_daily_budget", 3000.0)) or 3000.0
+                data.get("default_daily_budget")
+                or extra.get("default_daily_budget")
+                or 3000.0
             ),
         )
 

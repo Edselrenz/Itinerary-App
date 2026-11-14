@@ -1,4 +1,4 @@
-"""Pure-Flet 1.1.2 Web-Mercator Slippy Map with OSM tiles, spatial marker clustering, and OSRM road routing.
+"""Pure-Flet 1.1.2 Web-Mercator Slippy Map with Pooled Tiles, Spatial Marker Clustering, and OSRM Road Routing.
 
 Directly ports the Leaflet mapping architecture from Project/src/app/tabs/map/map.page.ts
 and Project/src/app/shared/components/itinerary-route-map/itinerary-route-map.component.ts into pure Flet.
@@ -8,11 +8,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import concurrent.futures
+import json
 import math
-import os
-from pathlib import Path
 import time
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 import urllib.request
 import flet as ft
 import flet.canvas as cv
@@ -21,6 +20,12 @@ import httpx
 from desktop_client.config.settings import get_settings
 from desktop_client.core.polyline import decode_polyline, generate_geodesic_arc
 from desktop_client.models.place import Place
+
+# Nueva Ecija Provincial Bounds matching Project/src/app/tabs/map/map.page.ts:116-119
+NUEVA_ECIJA_MIN_LAT = 15.05
+NUEVA_ECIJA_MAX_LAT = 16.25
+NUEVA_ECIJA_MIN_LNG = 120.55
+NUEVA_ECIJA_MAX_LNG = 121.55
 
 # Global background tile fetcher
 _TILE_EXECUTOR = concurrent.futures.ThreadPoolExecutor(max_workers=6)
@@ -34,7 +39,7 @@ def _resolve_tile_source(
     y: int,
     on_tile_cached: Optional[Callable[[str, str], None]] = None,
 ) -> str:
-    """Returns local path to clean OSM tile (bundled or cached) or downloads in background with clean ESRI fallback."""
+    """Returns local path to bundled/cached OSM tile or CartoDB Voyager / ESRI fallback while caching in background."""
     tile_key = f"{zoom}_{x}_{y}"
     cached_src = _TILE_PATH_CACHE.get(tile_key)
     if cached_src:
@@ -58,15 +63,15 @@ def _resolve_tile_source(
         _TILE_PATH_CACHE[tile_key] = c_str
         return c_str
 
-    # 3. Schedule background download from tile.openstreetmap.org with compliant User-Agent
+    # 3. Schedule background download into local disk cache for future sessions
     if tile_key not in _QUEUED_TILES:
         _QUEUED_TILES.add(tile_key)
 
         def _fetch():
-            url = f"https://tile.openstreetmap.org/{zoom}/{x}/{y}.png"
+            url = f"https://basemaps.cartocdn.com/rastertiles/voyager/{zoom}/{x}/{y}.png"
             req = urllib.request.Request(
                 url,
-                headers={"User-Agent": "NuevaEcijaTravel/1.0 (+https://edselrenz.github.io/Itinerary-App; contact: edselrenz0@gmail.com)"},
+                headers={"User-Agent": "NuevaEcijaTravel/1.0 (+https://edselrenz.github.io/Itinerary-App)"},
             )
             try:
                 with urllib.request.urlopen(req, timeout=5) as resp:
@@ -77,8 +82,6 @@ def _resolve_tile_source(
                                 f.write(data)
                             c_path = str(cache_file)
                             _TILE_PATH_CACHE[tile_key] = c_path
-                            if on_tile_cached:
-                                on_tile_cached(tile_key, c_path)
             except Exception:
                 pass
             finally:
@@ -86,8 +89,8 @@ def _resolve_tile_source(
 
         _TILE_EXECUTOR.submit(_fetch)
 
-    # 4. Clean fallback while downloading: ESRI World Street Map (clean, zero watermark, never blocked by Flutter)
-    return f"https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{zoom}/{y}/{x}"
+    # 4. Immediate high-speed CDN tile URL (never blocked by Flutter HttpClient)
+    return f"https://basemaps.cartocdn.com/rastertiles/voyager/{zoom}/{x}/{y}.png"
 
 
 # Category Pin Palette matching Project/src/app/tabs/map/map.page.scss (.pin-cat-*)
@@ -148,10 +151,70 @@ def world_px_to_latlon(wx: float, wy: float, zoom: int) -> tuple[float, float]:
     return lat, lon
 
 
+def _extract_pan_delta(e: Any) -> tuple[float, float]:
+    """Extracts (dx, dy) from Flet 1.1.2 DragUpdateEvent across all possible event properties."""
+    # 1. Check local_delta / global_delta Offset objects (Flet 1.x standard)
+    for attr in ("local_delta", "global_delta", "delta"):
+        delta_obj = getattr(e, attr, None)
+        if delta_obj is not None:
+            dx = getattr(delta_obj, "x", None)
+            dy = getattr(delta_obj, "y", None)
+            if dx is not None or dy is not None:
+                return float(dx or 0.0), float(dy or 0.0)
+
+    # 2. Check legacy flat delta_x / delta_y attributes
+    dx = getattr(e, "delta_x", None)
+    dy = getattr(e, "delta_y", None)
+    if dx is not None or dy is not None:
+        return float(dx or 0.0), float(dy or 0.0)
+
+    # 3. Check raw JSON data payload if present
+    raw_data = getattr(e, "data", None)
+    if isinstance(raw_data, str) and raw_data.startswith("{"):
+        try:
+            parsed = json.loads(raw_data)
+            dx = parsed.get("dx") or parsed.get("delta_x") or (parsed.get("ld") or {}).get("x") or 0.0
+            dy = parsed.get("dy") or parsed.get("delta_y") or (parsed.get("ld") or {}).get("y") or 0.0
+            return float(dx), float(dy)
+        except Exception:
+            pass
+    return 0.0, 0.0
+
+
+def _extract_scroll_delta_y(e: Any) -> float:
+    """Extracts vertical mouse-wheel scroll delta from Flet 1.1.2 ScrollEvent."""
+    # 1. Check scroll_delta Offset object (Flet 1.x standard)
+    sd = getattr(e, "scroll_delta", None)
+    if sd is not None:
+        sy = getattr(sd, "y", None)
+        if sy is not None and float(sy) != 0.0:
+            return float(sy)
+
+    # 2. Check flat scroll_delta_y attribute
+    sdy = getattr(e, "scroll_delta_y", None)
+    if sdy is not None and float(sdy) != 0.0:
+        return float(sdy)
+
+    # 3. Check raw JSON data payload
+    raw_data = getattr(e, "data", None)
+    if isinstance(raw_data, str) and raw_data.startswith("{"):
+        try:
+            parsed = json.loads(raw_data)
+            val = (
+                parsed.get("scroll_delta_y")
+                or parsed.get("ddy")
+                or parsed.get("dy")
+                or (parsed.get("sd") or {}).get("y")
+                or 0.0
+            )
+            return float(val)
+        except Exception:
+            pass
+    return 0.0
+
+
 def fetch_osrm_road_geometry(coords: list[tuple[float, float]], timeout: float = 3.0) -> list[tuple[float, float]]:
-    """Fetch road-following geometry from public OSRM API for a sequence of (lat, lng) stops.
-    Falls back to smooth 24-point geodesic arcs if offline or OSRM times out.
-    """
+    """Fetch road-following geometry from public OSRM API for a sequence of (lat, lng) stops."""
     valid = [(float(lat), float(lng)) for lat, lng in coords if lat and lng]
     if len(valid) < 2:
         return valid
@@ -171,7 +234,6 @@ def fetch_osrm_road_geometry(coords: list[tuple[float, float]], timeout: float =
     except Exception:
         pass
 
-    # Offline / fallback: stitch smooth geodesic splines between consecutive stops
     fallback_pts: list[tuple[float, float]] = []
     for i in range(len(valid) - 1):
         arc = generate_geodesic_arc(valid[i], valid[i + 1], num_points=24)
@@ -182,7 +244,7 @@ def fetch_osrm_road_geometry(coords: list[tuple[float, float]], timeout: float =
 
 
 class SlippyMapCanvas(ft.Container):
-    """Interactive OpenStreetMap slippy map with marker clustering, category pins, and OSRM road polylines."""
+    """High-performance interactive slippy map with tile pooling, cached clustering, and smooth pan/scroll zoom."""
 
     def __init__(
         self,
@@ -211,8 +273,8 @@ class SlippyMapCanvas(ft.Container):
         self.bgcolor = "#e2e8f0"
         self.border = ft.Border.all(1, "#cbd5e1")
 
-        self.center_lat = float(center_lat)
-        self.center_lng = float(center_lng)
+        self.center_lat = max(NUEVA_ECIJA_MIN_LAT, min(NUEVA_ECIJA_MAX_LAT, float(center_lat)))
+        self.center_lng = max(NUEVA_ECIJA_MIN_LNG, min(NUEVA_ECIJA_MAX_LNG, float(center_lng)))
         self.zoom = max(8, min(18, int(zoom)))
 
         if route_coords and not route_stops:
@@ -232,13 +294,19 @@ class SlippyMapCanvas(ft.Container):
         self._on_stop_click = on_stop_click
         self._last_pan_redraw: float = 0.0
         self._last_scroll_zoom: float = 0.0
+        self._is_panning: bool = False
+
+        # Control & Geometry Pools for 60 FPS Panning
+        self._tile_pool: dict[str, ft.Container] = {}
         self._active_tile_images: dict[str, ft.Image] = {}
+        self._cluster_cache_key: Optional[tuple[int, int, str]] = None
+        self._cached_world_items: list[dict[str, Any]] = []
 
         self._tile_stack = ft.Stack(width=self._map_w, height=self._map_h)
         self._vector_canvas = cv.Canvas(width=self._map_w, height=self._map_h, shapes=[])
         self._marker_stack = ft.Stack(width=self._map_w, height=self._map_h)
 
-        # Attribution & Zoom Controls (positioned bottom-right, clear of top bar and floating buttons)
+        # Attribution & Zoom Controls (bottom-right)
         self._zoom_label = ft.Text(f"Z{self.zoom}", size=10, weight=ft.FontWeight.W_700, color="#334155")
         controls_overlay = ft.Container(
             right=12,
@@ -291,22 +359,28 @@ class SlippyMapCanvas(ft.Container):
             content=ft.Text("© OpenStreetMap contributors • OSRM", size=9, color="#475569"),
         )
 
-        # Dedicated hit-testable gesture plane placed ABOVE tiles/vectors and BELOW interactive markers
+        # Transparent hit-test plane inside GestureDetector
+        hit_test_bg = ft.Container(
+            width=self._map_w,
+            height=self._map_h,
+            bgcolor="#01000000",
+        )
+
+        # GestureDetector wraps the interactive map layers so mouse scroll-wheel zoom and pan drag
+        # work everywhere across the map (including over markers), while marker taps still fire on_click!
         gesture_surface = ft.GestureDetector(
+            on_pan_start=self._handle_pan_start,
             on_pan_update=self._handle_pan_update,
             on_pan_end=self._handle_pan_end,
             on_scroll=self._handle_scroll,
             on_double_tap=lambda _: self.set_zoom(self.zoom + 1),
-            drag_interval=32,
-            content=ft.Container(
-                width=self._map_w,
-                height=self._map_h,
-                bgcolor="#01000000",
-            ),
+            drag_interval=16,
+            content=hit_test_bg,
         )
         self._gesture_surface = gesture_surface
 
-        self.content = ft.Stack(
+        # Outer GestureDetector captures scroll-wheel and drag events even when pointer is over _marker_stack
+        inner_stack = ft.Stack(
             width=self._map_w,
             height=self._map_h,
             controls=[
@@ -318,7 +392,16 @@ class SlippyMapCanvas(ft.Container):
                 attribution_badge,
             ],
         )
-        self._canvas_stack = self.content
+        self._canvas_stack = inner_stack
+
+        self.content = ft.GestureDetector(
+            on_pan_start=self._handle_pan_start,
+            on_pan_update=self._handle_pan_update,
+            on_pan_end=self._handle_pan_end,
+            on_scroll=self._handle_scroll,
+            drag_interval=16,
+            content=inner_stack,
+        )
 
         if self._route_stops:
             self.set_route(
@@ -336,6 +419,12 @@ class SlippyMapCanvas(ft.Container):
             return list(self._route_pts)
         return [(s.lat, s.lng) for s in self._route_stops if s.lat and s.lng]
 
+    def _clamp_center(self, lat: float, lng: float) -> tuple[float, float]:
+        """Clamps center coordinates within Nueva Ecija provincial bounds."""
+        c_lat = max(NUEVA_ECIJA_MIN_LAT, min(NUEVA_ECIJA_MAX_LAT, float(lat)))
+        c_lng = max(NUEVA_ECIJA_MIN_LNG, min(NUEVA_ECIJA_MAX_LNG, float(lng)))
+        return c_lat, c_lng
+
     def get_viewport_bounds(self) -> tuple[float, float, float, float]:
         """Returns (min_lat, min_lng, max_lat, max_lng) for the currently visible map viewport."""
         cx, cy = latlon_to_world_px(self.center_lat, self.center_lng, self.zoom)
@@ -345,6 +434,7 @@ class SlippyMapCanvas(ft.Container):
 
     def set_places(self, places: list[Place], auto_fit: bool = False) -> None:
         self._places = list(places or [])
+        self._cluster_cache_key = None
         if auto_fit and self._places:
             self.fit_bounds([(p.latitude, p.longitude) for p in self._places if p.latitude and p.longitude])
         else:
@@ -363,7 +453,6 @@ class SlippyMapCanvas(ft.Container):
             self._route_pts = list(polyline_points)
         elif len(self._route_stops) >= 2:
             coords = [(s.lat, s.lng) for s in self._route_stops if s.lat and s.lng]
-            # Immediate smooth geodesic arc so UI never freezes
             arc_pts: list[tuple[float, float]] = []
             for i in range(len(coords) - 1):
                 seg = generate_geodesic_arc(coords[i], coords[i + 1])
@@ -394,10 +483,13 @@ class SlippyMapCanvas(ft.Container):
             self.redraw()
 
     def set_center_and_zoom(self, lat: float, lng: float, zoom: Optional[int] = None) -> None:
-        self.center_lat = float(lat)
-        self.center_lng = float(lng)
+        self.center_lat, self.center_lng = self._clamp_center(lat, lng)
         if zoom is not None:
-            self.zoom = max(8, min(18, int(zoom)))
+            new_z = max(8, min(18, int(zoom)))
+            if new_z != self.zoom:
+                self.zoom = new_z
+                self._tile_pool.clear()
+                self._cluster_cache_key = None
         self.redraw()
 
     def recenter_province(self) -> None:
@@ -408,6 +500,8 @@ class SlippyMapCanvas(ft.Container):
         clamped = max(8, min(18, int(new_zoom)))
         if clamped != self.zoom:
             self.zoom = clamped
+            self._tile_pool.clear()
+            self._cluster_cache_key = None
             self.redraw()
 
     def fit_to_content(self) -> None:
@@ -424,8 +518,10 @@ class SlippyMapCanvas(ft.Container):
             self.redraw()
             return
         if len(valid) == 1:
-            self.center_lat, self.center_lng = valid[0]
+            self.center_lat, self.center_lng = self._clamp_center(valid[0][0], valid[0][1])
             self.zoom = 14
+            self._tile_pool.clear()
+            self._cluster_cache_key = None
             self.redraw()
             return
 
@@ -434,8 +530,10 @@ class SlippyMapCanvas(ft.Container):
         min_lng = min(c[1] for c in valid)
         max_lng = max(c[1] for c in valid)
 
-        self.center_lat = (min_lat + max_lat) / 2.0
-        self.center_lng = (min_lng + max_lng) / 2.0
+        self.center_lat, self.center_lng = self._clamp_center(
+            (min_lat + max_lat) / 2.0,
+            (min_lng + max_lng) / 2.0,
+        )
 
         usable_w = max(120, self._map_w - 2 * padding_px)
         usable_h = max(120, self._map_h - 2 * padding_px)
@@ -447,31 +545,42 @@ class SlippyMapCanvas(ft.Container):
             if abs(x2 - x1) <= usable_w and abs(y2 - y1) <= usable_h:
                 best_z = z
                 break
-        self.zoom = best_z
+        if best_z != self.zoom:
+            self.zoom = best_z
+            self._tile_pool.clear()
+            self._cluster_cache_key = None
         self.redraw()
 
-    def _handle_pan_update(self, e: ft.DragUpdateEvent) -> None:
-        dx = float(getattr(e, "delta_x", 0.0) or 0.0)
-        dy = float(getattr(e, "delta_y", 0.0) or 0.0)
+    def _handle_pan_start(self, e: Any) -> None:
+        self._is_panning = True
+
+    def _handle_pan_update(self, e: Any) -> None:
+        dx, dy = _extract_pan_delta(e)
+        if dx == 0.0 and dy == 0.0:
+            return
         cx, cy = latlon_to_world_px(self.center_lat, self.center_lng, self.zoom)
-        self.center_lat, self.center_lng = world_px_to_latlon(cx - dx, cy - dy, self.zoom)
+        new_lat, new_lng = world_px_to_latlon(cx - dx, cy - dy, self.zoom)
+        self.center_lat, self.center_lng = self._clamp_center(new_lat, new_lng)
+
         now = time.monotonic()
-        if now - self._last_pan_redraw >= 0.045:
+        if now - self._last_pan_redraw >= 0.032:
             self._last_pan_redraw = now
+            self._is_panning = True
             self.redraw()
 
-    def _handle_pan_end(self, e: ft.DragEndEvent) -> None:
+    def _handle_pan_end(self, e: Any) -> None:
+        self._is_panning = False
         self.redraw()
 
     def _handle_scroll(self, e: Any) -> None:
         now = time.monotonic()
-        if now - self._last_scroll_zoom < 0.12:
+        if now - self._last_scroll_zoom < 0.09:
             return
-        dy = float(getattr(e, "scroll_delta_y", 0.0) or 0.0)
-        if dy < -1.0:
+        dy = _extract_scroll_delta_y(e)
+        if dy < -0.5:
             self._last_scroll_zoom = now
             self.set_zoom(self.zoom + 1)
-        elif dy > 1.0:
+        elif dy > 0.5:
             self._last_scroll_zoom = now
             self.set_zoom(self.zoom - 1)
 
@@ -479,16 +588,6 @@ class SlippyMapCanvas(ft.Container):
         cx, cy = latlon_to_world_px(self.center_lat, self.center_lng, self.zoom)
         px, py = latlon_to_world_px(lat, lng, self.zoom)
         return (self._map_w / 2.0) + (px - cx), (self._map_h / 2.0) + (py - cy)
-
-    def _on_single_tile_cached(self, tile_key: str, local_path: str) -> None:
-        """Thread-safe callback updating only the specific ft.Image control when a background tile finishes downloading."""
-        img = self._active_tile_images.get(tile_key)
-        if img and self.page:
-            try:
-                img.src = local_path
-                img.update()
-            except Exception:
-                pass
 
     def redraw(self) -> None:
         self._zoom_label.value = f"Z{self.zoom}"
@@ -514,37 +613,50 @@ class SlippyMapCanvas(ft.Container):
         num_tiles = 2 ** self.zoom
         tiles: list[ft.Control] = []
         active_imgs: dict[str, ft.Image] = {}
+
         for tx in range(min_tx, max_tx + 1):
             for ty in range(min_ty, max_ty + 1):
                 if ty < 0 or ty >= num_tiles:
                     continue
                 wrapped_tx = tx % num_tiles
-                left_px = (tx * 256.0) - top_left_wx
-                top_px = (ty * 256.0) - top_left_wy
+                left_px = round((tx * 256.0) - top_left_wx, 1)
+                top_px = round((ty * 256.0) - top_left_wy, 1)
                 tile_key = f"{self.zoom}_{wrapped_tx}_{ty}"
-                tile_src = _resolve_tile_source(
-                    self.zoom,
-                    wrapped_tx,
-                    ty,
-                    on_tile_cached=self._on_single_tile_cached,
-                )
-                img_ctrl = ft.Image(
-                    src=tile_src,
-                    width=256,
-                    height=256,
-                    fit=ft.BoxFit.COVER,
-                    gapless_playback=True,
-                )
-                active_imgs[tile_key] = img_ctrl
-                tiles.append(
-                    ft.Container(
+
+                tile_cont = self._tile_pool.get(tile_key)
+                if tile_cont is not None:
+                    tile_cont.left = left_px
+                    tile_cont.top = top_px
+                    if isinstance(tile_cont.content, ft.Image):
+                        active_imgs[tile_key] = tile_cont.content
+                else:
+                    tile_src = _resolve_tile_source(self.zoom, wrapped_tx, ty)
+                    img_ctrl = ft.Image(
+                        src=tile_src,
+                        width=256,
+                        height=256,
+                        fit=ft.BoxFit.COVER,
+                        gapless_playback=True,
+                    )
+                    tile_cont = ft.Container(
                         left=left_px,
                         top=top_px,
                         width=256,
                         height=256,
                         content=img_ctrl,
                     )
-                )
+                    self._tile_pool[tile_key] = tile_cont
+                    active_imgs[tile_key] = img_ctrl
+
+                tiles.append(tile_cont)
+
+        # Bound tile pool size to prevent memory bloat
+        if len(self._tile_pool) > 160:
+            visible_keys = {f"{self.zoom}_{tx % num_tiles}_{ty}" for tx in range(min_tx, max_tx + 1) for ty in range(min_ty, max_ty + 1)}
+            for k in list(self._tile_pool.keys()):
+                if k not in visible_keys:
+                    del self._tile_pool[k]
+
         self._active_tile_images = active_imgs
         self._tile_stack.controls = tiles
 
@@ -556,7 +668,6 @@ class SlippyMapCanvas(ft.Container):
             for vx, vy in screen_pts[1:]:
                 path_elements.append(cv.Path.LineTo(vx, vy))
 
-            # Outer white route casing
             shapes.append(
                 cv.Path(
                     elements=path_elements,
@@ -569,7 +680,6 @@ class SlippyMapCanvas(ft.Container):
                     ),
                 )
             )
-            # Inner primary road line (#0284c7 / #2563eb matching Web App)
             shapes.append(
                 cv.Path(
                     elements=path_elements,
@@ -584,10 +694,64 @@ class SlippyMapCanvas(ft.Container):
             )
         self._vector_canvas.shapes = shapes
 
+    def _ensure_world_clusters(self) -> None:
+        """Pre-computes Web-Mercator world coordinates and spatial grid clusters once per (zoom, places list)."""
+        first_id = self._places[0].id if self._places else ""
+        last_id = self._places[-1].id if self._places else ""
+        sig = f"{len(self._places)}:{first_id}:{last_id}"
+        key = (self.zoom, len(self._places), sig)
+        if self._cluster_cache_key == key:
+            return
+
+        self._cluster_cache_key = key
+        projected: list[tuple[Place, float, float]] = []
+        for p in self._places:
+            if not p.latitude or not p.longitude:
+                continue
+            wx, wy = latlon_to_world_px(p.latitude, p.longitude, self.zoom)
+            projected.append((p, wx, wy))
+
+        if self.zoom < 14 and len(projected) > 18:
+            cell_size = 58.0
+            grid: dict[tuple[int, int], list[tuple[Place, float, float]]] = {}
+            for item in projected:
+                gx = int(item[1] // cell_size)
+                gy = int(item[2] // cell_size)
+                grid.setdefault((gx, gy), []).append(item)
+
+            items: list[dict[str, Any]] = []
+            for bucket in grid.values():
+                if len(bucket) == 1:
+                    p, wx, wy = bucket[0]
+                    items.append({"type": "pin", "place": p, "wx": wx, "wy": wy})
+                else:
+                    n = len(bucket)
+                    avg_wx = sum(b[1] for b in bucket) / n
+                    avg_wy = sum(b[2] for b in bucket) / n
+                    avg_lat = sum(b[0].latitude for b in bucket) / n
+                    avg_lng = sum(b[0].longitude for b in bucket) / n
+                    items.append({
+                        "type": "cluster",
+                        "count": n,
+                        "wx": avg_wx,
+                        "wy": avg_wy,
+                        "lat": avg_lat,
+                        "lng": avg_lng,
+                    })
+            self._cached_world_items = items
+        else:
+            self._cached_world_items = [
+                {"type": "pin", "place": p, "wx": wx, "wy": wy}
+                for p, wx, wy in projected
+            ]
+
     def _render_markers_and_clusters(self) -> None:
         controls: list[ft.Control] = []
+        cx, cy = latlon_to_world_px(self.center_lat, self.center_lng, self.zoom)
+        half_w = self._map_w / 2.0
+        half_h = self._map_h / 2.0
 
-        # 1. User GPS / Cabanatuan Anchor Dot (if present)
+        # 1. User GPS / Cabanatuan Anchor Dot
         if self._user_location:
             ux, uy = self._latlon_to_viewport(self._user_location[0], self._user_location[1])
             if -20 <= ux <= self._map_w + 20 and -20 <= uy <= self._map_h + 20:
@@ -601,48 +765,30 @@ class SlippyMapCanvas(ft.Container):
                         border=ft.Border.all(3, "#ffffff"),
                         border_radius=10,
                         tooltip="Your Location",
-                        shadow=ft.BoxShadow(blur_radius=8, color=ft.Colors.with_opacity(0.4, "#3b82f6")),
                     )
                 )
 
-        # 2. Discovery Place Markers (with fast degree bounding-box pre-filter and marker clustering)
-        lat_span = (360.0 / (2 ** self.zoom)) * (self._map_h / 256.0) * 0.75
-        lng_span = (360.0 / (2 ** self.zoom)) * (self._map_w / 256.0) * 0.75
-        visible_places: list[tuple[Place, float, float]] = []
-        for p in self._places:
-            if not p.latitude or not p.longitude:
+        # 2. Pre-cached Discovery Markers & Clusters
+        self._ensure_world_clusters()
+        rendered_count = 0
+        for item in self._cached_world_items:
+            px = half_w + (item["wx"] - cx)
+            py = half_h + (item["wy"] - cy)
+            if px < -36 or px > self._map_w + 36 or py < -36 or py > self._map_h + 36:
                 continue
-            if abs(p.latitude - self.center_lat) > lat_span or abs(p.longitude - self.center_lng) > lng_span:
-                continue
-            px, py = self._latlon_to_viewport(p.latitude, p.longitude)
-            if -32 <= px <= self._map_w + 32 and -32 <= py <= self._map_h + 32:
-                visible_places.append((p, px, py))
+            if item["type"] == "cluster":
+                controls.append(
+                    self._build_cluster_pin(
+                        item["count"], px, py, item["lat"], item["lng"]
+                    )
+                )
+            else:
+                controls.append(self._build_place_pin(item["place"], px, py))
+            rendered_count += 1
+            if rendered_count >= 180:
+                break
 
-        if self.zoom < 14 and len(visible_places) > 18:
-            # Grid spatial clustering (cell size 58px) matching Leaflet.markercluster (.marker-cluster)
-            grid: dict[tuple[int, int], list[tuple[Place, float, float]]] = {}
-            cell_size = 58.0
-            for item in visible_places:
-                gx = int(item[1] // cell_size)
-                gy = int(item[2] // cell_size)
-                grid.setdefault((gx, gy), []).append(item)
-
-            for bucket in grid.values():
-                if len(bucket) == 1:
-                    p, px, py = bucket[0]
-                    controls.append(self._build_place_pin(p, px, py))
-                else:
-                    avg_x = sum(b[1] for b in bucket) / len(bucket)
-                    avg_y = sum(b[2] for b in bucket) / len(bucket)
-                    avg_lat = sum(b[0].latitude for b in bucket) / len(bucket)
-                    avg_lng = sum(b[0].longitude for b in bucket) / len(bucket)
-                    count = len(bucket)
-                    controls.append(self._build_cluster_pin(count, avg_x, avg_y, avg_lat, avg_lng))
-        else:
-            for p, px, py in visible_places[:250]:
-                controls.append(self._build_place_pin(p, px, py))
-
-        # 3. Numbered Itinerary Route Stop Badges (1..N) on top of everything
+        # 3. Numbered Itinerary Route Stop Badges (1..N)
         for stop in self._route_stops:
             if not stop.lat or not stop.lng:
                 continue
@@ -655,11 +801,10 @@ class SlippyMapCanvas(ft.Container):
     def _build_cluster_pin(
         self, count: int, px: float, py: float, center_lat: float, center_lng: float
     ) -> ft.Control:
-        """Web-App-identical blue marker cluster circle (`.marker-cluster` in `map.page.scss`)."""
         size = 38 if count < 25 else (44 if count < 100 else 50)
         return ft.Container(
-            left=px - size / 2,
-            top=py - size / 2,
+            left=round(px - size / 2, 1),
+            top=round(py - size / 2, 1),
             width=size,
             height=size,
             border_radius=size / 2,
@@ -683,13 +828,12 @@ class SlippyMapCanvas(ft.Container):
         )
 
     def _build_place_pin(self, place: Place, px: float, py: float) -> ft.Control:
-        """Category-colored circular marker pin that opens PlaceDetailSheet on click."""
         color_hex, icon_data = CATEGORY_PIN_STYLE.get(
             place.category, ("#2563eb", ft.Icons.LOCATION_ON_ROUNDED)
         )
         return ft.Container(
-            left=px - 15,
-            top=py - 15,
+            left=round(px - 15, 1),
+            top=round(py - 15, 1),
             width=30,
             height=30,
             bgcolor=color_hex,
@@ -697,21 +841,19 @@ class SlippyMapCanvas(ft.Container):
             border_radius=15,
             alignment=ft.Alignment(0, 0),
             tooltip=f"{place.name} ({place.municipality_name or 'Nueva Ecija'})",
-            shadow=ft.BoxShadow(blur_radius=6, color=ft.Colors.with_opacity(0.28, "#0f172a")),
             ink=True,
             on_click=lambda _, p=place: self._on_place_click(p) if self._on_place_click else None,
             content=ft.Icon(icon_data, size=15, color="#ffffff"),
         )
 
     def _build_route_stop_badge(self, stop: RouteStopPin, sx: float, sy: float) -> ft.Control:
-        """Numbered circular stop badge (`1`, `2`, `3`...) with floating stop name pill."""
         is_active = self._active_stop_index == stop.index
         badge_bg = "#f97316" if is_active else "#2563eb"
         badge_size = 34 if is_active else 30
 
         return ft.Container(
-            left=sx - badge_size / 2,
-            top=sy - badge_size / 2,
+            left=round(sx - badge_size / 2, 1),
+            top=round(sy - badge_size / 2, 1),
             ink=True,
             on_click=lambda _, s=stop: self._on_stop_click(s.index, s) if self._on_stop_click else None,
             tooltip=f"Stop {stop.index + 1}: {stop.title} ({stop.planned_time or 'Scheduled'})",
@@ -727,11 +869,6 @@ class SlippyMapCanvas(ft.Container):
                         border=ft.Border.all(2.5, "#ffffff"),
                         border_radius=badge_size / 2,
                         alignment=ft.Alignment(0, 0),
-                        shadow=ft.BoxShadow(
-                            blur_radius=8,
-                            color=ft.Colors.with_opacity(0.35, "#0f172a"),
-                            offset=ft.Offset(0, 2),
-                        ),
                         content=ft.Text(
                             str(stop.index + 1),
                             size=13,
@@ -744,7 +881,6 @@ class SlippyMapCanvas(ft.Container):
                         border=ft.Border.all(1, "#cbd5e1"),
                         border_radius=8,
                         padding=ft.Padding.symmetric(horizontal=7, vertical=3),
-                        shadow=ft.BoxShadow(blur_radius=4, color=ft.Colors.with_opacity(0.12, "#0f172a")),
                         content=ft.Text(
                             stop.title[:22] + ("…" if len(stop.title) > 22 else ""),
                             size=10,

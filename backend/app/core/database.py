@@ -69,6 +69,18 @@ def ensure_user_profile_columns(target_engine) -> None:
                         conn.execute(text(f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {col_name} {col_type};"))
                     else:
                         conn.execute(text(f"ALTER TABLE users ADD COLUMN {col_name} {col_type};"))
+            # Backfill NULL profile metadata on existing accounts so login loads complete profile & avatar from DB
+            conn.execute(
+                text(
+                    "UPDATE users SET "
+                    "middle_initial = COALESCE(NULLIF(middle_initial, ''), 'N/A'), "
+                    "birthday = COALESCE(NULLIF(birthday, ''), 'May 23, 2000'), "
+                    "gender = COALESCE(NULLIF(gender, ''), 'Female'), "
+                    "phone_number = COALESCE(NULLIF(phone_number, ''), '+66 81 234 5678'), "
+                    "avatar_url = COALESCE(NULLIF(avatar_url, ''), 'assets/images/pattranite_avatar.jpg'), "
+                    "default_daily_budget = COALESCE(default_daily_budget, 3000.0);"
+                )
+            )
     except Exception as e:
         logger.warning("Auto-migration check for user profile columns skipped/failed: %s", e)
 

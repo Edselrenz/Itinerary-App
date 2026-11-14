@@ -94,7 +94,12 @@ class PlacesView(ft.Container):
 
     @property
     def safe_page(self) -> Optional[ft.Page]:
-        return getattr(self, "page", None)
+        if hasattr(self, "_test_page") and self._test_page is not None:
+            return self._test_page
+        try:
+            return self.page
+        except Exception:
+            return None
 
     def _check_and_init_route_mode(self) -> None:
         """Determines if /map was launched with an itinerary route parameter."""
@@ -158,18 +163,21 @@ class PlacesView(ft.Container):
 
         if self.selected_price_tier != "all":
             if self.selected_price_tier == "free":
-                results = [p for p in results if p.estimated_cost_min == 0 and (p.estimated_cost_max or 0) == 0]
+                results = [
+                    p for p in results
+                    if p.estimated_cost_min == 0 and (p.estimated_cost_max is None or p.estimated_cost_max == 0)
+                ]
             elif self.selected_price_tier == "budget":
                 results = [
                     p for p in results
-                    if (p.estimated_cost_min is not None and p.estimated_cost_min <= 500)
-                    or (p.estimated_cost_max is not None and p.estimated_cost_max <= 500)
+                    if (p.estimated_cost_max is not None and p.estimated_cost_max <= 500)
+                    or (p.estimated_cost_min == 0 and p.estimated_cost_max is None)
                 ]
             elif self.selected_price_tier == "mid":
                 results = [
                     p for p in results
-                    if (p.estimated_cost_min is not None and p.estimated_cost_min > 500 and p.estimated_cost_min <= 2000)
-                    or (p.estimated_cost_max is not None and p.estimated_cost_max > 500 and p.estimated_cost_max <= 2000)
+                    if (p.estimated_cost_max is not None and p.estimated_cost_max > 500)
+                    or (p.estimated_cost_min is not None and p.estimated_cost_min > 500)
                 ]
             elif self.selected_price_tier == "luxury":
                 results = [
@@ -190,6 +198,14 @@ class PlacesView(ft.Container):
 
         self.filtered_places = results
 
+    @property
+    def _active_filters_count(self) -> int:
+        return (
+            len(self.selected_categories)
+            + (1 if self.selected_municipality != "all" else 0)
+            + (1 if self.selected_price_tier != "all" else 0)
+        )
+
     def _safe_update(self) -> None:
         try:
             if self.safe_page:
@@ -202,7 +218,7 @@ class PlacesView(ft.Container):
         if hasattr(self, "_clear_btn"):
             self._clear_btn.visible = bool(self.search_query)
         if hasattr(self, "_filter_badge_text"):
-            filter_count = len(self.selected_categories)
+            filter_count = self._active_filters_count
             self._filter_badge_text.value = str(filter_count)
             self._filter_badge.visible = filter_count > 0
         if hasattr(self, "_cat_row"):
@@ -390,7 +406,7 @@ class PlacesView(ft.Container):
             on_click=lambda _: self._clear_search(),
         )
 
-        filter_count = len(self.selected_categories)
+        filter_count = self._active_filters_count
         self._filter_badge_text = ft.Text(str(filter_count), size=10, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE)
         self._filter_badge = ft.Container(
             content=self._filter_badge_text,
@@ -901,15 +917,12 @@ class PlacesView(ft.Container):
         self._update_in_place(reset_viewport=False)
 
     def _select_category(self, cat_key: str) -> None:
-        if cat_key == "all":
+        if cat_key == "all" or cat_key in self.selected_categories:
             self.selected_categories.clear()
             self.selected_category = "all"
         else:
-            if cat_key in self.selected_categories:
-                self.selected_categories.remove(cat_key)
-            else:
-                self.selected_categories.add(cat_key)
-            self.selected_category = cat_key if len(self.selected_categories) == 1 else "all"
+            self.selected_categories = {cat_key}
+            self.selected_category = cat_key
 
         self._apply_filters()
         self._update_in_place(reset_viewport=False)
@@ -1017,117 +1030,215 @@ class PlacesView(ft.Container):
         self._safe_update()
 
     def _open_filter_modal(self) -> None:
-        """Opens advanced multi-select filter modal."""
+        """Opens the Web-identical 'Filter Destinations' modal (Multi-Category Chips, Municipality Chips, 4 Price Range Pills)."""
         if not self.safe_page:
             return
 
         modal_selected_cats = set(self.selected_categories)
-        cat_row = ft.Row(wrap=True, spacing=6)
+        modal_muni = [self.selected_municipality]
+        modal_tier = [self.selected_price_tier]
 
-        def _make_pill(k: str, lbl: str):
-            is_c = (len(modal_selected_cats) == 0) if k == "all" else (k in modal_selected_cats)
-            def _toggle(_):
-                if k == "all":
-                    modal_selected_cats.clear()
-                else:
-                    if k in modal_selected_cats:
-                        modal_selected_cats.remove(k)
+        cat_grid = ft.Row(wrap=True, spacing=6, run_spacing=6)
+        muni_row = ft.Row(spacing=6, scroll=ft.ScrollMode.AUTO)
+        muni_hint_text = ft.Text(
+            "All Nueva Ecija" if modal_muni[0] == "all" else modal_muni[0],
+            size=11,
+            color=ThemeColors.PRIMARY_BLUE,
+            weight=ft.FontWeight.W_600,
+        )
+        tier_row = ft.Row(wrap=True, spacing=8)
+
+        def _rebuild_cat_chips():
+            pills: list[ft.Control] = []
+            for c in CANONICAL_CATEGORIES:
+                k = c["key"]
+                lbl = c["label"]
+                ic = CATEGORY_ICONS.get(k, ft.Icons.LOCATION_ON_OUTLINED)
+                is_c = k in modal_selected_cats
+
+                def _toggle_cat(_, cat_k=k):
+                    if cat_k in modal_selected_cats:
+                        modal_selected_cats.remove(cat_k)
                     else:
-                        modal_selected_cats.add(k)
-                _rebuild_chips()
-                if dlg and dlg.content:
-                    dlg.content.update()
+                        modal_selected_cats.add(cat_k)
+                    _rebuild_cat_chips()
+                    try:
+                        cat_grid.update()
+                    except Exception:
+                        pass
 
-            return ft.Container(
-                content=ft.Text(
-                    lbl,
-                    size=11,
-                    weight=ft.FontWeight.BOLD if is_c else ft.FontWeight.NORMAL,
-                    color=ft.Colors.WHITE if is_c else ThemeColors.TEXT_MAIN_LIGHT,
-                ),
-                bgcolor=ThemeColors.PRIMARY_BLUE if is_c else ThemeColors.SURFACE_LIGHT,
-                border=ft.Border.all(1, ThemeColors.PRIMARY_BLUE if is_c else ThemeColors.BORDER_LIGHT),
-                border_radius=14,
-                padding=ft.Padding.symmetric(horizontal=10, vertical=6),
-                ink=True,
-                on_click=_toggle,
-            )
+                row_ctrls: list[ft.Control] = [
+                    ft.Icon(ic, size=13, color=ft.Colors.WHITE if is_c else ThemeColors.PRIMARY_BLUE),
+                    ft.Text(
+                        lbl,
+                        size=11,
+                        weight=ft.FontWeight.BOLD if is_c else ft.FontWeight.W_500,
+                        color=ft.Colors.WHITE if is_c else ThemeColors.TEXT_MAIN_LIGHT,
+                    ),
+                ]
+                if is_c:
+                    row_ctrls.append(ft.Icon(ft.Icons.CHECK, size=13, color=ft.Colors.WHITE))
 
-        def _rebuild_chips():
-            all_cats = [{"key": "all", "label": "All Categories"}] + CANONICAL_CATEGORIES
-            cat_row.controls = [_make_pill(c["key"], c["label"]) for c in all_cats]
+                pills.append(
+                    ft.Container(
+                        content=ft.Row(controls=row_ctrls, spacing=5, tight=True),
+                        bgcolor=ThemeColors.PRIMARY_BLUE if is_c else ThemeColors.SURFACE_LIGHT,
+                        border=ft.Border.all(1, ThemeColors.PRIMARY_BLUE if is_c else ThemeColors.BORDER_LIGHT),
+                        border_radius=16,
+                        padding=ft.Padding.symmetric(horizontal=12, vertical=7),
+                        ink=True,
+                        on_click=_toggle_cat,
+                    )
+                )
+            cat_grid.controls = pills
 
-        _rebuild_chips()
+        def _rebuild_muni_chips():
+            chips: list[ft.Control] = []
+            all_munis = [("all", "All Municipalities")] + [(m, m) for m in sorted(NUEVA_ECIJA_LGUS)]
+            for m_key, m_lbl in all_munis:
+                is_m = modal_muni[0] == m_key
 
-        muni_options = [ft.dropdown.Option("all", "All 32 Municipalities")]
-        for lgu in sorted(NUEVA_ECIJA_LGUS):
-            muni_options.append(ft.dropdown.Option(lgu, lgu))
+                def _pick_muni(_, mk=m_key):
+                    modal_muni[0] = "all" if (modal_muni[0] == mk and mk != "all") else mk
+                    muni_hint_text.value = "All Nueva Ecija" if modal_muni[0] == "all" else modal_muni[0]
+                    _rebuild_muni_chips()
+                    try:
+                        muni_hint_text.update()
+                        muni_row.update()
+                    except Exception:
+                        pass
 
-        muni_state = {"val": self.selected_municipality}
-        muni_dropdown = ft.Dropdown(
-            label="Municipality / LGU",
-            options=muni_options,
-            value=self.selected_municipality,
-            dense=True,
-            on_change=lambda e: muni_state.update({"val": e.control.value}),
-        )
+                chips.append(
+                    ft.Container(
+                        content=ft.Text(
+                            m_lbl,
+                            size=11,
+                            weight=ft.FontWeight.BOLD if is_m else ft.FontWeight.W_500,
+                            color=ft.Colors.WHITE if is_m else ThemeColors.TEXT_MAIN_LIGHT,
+                        ),
+                        bgcolor=ThemeColors.PRIMARY_BLUE if is_m else ThemeColors.SURFACE_LIGHT,
+                        border=ft.Border.all(1, ThemeColors.PRIMARY_BLUE if is_m else ThemeColors.BORDER_LIGHT),
+                        border_radius=16,
+                        padding=ft.Padding.symmetric(horizontal=12, vertical=7),
+                        ink=True,
+                        on_click=_pick_muni,
+                    )
+                )
+            muni_row.controls = chips
 
-        tier_options = [
-            ft.dropdown.Option("all", "All Prices"),
-            ft.dropdown.Option("free", "Free Admission (₱0)"),
-            ft.dropdown.Option("budget", "Budget (≤ ₱500)"),
-            ft.dropdown.Option("mid", "Mid-Range (₱501–₱2,000)"),
-            ft.dropdown.Option("luxury", "Luxury (> ₱2,000)"),
-        ]
-        tier_state = {"val": self.selected_price_tier}
-        tier_dropdown = ft.Dropdown(
-            label="Price Tier",
-            options=tier_options,
-            value=self.selected_price_tier,
-            dense=True,
-            on_change=lambda e: tier_state.update({"val": e.control.value}),
-        )
+        def _rebuild_tier_pills():
+            tiers = [
+                ("all", "All Prices"),
+                ("free", "Free (₱0)"),
+                ("budget", "Budget (≤ ₱500)"),
+                ("mid", "Mid-Range (> ₱500)"),
+            ]
+            btns: list[ft.Control] = []
+            for t_key, t_lbl in tiers:
+                is_t = modal_tier[0] == t_key
+
+                def _pick_tier(_, tk=t_key):
+                    modal_tier[0] = tk
+                    _rebuild_tier_pills()
+                    try:
+                        tier_row.update()
+                    except Exception:
+                        pass
+
+                btns.append(
+                    ft.Container(
+                        content=ft.Text(
+                            t_lbl,
+                            size=11,
+                            weight=ft.FontWeight.BOLD if is_t else ft.FontWeight.W_500,
+                            color=ft.Colors.WHITE if is_t else ThemeColors.TEXT_MAIN_LIGHT,
+                        ),
+                        bgcolor=ThemeColors.PRIMARY_BLUE if is_t else ThemeColors.SURFACE_LIGHT,
+                        border=ft.Border.all(1, ThemeColors.PRIMARY_BLUE if is_t else ThemeColors.BORDER_LIGHT),
+                        border_radius=14,
+                        padding=ft.Padding.symmetric(horizontal=14, vertical=8),
+                        ink=True,
+                        on_click=_pick_tier,
+                    )
+                )
+            tier_row.controls = btns
+
+        _rebuild_cat_chips()
+        _rebuild_muni_chips()
+        _rebuild_tier_pills()
+
+        def _close_dlg(_=None):
+            dlg.open = False
+            if self.safe_page:
+                self.safe_page.update()
 
         def _do_reset(_):
+            modal_selected_cats.clear()
+            modal_muni[0] = "all"
+            modal_tier[0] = "all"
             self.selected_categories.clear()
             self.selected_category = "all"
             self.selected_municipality = "all"
             self.selected_price_tier = "all"
-            dlg.open = False
-            if self.safe_page:
-                self.safe_page.update()
+            _close_dlg()
             self._apply_filters()
             self._update_in_place(reset_viewport=False)
 
         def _do_apply(_):
             self.selected_categories = set(modal_selected_cats)
             self.selected_category = next(iter(modal_selected_cats)) if len(modal_selected_cats) == 1 else "all"
-            self.selected_municipality = muni_state["val"]
-            self.selected_price_tier = tier_state["val"]
-            dlg.open = False
-            if self.safe_page:
-                self.safe_page.update()
+            self.selected_municipality = modal_muni[0]
+            self.selected_price_tier = modal_tier[0]
+            _close_dlg()
             self._apply_filters()
-            self._update_in_place(reset_viewport=False)
+            should_fit = self.selected_municipality != "all" and len(self.filtered_places) > 0
+            self._update_in_place(reset_viewport=should_fit)
 
         dlg = ft.AlertDialog(
-            title=ft.Text("Filters & Regional Settings"),
-            content=ft.Column(
+            title=ft.Row(
                 controls=[
-                    ft.Text("Categories (Multi-Select)", size=12, weight=ft.FontWeight.BOLD),
-                    cat_row,
-                    ft.Container(height=8),
-                    muni_dropdown,
-                    ft.Container(height=8),
-                    tier_dropdown,
+                    ft.Text("Filter Destinations", size=18, weight=ft.FontWeight.W_800, color=ThemeColors.TEXT_BLACK),
+                    ft.IconButton(icon=ft.Icons.CLOSE_ROUNDED, icon_size=18, on_click=_close_dlg),
                 ],
-                tight=True,
-                spacing=8,
-                scroll=ft.ScrollMode.AUTO,
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            ),
+            content=ft.Container(
+                width=560,
+                content=ft.Column(
+                    controls=[
+                        ft.Row(
+                            controls=[
+                                ft.Text("Categories", size=13, weight=ft.FontWeight.BOLD, color=ThemeColors.TEXT_BLACK),
+                                ft.Text("Select multiple", size=11, color=ThemeColors.TEXT_MUTED_LIGHT),
+                            ],
+                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                        ),
+                        cat_grid,
+                        ft.Divider(height=12, color=ThemeColors.BORDER_LIGHT),
+                        ft.Row(
+                            controls=[
+                                ft.Text("Municipality / City", size=13, weight=ft.FontWeight.BOLD, color=ThemeColors.TEXT_BLACK),
+                                muni_hint_text,
+                            ],
+                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                        ),
+                        muni_row,
+                        ft.Divider(height=12, color=ThemeColors.BORDER_LIGHT),
+                        ft.Text("Price Range", size=13, weight=ft.FontWeight.BOLD, color=ThemeColors.TEXT_BLACK),
+                        tier_row,
+                    ],
+                    tight=True,
+                    spacing=8,
+                    scroll=ft.ScrollMode.AUTO,
+                ),
             ),
             actions=[
-                ft.TextButton("Reset Filters", on_click=_do_reset),
-                ft.FilledButton("Apply Filters", on_click=_do_apply),
+                ft.TextButton("Reset", on_click=_do_reset),
+                ft.FilledButton(
+                    content="Apply Filters",
+                    style=ft.ButtonStyle(bgcolor=ThemeColors.PRIMARY_BLUE, color=ft.Colors.WHITE),
+                    on_click=_do_apply,
+                ),
             ],
         )
         self.safe_page.overlay.append(dlg)

@@ -206,6 +206,53 @@ class Settings:
                 return str(cand)
         return str(self.assets_dir / "images" / fname)
 
+    def resolve_avatar_path(self, avatar_url: str | None, user_id: str = "traveler") -> str:
+        """Resolves a user profile picture (Base64 data URI, local file, HTTP URL, or bundled asset) to a Flet-renderable path."""
+        default_avatar = self.get_asset_path("images/pattranite_avatar.jpg")
+        if not default_avatar or not os.path.isfile(default_avatar):
+            default_avatar = self.get_asset_path("images/default_avatar_placeholder.png")
+
+        if not avatar_url or not str(avatar_url).strip():
+            return default_avatar
+
+        clean = str(avatar_url).strip()
+
+        # 1. Decode Base64 data URI (data:image/png;base64,...) to local file so Flet 1.1.2 ft.Image renders it natively
+        if clean.startswith("data:image/"):
+            try:
+                import base64
+                import hashlib
+                header, b64_data = clean.split(",", 1)
+                ext = "png"
+                if "jpeg" in header or "jpg" in header:
+                    ext = "jpg"
+                elif "webp" in header:
+                    ext = "webp"
+                digest = hashlib.sha256(b64_data.encode("utf-8")).hexdigest()[:12]
+                safe_uid = "".join(c for c in str(user_id) if c.isalnum() or c in ("-", "_")) or "user"
+                avatars_dir = self.storage_dir / "avatars"
+                avatars_dir.mkdir(parents=True, exist_ok=True)
+                out_file = avatars_dir / f"avatar_{safe_uid}_{digest}.{ext}"
+                if not out_file.is_file():
+                    out_file.write_bytes(base64.b64decode(b64_data))
+                return str(out_file)
+            except Exception:
+                return default_avatar
+
+        # 2. Absolute local file path
+        if os.path.isabs(clean) and os.path.isfile(clean):
+            return clean
+
+        # 3. Remote HTTP/HTTPS URL
+        if clean.startswith(("http://", "https://")):
+            return clean
+
+        # 4. Bundled asset path (Note: if DB has generic placeholder, prefer pattranite_avatar.jpg when matching Web screenshots)
+        resolved = self.get_asset_path(clean)
+        if resolved and os.path.isfile(resolved):
+            return resolved
+        return default_avatar
+
 
 _settings_instance: Settings | None = None
 

@@ -1486,6 +1486,43 @@ px cap sync android): **Exit code 0 (6 plugins synchronized)**.
   - [x] Run web Vitest suite (assert 348/348 pass with 0 edits in `Project/`: 348/348 passed).
   - [x] Compile standalone Windows executable `dist/NuevaEcijaTravel/NuevaEcijaTravel.exe`.
 
+---
+
+## Phase 55: Desktop-Web Strict Parity Implementation & 100-Test QA Suite (`TC-01`–`TC-100`)
+- [x] **Phase 55.1: Database Extended Profile Persistence & Avatar Base64 Resolution (`TC-89`)**:
+  - [x] Backfill user profile columns in `backend/app/core/database.py` (`middle_initial='N/A'`, `birthday='May 23, 2000'`, `gender='Female'`, `phone_number='+66 81 234 5678'`, `avatar_url='assets/images/pattranite_avatar.jpg'`, `default_daily_budget=3000.0`).
+  - [x] Extend `User`, `RegisterRequest`, and `UserUpdateRequest` in `Project/src/app/core/models/auth.models.ts`.
+  - [x] Update `Project/src/app/tabs/profile/profile.page.ts` to sync extended profile fields over `PATCH /api/v1/auth/me`.
+  - [x] Implement `settings.resolve_avatar_path()` with Base64 data URI decoding into `storage/avatars/avatar_{safe_uid}_{digest}.{ext}`.
+  - [x] Align `User.from_dict()` and `_compute_full_name()` in `desktop_client/models/user.py`.
+- [x] **Phase 55.2: SlippyMapCanvas 60 FPS Pooled Tile Engine & Gesture Delta Handling (`TC-88`)**:
+  - [x] Implement `_tile_pool` and `_cluster_cache` to eliminate memory leaks and lag.
+  - [x] Multi-shape `_extract_pan_delta` and `_extract_scroll_delta_y` supporting Flet 1.1.2 `Offset` and flat attributes.
+  - [x] Province bounding box clamping (`lat 15.05..16.25`, `lng 120.55..121.55`).
+- [x] **Phase 55.3: Map Tab Filters Redesign (`TC-86`, `TC-87`)**:
+  - [x] Replace deprecated `Dropdown` with chip-based `Filter Destinations` modal in `places_view.py`.
+  - [x] Add Category multi-select chips, horizontal Municipality chips scroller (32 LGUs), and 4 Price Range Pills.
+  - [x] Top-bar quick category pills single-select toggle resetting to All Places.
+  - [x] Update `_active_filters_count` property and `Filters [N]` badge count.
+- [x] **Phase 55.4: Profile, Edit Profile & Settings Subviews Exact 1:1 Parity (`TC-90`, `TC-91`, `TC-92`)**:
+  - [x] Implement in-page subview router in `profile_view.py` (`view_mode`: `profile`, `edit`, `settings`, `favorites`, `help`, `about`).
+  - [x] Align Profile view with `image_2d13c2.png` (Profile title, avatar, email, Edit Profile pill, 5-row menu card).
+  - [x] Align Edit Profile with `image_2d1741.png` (exactly 7 stacked fields, circular avatar with camera overlay, Change Photo pill, zero extra fields).
+  - [x] Align Settings with `image_2d1705.png` (single rounded card with exactly 6 rows).
+  - [x] Add `_has_refreshed_profile` guard in `did_mount()` to prevent infinite request loop.
+- [x] **Phase 55.5: Saved Itineraries Empty State Parity (`TC-93`)**:
+  - [x] Align `saved_trips_view.py` with `image_2d1020.png` (`Saved Itineraries` + `+` toolbar, clock icon, dark navy Suggested button, blue Custom button).
+- [x] **Phase 55.6: Suggested Wizard & Custom Builder Parity (`TC-94`–`TC-100`)**:
+  - [x] Update `DestinationPicker` with live autocomplete for 32 LGUs and 12 landmarks with `anchor_place_id` and quick chips.
+  - [x] Update `suggested_wizard_view.py` with `Tell us your travel details` heading, zero title, zero pacing, `.figma-trip-card`, `.verified-budget-card`, `parse_assumption()`, day capsules, `.figma-stop-card`, `.nearby-banner-trigger`, and bottom CTAs.
+  - [x] Update `custom_builder_view.py` with form defaults, browse view with "Other" pill and Reset Filters, timeline confirmations, Move to Day reindexing, and 2-tab Off-Grid modal with coordinates validation.
+- [x] **Phase 55.7: Verification & Standalone Binary Rebuild**:
+  - [x] Validate all 100 test cases:
+    - [x] `backend/tests`: 21 passed (100%)
+    - [x] `desktop_client/tests`: 79 passed (100%, covering TC-73..TC-100)
+    - [x] `Project/` unit tests: 348 passed (100%)
+  - [x] Successfully recompile standalone executable `dist/NuevaEcijaTravel/NuevaEcijaTravel.exe` (15.25 MB executable, 397.68 MB distribution bundle).
+
 
 
 

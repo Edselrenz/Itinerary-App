@@ -330,32 +330,30 @@ export class ProfilePage implements OnInit, OnDestroy {
 
     const userId = this.currentUser.id;
     const storageKey = `ne_profile_extra_${userId}`;
+    let storedExtra: any = {};
     const raw = localStorage.getItem(storageKey);
     if (raw) {
       try {
-        this.profileExtra = { ...this.profileExtra, ...JSON.parse(raw) };
+        storedExtra = JSON.parse(raw);
       } catch {
-        // Fallback to default
-      }
-    } else {
-      if (isDemo) {
-        this.profileExtra = {
-          middle_initial: 'N/A',
-          phone_number: '+66 81 234 5678',
-          birthday: 'May 23, 2000',
-          gender: 'Female',
-          avatar_url: 'assets/images/default_avatar_placeholder.png',
-        };
-      } else {
-        this.profileExtra = {
-          middle_initial: '',
-          phone_number: '',
-          birthday: '',
-          gender: '',
-          avatar_url: 'assets/images/default_avatar_placeholder.png',
-        };
+        storedExtra = {};
       }
     }
+
+    const cu = this.currentUser as any;
+    const dbAvatar = cu?.avatar_url;
+    const dbMiddle = cu?.middle_initial;
+    const dbPhone = cu?.phone_number;
+    const dbBirthday = cu?.birthday;
+    const dbGender = cu?.gender;
+
+    this.profileExtra = {
+      middle_initial: dbMiddle || storedExtra.middle_initial || 'N/A',
+      phone_number: dbPhone || storedExtra.phone_number || '+66 81 234 5678',
+      birthday: dbBirthday || storedExtra.birthday || 'May 23, 2000',
+      gender: dbGender || storedExtra.gender || 'Female',
+      avatar_url: dbAvatar || storedExtra.avatar_url || 'assets/images/default_avatar_placeholder.png',
+    };
 
     if (!this.profileExtra.avatar_url) {
       this.profileExtra.avatar_url = 'assets/images/default_avatar_placeholder.png';
@@ -573,10 +571,21 @@ export class ProfilePage implements OnInit, OnDestroy {
     }
 
     const formVal = this.editForm.value;
+    const finalAvatar =
+      this.editAvatarPreview ||
+      formVal.avatar_url ||
+      this.profileExtra.avatar_url ||
+      'assets/images/pattranite_avatar.jpg';
+
     const updatePayload: UserUpdateRequest = {
       first_name: formVal.first_name?.trim(),
       last_name: formVal.last_name?.trim(),
       username: formVal.username?.trim(),
+      middle_initial: formVal.middle_initial?.trim() || 'N/A',
+      phone_number: formVal.phone_number?.trim() || '+66 81 234 5678',
+      birthday: formVal.birthday || 'May 23, 2000',
+      gender: formVal.gender || 'Female',
+      avatar_url: finalAvatar,
     };
 
     if (formVal.new_password) {
@@ -592,12 +601,6 @@ export class ProfilePage implements OnInit, OnDestroy {
     this.editProfileError = '';
 
     // Update extended profile data locally
-    const finalAvatar =
-      this.editAvatarPreview ||
-      formVal.avatar_url ||
-      this.profileExtra.avatar_url ||
-      'assets/images/default_avatar_placeholder.png';
-
     this.profileExtra = {
       middle_initial: formVal.middle_initial?.trim() || 'N/A',
       phone_number: formVal.phone_number?.trim() || '+66 81 234 5678',

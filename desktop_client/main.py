@@ -217,11 +217,7 @@ def main(page: ft.Page) -> None:
                 navigate_to("/home")
 
             if base_route == "/suggested":
-                workflow_header.visible = True
-                workflow_header.title_text = "Suggested Itinerary Wizard"
-                workflow_header.subtitle_text = "Automated Proximity & Corridor Clustering"
-                workflow_header.on_back = _handle_workflow_back
-                workflow_header._build_content()
+                workflow_header.visible = False
                 dest_param = query_params.get("destination", [None])[0]
                 place_id_param = query_params.get("placeId", [None])[0]
                 restore_param = query_params.get("restore", [None])[0] == "draft" or (selected_trip is not None and getattr(selected_trip, "id", None) == "draft")
@@ -234,11 +230,7 @@ def main(page: ft.Page) -> None:
                 )
 
             elif base_route == "/builder":
-                workflow_header.visible = True
-                workflow_header.title_text = "Custom Itinerary Builder"
-                workflow_header.subtitle_text = "Interactive Stop-by-Stop Scheduling"
-                workflow_header.on_back = _handle_workflow_back
-                workflow_header._build_content()
+                workflow_header.visible = False
                 is_draft_wizard = query_params.get("draft", ["false"])[0].lower() == "true"
                 content_area.content = CustomBuilderView(
                     on_navigate=navigate_to,
