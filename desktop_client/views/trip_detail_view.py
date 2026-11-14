@@ -11,6 +11,7 @@ from desktop_client.components.dialogs import (
     show_custom_venue_dialog,
     show_edit_stop_dialog,
     show_export_dialog,
+    show_place_detail_dialog,
 )
 from desktop_client.components.itinerary_route_map import ItineraryRouteMap
 from desktop_client.components.stop_card import StopCard
@@ -218,6 +219,7 @@ class TripDetailView(ft.Container):
                     StopCard(
                         item=item,
                         editable=False,
+                        on_click=lambda itm: show_place_detail_dialog(self.safe_page, itm.place, on_navigate=self.on_navigate) if (itm.place and self.safe_page) else None,
                     )
                 )
 
@@ -483,17 +485,42 @@ class TripDetailView(ft.Container):
         if not self.safe_page:
             return
 
+        avail_days = [d.day_number for d in self.itinerary.days]
+        current_day_num = self.itinerary.days[self.active_day_index].day_number if self.itinerary.days else 1
+
         def handle_save(data: dict):
             item.planned_time = data.get("planned_time")
             item.duration_minutes = data.get("duration_minutes", 90)
             item.notes = data.get("notes")
             item.estimated_cost_min = data.get("estimated_cost_min")
             item.estimated_cost_max = data.get("estimated_cost_max")
+
+            target_day_num = data.get("target_day", current_day_num)
+            if target_day_num != current_day_num:
+                # Remove from current day
+                cur_day = self.itinerary.days[self.active_day_index]
+                cur_day.items = [i for i in cur_day.items if i.id != item.id]
+                for idx, itm in enumerate(cur_day.items, 1):
+                    itm.sort_order = idx
+
+                # Move to target day
+                target_day = next((d for d in self.itinerary.days if d.day_number == target_day_num), None)
+                if target_day:
+                    item.day_id = target_day.id
+                    item.sort_order = len(target_day.items) + 1
+                    target_day.items.append(item)
+
             self.is_dirty = True
             self._build_content()
             self._safe_update()
 
-        show_edit_stop_dialog(self.safe_page, item, handle_save)
+        show_edit_stop_dialog(
+            self.safe_page,
+            item,
+            handle_save,
+            available_days=avail_days,
+            current_day=current_day_num,
+        )
 
     def _delete_stop(self, item: ItineraryItem) -> None:
         active_day = self.itinerary.days[self.active_day_index]
@@ -546,6 +573,8 @@ class TripDetailView(ft.Container):
                 duration_minutes=venue_data.get("duration_minutes", 90),
                 estimated_cost_min=venue_data.get("estimated_cost_min"),
                 estimated_cost_max=venue_data.get("estimated_cost_max"),
+                custom_lat=venue_data.get("latitude"),
+                custom_lng=venue_data.get("longitude"),
                 sort_order=len(active_day.items) + 1,
             )
             active_day.items.append(new_item)

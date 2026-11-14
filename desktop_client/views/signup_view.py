@@ -348,6 +348,10 @@ class SignupView(ft.Container):
                     middle_initial=(self.mi_input.value or "").strip(),
                     username=username or f"{first_name.lower()}_{last_name.lower()}",
                 )
+                try:
+                    await self.auth_service.migrate_guest_trips()
+                except Exception:
+                    pass
                 self._navigate("/dashboard")
             except ApiClientError as err:
                 self._show_error(err.message or "Registration failed. Try another email or username.")

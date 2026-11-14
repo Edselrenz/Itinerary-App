@@ -409,3 +409,123 @@ def test_slippy_map_canvas_and_route_map():
     assert route_map.is_expanded is False
     route_map.toggle_expand()
     assert route_map.is_expanded is True
+
+
+def test_calculate_budget_summary_and_payload_parity():
+    """Validates calculate_budget_summary honest metrics and to_create_payload contract."""
+    from desktop_client.models.itinerary import (
+        Itinerary,
+        ItineraryDay,
+        ItineraryItem,
+        to_backend_iso_time,
+        _is_valid_uuid,
+    )
+    from desktop_client.models.place import Place
+    from desktop_client.services.itinerary_service import ItineraryService
+
+    # 1. to_backend_iso_time tests
+    assert to_backend_iso_time("09:30:00") == "09:30:00"
+    assert to_backend_iso_time("09:30") == "09:30:00"
+    assert to_backend_iso_time("09:30 AM") == "09:30:00"
+    assert to_backend_iso_time("2:15 PM") == "14:15:00"
+    assert to_backend_iso_time("09:30 AM - 11:30 AM") == "09:30:00"
+    assert to_backend_iso_time("") is None
+
+    # 2. _is_valid_uuid tests
+    assert _is_valid_uuid("b699c2ea-4d89-40c2-9ce8-7be6d4052f75") is True
+    assert _is_valid_uuid("dest-123") is False
+    assert _is_valid_uuid("osm-node-12345") is False
+    assert _is_valid_uuid(None) is False
+
+    # 3. calculate_budget_summary tests
+    itin = Itinerary(
+        id="itin-test",
+        title="Budget Test",
+        destination="Pantabangan",
+        start_date="2026-12-01",
+        end_date="2026-12-02",
+        daily_budget=3000.0,
+        days=[
+            ItineraryDay(
+                id="d1",
+                itinerary_id="itin-test",
+                day_number=1,
+                travel_date="2026-12-01",
+                items=[
+                    ItineraryItem(
+                        id="i1",
+                        day_id="d1",
+                        sort_order=1,
+                        place_id="dest-1",
+                        custom_title="Priced Place",
+                        estimated_cost_min=100.0,
+                        estimated_cost_max=250.0,
+                        planned_time="09:00 AM",
+                        custom_lat=15.8,
+                        custom_lng=121.1,
+                    ),
+                    ItineraryItem(
+                        id="i2",
+                        day_id="d1",
+                        sort_order=2,
+                        place_id="b699c2ea-4d89-40c2-9ce8-7be6d4052f75",
+                        custom_title="Unpriced Place",
+                        planned_time="02:00 PM",
+                    ),
+                ],
+            )
+        ],
+    )
+    itin_service = ItineraryService()
+    summary = itin_service.calculate_budget_summary(itin)
+    assert summary["verified_min"] == 100.0
+    assert summary["verified_max"] == 250.0
+    assert summary["unverified_count"] == 1
+    assert "₱100 - ₱250" in summary["display_text"]
+
+    # 4. to_create_payload contract verification
+    payload = itin.to_create_payload()
+    assert payload.title == "Budget Test"
+    assert len(payload.days) == 1
+    d_out = payload.days[0]
+    assert len(d_out["items"]) == 2
+
+    # Non-UUID place_id should become None in backend payload
+    item1 = d_out["items"][0]
+    assert item1["place_id"] is None
+    assert item1["planned_time"] == "09:00:00"
+    assert item1["custom_lat"] == 15.8
+    assert item1["custom_lng"] == 121.1
+
+    # Valid UUID place_id should be preserved
+    item2 = d_out["items"][1]
+    assert item2["place_id"] == "b699c2ea-4d89-40c2-9ce8-7be6d4052f75"
+    assert item2["planned_time"] == "14:00:00"
+
+
+def test_place_service_osm_category_mapping_and_nearby():
+    """Validates map_osm_tags_to_category and get_nearby_places grouping."""
+    from desktop_client.services.place_service import PlaceService
+
+    # 1. Tag mapping
+    assert PlaceService.map_osm_tags_to_category({"amenity": "cafe"}) == "cafe"
+    assert PlaceService.map_osm_tags_to_category({"amenity": "restaurant"}) == "restaurant"
+    assert PlaceService.map_osm_tags_to_category({"tourism": "hotel"}) == "hotel_accommodation"
+    assert PlaceService.map_osm_tags_to_category({"amenity": "place_of_worship"}) == "church_religious"
+    assert PlaceService.map_osm_tags_to_category({"leisure": "park"}) == "nature_park"
+    assert PlaceService.map_osm_tags_to_category({"amenity": "pharmacy"}) == "pharmacy"
+    assert PlaceService.map_osm_tags_to_category({"amenity": "hospital"}) == "hospital_clinic"
+    assert PlaceService.map_osm_tags_to_category({"amenity": "fuel"}) == "fuel_station"
+
+    # 2. get_nearby_places
+    ps = PlaceService()
+    restos = ps.get_nearby_places("Cabanatuan City", "restaurant")
+    assert isinstance(restos, list)
+    if restos:
+        assert all(r.category in ("restaurant", "cafe") for r in restos)
+
+    hospitals = ps.get_nearby_places("Cabanatuan City", "hospital")
+    assert isinstance(hospitals, list)
+    if hospitals:
+        assert all(h.category in ("hospital_clinic", "pharmacy") for h in hospitals)
+

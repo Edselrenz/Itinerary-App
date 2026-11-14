@@ -239,6 +239,10 @@ class LoginView(ft.Container):
         async def _do_login():
             try:
                 await self.auth_service.login(email, pwd, remember_me=self.remember_cb.value or False)
+                try:
+                    await self.auth_service.migrate_guest_trips()
+                except Exception:
+                    pass
                 self._navigate("/dashboard")
             except ApiClientError as err:
                 self._show_error(err.message or "Login failed. Check your credentials.")

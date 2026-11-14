@@ -18,6 +18,7 @@ from desktop_client.models.itinerary import (
     ItineraryItem,
     ItineraryItemCreatePayload,
     SuggestedItineraryRequest,
+    _is_valid_uuid,
 )
 from desktop_client.models.place import Place
 
@@ -434,6 +435,47 @@ class ItineraryService:
             # Fallback check if it was locally stored
             return self.guest_storage.delete_itinerary(itinerary_id)
 
+    def calculate_budget_summary(self, itinerary: Itinerary) -> dict[str, Any]:
+        """Transparently calculates verified min/max stop costs and unpriced stop count."""
+        verified_min = 0.0
+        verified_max = 0.0
+        unverified_count = 0
+
+        for day in itinerary.days or []:
+            for item in day.items or []:
+                c_min = item.estimated_cost_min
+                c_max = item.estimated_cost_max
+                if c_min is None and c_max is None and item.place:
+                    c_min = item.place.estimated_cost_min
+                    c_max = item.place.estimated_cost_max
+                if c_min is not None or c_max is not None:
+                    verified_min += float(c_min if c_min is not None else c_max or 0.0)
+                    verified_max += float(c_max if c_max is not None else c_min or 0.0)
+                else:
+                    unverified_count += 1
+
+        if verified_min > 0 or verified_max > 0:
+            if abs(verified_min - verified_max) < 0.01:
+                formatted_range = f"₱{verified_min:,.0f}"
+            else:
+                formatted_range = f"₱{verified_min:,.0f} - ₱{verified_max:,.0f}"
+            display_text = (
+                f"{formatted_range} (+ {unverified_count} unpriced)"
+                if unverified_count > 0
+                else formatted_range
+            )
+        elif unverified_count > 0:
+            display_text = f"{unverified_count} unpriced stops"
+        else:
+            display_text = "No stops added"
+
+        return {
+            "verified_min": verified_min,
+            "verified_max": verified_max,
+            "unverified_count": unverified_count,
+            "display_text": display_text,
+        }
+
     async def add_stop(
         self,
         itinerary: Itinerary,
@@ -451,13 +493,17 @@ class ItineraryService:
 
         if not itinerary.is_guest and self.session_manager.is_authenticated:
             try:
+                req_dict = payload.to_dict()
+                if not _is_valid_uuid(req_dict.get("place_id")):
+                    req_dict["place_id"] = None
+                    if place:
+                        req_dict["place_payload"] = place.to_dict()
                 data = await self.api_client.post(
                     f"itineraries/{itinerary.id}/days/{day_id}/items",
-                    json_data=payload.to_dict(),
+                    json_data=req_dict,
                 )
-                new_item = ItineraryItem.from_dict(data)
-                target_day.items.append(new_item)
-                return itinerary
+                if isinstance(data, dict) and "days" in data:
+                    return Itinerary.from_dict(data)
             except Exception:
                 pass
 
@@ -479,6 +525,36 @@ class ItineraryService:
         )
         target_day.items.append(new_item)
         return self.guest_storage.save_itinerary(itinerary)
+
+    async def update_stop(
+        self,
+        itinerary: Itinerary,
+        day_id: str,
+        stop_id: str,
+        patch_data: dict[str, Any],
+    ) -> Itinerary:
+        """Partially updates a stop via PATCH /api/v1/itineraries/{id}/days/{day_id}/items/{stop_id}."""
+        if not itinerary.is_guest and self.session_manager.is_authenticated:
+            try:
+                data = await self.api_client.patch(
+                    f"itineraries/{itinerary.id}/days/{day_id}/items/{stop_id}",
+                    json_data=patch_data,
+                )
+                if isinstance(data, dict) and "days" in data:
+                    return Itinerary.from_dict(data)
+            except Exception:
+                pass
+
+        target_day = next((d for d in itinerary.days if d.id == day_id), None)
+        if target_day:
+            target_item = next((i for i in target_day.items if i.id == stop_id), None)
+            if target_item:
+                for k, v in patch_data.items():
+                    if hasattr(target_item, k):
+                        setattr(target_item, k, v)
+        if itinerary.is_guest or not self.session_manager.is_authenticated:
+            self.guest_storage.save_itinerary(itinerary)
+        return itinerary
 
     async def delete_stop(self, itinerary: Itinerary, day_id: str, stop_id: str) -> Itinerary:
         """Removes a stop from an itinerary day."""

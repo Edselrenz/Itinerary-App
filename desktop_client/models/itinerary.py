@@ -2,10 +2,47 @@
 
 from dataclasses import dataclass, field
 from datetime import date, datetime
+import re
 from typing import Any, Optional
 import uuid
 
 from desktop_client.models.place import Place
+
+
+def _is_valid_uuid(val: Any) -> bool:
+    """Checks whether a string or object is a valid UUID."""
+    if not val:
+        return False
+    try:
+        uuid.UUID(str(val))
+        return True
+    except Exception:
+        return False
+
+
+def to_backend_iso_time(time_str: Optional[str]) -> Optional[str]:
+    """Normalizes user-facing time strings ('09:30 AM - 11:30 AM', '2:00 PM', '14:30') into 'HH:MM:00' for FastAPI."""
+    if not time_str:
+        return None
+    clean = str(time_str).strip()
+    if not clean:
+        return None
+    first_part = clean.split("-")[0].strip() if "-" in clean else clean
+    if re.match(r"^\d{2}:\d{2}:\d{2}$", first_part):
+        return first_part
+    if re.match(r"^\d{2}:\d{2}$", first_part):
+        return f"{first_part}:00"
+    m = re.match(r"^(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?$", first_part, re.IGNORECASE)
+    if m:
+        h = int(m.group(1))
+        mins = m.group(2)
+        meridiem = (m.group(3) or "").upper()
+        if meridiem == "PM" and h < 12:
+            h += 12
+        elif meridiem == "AM" and h == 12:
+            h = 0
+        return f"{h:02d}:{mins}:00"
+    return None
 
 
 @dataclass
@@ -262,23 +299,26 @@ class Itinerary:
         for d in self.days:
             items_data = []
             for it in d.items:
+                valid_uuid = _is_valid_uuid(it.place_id)
+                place_dict = it.place.to_dict() if it.place else None
                 items_data.append({
-                    "place_id": it.place_id,
+                    "place_id": it.place_id if valid_uuid else None,
                     "custom_title": it.custom_title or it.display_title,
-                    "custom_lat": it.custom_lat or (it.place.latitude if it.place else None),
-                    "custom_lng": it.custom_lng or (it.place.longitude if it.place else None),
+                    "custom_lat": it.custom_lat if it.custom_lat is not None else (it.place.latitude if it.place else None),
+                    "custom_lng": it.custom_lng if it.custom_lng is not None else (it.place.longitude if it.place else None),
                     "sort_order": it.sort_order,
-                    "planned_time": it.planned_time,
-                    "duration_minutes": it.duration_minutes,
+                    "planned_time": to_backend_iso_time(it.planned_time) or it.planned_time,
+                    "duration_minutes": it.duration_minutes or 90,
                     "notes": it.notes,
                     "estimated_cost_min": it.estimated_cost_min,
                     "estimated_cost_max": it.estimated_cost_max,
-                    "place": it.place.to_dict() if it.place else None,
+                    "place_payload": place_dict,
+                    "place": place_dict,
                 })
             days_data.append({
                 "day_number": d.day_number,
-                "travel_date": d.travel_date,
-                "title": d.title,
+                "travel_date": d.travel_date or self.start_date,
+                "title": d.title or f"Day {d.day_number}",
                 "items": items_data,
             })
         return ItineraryCreatePayload(

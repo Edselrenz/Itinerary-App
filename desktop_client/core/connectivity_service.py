@@ -190,32 +190,47 @@ class ConnectivityService:
         except Exception:
             pass
 
+    CLOUDFLARE_WORKER_API_URL: str = "https://ne-itinerary-api.edselrenz0.workers.dev/api/v1"
+
     async def check_host_health(self) -> bool:
         self._is_checking_health = True
         self._notify_listeners()
 
+        req_headers = {"ngrok-skip-browser-warning": "true", "Accept": "application/json"}
         health_url = f"{self.active_api_base_url}/health"
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
-                res = await client.get(health_url)
+                res = await client.get(health_url, headers=req_headers)
                 if res.status_code == 200:
                     self._is_checking_health = False
                     self.set_host_offline(False)
                     return True
-                else:
-                    self._is_checking_health = False
-                    self.set_host_offline(True, force=True)
-                    return False
         except Exception:
-            self._is_checking_health = False
-            self.set_host_offline(True, force=True)
-            return False
+            pass
+
+        # If default localhost is down and no custom URL is set, try Cloudflare Worker proxy
+        if not self._custom_api_url and "127.0.0.1" in self.settings.api_base_url:
+            try:
+                async with httpx.AsyncClient(timeout=5.0) as client:
+                    cf_res = await client.get(f"{self.CLOUDFLARE_WORKER_API_URL}/health", headers=req_headers)
+                    if cf_res.status_code == 200:
+                        self.settings.api_base_url = self.CLOUDFLARE_WORKER_API_URL
+                        self._is_checking_health = False
+                        self.set_host_offline(False)
+                        return True
+            except Exception:
+                pass
+
+        self._is_checking_health = False
+        self.set_host_offline(True, force=True)
+        return False
 
     def check_host_health_sync(self) -> bool:
         health_url = f"{self.active_api_base_url}/health"
+        req_headers = {"ngrok-skip-browser-warning": "true", "Accept": "application/json"}
         try:
             with httpx.Client(timeout=3.0) as client:
-                res = client.get(health_url)
+                res = client.get(health_url, headers=req_headers)
                 if res.status_code == 200:
                     self.set_host_offline(False)
                     return True

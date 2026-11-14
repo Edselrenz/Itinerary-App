@@ -145,6 +145,7 @@ class PlaceService:
             params["categories"] = [category.strip()]
 
         # Resolve municipality_id vs municipality_name safely (prevents FastAPI 422 on non-UUID town names)
+        muni_name_resolved = municipality_name
         if municipality_id and municipality_id.strip() and municipality_id != "all":
             raw_m = municipality_id.strip()
             # If a town name was passed (e.g. "Bongabon", "Pantabangan"), route to municipality_name
@@ -153,12 +154,12 @@ class PlaceService:
                 or any(raw_m.lower() == k.lower() for k in ALL_32_LGUS_METADATA)
             )
             if is_known_town_name:
-                municipality_name = raw_m
+                muni_name_resolved = raw_m
             else:
                 params["municipality_id"] = raw_m
 
-        if municipality_name and municipality_name.strip() and municipality_name.lower() != "all":
-            params["municipality_name"] = municipality_name.strip()
+        if muni_name_resolved and muni_name_resolved.strip() and muni_name_resolved.lower() != "all":
+            params["municipality_name"] = muni_name_resolved.strip()
 
         if price_tier and price_tier.strip() and price_tier != "all":
             params["price_tier"] = price_tier.strip().lower()
@@ -229,6 +230,158 @@ class PlaceService:
             if str(p.id) == str(place_id):
                 return p
         return None
+
+    @staticmethod
+    def map_osm_tags_to_category(tags: dict[str, Any]) -> str:
+        """Maps OpenStreetMap amenity/tourism/historic/leisure tags to canonical categories."""
+        amenity = str(tags.get("amenity", "")).lower()
+        tourism = str(tags.get("tourism", "")).lower()
+        leisure = str(tags.get("leisure", "")).lower()
+        shop = str(tags.get("shop", "")).lower()
+        historic = str(tags.get("historic", "")).lower()
+
+        if amenity == "cafe":
+            return "cafe"
+        if amenity in ("restaurant", "fast_food", "food_court"):
+            return "restaurant"
+        if tourism in ("hotel", "motel", "guest_house", "hostel"):
+            return "hotel_accommodation"
+        if tourism in ("attraction", "viewpoint") or historic in ("monument", "memorial"):
+            return "tourist_attraction"
+        if tourism == "museum" or historic == "archaeological_site":
+            return "museum_cultural"
+        if amenity == "place_of_worship":
+            return "church_religious"
+        if leisure in ("park", "nature_reserve", "garden"):
+            return "nature_park"
+        if leisure in ("water_park", "swimming_pool") or tourism == "resort":
+            return "resort_swimming"
+        if amenity in ("hospital", "clinic", "doctors"):
+            return "hospital_clinic"
+        if amenity == "pharmacy":
+            return "pharmacy"
+        if amenity in ("bank", "atm"):
+            return "bank_atm"
+        if amenity == "fuel":
+            return "fuel_station"
+        if amenity in ("bus_station", "taxi") or str(tags.get("railway", "")).lower() == "station":
+            return "transport_terminal"
+        if shop in ("supermarket", "convenience"):
+            return "convenience_store"
+        if shop or amenity == "marketplace":
+            return "shopping_market"
+        if amenity in ("townhall", "police", "post_office"):
+            return "public_facility"
+        return "tourist_attraction"
+
+    async def fetch_live_osm_places(
+        self,
+        min_lat: float = 15.15,
+        max_lat: float = 16.15,
+        min_lng: float = 120.70,
+        max_lng: float = 121.40,
+    ) -> list[Place]:
+        """Queries backend /places and live OpenStreetMap Overpass API within bounds and merges into cache."""
+        discovered: list[Place] = []
+        # 1. Try backend bbox query first
+        try:
+            res = await self.get_places(
+                page=1,
+                page_size=500,
+                min_lat=min_lat,
+                max_lat=max_lat,
+                min_lng=min_lng,
+                max_lng=max_lng,
+            )
+            if res.items:
+                discovered.extend(res.items)
+        except Exception:
+            pass
+
+        # 2. Query live Overpass API for viewport bbox
+        bbox = f"{min_lat},{min_lng},{max_lat},{max_lng}"
+        overpass_query = f"""
+        [out:json][timeout:12];
+        (
+          node["amenity"~"cafe|restaurant|fast_food|bank|atm|pharmacy|hospital|clinic|fuel|place_of_worship|bus_station|townhall"]({bbox});
+          node["tourism"~"attraction|hotel|motel|guest_house|museum|viewpoint|resort"]({bbox});
+          node["leisure"~"park|resort|water_park|nature_reserve|swimming_pool"]({bbox});
+          way["tourism"~"attraction|hotel|resort|museum"]({bbox});
+        );
+        out center body;
+        """
+        endpoints = [
+            "https://overpass-api.de/api/interpreter",
+            "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+        ]
+        for ep in endpoints:
+            try:
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    resp = await client.get(ep, params={"data": overpass_query})
+                    if resp.status_code == 200:
+                        payload = resp.json()
+                        for el in payload.get("elements", []):
+                            tags = el.get("tags") or {}
+                            name = tags.get("name") or tags.get("name:en") or tags.get("alt_name")
+                            if not name:
+                                continue
+                            lat = el.get("lat") or (el.get("center") or {}).get("lat")
+                            lng = el.get("lon") or (el.get("center") or {}).get("lon")
+                            if lat is None or lng is None:
+                                continue
+                            cat = self.map_osm_tags_to_category(tags)
+                            city = tags.get("addr:city") or tags.get("addr:municipality") or "Nueva Ecija"
+                            street = tags.get("addr:street") or ""
+                            address = f"{street}, {city}" if street else city
+                            osm_id = f"{el.get('type', 'node')}-{el.get('id')}"
+                            discovered.append(
+                                Place(
+                                    id=f"osm-{osm_id}",
+                                    name=str(name).strip(),
+                                    category=cat,
+                                    latitude=float(lat),
+                                    longitude=float(lng),
+                                    municipality_name=city,
+                                    address_text=address,
+                                    description=tags.get("description") or tags.get("tourism:description") or "",
+                                    phone=tags.get("phone") or tags.get("contact:phone"),
+                                    website=tags.get("website") or tags.get("contact:website"),
+                                    opening_hours=tags.get("opening_hours"),
+                                    directions_url=f"https://www.google.com/maps/dir/?api=1&destination={lat},{lng}",
+                                )
+                            )
+                        break
+            except Exception:
+                continue
+
+        if discovered:
+            self.merge_places_into_cache(discovered)
+        return discovered
+
+    def get_nearby_places(
+        self,
+        municipality: Optional[str] = None,
+        category_tab: str = "restaurant",
+    ) -> list[Place]:
+        """Filters cached places for nearby amenities by municipality and category tab matching Web app."""
+        group_map = {
+            "restaurant": {"restaurant", "cafe"},
+            "restaurants": {"restaurant", "cafe"},
+            "hospital": {"hospital_clinic", "pharmacy"},
+            "hospitals": {"hospital_clinic", "pharmacy"},
+            "store": {"convenience_store", "shopping_market", "fuel_station", "bank_atm"},
+            "stores": {"convenience_store", "shopping_market", "fuel_station", "bank_atm"},
+        }
+        allowed_cats = group_map.get(category_tab.lower(), {"restaurant", "cafe"})
+        muni_places = self.get_loaded_places(municipality)
+        if len(muni_places) < 3 and municipality and municipality.lower().strip() not in ("all", "nueva ecija"):
+            muni_places = self.get_loaded_places()
+
+        res: list[Place] = []
+        for p in muni_places:
+            if p.category in allowed_cats:
+                res.append(p)
+        return res
 
 
 _place_service_instance: Optional[PlaceService] = None

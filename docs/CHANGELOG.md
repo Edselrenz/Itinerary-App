@@ -5,6 +5,38 @@ All notable changes to the Nueva Ecija Travel Itinerary project are documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.52.0] - 2026-11-14
+### Fixed
+- **Network Resilience & Edge Proxy Failover (`core/api_client.py` & `core/connectivity_service.py`)**:
+  - Injected `"ngrok-skip-browser-warning": "true"` across `ApiClient._get_headers()` and `ConnectivityService` health probes to bypass ngrok interstitial warning pages.
+  - Implemented automatic failover in `ConnectivityService` to the Cloudflare Worker proxy (`https://ne-itinerary-api.edselrenz0.workers.dev/api/v1/health`) whenever local `127.0.0.1:8000` is offline and no custom URL is configured.
+  - Corrected API gateway error detection: status codes `502`, `503`, and `504` trigger `set_host_offline(True, force=True)`, and `set_host_offline(False)` is only invoked when `response.status_code < 500`.
+  - Serialized 401 token refresh attempts behind an `asyncio.Lock()` and excluded auth endpoints (`/auth/login`, `/auth/register`, `/auth/refresh`) from triggering recursive refresh cycles.
+- **Service & Domain Model Parity (`models/itinerary.py` & `services/place_service.py`)**:
+  - Resolved `NameError: name 'muni_name_resolved' is not defined` in `PlaceService.get_places()` while preserving the `is_known_town_name` check for test compatibility (`test_def_06_place_service_query_parameter_mapping`).
+  - Added `map_osm_tags_to_category()`, `fetch_live_osm_places()` (querying `/places/discover` and live OpenStreetMap Overpass API), and `get_nearby_places(municipality, category_tab)` supporting `"restaurant"`, `"hospital"`, and `"store"` groupings.
+  - Added `to_backend_iso_time()` normalizing user time strings (`"09:30 AM"`, `"2:00 PM"`, `"09:30 AM - 11:30 AM"`) into `"HH:MM:00"` for FastAPI validation.
+  - Updated `Itinerary.to_create_payload()`: non-UUID `place_id` values are sent as `place_id: None` with `place_payload: it.place.to_dict()` and `place: it.place.to_dict()` to avoid FastAPI HTTP 422 errors, and `custom_lat`/`custom_lng` coordinates are preserved.
+- **Itinerary Service Parity (`services/itinerary_service.py`)**:
+  - Implemented `calculate_budget_summary(itinerary)` providing verified min/max stop costs and unverified stop counts matching the web app.
+  - Fixed `add_stop()` to return `Itinerary.from_dict(data)` directly from FastAPI's `ItineraryOut` response, eliminating state corruption where stops were assigned itinerary UUIDs.
+  - Added `update_stop(itinerary, day_id, stop_id, patch_data)` with cloud PATCH and offline storage fallback.
+- **Components & View Interactions**:
+  - `PlaceCard`: Added `compact: bool = False` (92px vs 140px thumbnail) and `on_click` support, resolving the crash when opening the bottom drawer in `PlacesView`.
+  - `StopCard`: Added `on_click: Optional[Callable[[ItineraryItem], None]] = None` and wired it to `self.ink = True` for clickable card interaction in view modes.
+  - `DashboardView`: Fixed `TypeError` in `_navigate()` when clicking saved itinerary cards by accepting optional `trip_data: Optional[Itinerary] = None`.
+  - `ProfileView`: Replaced invalid `_run_async` with `self.safe_page.run_task(_do_test)` in `_open_settings_dialog()`, and added `Current Password` and `New Password` fields in `_open_edit_profile_dialog()`.
+  - `LoginView` & `SignupView`: Automatically invoked `await self.auth_service.migrate_guest_trips()` post-authentication.
+  - `SuggestedWizardView`: Added Minimum Place Rating chips (`All Ratings`, `4.0+ ★`, `4.5+ ★`), Verified Place Costs badge, collapsible Planning Assumptions, municipal nearby amenities filtering, and draft restoration on return from Map view.
+  - `CustomBuilderView`: Added Traveler Preferences pills, `✨ Recommended` category filter with preference-to-category mapping, destination priority sorting, editable Trip Settings and Verified Costs mini-card, and fixed off-grid custom venue coordinates.
+  - `TripDetailView`: Enabled `show_place_detail_dialog` on `StopCard` click in view mode, added `available_days` and `target_day` handling in `_edit_stop()`, and passed `custom_lat`/`custom_lng` in `_open_add_custom_stop()`.
+### Verified
+- **Multi-Suite Automated Testing & Standalone Compilation**:
+  - Desktop Client pytest suite: 50 passed, 0 failed, 1 deselected in 2.41s [100% PASS].
+  - Backend pytest suite: 21 passed, 0 failed in 8.83s [100% PASS].
+  - Canonical Web Vitest suite: 32 test files, 348 unit tests passed in 22.44s [100% GREEN, 0 edits in `Project/`].
+  - Standalone Windows distribution recompiled cleanly via `scripts/build_standalone_exe.py` -> `dist/NuevaEcijaTravel/NuevaEcijaTravel.exe` (15.21 MB exe, 397.41 MB total distribution with 2,673 OSM places, tiles, and photos).
+
 ## [0.51.1] - 2026-11-14
 ### Fixed
 - **`SuggestedWizardView` Constructor Signature Remediation (`51.7`)**:

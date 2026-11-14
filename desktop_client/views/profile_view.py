@@ -457,7 +457,14 @@ class ProfileView(ft.Container):
                     api_status.color = ThemeColors.ERROR
                 dlg.update()
 
-            self._run_async(_do_test)
+            if self.safe_page:
+                self.safe_page.run_task(_do_test)
+            else:
+                try:
+                    loop = asyncio.get_running_loop()
+                    loop.create_task(_do_test())
+                except RuntimeError:
+                    pass
 
         def _save_url(_):
             new_url = (api_url_input.value or "").strip()
@@ -1116,6 +1123,20 @@ class ProfileView(ft.Container):
             border_radius=10,
             dense=True,
         )
+        current_pwd_input = ft.TextField(
+            label="Current Password (optional)",
+            password=True,
+            can_reveal_password=True,
+            border_radius=10,
+            dense=True,
+        )
+        new_pwd_input = ft.TextField(
+            label="New Password (min 8 chars)",
+            password=True,
+            can_reveal_password=True,
+            border_radius=10,
+            dense=True,
+        )
 
         validation_text = ft.Text("", size=11, color=ThemeColors.ERROR)
 
@@ -1133,6 +1154,13 @@ class ProfileView(ft.Container):
             except ValueError:
                 bud_val = 3000.0
 
+            cur_pwd_val = (current_pwd_input.value or "").strip()
+            new_pwd_val = (new_pwd_input.value or "").strip()
+            if new_pwd_val and len(new_pwd_val) < 8:
+                validation_text.value = "New password must be at least 8 characters."
+                dlg.update()
+                return
+
             if not f_val or not l_val:
                 validation_text.value = "First Name and Last Name are required."
                 dlg.update()
@@ -1149,6 +1177,8 @@ class ProfileView(ft.Container):
                 gender=g_val or None,
                 default_daily_budget=bud_val,
                 avatar_url=current_avatar_url[0],
+                current_password=cur_pwd_val or None,
+                new_password=new_pwd_val or None,
             )
 
             async def _update():
@@ -1204,6 +1234,8 @@ class ProfileView(ft.Container):
                     birthday_input,
                     gender_input,
                     budget_input,
+                    current_pwd_input,
+                    new_pwd_input,
                     validation_text,
                 ],
                 spacing=8,

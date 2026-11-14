@@ -22,6 +22,7 @@ from desktop_client.config.settings import (
 )
 from desktop_client.core.api_client import ApiClientError
 from desktop_client.core.commute_guide import get_leg_commute_info
+from desktop_client.core.session import get_session_manager
 from desktop_client.models.itinerary import (
     Itinerary,
     ItineraryDay,
@@ -80,7 +81,8 @@ class SuggestedWizardView(ft.Container):
         self.destination_val = dest
         self.start_date_val = (today + timedelta(days=7)).strftime("%Y-%m-%d")
         self.end_date_val = (today + timedelta(days=9)).strftime("%Y-%m-%d")
-        self.budget_val = 2500.0
+        user = get_session_manager().current_user
+        self.budget_val = float(user.default_daily_budget) if (user and user.default_daily_budget) else 2500.0
         self.pacing_val = "moderate"
         self.travel_mode_val = "drive"  # 'drive', 'motorcycle', 'transit'
         self.min_rating_val = 0.0
@@ -97,6 +99,13 @@ class SuggestedWizardView(ft.Container):
         self.generated_itinerary: Optional[Itinerary] = None
         self.active_day_index = 0
         self.save_feedback: Optional[str] = None
+        self.is_assumptions_expanded = False
+
+        # Restore draft if returning from map view
+        existing_draft = self.itinerary_service.get_active_draft_itinerary()
+        if existing_draft and existing_draft.days and not anchor_place_id:
+            self.generated_itinerary = existing_draft
+            self.view_mode = "itinerary"
 
         # Nearby Amenities State
         self.nearby_category = "restaurant"
@@ -266,6 +275,33 @@ class SuggestedWizardView(ft.Container):
 
         pacing_row = ft.Row(controls=pacing_cards, spacing=12)
 
+        # Minimum Place Rating Filter (matching Web Figma chips)
+        rating_options = [
+            (0.0, "All Ratings"),
+            (4.0, "4.0+ ★"),
+            (4.5, "4.5+ ★"),
+        ]
+        rating_chips: list[ft.Control] = []
+        for r_val, r_label in rating_options:
+            is_r_sel = abs(self.min_rating_val - r_val) < 0.05
+            rating_chips.append(
+                ft.Container(
+                    content=ft.Text(
+                        r_label,
+                        size=11,
+                        weight=ft.FontWeight.BOLD if is_r_sel else ft.FontWeight.NORMAL,
+                        color=ft.Colors.WHITE if is_r_sel else ThemeColors.TEXT_MAIN_LIGHT,
+                    ),
+                    bgcolor=ThemeColors.PRIMARY_BLUE if is_r_sel else ThemeColors.SURFACE_LIGHT,
+                    border=ft.Border.all(1, ThemeColors.PRIMARY_BLUE if is_r_sel else ThemeColors.BORDER_LIGHT),
+                    border_radius=14,
+                    padding=ft.Padding.symmetric(horizontal=12, vertical=6),
+                    ink=True,
+                    on_click=lambda _, v=r_val: self._set_min_rating(v),
+                )
+            )
+        rating_row = ft.Row(controls=rating_chips, spacing=8)
+
         # Category Preferences Chips (Multi-Select)
         category_chips: list[ft.Control] = []
         for cat in CANONICAL_CATEGORIES:
@@ -339,6 +375,9 @@ class SuggestedWizardView(ft.Container):
                     ft.Container(height=6),
                     ft.Text("Step 5: Pacing & Intensity", size=14, weight=ft.FontWeight.BOLD),
                     pacing_row,
+                    ft.Container(height=6),
+                    ft.Text("Step 5b: Minimum Venue Rating", size=14, weight=ft.FontWeight.BOLD),
+                    rating_row,
                     ft.Container(height=6),
                     ft.Text("Step 6: Traveler Preferences & Interests", size=14, weight=ft.FontWeight.BOLD),
                     categories_wrap,
@@ -479,24 +518,67 @@ class SuggestedWizardView(ft.Container):
             margin=ft.Margin.only(bottom=12),
         )
 
-        # Assumptions Info Box
-        assumptions_box = ft.Container(
+        # Verified Place Costs Badge
+        summary = self.itinerary_service.calculate_budget_summary(itin)
+        verified_costs_card = ft.Container(
             content=ft.Row(
                 controls=[
-                    ft.Icon(ft.Icons.LIGHTBULB_OUTLINE, size=16, color=ThemeColors.PRIMARY_BLUE),
-                    ft.Text(
-                        f"Assumptions: Pacing: {self.pacing_val.title()} • Travel Mode: {self.travel_mode_val.title()} • "
-                        "Lunch scheduled between 12:00 PM – 1:00 PM • Nearby stops clustered within same municipal corridors.",
-                        size=11,
-                        color=ThemeColors.TEXT_MUTED_LIGHT,
+                    ft.Icon(ft.Icons.PAYMENTS_OUTLINED, size=15, color=ThemeColors.BUDGET_GREEN),
+                    ft.Text(f"Verified Place Costs: {summary['display_text']}", size=11, weight=ft.FontWeight.BOLD, color=ThemeColors.BUDGET_GREEN),
+                ],
+                spacing=6,
+            ),
+            bgcolor=ThemeColors.SUCCESS_BG,
+            border_radius=8,
+            padding=ft.Padding.symmetric(horizontal=12, vertical=8),
+            margin=ft.Margin.only(bottom=10),
+        )
+
+        # Expandable Assumptions Info Box
+        assumptions_items = itin.assumptions or [
+            f"Pacing: {self.pacing_val.title()} • Travel Mode: {self.travel_mode_val.title()}",
+            "Lunch scheduled between 12:00 PM – 1:00 PM",
+            "Stops clustered within same municipal corridors to minimize transit time",
+        ]
+        assumptions_controls: list[ft.Control] = [
+            ft.Row(
+                controls=[
+                    ft.Row(
+                        controls=[
+                            ft.Icon(ft.Icons.LIGHTBULB_OUTLINE, size=16, color=ThemeColors.PRIMARY_BLUE),
+                            ft.Text("Trip Assumptions & Corridor Notes", size=11, weight=ft.FontWeight.BOLD, color=ThemeColors.PRIMARY_BLUE),
+                        ],
+                        spacing=6,
+                    ),
+                    ft.Icon(
+                        ft.Icons.KEYBOARD_ARROW_UP if self.is_assumptions_expanded else ft.Icons.KEYBOARD_ARROW_DOWN,
+                        size=16,
+                        color=ThemeColors.PRIMARY_BLUE,
                     ),
                 ],
-                spacing=8,
-            ),
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            )
+        ]
+        if self.is_assumptions_expanded:
+            for asm in assumptions_items:
+                assumptions_controls.append(
+                    ft.Row(
+                        controls=[
+                            ft.Icon(ft.Icons.CHECK_SMALL, size=14, color=ThemeColors.PRIMARY_BLUE),
+                            ft.Text(asm, size=11, color=ThemeColors.TEXT_MUTED_LIGHT),
+                        ],
+                        spacing=4,
+                    )
+                )
+
+        assumptions_box = ft.Container(
+            content=ft.Column(controls=assumptions_controls, spacing=4),
             bgcolor=ThemeColors.AZURE_SOFT,
             border_radius=8,
             padding=10,
             margin=ft.Margin.only(bottom=12),
+            ink=True,
+            on_click=lambda _: self._toggle_assumptions(),
         )
 
         # Save Feedback Banner
@@ -572,6 +654,7 @@ class SuggestedWizardView(ft.Container):
                     StopCard(
                         item=item,
                         editable=False,
+                        on_click=lambda itm: show_place_detail_dialog(self.safe_page, itm.place, on_navigate=self.on_navigate) if (itm.place and self.safe_page) else None,
                     )
                 )
         else:
@@ -607,6 +690,7 @@ class SuggestedWizardView(ft.Container):
         return ft.Column(
             controls=[
                 overview_card,
+                verified_costs_card,
                 feedback_banner,
                 assumptions_box,
                 day_bar,
@@ -754,6 +838,16 @@ class SuggestedWizardView(ft.Container):
         self.nearby_category = cat
         self._load_nearby_amenities()
 
+    def _toggle_assumptions(self) -> None:
+        self.is_assumptions_expanded = not self.is_assumptions_expanded
+        self._build_content()
+        self._safe_update()
+
+    def _set_min_rating(self, val: float) -> None:
+        self.min_rating_val = val
+        self._build_content()
+        self._safe_update()
+
     def _load_nearby_amenities(self) -> None:
         self.nearby_loading = True
         self._build_content()
@@ -761,13 +855,17 @@ class SuggestedWizardView(ft.Container):
 
         async def _query():
             try:
-                cat_arg = "restaurant" if self.nearby_category == "restaurant" else None
-                res = await self.place_service.get_places(page=1, page_size=8, category=cat_arg)
-                self.nearby_amenities = res.items
+                itin = self.generated_itinerary
+                muni = itin.destination if itin else "Nueva Ecija"
+                if itin and itin.days and self.active_day_index < len(itin.days):
+                    act_day = itin.days[self.active_day_index]
+                    for itm in act_day.items:
+                        if itm.place and itm.place.municipality_name:
+                            muni = itm.place.municipality_name
+                            break
+                self.nearby_amenities = self.place_service.get_nearby_places(muni, self.nearby_category)
             except Exception:
-                from desktop_client.views.dashboard_view import DashboardView
-                fallback = DashboardView()._get_fallback_popular_places()
-                self.nearby_amenities = fallback[:5]
+                self.nearby_amenities = []
             finally:
                 self.nearby_loading = False
                 self._build_content()
@@ -824,42 +922,13 @@ class SuggestedWizardView(ft.Container):
 
         async def _do_save():
             try:
-                # Save into cloud account or guest local storage
-                from desktop_client.models.itinerary import ItineraryCreatePayload
-                days_payload = []
-                for d in self.generated_itinerary.days:
-                    items_payload = []
-                    for itm in d.items:
-                        items_payload.append({
-                            "place_id": itm.place_id,
-                            "custom_title": itm.custom_title,
-                            "sort_order": itm.sort_order,
-                            "planned_time": itm.planned_time,
-                            "duration_minutes": itm.duration_minutes,
-                            "notes": itm.notes,
-                            "estimated_cost_min": itm.estimated_cost_min,
-                            "estimated_cost_max": itm.estimated_cost_max,
-                            "place": itm.place.to_dict() if itm.place else None,
-                        })
-                    days_payload.append({
-                        "day_number": d.day_number,
-                        "travel_date": d.travel_date,
-                        "title": d.title,
-                        "items": items_payload,
-                    })
-
-                payload = ItineraryCreatePayload(
-                    title=self.generated_itinerary.title,
-                    destination=self.generated_itinerary.destination,
-                    start_date=self.generated_itinerary.start_date,
-                    end_date=self.generated_itinerary.end_date,
-                    daily_budget=self.generated_itinerary.daily_budget,
-                    preferences=self.generated_itinerary.preferences,
-                    type="suggested",
-                    days=days_payload,
-                )
+                payload = self.generated_itinerary.to_create_payload()
                 saved = await self.itinerary_service.create_itinerary(payload)
+                self.itinerary_service.set_active_draft_itinerary(None)
                 self.save_feedback = f"Trip '{saved.title}' saved to your itineraries!"
+                if self.on_navigate:
+                    self.on_navigate(f"/trips/{saved.id}", saved)
+                    return
             except Exception as ex:
                 self.save_feedback = f"Saved locally in itinerary draft ({str(ex)})."
             finally:

@@ -316,6 +316,28 @@ class CustomBuilderView(ft.Container):
             spacing=8,
         )
 
+        pref_options = ["Nature & Parks", "Food Trip", "Culture & History", "Shopping", "Resort"]
+        pref_pills: list[ft.Control] = []
+        for pref in pref_options:
+            is_p_sel = pref in self.preferences
+            pref_pills.append(
+                ft.Container(
+                    content=ft.Text(
+                        pref,
+                        size=11,
+                        weight=ft.FontWeight.BOLD if is_p_sel else ft.FontWeight.NORMAL,
+                        color=ft.Colors.WHITE if is_p_sel else ThemeColors.TEXT_MAIN_LIGHT,
+                    ),
+                    bgcolor=ThemeColors.PRIMARY_BLUE if is_p_sel else ThemeColors.SURFACE_LIGHT,
+                    border=ft.Border.all(1, ThemeColors.PRIMARY_BLUE if is_p_sel else ThemeColors.BORDER_LIGHT),
+                    border_radius=14,
+                    padding=ft.Padding.symmetric(horizontal=12, vertical=6),
+                    ink=True,
+                    on_click=lambda _, pr=pref: self._toggle_pref(pr),
+                )
+            )
+        pref_wrap = ft.Row(controls=pref_pills, wrap=True, spacing=6)
+
         def _start_building(_):
             self.sync_days_with_date_range()
             self.active_view = "browse"
@@ -351,6 +373,9 @@ class CustomBuilderView(ft.Container):
                     ft.Container(height=4),
                     budget_input,
                     budget_pills,
+                    ft.Container(height=4),
+                    ft.Text("Traveler Preferences", size=12, weight=ft.FontWeight.W_600, color=ThemeColors.TEXT_MUTED_LIGHT),
+                    pref_wrap,
                     ft.Container(height=16),
                     start_btn,
                 ],
@@ -433,7 +458,16 @@ class CustomBuilderView(ft.Container):
         )
 
         cat_chips: list[ft.Control] = []
-        cats = [("all", "All"), ("nature_park", "Nature"), ("restaurant", "Food"), ("museum_cultural", "Culture"), ("resort_swimming", "Resorts"), ("shopping_market", "Shopping")]
+        cats = [("all", "All")]
+        if self.preferences:
+            cats.append(("recommended", "✨ Recommended"))
+        cats.extend([
+            ("nature_park", "Nature"),
+            ("restaurant", "Food"),
+            ("museum_cultural", "Culture"),
+            ("resort_swimming", "Resorts"),
+            ("shopping_market", "Shopping"),
+        ])
         for c_key, c_label in cats:
             is_act = self.browse_category == c_key
             cat_chips.append(
@@ -562,6 +596,80 @@ class CustomBuilderView(ft.Container):
 
         # Active Day
         active_day = self.days[self.active_day_index] if self.days else None
+
+        # Trip Settings & Verified Costs Mini Card
+        itin_temp = Itinerary(
+            id="draft",
+            title=self.trip_title,
+            destination=self.destination,
+            start_date=self.start_date_str,
+            end_date=self.end_date_str,
+            daily_budget=self.daily_budget,
+            days=self.days,
+        )
+        budget_summary = self.itinerary_service.calculate_budget_summary(itin_temp)
+
+        title_input_mini = ft.TextField(
+            value=self.trip_title,
+            label="Trip Title",
+            dense=True,
+            border_radius=8,
+            expand=True,
+            on_change=lambda e: setattr(self, "trip_title", e.control.value),
+        )
+        dest_picker_mini = DestinationPicker(
+            value=self.destination,
+            label="Destination",
+            on_change=lambda val: setattr(self, "destination", val),
+        )
+
+        date_summary_mini = ft.Text(f"{self.start_date_str} → {self.end_date_str}", size=11, weight=ft.FontWeight.BOLD)
+        date_chip_mini = ft.Container(
+            content=ft.Row(
+                controls=[
+                    ft.Icon(ft.Icons.CALENDAR_MONTH, size=14, color=ThemeColors.PRIMARY_BLUE),
+                    date_summary_mini,
+                ],
+                spacing=4,
+            ),
+            bgcolor=ThemeColors.AZURE_SOFT,
+            border_radius=8,
+            padding=ft.Padding.symmetric(horizontal=10, vertical=6),
+            ink=True,
+            on_click=lambda _: self._open_date_picker(date_summary_mini),
+        )
+
+        settings_card = ft.Container(
+            content=ft.Column(
+                controls=[
+                    ft.Row(
+                        controls=[
+                            title_input_mini,
+                            dest_picker_mini,
+                            date_chip_mini,
+                        ],
+                        spacing=8,
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                    ),
+                    ft.Row(
+                        controls=[
+                            ft.Icon(ft.Icons.PAYMENTS_OUTLINED, size=14, color=ThemeColors.BUDGET_GREEN),
+                            ft.Text(f"Verified Place Costs: {budget_summary['display_text']}", size=11, weight=ft.FontWeight.BOLD, color=ThemeColors.BUDGET_GREEN),
+                            ft.Container(expand=True),
+                            ft.Text(f"Target Budget: ₱{self.daily_budget:,.0f} / day", size=11, color=ThemeColors.TEXT_MUTED_LIGHT),
+                        ],
+                        spacing=6,
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                    ),
+                ],
+                spacing=8,
+            ),
+            bgcolor=ThemeColors.SURFACE_LIGHT,
+            border=ft.Border.all(1, ThemeColors.BORDER_LIGHT),
+            border_radius=12,
+            padding=12,
+            margin=ft.Margin.only(bottom=10),
+        )
 
         # Day capsule bar
         day_buttons: list[ft.Control] = []
@@ -699,6 +807,7 @@ class CustomBuilderView(ft.Container):
             controls=[
                 top_switcher,
                 ft.Container(height=8),
+                settings_card,
                 day_bar,
                 ft.Container(height=10),
                 active_day_header,
@@ -976,7 +1085,7 @@ class CustomBuilderView(ft.Container):
         self.itinerary_service.set_active_draft_itinerary(draft_itin)
         day_num = self.active_day_index + 1
         if self.on_navigate:
-            self.on_navigate(f"/map?itineraryId=draft&day={day_num}")
+            self.on_navigate(f"/map?itineraryId=draft&day={day_num}&source=builder")
 
     def _save_custom_itinerary(self) -> None:
         if self.total_stops_count == 0:
@@ -986,29 +1095,8 @@ class CustomBuilderView(ft.Container):
             return
 
         async def _do_save():
-            days_payload = []
-            for d in self.days:
-                items_payload = []
-                for itm in d.items:
-                    items_payload.append({
-                        "place_id": itm.place_id,
-                        "custom_title": itm.custom_title,
-                        "sort_order": itm.sort_order,
-                        "planned_time": itm.planned_time,
-                        "duration_minutes": itm.duration_minutes,
-                        "notes": itm.notes,
-                        "estimated_cost_min": itm.estimated_cost_min,
-                        "estimated_cost_max": itm.estimated_cost_max,
-                        "place": itm.place.to_dict() if itm.place else None,
-                    })
-                days_payload.append({
-                    "day_number": d.day_number,
-                    "travel_date": d.travel_date,
-                    "title": d.title,
-                    "items": items_payload,
-                })
-
-            payload = ItineraryCreatePayload(
+            itin_to_save = Itinerary(
+                id=self.existing_itinerary.id if (self.existing_itinerary and not self.is_draft_from_wizard and self.existing_itinerary.id != "draft") else "draft",
                 title=self.trip_title,
                 destination=self.destination,
                 start_date=self.start_date_str,
@@ -1016,9 +1104,21 @@ class CustomBuilderView(ft.Container):
                 daily_budget=self.daily_budget,
                 preferences=self.preferences,
                 type="custom",
-                days=days_payload,
+                days=self.days,
             )
-            saved = await self.itinerary_service.create_itinerary(payload)
+            payload = itin_to_save.to_create_payload()
+            if self.existing_itinerary and not self.is_draft_from_wizard and self.existing_itinerary.id != "draft":
+                self.existing_itinerary.title = self.trip_title
+                self.existing_itinerary.destination = self.destination
+                self.existing_itinerary.start_date = self.start_date_str
+                self.existing_itinerary.end_date = self.end_date_str
+                self.existing_itinerary.daily_budget = self.daily_budget
+                self.existing_itinerary.preferences = self.preferences
+                self.existing_itinerary.days = self.days
+                saved = await self.itinerary_service.update_itinerary(self.existing_itinerary)
+            else:
+                saved = await self.itinerary_service.create_itinerary(payload)
+
             self.is_dirty = False
             self.itinerary_service.set_active_draft_itinerary(None)
             if self.on_navigate:
@@ -1033,6 +1133,15 @@ class CustomBuilderView(ft.Container):
                 loop.create_task(_do_save())
             except RuntimeError:
                 pass
+
+    def _toggle_pref(self, pref: str) -> None:
+        if pref in self.preferences:
+            self.preferences.remove(pref)
+        else:
+            self.preferences.append(pref)
+        self.is_dirty = True
+        self._build_content()
+        self._safe_update()
 
     def _open_date_picker(self, summary_label: ft.Text) -> None:
         def _on_dates(s: str, e: str):
@@ -1078,10 +1187,29 @@ class CustomBuilderView(ft.Container):
 
         async def _worker():
             try:
-                cat = None if self.browse_category == "all" else self.browse_category
+                pref_cat_map = {
+                    "Nature & Parks": ["nature_park"],
+                    "Food Trip": ["restaurant", "cafe"],
+                    "Culture & History": ["museum_cultural", "church_religious"],
+                    "Shopping": ["shopping_market", "convenience_store"],
+                    "Resort": ["resort_swimming"],
+                }
+                cat = None if self.browse_category in ("all", "recommended") else self.browse_category
                 q = self.browse_search if self.browse_search else None
                 res = await self.place_service.get_places(page=1, page_size=60, category=cat, search=q)
-                self.browse_places = res.items
+                places = res.items
+                if self.browse_category == "recommended" and self.preferences:
+                    target_cats = set()
+                    for pref in self.preferences:
+                        target_cats.update(pref_cat_map.get(pref, []))
+                    if target_cats:
+                        recommended_places = [p for p in places if p.category in target_cats]
+                        if recommended_places:
+                            places = recommended_places
+                if self.destination and self.destination.lower() not in ("nueva ecija", "all"):
+                    dest_lower = self.destination.lower()
+                    places.sort(key=lambda p: 0 if (p.municipality_name or "").lower() == dest_lower else 1)
+                self.browse_places = places
             except Exception:
                 from desktop_client.core.offline_data import get_all_offline_places
                 raw = get_all_offline_places()

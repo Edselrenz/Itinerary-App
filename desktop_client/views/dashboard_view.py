@@ -23,7 +23,7 @@ class DashboardView(ft.Container):
     - Saved Itineraries preview cards with plan badges and daily budgets.
     """
 
-    def __init__(self, on_navigate: Optional[Callable[[str], None]] = None):
+    def __init__(self, on_navigate: Optional[Callable[..., None]] = None):
         super().__init__()
         self.on_navigate = on_navigate
         self.session_manager = get_session_manager()
@@ -1063,6 +1063,12 @@ class DashboardView(ft.Container):
         except Exception:
             return None
 
-    def _navigate(self, route: str) -> None:
+    def _navigate(self, route: str, trip_data: Optional[Itinerary] = None) -> None:
         if self.on_navigate:
+            if trip_data is not None:
+                try:
+                    self.on_navigate(route, trip_data)
+                    return
+                except TypeError:
+                    pass
             self.on_navigate(route)

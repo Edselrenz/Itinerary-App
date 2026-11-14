@@ -22,6 +22,7 @@ class StopCard(ft.Container):
         on_move_down: Optional[Callable[[ItineraryItem], None]] = None,
         on_edit: Optional[Callable[[ItineraryItem], None]] = None,
         on_delete: Optional[Callable[[ItineraryItem], None]] = None,
+        on_click: Optional[Callable[[ItineraryItem], None]] = None,
         editable: bool = True,
     ):
         super().__init__()
@@ -32,6 +33,7 @@ class StopCard(ft.Container):
         self.on_move_down = on_move_down
         self.on_edit = on_edit
         self.on_delete = on_delete
+        self.on_click_card = on_click
         self.editable = editable
 
         self.border_radius = 12
@@ -39,6 +41,9 @@ class StopCard(ft.Container):
         self.border = ft.Border.all(1.2, ThemeColors.BORDER_LIGHT)
         self.padding = ft.Padding.all(12)
         self.margin = ft.Margin.only(bottom=8)
+        if self.on_click_card:
+            self.ink = True
+            self.on_click = lambda _: self.on_click_card(self.item)
 
         self._build_content()
 

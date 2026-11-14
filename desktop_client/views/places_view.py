@@ -19,7 +19,7 @@ import flet as ft
 from desktop_client.components.dialogs import show_place_detail_dialog
 from desktop_client.components.place_card import PlaceCard
 from desktop_client.components.slippy_map_canvas import RouteStopPin, SlippyMapCanvas
-from desktop_client.config.settings import CANONICAL_CATEGORIES, ThemeColors
+from desktop_client.config.settings import CANONICAL_CATEGORIES, NUEVA_ECIJA_LGUS, ThemeColors
 from desktop_client.core.commute_guide import get_multi_stop_google_maps_url
 from desktop_client.models.itinerary import Itinerary, ItineraryDay
 from desktop_client.models.place import Municipality, Place
@@ -732,14 +732,30 @@ class PlacesView(ft.Container):
 
     def _refresh_live_places(self) -> None:
         self.is_live_refreshing = True
+        self._safe_update()
 
         async def _do():
             try:
-                res = await self.place_service.get_places(page=1, page_size=250)
-                if res.items:
-                    self.place_service.merge_places_into_cache(res.items)
-                    self.all_places = self.place_service.get_loaded_places()
-                    self._apply_filters()
+                discovered = await self.place_service.fetch_live_osm_places()
+                self.all_places = self.place_service.get_loaded_places()
+                self._apply_filters()
+                if self.safe_page:
+                    count = len(self.all_places)
+                    self.safe_page.snack_bar = ft.SnackBar(
+                        content=ft.Text(f"✨ Live OSM: {count:,} places indexed across Nueva Ecija"),
+                        bgcolor=ThemeColors.PRIMARY_BLUE,
+                        duration=3000,
+                    )
+                    self.safe_page.snack_bar.open = True
+                    self.safe_page.update()
+            except Exception:
+                if self.safe_page:
+                    self.safe_page.snack_bar = ft.SnackBar(
+                        content=ft.Text(f"Notice: Live refresh completed with {len(self.all_places):,} places cached"),
+                        duration=2500,
+                    )
+                    self.safe_page.snack_bar.open = True
+                    self.safe_page.update()
             finally:
                 self.is_live_refreshing = False
                 self._safe_update()
@@ -772,8 +788,12 @@ class PlacesView(ft.Container):
         """Navigates back to the source planning view preserving drafts."""
         if not self.on_navigate:
             return
-        if self.route_query.startswith("/map?itineraryId=draft") or ("draft" in self.route_query):
-            self.on_navigate("/suggested")
+        parsed_q = urllib.parse.parse_qs(urllib.parse.urlparse(self.route_query).query)
+        source_param = parsed_q.get("source", [None])[0]
+        if source_param == "builder":
+            self.on_navigate("/builder?draft=true", self.route_itinerary)
+        elif self.route_query.startswith("/map?itineraryId=draft") or ("draft" in self.route_query):
+            self.on_navigate("/suggested", self.route_itinerary)
         elif self.route_itinerary:
             self.on_navigate(f"/trips/{self.route_itinerary.id}", self.route_itinerary)
         else:
@@ -803,6 +823,18 @@ class PlacesView(ft.Container):
                 )
             )
 
+        muni_options = [ft.dropdown.Option("all", "All 32 Municipalities")]
+        for lgu in sorted(NUEVA_ECIJA_LGUS):
+            muni_options.append(ft.dropdown.Option(lgu, lgu))
+
+        muni_dropdown = ft.Dropdown(
+            label="Municipality / LGU",
+            options=muni_options,
+            value=self.selected_municipality,
+            dense=True,
+            on_change=lambda e: setattr(self, "selected_municipality", e.control.value),
+        )
+
         tier_options = [
             ft.dropdown.Option("all", "All Prices"),
             ft.dropdown.Option("free", "Free Admission (₱0)"),
@@ -824,6 +856,8 @@ class PlacesView(ft.Container):
                     ft.Text("Categories", size=12, weight=ft.FontWeight.BOLD),
                     ft.Row(controls=cat_chips, wrap=True, spacing=6),
                     ft.Container(height=8),
+                    muni_dropdown,
+                    ft.Container(height=8),
                     tier_dropdown,
                 ],
                 tight=True,
@@ -835,8 +869,7 @@ class PlacesView(ft.Container):
                 ft.FilledButton("Apply Filters", on_click=lambda _: self._apply_filters_and_close(dlg)),
             ],
         )
-        self.safe_page.pop_dialog()
-        self.safe_page.dialog = dlg
+        self.safe_page.overlay.append(dlg)
         dlg.open = True
         self.safe_page.update()
 

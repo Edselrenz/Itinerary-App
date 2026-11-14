@@ -38,9 +38,12 @@ def show_place_detail_dialog(
             on_navigate("/builder", pre_added_place=place)
 
     def handle_start_trip(_=None):
+        import urllib.parse
         page.pop_dialog()
         if on_navigate:
-            on_navigate("/suggested")
+            dest_q = urllib.parse.quote(place.municipality_name or "Nueva Ecija")
+            pid_q = urllib.parse.quote(str(place.id))
+            on_navigate(f"/suggested?destination={dest_q}&placeId={pid_q}")
 
     def toggle_fav(_=None):
         nonlocal is_fav

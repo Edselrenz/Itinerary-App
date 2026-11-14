@@ -46,6 +46,7 @@ class ApiClient:
         self._token_getter = None
         self._refresh_handler = None
         self._client: Optional[httpx.AsyncClient] = None
+        self._refresh_lock = asyncio.Lock()
 
     @property
     def base_url(self) -> str:
@@ -74,6 +75,7 @@ class ApiClient:
             "Accept": "application/json",
             "Content-Type": "application/json",
             "User-Agent": "NuevaEcijaTravel-Desktop/1.0.0",
+            "ngrok-skip-browser-warning": "true",
         }
         if self._token_getter:
             token = self._token_getter()
@@ -152,7 +154,10 @@ class ApiClient:
             )
             try:
                 from desktop_client.core.connectivity_service import get_connectivity_service
-                get_connectivity_service().set_host_offline(False)
+                if response.status_code in (502, 503, 504):
+                    get_connectivity_service().set_host_offline(True, force=True)
+                elif response.status_code < 500:
+                    get_connectivity_service().set_host_offline(False)
             except Exception:
                 pass
         except httpx.ConnectError as err:
@@ -177,9 +182,21 @@ class ApiClient:
                 pass
             raise NetworkError(f"Network error: {str(err)}") from err
 
+        clean_ep = endpoint.lstrip("/").lower()
+        is_auth_endpoint = any(
+            clean_ep.startswith(p)
+            for p in ("auth/login", "auth/register", "auth/refresh")
+        )
+
         # Handle 401 Token Expiry with single automatic refresh retry
-        if response.status_code == 401 and not retried and self._refresh_handler:
-            refreshed = await self._refresh_handler()
+        if (
+            response.status_code == 401
+            and not retried
+            and not is_auth_endpoint
+            and self._refresh_handler
+        ):
+            async with self._refresh_lock:
+                refreshed = await self._refresh_handler()
             if refreshed:
                 return await self.request(
                     method=method,

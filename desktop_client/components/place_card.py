@@ -18,14 +18,17 @@ class PlaceCard(ft.Container):
         place: Place,
         on_view_details: Optional[Callable[[Place], None]] = None,
         on_add_to_day: Optional[Callable[[Place], None]] = None,
+        on_click: Optional[Callable[[Place], None]] = None,
+        compact: bool = False,
         width: Optional[float] = 300,
     ):
         super().__init__()
         self.place = place
-        self.on_view_details = on_view_details
+        self.on_view_details = on_view_details or on_click
         self.on_add_to_day = on_add_to_day
+        self.compact = compact
 
-        self.width = width
+        self.width = 236 if compact else width
         self.border_radius = 14
         self.bgcolor = ThemeColors.SURFACE_LIGHT
         self.border = ft.Border.all(1.2, ThemeColors.BORDER_LIGHT)
@@ -37,11 +40,12 @@ class PlaceCard(ft.Container):
 
     def _build_content(self) -> None:
         # Thumbnail image or fallback with top-left category badge overlay
+        img_h = 92 if self.compact else 140
         img_src = self.place.resolved_image_path
         if img_src:
             image_widget = ft.Image(
                 src=img_src,
-                height=140,
+                height=img_h,
                 width=float("inf"),
                 fit=ft.BoxFit.COVER,
                 error_content=ft.Container(
@@ -50,7 +54,7 @@ class PlaceCard(ft.Container):
                         size=36,
                         color=ThemeColors.PRIMARY_BLUE,
                     ),
-                    height=140,
+                    height=img_h,
                     bgcolor=ThemeColors.PRIMARY_LIGHT,
                     alignment=ft.Alignment(0, 0),
                 ),
@@ -74,7 +78,7 @@ class PlaceCard(ft.Container):
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     spacing=4,
                 ),
-                height=140,
+                height=img_h,
                 bgcolor=ThemeColors.PRIMARY_LIGHT,
                 alignment=ft.Alignment(0, 0),
             )
