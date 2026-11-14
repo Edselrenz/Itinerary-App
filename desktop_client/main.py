@@ -42,6 +42,7 @@ from desktop_client.core.storage import get_guest_storage
 from desktop_client.models.itinerary import Itinerary
 from desktop_client.models.place import Place
 from desktop_client.services.auth_service import get_auth_service
+from desktop_client.services.itinerary_service import get_itinerary_service
 from desktop_client.views.custom_builder_view import CustomBuilderView
 from desktop_client.views.dashboard_view import DashboardView
 from desktop_client.views.guest_view import GuestView
@@ -60,6 +61,7 @@ def main(page: ft.Page) -> None:
     session_manager = get_session_manager()
     api_client = get_api_client()
     auth_service = get_auth_service()
+    itinerary_service = get_itinerary_service()
     connectivity_service = get_connectivity_service()
 
     # Window & Page Setup
@@ -68,6 +70,13 @@ def main(page: ft.Page) -> None:
     page.padding = 0
     page.spacing = 0
     page.bgcolor = ThemeColors.BG_LIGHT
+    try:
+        page.window.width = settings.window_width
+        page.window.height = settings.window_height
+        page.window.min_width = settings.window_min_width
+        page.window.min_height = settings.window_min_height
+    except Exception:
+        pass
 
     current_route = "/welcome"
     selected_trip: Optional[Itinerary] = None
@@ -201,11 +210,17 @@ def main(page: ft.Page) -> None:
         if base_route in ("/suggested", "/builder") or base_route.startswith("/trips/"):
             bottom_tab_bar.visible = False
 
+            def _handle_workflow_back():
+                if content_area.content and hasattr(content_area.content, "handle_back"):
+                    if content_area.content.handle_back():
+                        return
+                navigate_to("/home")
+
             if base_route == "/suggested":
                 workflow_header.visible = True
                 workflow_header.title_text = "Suggested Itinerary Wizard"
                 workflow_header.subtitle_text = "Automated Proximity & Corridor Clustering"
-                workflow_header.on_back = lambda: navigate_to("/home")
+                workflow_header.on_back = _handle_workflow_back
                 workflow_header._build_content()
                 dest_param = query_params.get("destination", [None])[0]
                 place_id_param = query_params.get("placeId", [None])[0]
@@ -222,7 +237,7 @@ def main(page: ft.Page) -> None:
                 workflow_header.visible = True
                 workflow_header.title_text = "Custom Itinerary Builder"
                 workflow_header.subtitle_text = "Interactive Stop-by-Stop Scheduling"
-                workflow_header.on_back = lambda: navigate_to("/home")
+                workflow_header.on_back = _handle_workflow_back
                 workflow_header._build_content()
                 is_draft_wizard = query_params.get("draft", ["false"])[0].lower() == "true"
                 content_area.content = CustomBuilderView(
@@ -260,10 +275,11 @@ def main(page: ft.Page) -> None:
         if base_route in ("/dashboard", "/home"):
             content_area.content = DashboardView(on_navigate=navigate_to)
         elif base_route in ("/map", "/places"):
+            has_route_param = ("itineraryId=" in route) or ("followRoute=true" in route)
             content_area.content = PlacesView(
                 on_navigate=navigate_to,
                 route_query=route,
-                active_trip=selected_trip,
+                active_trip=selected_trip if has_route_param else None,
             )
         elif base_route in ("/saved", "/trips"):
             content_area.content = SavedTripsView(

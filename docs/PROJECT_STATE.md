@@ -7,21 +7,37 @@ This document serves as the primary handoff reference for developers and coding 
 ## 1. Project Status Overview
 
 - **Application Name**: Nueva Ecija Travel Itinerary (MVP, GIS Upgrade & Native Desktop Client)
-- **Current Development Phase**: **Phase 51 — Desktop Client QA Audit v4 Remediation & Full-Bleed Map Parity [COMPLETED]**
+- **Current Development Phase**: **Phase 54 — Desktop Client Post-Session 53 Parity Remediation (v2) [COMPLETED & VERIFIED]**
 - **Active Git Branch**: `feature/flet-desktop-app`
 - **Active Database Infrastructure**: **PostgreSQL 16 in Docker** (`ne_postgres` on port 5432) active and populated with the complete **2,673-place catalog** (2,656 OSM + 17 curated), 12 municipalities, 4 users, and 5 itineraries. Dual-engine SQLite fallback verified with `connect_timeout=2` fail-fast guard.
 - **Last Verified Working State**:
-  - **Phase 51 Acceptance**: 100% complete across all 6 sub-phases (51.1 to 51.6). All 12 Acceptance Gates verified and passing.
-  - **Desktop Client Verification**: 47/47 unit and parity tests passed (0 failures) via `pytest` (`python -m pytest desktop_client/tests/ -v -k "not test_live_backend_integration"`), live backend integration verified, and standalone Windows executable compiled via `NuevaEcijaTravel.spec` with all assets bundled in `dist/NuevaEcijaTravel/`.
-  - **Web Client Verification**: 32/32 test files and 348/348 unit tests passing [100%] via Vitest (`npm --prefix Project run test:unit`) with zero regressions and zero edits in `Project/`.
-  - **Documentation Consolidation**: All desktop application documentation consolidated and updated into `docs/` (`DESKTOP_APP_OVERVIEW.md`, `DESKTOP_APP_ARCHITECTURE.md`, `DESKTOP_APP_API_INTEGRATION.md`, `DESKTOP_APP_INSTALLATION_AND_BUILD.md`, `DESKTOP_APP_QA_AND_TESTING.md`, `DESKTOP_APP_PARITY_AND_IMPLEMENTATION_PLAN.md`).
-- **Phase 51 Delivered Capabilities**:
-  1. **CartoDB Voyager OSM Tiles**: Eliminated Dart/Flutter HTTP 403 blocks in `SlippyMapCanvas` using CartoDB Voyager tiles (`sub.basemaps.cartocdn.com/rastertiles/voyager`).
-  2. **PlaceService & Data Models**: Fixed offline `total_pages=`, resolved municipality UUID vs. name routing, merged 2,673 POIs in memory, added `_MEIPASS` asset lookup, and updated itinerary serialization.
-  3. **Navigation & Views**: Fixed `check_backend_loop()` (0 args), query parameter parsing, notification bell guest crash, signup M.I., guest trip migration, and Haversine auto-scheduling.
-  4. **Full-Bleed Map View (`places_view.py`)**: Web-app parity layout with floating search/category bar, floating right buttons, floating bottom drawer, and Follow-Route navigation mode with carousel.
-  5. **Dead Code Cleanup**: Deleted legacy `sidebar.py`, `header.py`, and `interactive_map.py`.
-  6. **Packaging & Verification**: 47/47 desktop tests green, 348/348 web tests green, standalone `.exe` compiled and tested.
+  - **Phase 54 Parity Acceptance**: 100% verified across all suites:
+    - **Desktop Client Test Suite**: 64/64 passed in 4.04s (`100% PASS`), including new automated parity matrix `TC-73` through `TC-85`.
+    - **Backend Test Suite**: 21/21 passed in 9.26s (`100% PASS`).
+    - **Web Client Unit Test Suite**: 32 test files, 348/348 passed in 33.64s (`100% PASS`, strictly 0 edits in `Project/`).
+    - **Standalone Windows Distribution**: Recompiled executable `dist/NuevaEcijaTravel/NuevaEcijaTravel.exe` (15.2 MB executable, ~397 MB complete bundle) verified healthy.
+  - **Defects Remediated**: All 20 post-Session 53 defects (`MAP-01` to `MAP-10`, `SUG-01` to `SUG-05`, `CUS-01` to `CUS-05`) completely resolved and verified.
+  - **Live Service Daemons**: Pilot backend (`127.0.0.1:8000`), ngrok public tunnel, and Cloudflare Worker proxy (`ne-itinerary-api.edselrenz0.workers.dev`) active and verified.
+- **Phase 54 Delivered Capabilities**:
+  1. **Map Pointer & Canvas Layering (`MAP-01`, `MAP-02`, `MAP-06`, `MAP-08`)**:
+     - Drawer toggle pill anchored at `bottom=18, left=530` with intrinsic width, removing the full-width click-blocking container overlay.
+     - Transparent gesture surface (`#01000000`) placed directly below marker stack, eliminating pointer recognizer conflicts and enabling smooth mouse-wheel zoom and double-tap zoom.
+     - Window size initialized to `1366x768` (min `1024x600`), floating action buttons placed at `right=12, bottom=185` above zoom controls.
+  2. **PlacesView State Preservation & Route Isolation (`MAP-04`, `MAP-05`, `MAP-07`, `MAP-09`, `MAP-10`)**:
+     - Live search and filter modifications update in-place without rebuilding content, preserving `TextField` focus across typing and maintaining map viewport.
+     - Top-level `import httpx` in place service; `get_viewport_bounds()` returning accurate geographic bounding box.
+     - Route mode isolated to query URLs with `itineraryId=` or `followRoute=true`; explore mode defaults cleanly without sticky active trip leaks.
+     - Multi-category filter set with `Filters [N]` badge counter, true Free vs Paid price filtering, and vertical destination sheet with empty-state reset.
+  3. **Suggested Itinerary Wizard (`SUG-01` to `SUG-05`)**:
+     - Canonical preference keys (`nature`, `food`, `culture`, `shopping`, `resort`) with `{"food", "culture", "resort"}` default.
+     - `ItineraryDay.display_title` guarded against double `"Day X: "` prefix.
+     - Pacing engine supports `"packed"` and `"fast"` for 4 stops/day, excludes utilities, applies `+20.0` curated boost, 25km geographic clustering, and 2-Opt nearest-neighbor ordering.
+     - Bottom Nearby banner + CTAs wired, sequential Haversine travel time injection, and back navigation stepping through `nearby` → `itinerary` → `form`.
+  4. **Custom Builder & Timeline (`CUS-01` to `CUS-05`)**:
+     - Step 2 live in-memory search across all 2,673 POIs with Clear button, preserving input focus; 8 category groups covering all 16 canonical categories.
+     - `show_place_detail_dialog` wired with `on_add_to_day` callback for instant stop scheduling from modal.
+     - Dynamic Haversine driving buffers (15-120 min) parsing range times (`"09:30 AM - 11:30 AM"`).
+     - Timeline Daily Budget input, municipality tags on Day tabs, first/last arrow flags, auto-scheduling on stop move, coordinate validation in off-grid modal, and back navigation stepping back to form.
 - **Current Blockers**: **None**.
 
 ---

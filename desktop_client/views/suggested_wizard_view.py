@@ -22,6 +22,7 @@ from desktop_client.config.settings import (
 )
 from desktop_client.core.api_client import ApiClientError
 from desktop_client.core.commute_guide import get_leg_commute_info
+from desktop_client.core.polyline import haversine_distance_meters
 from desktop_client.core.session import get_session_manager
 from desktop_client.models.itinerary import (
     Itinerary,
@@ -89,9 +90,9 @@ class SuggestedWizardView(ft.Container):
         self.travel_mode_val = "DRIVE"  # 'DRIVE', 'TWO_WHEELER', 'WALK'
         self.min_rating_val = 0.0
         self.selected_preferences: set[str] = {
-            "Nature & Parks",
-            "Food Trip",
-            "Culture & History",
+            "food",
+            "culture",
+            "resort",
         }
 
         # Execution & Result State
@@ -320,17 +321,17 @@ class SuggestedWizardView(ft.Container):
             )
         rating_row = ft.Row(controls=rating_chips, spacing=8)
 
-        # 5 Figma Traveler Preference Pills (Multi-Select)
+        # 5 Canonical Traveler Preference Pills (Multi-Select)
         figma_prefs = [
-            ("Nature & Parks", ft.Icons.LANDSCAPE),
-            ("Food Trip", ft.Icons.RESTAURANT),
-            ("Culture & History", ft.Icons.MUSEUM),
-            ("Shopping", ft.Icons.SHOPPING_BAG),
-            ("Resort", ft.Icons.POOL),
+            ("nature", "Nature & Parks", ft.Icons.LANDSCAPE),
+            ("food", "Food Trip", ft.Icons.RESTAURANT),
+            ("culture", "Culture & History", ft.Icons.MUSEUM),
+            ("shopping", "Shopping", ft.Icons.SHOPPING_BAG),
+            ("resort", "Resort", ft.Icons.POOL),
         ]
         preference_chips: list[ft.Control] = []
-        for pref_label, pref_icon in figma_prefs:
-            is_active = pref_label in self.selected_preferences
+        for pref_key, pref_label, pref_icon in figma_prefs:
+            is_active = pref_key in self.selected_preferences
             bg = ThemeColors.PRIMARY_BLUE if is_active else ThemeColors.SURFACE_LIGHT
             text_col = ft.Colors.WHITE if is_active else ThemeColors.TEXT_MAIN_LIGHT
             icon_col = ft.Colors.WHITE if is_active else ThemeColors.PRIMARY_BLUE
@@ -351,7 +352,7 @@ class SuggestedWizardView(ft.Container):
                     border_radius=16,
                     padding=ft.Padding.symmetric(horizontal=14, vertical=8),
                     ink=True,
-                    on_click=lambda _, p=pref_label: self._toggle_preference(p),
+                    on_click=lambda _, k=pref_key: self._toggle_preference(k),
                 )
             )
 
@@ -719,6 +720,66 @@ class SuggestedWizardView(ft.Container):
         route_map = ItineraryRouteMap(
             day=active_day,
             on_view_full_map=lambda: self._open_full_map_draft(),
+            on_stop_click=lambda idx, pin: show_place_detail_dialog(self.safe_page, pin.place, on_navigate=self.on_navigate) if (pin.place and self.safe_page) else None,
+        )
+
+        # Bottom Nearby banner card matching Web App (suggested-wizard.page.html:384-413)
+        first_muni = self.destination_val or "Nueva Ecija"
+        if active_day and active_day.items and active_day.items[0].place and active_day.items[0].place.municipality_name:
+            first_muni = active_day.items[0].place.municipality_name
+
+        nearby_banner = ft.Container(
+            content=ft.Row(
+                controls=[
+                    ft.Icon(ft.Icons.NEAR_ME_ROUNDED, size=22, color=ThemeColors.PRIMARY_BLUE),
+                    ft.Column(
+                        controls=[
+                            ft.Text(f"Nearby Places in {first_muni}", size=13, weight=ft.FontWeight.BOLD, color=ThemeColors.TEXT_BLACK),
+                            ft.Text("Explore food, pharmacies, ATMs, and essentials near your scheduled stops.", size=11, color=ThemeColors.TEXT_MUTED_LIGHT),
+                        ],
+                        spacing=2,
+                        expand=True,
+                    ),
+                    ft.FilledButton(
+                        content="Explore Nearby",
+                        icon=ft.Icons.SEARCH,
+                        style=ft.ButtonStyle(bgcolor=ThemeColors.PRIMARY_BLUE, color=ft.Colors.WHITE),
+                        on_click=lambda _: self._open_nearby_view(),
+                    ),
+                ],
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            ),
+            bgcolor=ThemeColors.AZURE_SOFT,
+            border=ft.Border.all(1, ThemeColors.CUSTOM_CARD_BORDER),
+            border_radius=12,
+            padding=14,
+            margin=ft.Margin.only(top=16, bottom=12),
+        )
+
+        bottom_actions = ft.Row(
+            controls=[
+                ft.FilledButton(
+                    content="✓ Accept & Save Itinerary",
+                    style=ft.ButtonStyle(
+                        bgcolor="#10b981",
+                        color=ft.Colors.WHITE,
+                        padding=ft.Padding.symmetric(horizontal=18, vertical=12),
+                        shape=ft.RoundedRectangleBorder(radius=10),
+                    ),
+                    on_click=lambda _: self._save_generated_itinerary(),
+                ),
+                ft.OutlinedButton(
+                    content="✏️ Customize in Builder",
+                    style=ft.ButtonStyle(
+                        color=ThemeColors.PRIMARY_BLUE,
+                        padding=ft.Padding.symmetric(horizontal=16, vertical=12),
+                        shape=ft.RoundedRectangleBorder(radius=10),
+                    ),
+                    on_click=lambda _: self._customize_in_builder(),
+                ),
+            ],
+            spacing=10,
         )
 
         return ft.Column(
@@ -734,6 +795,10 @@ class SuggestedWizardView(ft.Container):
                 route_map,
                 ft.Container(height=12),
                 ft.Column(controls=timeline_items, spacing=6),
+                nearby_banner,
+                ft.Container(height=4),
+                bottom_actions,
+                ft.Container(height=16),
             ],
             scroll=ft.ScrollMode.AUTO,
             spacing=0,
@@ -802,32 +867,59 @@ class SuggestedWizardView(ft.Container):
                 )
             ]
         elif self.nearby_amenities:
-            for p in self.nearby_amenities:
+            for idx, p in enumerate(self.nearby_amenities):
+                hours_str = p.opening_hours or "Open Daily"
+                maps_url = p.directions_url or f"https://www.google.com/maps/dir/?api=1&destination={p.latitude},{p.longitude}"
                 cards_column.controls.append(
                     ft.Container(
                         content=ft.Row(
                             controls=[
                                 ft.Image(
                                     src=p.resolved_image_path,
-                                    width=75,
-                                    height=65,
+                                    width=80,
+                                    height=70,
                                     fit=ft.BoxFit.COVER,
                                     border_radius=8,
                                     error_content=ft.Icon(ft.Icons.STORE, size=24, color=ThemeColors.PRIMARY_BLUE),
                                 ),
                                 ft.Column(
                                     controls=[
-                                        ft.Text(p.name, size=13, weight=ft.FontWeight.BOLD),
+                                        ft.Text(f"{idx + 1}. {p.name}", size=13, weight=ft.FontWeight.BOLD),
                                         ft.Text(f"{p.municipality_name or 'Nueva Ecija'} • {p.formatted_category}", size=11, color=ThemeColors.TEXT_MUTED_LIGHT),
+                                        ft.Row(
+                                            controls=[
+                                                ft.Icon(ft.Icons.ACCESS_TIME, size=11, color=ThemeColors.TEXT_MUTED_LIGHT),
+                                                ft.Text(hours_str, size=10, color=ThemeColors.TEXT_MUTED_LIGHT),
+                                            ],
+                                            spacing=4,
+                                        ),
                                         ft.Text(p.formatted_cost, size=11, weight=ft.FontWeight.BOLD, color=ThemeColors.EMERALD_PRIMARY),
                                     ],
                                     spacing=2,
                                     expand=True,
                                 ),
-                                ft.FilledButton(
-                                    content=f"+ Add to Day {day_num}",
-                                    style=ft.ButtonStyle(bgcolor=ThemeColors.PRIMARY_BLUE, color=ft.Colors.WHITE),
-                                    on_click=lambda _, place=p: self._inject_nearby_to_day(place),
+                                ft.Row(
+                                    controls=[
+                                        ft.OutlinedButton(
+                                            content="Maps",
+                                            icon=ft.Icons.MAP_OUTLINED,
+                                            style=ft.ButtonStyle(
+                                                color=ThemeColors.PRIMARY_BLUE,
+                                                padding=ft.Padding.symmetric(horizontal=10, vertical=6),
+                                            ),
+                                            on_click=lambda _, url=maps_url: self.safe_page.launch_url(url) if self.safe_page else None,
+                                        ),
+                                        ft.FilledButton(
+                                            content=f"+ Add to Day {day_num}",
+                                            style=ft.ButtonStyle(
+                                                bgcolor=ThemeColors.PRIMARY_BLUE,
+                                                color=ft.Colors.WHITE,
+                                                padding=ft.Padding.symmetric(horizontal=12, vertical=6),
+                                            ),
+                                            on_click=lambda _, place=p: self._inject_nearby_to_day(place),
+                                        ),
+                                    ],
+                                    spacing=6,
                                 ),
                             ],
                             spacing=12,
@@ -914,11 +1006,55 @@ class SuggestedWizardView(ft.Container):
             except RuntimeError:
                 pass
 
+    def handle_back(self) -> bool:
+        """Handles WorkflowHeader back button stepping through wizard state machine (SUG-05)."""
+        if self.view_mode == "nearby":
+            self._return_to_itinerary()
+            return True
+        if self.view_mode == "itinerary" and self.generated_itinerary:
+            self.view_mode = "form"
+            self._build_content()
+            self._safe_update()
+            return True
+        return False
+
     def _inject_nearby_to_day(self, place: Place) -> None:
         if not self.generated_itinerary or not self.generated_itinerary.days:
             return
         active_day = self.generated_itinerary.days[self.active_day_index]
         new_order = len(active_day.items) + 1
+
+        dist_m = None
+        dur_s = None
+        if active_day.items:
+            last_item = active_day.items[-1]
+            last_time_str = (last_item.planned_time or "").strip()
+            if " - " in last_time_str:
+                end_str = last_time_str.split(" - ")[1].strip()
+            else:
+                end_str = last_time_str
+            try:
+                base_dt = datetime.strptime(end_str, "%I:%M %p")
+            except Exception:
+                try:
+                    base_dt = datetime.strptime(end_str, "%H:%M")
+                except Exception:
+                    base_dt = datetime.strptime("02:00 PM", "%I:%M %p")
+
+            transit_mins = 20
+            last_p = last_item.place
+            if last_p and last_p.latitude and last_p.longitude and place.latitude and place.longitude:
+                raw_dist = haversine_distance_meters(last_p.latitude, last_p.longitude, place.latitude, place.longitude)
+                dist_m = int(raw_dist * 1.28)
+                transit_mins = max(15, min(90, int(dist_m / 666.0) + 10))
+                dur_s = transit_mins * 60
+
+            start_dt = base_dt + timedelta(minutes=transit_mins)
+            end_dt = start_dt + timedelta(minutes=60)
+            planned_time = f"{start_dt.strftime('%I:%M %p')} - {end_dt.strftime('%I:%M %p')}"
+        else:
+            planned_time = "09:30 AM - 10:30 AM"
+
         new_item = ItineraryItem(
             id=str(uuid.uuid4()),
             day_id=active_day.id,
@@ -926,10 +1062,12 @@ class SuggestedWizardView(ft.Container):
             place=place,
             custom_title=place.name,
             sort_order=new_order,
-            planned_time="01:30 PM",
+            planned_time=planned_time,
             duration_minutes=60,
             estimated_cost_min=place.estimated_cost_min,
             estimated_cost_max=place.estimated_cost_max,
+            travel_distance_meters=dist_m,
+            travel_duration_seconds=dur_s,
         )
         active_day.items.append(new_item)
         self.save_feedback = f"Added '{place.name}' to Day {active_day.day_number}."

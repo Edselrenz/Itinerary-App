@@ -80,6 +80,35 @@ class ItineraryService:
         """Returns the active draft preview itinerary if present."""
         return self.active_draft_itinerary
 
+    def generate_suggested_itinerary_sync(
+        self,
+        destination: str,
+        days: int = 2,
+        pacing: str = "moderate",
+        preferences: Optional[list[str]] = None,
+        daily_budget: Optional[float] = None,
+        anchor_place_id: Optional[str] = None,
+    ) -> Itinerary:
+        """Synchronously runs offline clustering engine to generate a suggested itinerary."""
+        import asyncio
+        s_date = datetime.now().strftime("%Y-%m-%d")
+        e_date = (datetime.now() + timedelta(days=days - 1)).strftime("%Y-%m-%d")
+        req = SuggestedItineraryRequest(
+            destination=destination,
+            start_date=s_date,
+            end_date=e_date,
+            pacing=pacing,
+            preferences=preferences or ["food", "culture"],
+            daily_budget=daily_budget,
+            anchor_place_id=anchor_place_id,
+        )
+        try:
+            return asyncio.run(self.generate_offline_suggested_itinerary(req))
+        except RuntimeError:
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
+                return ex.submit(lambda: asyncio.run(self.generate_offline_suggested_itinerary(req))).result()
+
     async def generate_offline_suggested_itinerary(
         self,
         request: SuggestedItineraryRequest,
@@ -102,11 +131,22 @@ class ItineraryService:
         is_single_day = total_days == 1
 
         pacing = (request.pacing or "moderate").lower()
-        target_stops = 2 if pacing == "relaxed" else (4 if pacing == "fast" else 3)
+        target_stops = 2 if pacing == "relaxed" else (4 if pacing in ("fast", "packed") else 3)
 
-        # Build candidate pool
-        curated_pool = [p.to_dict() for p in CANONICAL_OFFLINE_PLACES]
-        all_places = get_all_offline_places()
+        UTILITY_CATEGORIES = {
+            "bank_atm", "fuel_station", "hospital_clinic", "pharmacy",
+            "convenience_store", "transport_terminal", "public_facility"
+        }
+
+        # Build candidate pool excluding utility/amenity POIs from tourist slots
+        curated_pool = [
+            p.to_dict() for p in CANONICAL_OFFLINE_PLACES
+            if str(p.category or "").lower() not in UTILITY_CATEGORIES
+        ]
+        all_places = [
+            p for p in get_all_offline_places()
+            if str(p.get("category", "")).lower() not in UTILITY_CATEGORIES
+        ]
         curated_ids = {p["id"] for p in curated_pool}
         for p in all_places:
             if p.get("id") not in curated_ids:
@@ -155,6 +195,9 @@ class ItineraryService:
             p_cat = str(p.get("category", "")).lower()
             p_tags = [str(t).lower() for t in p.get("tags", [])]
 
+            if p.get("is_featured") or str(p.get("id", "")).startswith("dest-"):
+                score += 20.0
+
             if is_targeting_muni and target_dest in p_muni:
                 score += 15.0
 
@@ -173,7 +216,8 @@ class ItineraryService:
                 if c_min <= daily_budget:
                     score += 5.0
 
-            score += float(p.get("rating") or 4.5) * 2.0
+            if p.get("rating") is not None:
+                score += float(p["rating"]) * 2.0
             return score
 
         matched_pool.sort(key=score_place, reverse=True)
@@ -253,6 +297,24 @@ class ItineraryService:
 
             while len(day_places) < target_stops and candidates:
                 slot = len(day_places)
+                # Geographic clustering: if day_places has an anchor, prioritize candidates within 25km radius
+                if day_places:
+                    a_lat = float(day_places[0].get("latitude") or 0.0)
+                    a_lng = float(day_places[0].get("longitude") or 0.0)
+                    if a_lat and a_lng:
+                        def cand_cluster_score(c: dict[str, Any]) -> float:
+                            base = score_place(c)
+                            c_lat = float(c.get("latitude") or 0.0)
+                            c_lng = float(c.get("longitude") or 0.0)
+                            if c_lat and c_lng:
+                                d_km = haversine_distance_meters(a_lat, a_lng, c_lat, c_lng) / 1000.0
+                                if d_km <= 25.0:
+                                    base += max(0.0, 25.0 - d_km)
+                                else:
+                                    base -= (d_km - 25.0) * 1.5
+                            return base
+                        candidates.sort(key=cand_cluster_score, reverse=True)
+
                 # Slot #1 around noon: prioritize dining
                 if slot == 1:
                     dining_cands = [c for c in candidates if is_dining(str(c.get("category", "")).lower())]
@@ -283,11 +345,31 @@ class ItineraryService:
                     day_places.append(selected)
                     mark_used(selected)
 
-            # Sort items with lodging at day end
-            def sort_key(p: dict[str, Any]) -> int:
-                return 1 if is_lodging(str(p.get("category", "")).lower()) else 0
-
-            day_places.sort(key=sort_key)
+            # 2-Opt nearest-neighbor stop ordering with lodging at day end
+            lodging = [p for p in day_places if is_lodging(str(p.get("category", "")).lower())]
+            non_lodging = [p for p in day_places if not is_lodging(str(p.get("category", "")).lower())]
+            if len(non_lodging) > 2:
+                ordered = [non_lodging[0]]
+                rem = list(non_lodging[1:])
+                while rem:
+                    curr_lat = float(ordered[-1].get("latitude") or 0.0)
+                    curr_lng = float(ordered[-1].get("longitude") or 0.0)
+                    best_idx = 0
+                    best_d = float("inf")
+                    for idx, r in enumerate(rem):
+                        r_lat = float(r.get("latitude") or 0.0)
+                        r_lng = float(r.get("longitude") or 0.0)
+                        if curr_lat and curr_lng and r_lat and r_lng:
+                            d = haversine_distance_meters(curr_lat, curr_lng, r_lat, r_lng)
+                        else:
+                            d = 999999
+                        if d < best_d:
+                            best_d = d
+                            best_idx = idx
+                    ordered.append(rem.pop(best_idx))
+                day_places = ordered + lodging
+            else:
+                day_places = non_lodging + lodging
 
             items: list[ItineraryItem] = []
             cur_time = datetime.strptime("09:30 AM", "%I:%M %p")

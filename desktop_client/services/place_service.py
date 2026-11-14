@@ -3,6 +3,7 @@
 import logging
 from typing import Any, Optional
 import uuid
+import httpx
 
 from desktop_client.config.settings import CANONICAL_CATEGORIES
 from desktop_client.core.api_client import ApiClient, get_api_client

@@ -529,3 +529,313 @@ def test_place_service_osm_category_mapping_and_nearby():
     if hospitals:
         assert all(h.category in ("hospital_clinic", "pharmacy") for h in hospitals)
 
+
+# =============================================================================
+# PHASE 54 PARITY VERIFICATION SUITE (TC-73 through TC-85)
+# =============================================================================
+
+
+def test_tc_73_map_pointer_blocking_pill():
+    """TC-73: Verifies PlacesView drawer toggle pill is anchored and non-blocking (MAP-01, MAP-08)."""
+    from desktop_client.views.places_view import PlacesView
+
+    pv = PlacesView()
+    # Drawer toggle pill should be positioned at left=530, bottom=18 and width=None (not blocking map gestures)
+    pill = pv._toggle_pill_btn
+    assert pill is not None
+    assert pill.left == 530
+    assert pill.bottom == 18
+    assert pill.width is None
+
+    # Map action buttons (Recenter & Follow Route) anchored at bottom-right
+    action_box = pv._action_buttons
+    assert action_box is not None
+    assert action_box.right == 12
+    assert action_box.bottom == 185
+
+
+def test_tc_74_slippy_map_canvas_gesture_layering():
+    """TC-74: Verifies SlippyMapCanvas gesture surface layering and zoom interactions (MAP-02, MAP-03)."""
+    from desktop_client.components.slippy_map_canvas import SlippyMapCanvas
+
+    canvas = SlippyMapCanvas(width=800, height=600)
+    stack_controls = canvas._canvas_stack.controls
+
+    # Gesture surface must be placed below _marker_stack
+    gesture_idx = stack_controls.index(canvas._gesture_surface)
+    marker_idx = stack_controls.index(canvas._marker_stack)
+    assert gesture_idx < marker_idx
+
+    # Dedicated transparent hit-test surface (#01000000)
+    assert canvas._gesture_surface.content.bgcolor == "#01000000"
+
+    # Wheel zoom and double-tap zoom handlers wired
+    assert canvas._gesture_surface.on_scroll is not None
+    assert canvas._gesture_surface.on_double_tap is not None
+
+
+def test_tc_75_slippy_map_auto_fit_on_mount():
+    """TC-75: Verifies SlippyMapCanvas auto-fits route bounding box on mount (MAP-06)."""
+    from desktop_client.components.slippy_map_canvas import SlippyMapCanvas
+
+    coords = [(15.48, 120.97), (15.55, 121.05)]
+    canvas = SlippyMapCanvas(route_coords=coords, width=800, height=600)
+
+    # set_route must have been auto-called in __init__
+    assert canvas.route_coords == coords
+    # Center lat/lng must match midpoints of the bounding coordinates
+    assert abs(canvas.center_lat - 15.515) < 0.01
+    assert abs(canvas.center_lng - 121.01) < 0.01
+
+
+def test_tc_76_places_view_mode_guard():
+    """TC-76: Verifies PlacesView default navigation is Pure Explore Mode (MAP-04)."""
+    from desktop_client.views.places_view import PlacesView
+
+    # Default navigation: active_trip is None -> Pure Explore Mode
+    pv = PlacesView()
+    assert pv.active_trip is None
+    assert pv._route_mode is False
+
+    # Route mode only when active_trip passed with itineraryId or followRoute query
+    dummy_itin = Itinerary(id="trip-1", title="Test Trip", destination="Cabanatuan City", start_date="2026-12-01", end_date="2026-12-02", days=[])
+    pv_route = PlacesView(route_query="/map?itineraryId=trip-1&followRoute=true", active_trip=dummy_itin)
+    assert pv_route.active_trip is not None
+    assert pv_route._route_mode is True
+
+
+def test_tc_77_places_view_search_focus_preservation():
+    """TC-77: Verifies PlacesView search updates in-place preserving keyboard focus (MAP-05)."""
+    from desktop_client.views.places_view import PlacesView
+
+    pv = PlacesView()
+    search_ref = pv._search_field
+
+    # Trigger search text change
+    pv._search_field.value = "bistro"
+    pv._on_search_change("bistro")
+
+    # Instance must remain identical (never re-instantiated)
+    assert pv._search_field is search_ref
+    assert pv.current_search == "bistro"
+
+
+def test_tc_78_httpx_import_and_viewport_bounds():
+    """TC-78: Verifies httpx import in place_service and viewport bounds calculation (MAP-07)."""
+    import desktop_client.services.place_service as ps
+    from desktop_client.components.slippy_map_canvas import SlippyMapCanvas
+
+    # Top-level httpx must be imported without NameError
+    assert hasattr(ps, "httpx")
+
+    canvas = SlippyMapCanvas(center_lat=15.50, center_lng=121.00, zoom=11, width=800, height=600)
+    bounds = canvas.get_viewport_bounds()
+    assert len(bounds) == 4
+    min_lat, min_lng, max_lat, max_lng = bounds
+    assert min_lat < max_lat
+    assert min_lng < max_lng
+    assert 14.0 <= min_lat <= 17.0
+    assert 119.0 <= min_lng <= 123.0
+
+
+def test_tc_79_places_view_multi_select_and_price_tier():
+    """TC-79: Verifies PlacesView multi-category selection, badge counter, and price filters (MAP-09, MAP-10)."""
+    from desktop_client.views.places_view import PlacesView
+
+    pv = PlacesView()
+    assert pv.selected_categories == set()
+    assert pv._active_filters_count == 0
+
+    # Multi-category toggle
+    pv._toggle_category_filter("nature_park")
+    pv._toggle_category_filter("restaurant")
+    assert pv.selected_categories == {"nature_park", "restaurant"}
+    assert pv._active_filters_count == 2
+    assert pv._filter_badge.visible is True
+    assert pv._filter_badge.content.value == "2"
+
+    # Price tier toggle
+    pv._on_price_change("free")
+    assert pv.selected_price == "free"
+    assert pv._active_filters_count == 3
+
+    # Reset all filters
+    pv._reset_all_filters()
+    assert pv.selected_categories == set()
+    assert pv.selected_price == "all"
+    assert pv._active_filters_count == 0
+
+
+def test_tc_80_suggested_wizard_canonical_keys_and_display_title():
+    """TC-80: Verifies canonical preference keys and display_title prefix guard (SUG-01, SUG-02)."""
+    from desktop_client.views.suggested_wizard_view import SuggestedWizardView
+
+    swv = SuggestedWizardView()
+    # Canonical default preferences: food, culture, resort
+    assert swv.selected_preferences == {"food", "culture", "resort"}
+
+    # Canonical keys supported
+    for key in ("nature", "food", "culture", "shopping", "resort"):
+        swv._toggle_preference(key)
+
+    # display_title prefix guard
+    d1 = ItineraryDay(id="1", itinerary_id="t", day_number=1, travel_date="2026-12-01", title="Day 1")
+    assert d1.display_title == "Day 1"
+
+    d2 = ItineraryDay(id="2", itinerary_id="t", day_number=2, travel_date="2026-12-02", title="Day 2: Minalungao")
+    assert d2.display_title == "Day 2: Minalungao"
+
+    d3 = ItineraryDay(id="3", itinerary_id="t", day_number=3, travel_date="2026-12-03", title="Historic Gapan Tour")
+    assert d3.display_title == "Day 3: Historic Gapan Tour"
+
+
+def test_tc_81_suggested_wizard_pacing_and_clustering():
+    """TC-81: Verifies packed pacing, utility exclusion, and 25km geographic clustering (SUG-01, SUG-03)."""
+    from desktop_client.services.itinerary_service import ItineraryService
+
+    svc = ItineraryService()
+    itin = svc.generate_suggested_itinerary_sync(
+        destination="Cabanatuan City",
+        days=2,
+        pacing="packed",
+        preferences=["food", "culture"],
+    )
+
+    assert len(itin.days) == 2
+    excluded_utilities = {"bank_atm", "fuel_station", "hospital_clinic", "pharmacy", "police_station", "parking"}
+
+    for day in itin.days:
+        # Pacing packed: up to 4 stops per day
+        assert len(day.items) <= 4
+        for item in day.items:
+            if item.place:
+                assert item.place.category not in excluded_utilities
+
+        # Geographic clustering verification: all stops within 25km of anchor
+        if len(day.items) >= 2 and day.items[0].place and day.items[0].place.latitude:
+            anchor = day.items[0].place
+            for other_item in day.items[1:]:
+                if other_item.place and other_item.place.latitude:
+                    dist_m = calculate_haversine_meters(
+                        float(anchor.latitude),
+                        float(anchor.longitude),
+                        float(other_item.place.latitude),
+                        float(other_item.place.longitude),
+                    )
+                    assert dist_m <= 25_000.0
+
+
+def test_tc_82_suggested_wizard_back_navigation_and_time_injection():
+    """TC-82: Verifies wizard back navigation and sequential Haversine travel time injection (SUG-04, SUG-05)."""
+    from desktop_client.views.suggested_wizard_view import SuggestedWizardView
+
+    swv = SuggestedWizardView()
+    day = ItineraryDay(
+        id="d1",
+        itinerary_id="i1",
+        day_number=1,
+        travel_date="2026-12-01",
+        items=[
+            ItineraryItem(
+                id="it1",
+                day_id="d1",
+                sort_order=1,
+                planned_time="09:00 AM",
+                duration_minutes=90,
+                custom_lat=15.48,
+                custom_lng=120.97,
+            )
+        ],
+    )
+    swv.generated_itinerary = Itinerary(id="i1", title="Test", destination="Cabanatuan City", start_date="2026-12-01", end_date="2026-12-02", days=[day])
+    swv.view_mode = "nearby"
+    assert swv.handle_back() is True
+    assert swv.view_mode == "itinerary"
+
+    assert swv.handle_back() is True
+    assert swv.view_mode == "form"
+
+    assert swv.handle_back() is False  # Delegates to app shell
+
+    # Inject nearby to day
+    nearby_place = Place(id="p2", name="Nearby Bistro", latitude=15.50, longitude=120.99, category="restaurant")
+
+    swv._inject_nearby_to_day(nearby_place)
+    assert len(day.items) == 2
+    new_item = day.items[1]
+    assert new_item.place_id == "p2"
+    assert new_item.sort_order == 2
+    assert new_item.planned_time is not None
+    assert new_item.planned_time != "09:00 AM"
+
+
+def test_tc_83_custom_builder_live_search_and_categories():
+    """TC-83: Verifies CustomBuilderView live search, category grouping, and details modal CTA (CUS-01, CUS-02)."""
+    from desktop_client.views.custom_builder_view import CustomBuilderView
+
+    cbv = CustomBuilderView()
+    cbv.active_view = "browse"
+    cbv._build_content()
+
+    # Search live filter
+    cbv._on_browse_search_live("bistro")
+    assert cbv.browse_search == "bistro"
+    assert hasattr(cbv, "_browse_results_col")
+
+    # Clear search
+    cbv._clear_browse_search()
+    assert cbv.browse_search == ""
+
+    # Category switching
+    cbv._on_browse_cat_change("tourist_spots")
+    assert cbv.browse_category == "tourist_spots"
+
+
+def test_tc_84_custom_builder_haversine_buffer_and_auto_schedule():
+    """TC-84: Verifies CustomBuilderView Haversine travel buffer and auto-schedule on stop move (CUS-03, CUS-04)."""
+    from desktop_client.views.custom_builder_view import CustomBuilderView
+
+    cbv = CustomBuilderView()
+    day = cbv.days[0]
+    p1 = Place(id="p1", name="Stop 1", category="attraction", latitude=15.48, longitude=120.97)
+    p2 = Place(id="p2", name="Stop 2", category="nature_park", latitude=15.80, longitude=121.10)  # ~38 km away
+
+    item1 = ItineraryItem(id="i1", day_id=day.id, sort_order=1, place_id="p1", place=p1, planned_time="09:00 AM", duration_minutes=90)
+    day.items = [item1]
+
+    # Calculate next time for next place (should include ~60 min driving buffer after 10:30 AM end)
+    next_time = cbv._calc_next_time(day, next_place=p2)
+    assert next_time is not None
+    assert next_time != "09:00 AM"
+    assert next_time != "10:30 AM"
+
+    # Add second item and test _move_stop re-schedules planned_time
+    item2 = ItineraryItem(id="i2", day_id=day.id, sort_order=2, place_id="p2", place=p2, planned_time=next_time, duration_minutes=60)
+    day.items.append(item2)
+
+    cbv._move_stop(item2, -1)
+    assert day.items[0] == item2
+    assert day.items[1] == item1
+    assert day.items[0].planned_time == "09:00 AM"
+
+
+def test_tc_85_main_service_resolution_and_back():
+    """TC-85: Verifies main service resolution, window min dimensions, and back navigation integration (MAP-04, CUS-05)."""
+    from desktop_client.services.itinerary_service import get_itinerary_service
+    from desktop_client.views.places_view import PlacesView
+    from desktop_client.views.custom_builder_view import CustomBuilderView
+
+    svc = get_itinerary_service()
+    assert svc is not None
+
+    # Back-handling protocol contracts
+    pv = PlacesView()
+    assert pv.handle_back() is False  # explore mode does not trap back
+
+    cbv = CustomBuilderView()
+    cbv.active_view = "browse"
+    assert cbv.handle_back() is True
+    assert cbv.active_view == "form"
+    assert cbv.handle_back() is False  # form view does not trap back
+
+

@@ -181,7 +181,10 @@ class ItineraryDay:
     @property
     def display_title(self) -> str:
         if self.title and self.title.strip():
-            return f"Day {self.day_number}: {self.title}"
+            clean_t = self.title.strip()
+            if clean_t.lower().startswith("day "):
+                return clean_t
+            return f"Day {self.day_number}: {clean_t}"
         return f"Day {self.day_number}"
 
     @property

@@ -13,6 +13,36 @@ from desktop_client.models.place import Place
 from desktop_client.services.favorites_service import get_favorites_service
 
 
+def present_dialog(page: ft.Page, dialog: ft.AlertDialog) -> None:
+    """Helper to present an AlertDialog across Flet runtime versions."""
+    if hasattr(page, "show_dialog"):
+        page.show_dialog(dialog)
+    else:
+        page.overlay.append(dialog)
+        dialog.open = True
+        page.update()
+
+
+def dismiss_dialog(page: ft.Page, dialog: Optional[ft.AlertDialog] = None) -> None:
+    """Helper to pop or close an AlertDialog across Flet runtime versions."""
+    if hasattr(page, "pop_dialog"):
+        try:
+            page.pop_dialog()
+            return
+        except Exception:
+            pass
+    if dialog:
+        dialog.open = False
+        try:
+            page.update()
+        except Exception:
+            pass
+
+
+_present_dialog = present_dialog
+_dismiss_dialog = dismiss_dialog
+
+
 def show_place_detail_dialog(
     page: ft.Page,
     place: Place,
@@ -331,8 +361,16 @@ def show_custom_venue_dialog(
             page.update()
             return
 
+        lat_has = bool(lat_field.value and lat_field.value.strip())
+        lng_has = bool(lng_field.value and lng_field.value.strip())
+        if lat_has != lng_has:
+            error_text.value = "Please provide both Latitude and Longitude coordinates, or leave both blank."
+            error_text.visible = True
+            page.update()
+            return
+
         lat_val = None
-        if lat_field.value and lat_field.value.strip():
+        if lat_has:
             try:
                 lat_val = float(lat_field.value.strip())
                 if not (15.10 <= lat_val <= 16.25):
@@ -347,7 +385,7 @@ def show_custom_venue_dialog(
                 return
 
         lng_val = None
-        if lng_field.value and lng_field.value.strip():
+        if lng_has:
             try:
                 lng_val = float(lng_field.value.strip())
                 if not (120.65 <= lng_val <= 121.50):

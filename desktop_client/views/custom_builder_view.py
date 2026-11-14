@@ -23,6 +23,7 @@ from desktop_client.components.itinerary_route_map import ItineraryRouteMap
 from desktop_client.components.stop_card import StopCard
 from desktop_client.config.settings import BUDGET_PRESETS, CANONICAL_CATEGORIES, ThemeColors
 from desktop_client.core.commute_guide import get_leg_commute_info
+from desktop_client.core.polyline import haversine_distance_meters
 from desktop_client.core.session import get_session_manager
 from desktop_client.models.itinerary import (
     Itinerary,
@@ -121,6 +122,15 @@ class CustomBuilderView(ft.Container):
 
         self._build_content()
         self._load_browse_places()
+
+    def handle_back(self) -> bool:
+        """Handles WorkflowHeader back button stepping back to form view (CUS-05)."""
+        if self.active_view in ("browse", "timeline") and not self.existing_itinerary:
+            self.active_view = "form"
+            self._build_content()
+            self._safe_update()
+            return True
+        return False
 
     def has_unsaved_changes(self) -> bool:
         """Returns True if user has unsaved modifications in draft."""
@@ -461,14 +471,21 @@ class CustomBuilderView(ft.Container):
         )
 
         # Search & Category Filters
-        search_field = ft.TextField(
+        self._browse_search_field = ft.TextField(
             hint_text="Search attractions, restaurants, resorts...",
             prefix_icon=ft.Icons.SEARCH,
             value=self.browse_search,
             border_radius=10,
             dense=True,
             expand=True,
-            on_submit=lambda e: self._on_browse_search(e.control.value),
+            on_change=lambda e: self._on_browse_search_live(e.control.value),
+            suffix=ft.IconButton(
+                icon=ft.Icons.CLEAR,
+                icon_size=16,
+                tooltip="Clear search",
+                on_click=lambda _: self._clear_browse_search(),
+                visible=bool(self.browse_search),
+            ),
         )
 
         cat_chips: list[ft.Control] = []
@@ -476,11 +493,12 @@ class CustomBuilderView(ft.Container):
         if self.preferences:
             cats.append(("recommended", "✨ Recommended"))
         cats.extend([
-            ("nature_park", "Nature"),
-            ("restaurant", "Food"),
-            ("museum_cultural", "Culture"),
-            ("resort_swimming", "Resorts"),
-            ("shopping_market", "Shopping"),
+            ("tourist_spots", "Tourist Spots"),
+            ("food", "Food"),
+            ("resorts_stays", "Resorts & Stays"),
+            ("culture_heritage", "Culture & Heritage"),
+            ("shopping", "Shopping"),
+            ("transit_essentials", "Transit & Essentials"),
         ])
         for c_key, c_label in cats:
             is_act = self.browse_category == c_key
@@ -496,19 +514,14 @@ class CustomBuilderView(ft.Container):
                 )
             )
 
-        # Place Cards Grid
-        place_cards: list[ft.Control] = []
-        active_day = self.days[self.active_day_index] if self.days else None
-        added_place_ids = {it.place_id for it in active_day.items} if active_day else set()
-
-        if self.browse_loading:
-            place_cards.append(ft.Container(content=ft.ProgressRing(), alignment=ft.Alignment(0, 0), padding=40))
-        elif not self.browse_places:
-            place_cards.append(ft.Container(content=ft.Text("No places found for this filter.", size=13, color=ThemeColors.TEXT_MUTED_LIGHT), padding=40))
-        else:
-            for p in self.browse_places:
-                is_added = p.id in added_place_ids
-                place_cards.append(self._build_browse_place_card(p, is_added))
+        # Place Cards Results Container for In-Memory Live Search
+        self._browse_results_col = ft.Column(
+            controls=[],
+            spacing=8,
+            scroll=ft.ScrollMode.AUTO,
+            expand=True,
+        )
+        self._filter_and_render_browse_places()
 
         # Bottom Bar: View Itinerary CTA
         bottom_bar = ft.Container(
@@ -535,16 +548,139 @@ class CustomBuilderView(ft.Container):
                 ft.Container(height=8),
                 target_day_bar,
                 ft.Container(height=10),
-                search_field,
-                ft.Row(controls=cat_chips, spacing=6),
+                self._browse_search_field,
+                ft.Row(controls=cat_chips, spacing=6, scroll=ft.ScrollMode.AUTO),
                 ft.Container(height=12),
-                ft.Column(controls=place_cards, spacing=8, scroll=ft.ScrollMode.AUTO, expand=True),
+                self._browse_results_col,
                 ft.Container(height=8),
                 bottom_bar,
             ],
             spacing=0,
             expand=True,
         )
+
+    def _on_browse_search_live(self, query: str) -> None:
+        self.browse_search = query.strip()
+        if hasattr(self, "_browse_search_field") and self._browse_search_field.suffix:
+            self._browse_search_field.suffix.visible = bool(self.browse_search)
+            try:
+                self._browse_search_field.suffix.update()
+            except Exception:
+                pass
+        self._filter_and_render_browse_places()
+
+    def _clear_browse_search(self) -> None:
+        self.browse_search = ""
+        if hasattr(self, "_browse_search_field"):
+            self._browse_search_field.value = ""
+            if self._browse_search_field.suffix:
+                self._browse_search_field.suffix.visible = False
+            try:
+                self._browse_search_field.update()
+            except Exception:
+                pass
+        self._filter_and_render_browse_places()
+
+    def _filter_and_render_browse_places(self) -> None:
+        if not hasattr(self, "_browse_results_col"):
+            return
+
+        active_day = self.days[self.active_day_index] if self.days else None
+        added_place_ids = {it.place_id for it in active_day.items} if active_day else set()
+
+        all_places = self.place_service.get_loaded_places()
+        if not all_places:
+            from desktop_client.core.offline_data import get_all_offline_places
+            all_places = [Place.from_dict(p) for p in get_all_offline_places()]
+
+        q = (self.browse_search or "").strip().lower()
+        cat = self.browse_category or "all"
+
+        CATEGORY_GROUPS = {
+            "tourist_spots": {"tourist_attraction", "nature_park", "historical_landmark", "park", "viewpoint"},
+            "food": {"restaurant", "cafe", "fast_food", "bakery", "food_court", "dining"},
+            "resorts_stays": {"resort_swimming", "hotel_lodging", "stay", "resort", "hotel"},
+            "culture_heritage": {"museum_cultural", "church_religious", "historical_landmark", "monument", "culture"},
+            "shopping": {"shopping_market", "convenience_store", "market", "gift_shop", "mall"},
+            "transit_essentials": {"gas_station", "bus_station", "transport_terminal", "hospital_clinic", "bank_atm", "transit", "emergency"},
+        }
+
+        pref_cat_map = {
+            "Nature & Parks": ["nature_park"],
+            "Food Trip": ["restaurant", "cafe"],
+            "Culture & History": ["museum_cultural", "church_religious"],
+            "Shopping": ["shopping_market", "convenience_store"],
+            "Resort": ["resort_swimming"],
+            "nature": ["nature_park"],
+            "food": ["restaurant", "cafe"],
+            "culture": ["museum_cultural", "church_religious"],
+            "shopping": ["shopping_market", "convenience_store"],
+            "resort": ["resort_swimming"],
+        }
+
+        matched: list[Place] = []
+        for p in all_places:
+            if q:
+                name_m = q in (p.name or "").lower()
+                muni_m = q in (p.municipality_name or "").lower()
+                cat_m = q in (p.category or "").lower() or q in (p.formatted_category or "").lower()
+                desc_m = q in (p.description or "").lower()
+                if not (name_m or muni_m or cat_m or desc_m):
+                    continue
+
+            if cat == "all":
+                pass
+            elif cat == "recommended" and self.preferences:
+                target_cats = set()
+                for pr in self.preferences:
+                    target_cats.update(pref_cat_map.get(pr, []))
+                if target_cats and p.category not in target_cats:
+                    continue
+            elif cat in CATEGORY_GROUPS:
+                allowed = CATEGORY_GROUPS[cat]
+                p_cat = (p.category or "").lower()
+                if p_cat not in allowed and not any(p_cat.startswith(a) for a in allowed):
+                    continue
+            else:
+                if (p.category or "").lower() != cat.lower():
+                    continue
+
+            matched.append(p)
+
+        if self.destination and self.destination.lower() not in ("nueva ecija", "all"):
+            dest_lower = self.destination.lower()
+            matched.sort(key=lambda p: (0 if (p.municipality_name or "").lower() == dest_lower else 1, p.name))
+        else:
+            matched.sort(key=lambda p: (p.municipality_name or "", p.name))
+
+        controls: list[ft.Control] = []
+        if self.browse_loading:
+            controls.append(ft.Container(content=ft.ProgressRing(), alignment=ft.Alignment(0, 0), padding=40))
+        elif not matched:
+            controls.append(
+                ft.Container(
+                    content=ft.Column(
+                        controls=[
+                            ft.Icon(ft.Icons.SEARCH_OFF, size=36, color=ThemeColors.TEXT_MUTED_LIGHT),
+                            ft.Text("No places match your search or filter.", size=13, color=ThemeColors.TEXT_MUTED_LIGHT),
+                        ],
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                        spacing=6,
+                    ),
+                    padding=40,
+                    alignment=ft.Alignment(0, 0),
+                )
+            )
+        else:
+            for p in matched:
+                is_added = p.id in added_place_ids
+                controls.append(self._build_browse_place_card(p, is_added))
+
+        self._browse_results_col.controls = controls
+        try:
+            self._browse_results_col.update()
+        except Exception:
+            self._safe_update()
 
     def _build_browse_place_card(self, place: Place, is_added: bool) -> ft.Control:
         action_btn = ft.Container(
@@ -567,7 +703,12 @@ class CustomBuilderView(ft.Container):
         details_btn = ft.TextButton(
             "Details",
             icon=ft.Icons.INFO_OUTLINE,
-            on_click=lambda _: show_place_detail_dialog(self.page, place),
+            on_click=lambda _: show_place_detail_dialog(
+                self.page,
+                place,
+                on_navigate=self.on_navigate,
+                on_add_to_day=lambda pl: self._toggle_place_in_active_day(pl),
+            ),
             style=ft.ButtonStyle(padding=ft.Padding.symmetric(horizontal=8, vertical=4)),
         )
 
@@ -637,6 +778,16 @@ class CustomBuilderView(ft.Container):
             on_change=lambda val: setattr(self, "destination", val),
         )
 
+        budget_field_mini = ft.TextField(
+            label="Daily Budget (₱)",
+            value=str(int(self.daily_budget)),
+            prefix=ft.Text("₱ "),
+            dense=True,
+            border_radius=8,
+            width=140,
+            on_change=lambda e: self._on_budget_change(e.control.value),
+        )
+
         date_summary_mini = ft.Text(f"{self.start_date_str} → {self.end_date_str}", size=11, weight=ft.FontWeight.BOLD)
         date_chip_mini = ft.Container(
             content=ft.Row(
@@ -660,6 +811,7 @@ class CustomBuilderView(ft.Container):
                         controls=[
                             title_input_mini,
                             dest_picker_mini,
+                            budget_field_mini,
                             date_chip_mini,
                         ],
                         spacing=8,
@@ -689,10 +841,13 @@ class CustomBuilderView(ft.Container):
         day_buttons: list[ft.Control] = []
         for idx, day in enumerate(self.days):
             is_act = idx == self.active_day_index
+            day_munis = [it.place.municipality_name for it in day.items if it.place and it.place.municipality_name]
+            muni_suffix = f" • {day_munis[0]}" if day_munis else ""
+            label_text = f"Day {day.day_number}{muni_suffix} ({len(day.items)})"
             day_buttons.append(
                 ft.Container(
                     content=ft.Text(
-                        f"Day {day.day_number} ({len(day.items)})",
+                        label_text,
                         size=11,
                         weight=ft.FontWeight.BOLD if is_act else ft.FontWeight.NORMAL,
                         color=ft.Colors.WHITE if is_act else ThemeColors.TEXT_MAIN_LIGHT,
@@ -709,7 +864,7 @@ class CustomBuilderView(ft.Container):
             ft.IconButton(icon=ft.Icons.ADD_CIRCLE_OUTLINE, icon_size=18, icon_color=ThemeColors.PRIMARY_BLUE, tooltip="Add Day", on_click=self._add_new_day)
         )
 
-        day_bar = ft.Row(controls=day_buttons, spacing=6)
+        day_bar = ft.Row(controls=day_buttons, spacing=6, scroll=ft.ScrollMode.AUTO)
 
         # Active Day Header Actions
         active_day_header = ft.Row(
@@ -767,11 +922,14 @@ class CustomBuilderView(ft.Container):
                 timeline_items.append(
                     StopCard(
                         item=item,
+                        is_first=(idx == 0),
+                        is_last=(idx == len(active_day.items) - 1),
                         editable=True,
                         on_move_up=lambda it=item: self._move_stop(it, -1),
                         on_move_down=lambda it=item: self._move_stop(it, 1),
                         on_edit=lambda it=item: self._open_edit_stop_dialog(it),
                         on_delete=lambda it=item: self._remove_stop(it),
+                        on_click=lambda itm: show_place_detail_dialog(self.safe_page, itm.place, on_navigate=self.on_navigate) if (itm.place and self.safe_page) else None,
                     )
                 )
         else:
@@ -906,7 +1064,7 @@ class CustomBuilderView(ft.Container):
         if existing_idx is not None:
             del day.items[existing_idx]
         else:
-            time_str = self._calc_next_time(day)
+            time_str = self._calc_next_time(day, next_place=place)
             item = ItineraryItem(
                 id=str(uuid.uuid4()),
                 day_id=day.id,
@@ -924,16 +1082,52 @@ class CustomBuilderView(ft.Container):
         self._build_content()
         self._safe_update()
 
-    def _calc_next_time(self, day: ItineraryDay) -> str:
+    def _calc_next_time(self, day: ItineraryDay, next_place: Optional[Place] = None) -> str:
         if not day.items:
             return "09:00 AM"
-        dur = day.items[-1].duration_minutes or 90
-        try:
-            t = datetime.strptime(day.items[-1].planned_time or "09:00 AM", "%I:%M %p")
-            nxt = t + timedelta(minutes=dur + 30)
-            return nxt.strftime("%I:%M %p")
-        except Exception:
-            return "11:00 AM"
+
+        last_item = day.items[-1]
+        raw_time = (last_item.planned_time or "09:00 AM").strip()
+
+        end_dt: Optional[datetime] = None
+        if " - " in raw_time:
+            end_str = raw_time.split(" - ")[-1].strip()
+            for fmt in ("%I:%M %p", "%H:%M", "%I:%M%p"):
+                try:
+                    end_dt = datetime.strptime(end_str, fmt)
+                    break
+                except Exception:
+                    pass
+
+        if not end_dt:
+            start_str = raw_time.split(" - ")[0].strip()
+            for fmt in ("%I:%M %p", "%H:%M", "%I:%M%p"):
+                try:
+                    start_dt = datetime.strptime(start_str, fmt)
+                    dur = last_item.duration_minutes or 90
+                    end_dt = start_dt + timedelta(minutes=dur)
+                    break
+                except Exception:
+                    pass
+
+        if not end_dt:
+            end_dt = datetime.strptime("10:30 AM", "%I:%M %p")
+
+        travel_buffer = 30
+        if next_place:
+            p1_lat = getattr(last_item, "custom_lat", None) or (last_item.place.latitude if last_item.place else None)
+            p1_lng = getattr(last_item, "custom_lng", None) or (last_item.place.longitude if last_item.place else None)
+            p2_lat = getattr(next_place, "latitude", None)
+            p2_lng = getattr(next_place, "longitude", None)
+            if p1_lat and p1_lng and p2_lat and p2_lng:
+                try:
+                    dist_km = haversine_distance_meters(float(p1_lat), float(p1_lng), float(p2_lat), float(p2_lng)) / 1000.0
+                    travel_buffer = max(15, min(120, int((dist_km / 40.0) * 60 + 10)))
+                except Exception:
+                    travel_buffer = 30
+
+        next_start = end_dt + timedelta(minutes=travel_buffer)
+        return next_start.strftime("%I:%M %p")
 
     def _move_stop(self, item: ItineraryItem, delta: int) -> None:
         day = self.days[self.active_day_index]
@@ -944,8 +1138,7 @@ class CustomBuilderView(ft.Container):
             for i, itm in enumerate(day.items):
                 itm.sort_order = i + 1
             self.is_dirty = True
-            self._build_content()
-            self._safe_update()
+            self._auto_schedule_active_day()
 
     def _remove_stop(self, item: ItineraryItem) -> None:
         day = self.days[self.active_day_index]
@@ -983,6 +1176,16 @@ class CustomBuilderView(ft.Container):
             value=str(self.days[self.active_day_index].day_number),
             dense=True,
         )
+
+        def _close_dlg(_=None):
+            if hasattr(self.page, "pop_dialog"):
+                try:
+                    self.page.pop_dialog()
+                    return
+                except Exception:
+                    pass
+            dlg.open = False
+            self.page.update()
 
         def _save_edit(_):
             c_min = None
@@ -1022,8 +1225,7 @@ class CustomBuilderView(ft.Container):
                 target_day.items.append(item)
 
             self.is_dirty = True
-            dlg.open = False
-            self.page.update()
+            _close_dlg()
             self._build_content()
             self._safe_update()
 
@@ -1035,13 +1237,16 @@ class CustomBuilderView(ft.Container):
                 spacing=10,
             ),
             actions=[
-                ft.TextButton("Cancel", on_click=lambda _: setattr(dlg, "open", False) or self.page.update()),
+                ft.TextButton("Cancel", on_click=_close_dlg),
                 ft.FilledButton("Save", on_click=_save_edit),
             ],
         )
-        self.page.overlay.append(dlg)
-        dlg.open = True
-        self.page.update()
+        if hasattr(self.page, "show_dialog"):
+            self.page.show_dialog(dlg)
+        else:
+            self.page.overlay.append(dlg)
+            dlg.open = True
+            self.page.update()
 
     def _open_custom_venue_dialog(self) -> None:
         """Adds off-grid custom venue geofenced to Nueva Ecija with optional coordinates."""
@@ -1055,6 +1260,16 @@ class CustomBuilderView(ft.Container):
         lat_field = ft.TextField(label="Latitude (optional)", hint_text="e.g. 15.5800", dense=True)
         lng_field = ft.TextField(label="Longitude (optional)", hint_text="e.g. 121.0000", dense=True)
         err_text = ft.Text("", size=11, color=ThemeColors.ERROR, visible=False)
+
+        def _close_venue_dlg(_=None):
+            if hasattr(self.page, "pop_dialog"):
+                try:
+                    self.page.pop_dialog()
+                    return
+                except Exception:
+                    pass
+            dlg.open = False
+            self.page.update()
 
         def _add_venue(_):
             name = name_field.value.strip()
@@ -1083,12 +1298,20 @@ class CustomBuilderView(ft.Container):
                 dlg.update()
                 return
 
+            lat_str = lat_field.value.strip()
+            lng_str = lng_field.value.strip()
+            if bool(lat_str) != bool(lng_str):
+                err_text.value = "Please provide both Latitude and Longitude coordinates, or leave both blank."
+                err_text.visible = True
+                dlg.update()
+                return
+
             lat = None
             lng = None
-            if lat_field.value.strip() or lng_field.value.strip():
+            if lat_str and lng_str:
                 try:
-                    lat = float(lat_field.value.strip())
-                    lng = float(lng_field.value.strip())
+                    lat = float(lat_str)
+                    lng = float(lng_str)
                     if not (15.10 <= lat <= 16.25 and 120.65 <= lng <= 121.50):
                         err_text.value = "Coordinates outside Nueva Ecija (Lat 15.10–16.25, Lng 120.65–121.50)."
                         err_text.visible = True
@@ -1125,8 +1348,7 @@ class CustomBuilderView(ft.Container):
             )
             active_day.items.append(new_item)
             self.is_dirty = True
-            dlg.open = False
-            self.page.update()
+            _close_venue_dlg()
             self._build_content()
             self._safe_update()
 
@@ -1147,13 +1369,16 @@ class CustomBuilderView(ft.Container):
                 width=450,
             ),
             actions=[
-                ft.TextButton("Cancel", on_click=lambda _: setattr(dlg, "open", False) or self.page.update()),
+                ft.TextButton("Cancel", on_click=_close_venue_dlg),
                 ft.FilledButton("Add Venue", on_click=_add_venue),
             ],
         )
-        self.page.overlay.append(dlg)
-        dlg.open = True
-        self.page.update()
+        if hasattr(self.page, "show_dialog"):
+            self.page.show_dialog(dlg)
+        else:
+            self.page.overlay.append(dlg)
+            dlg.open = True
+            self.page.update()
 
     def _open_full_map_draft(self) -> None:
         """Handoff draft custom itinerary to MapView Follow-Route mode."""

@@ -1435,6 +1435,58 @@ px cap sync android): **Exit code 0 (6 plugins synchronized)**.
   - [x] Recompile PyInstaller standalone distribution binary: `python -m PyInstaller NuevaEcijaTravel.spec --clean -y`.
   - [x] Verify all 12 End-to-End Acceptance Gates.
 
+## Phase 54: Desktop Client Post-Session 53 Parity Remediation (`MAP-01` to `MAP-10`, `SUG-01` to `SUG-05`, `CUS-01` to `CUS-05`)
+- [x] **Phase 54.1: Interactive Canvas & Gestures (`MAP-02`, `MAP-03`, `MAP-06`, `MAP-07`)**:
+  - [x] Update `desktop_client/services/place_service.py`: Add `import httpx`.
+  - [x] Update `desktop_client/components/slippy_map_canvas.py`:
+    - [x] Decouple `gesture_surface` (`#01000000`) below `_marker_stack` to prevent pan recognizer from swallowing marker clicks.
+    - [x] Add `on_scroll` (mouse-wheel zoom) and `on_double_tap` (double-click zoom).
+    - [x] Auto-invoke `set_route()` in `__init__()` when `route_stops` are provided.
+    - [x] Add `get_viewport_bounds()` returning `(min_lat, min_lng, max_lat, max_lng)`.
+    - [x] Introduce thread-safe `_on_single_tile_cached()` image updater.
+- [x] **Phase 54.2: PlacesView & Main App Shell (`MAP-01`, `MAP-04`, `MAP-05`, `MAP-08`, `MAP-09`, `MAP-10`, `CUS-05`)**:
+  - [x] Update `desktop_client/main.py`:
+    - [x] Import `get_itinerary_service` and instantiate `itinerary_service`.
+    - [x] Configure `page.window.width = 1366` and `height = 768`.
+    - [x] Wire `_handle_workflow_back()` to check `content.handle_back()`.
+    - [x] Pass `active_trip=selected_trip` to `PlacesView` only when `itineraryId=` or `followRoute=true`.
+  - [x] Update `desktop_client/views/places_view.py`:
+    - [x] Position drawer toggle pill at `bottom=18, left=530` (remove full-width overlay blocking map clicks).
+    - [x] Implement in-place filtering: preserve `_search_field` focus and map viewport.
+    - [x] Add multi-select category filter set (`selected_categories`), active filter badge `Filters [N]`, and price tier logic.
+    - [x] Position floating action buttons at `right=12, bottom=185` (above zoom controls).
+    - [x] Render vertical destination sheet drawer with empty-state `"Reset All Filters"` button.
+    - [x] Implement `recenter_map()`.
+- [x] **Phase 54.3: Suggested Wizard & Offline Clustering (`SUG-01` to `SUG-05`)**:
+  - [x] Update `desktop_client/models/itinerary.py`: Guard `display_title` against double `"Day X: "` prefix.
+  - [x] Update `desktop_client/services/itinerary_service.py`:
+    - [x] Support both `"packed"` and `"fast"` for 4 stops/day.
+    - [x] Exclude utility categories (`fuel_station`, `bank_atm`, `hospital_clinic`, etc.) from tourist slots.
+    - [x] Add `+20.0` curated boost and restrict rating multiplier to real ratings.
+    - [x] Implement 25km geographic clustering and 2-Opt nearest-neighbor stop ordering.
+  - [x] Update `desktop_client/views/suggested_wizard_view.py`:
+    - [x] Transmit canonical preference keys (`nature`, `food`, `culture`, `shopping`, `resort`) with `{"food", "culture", "resort"}` default.
+    - [x] Implement `handle_back() -> bool` stepping `nearby` → `itinerary` → `form`.
+    - [x] Add bottom Nearby banner card and bottom Accept & Save / Customize in Builder CTAs.
+    - [x] Enrich Nearby cards with hours, Maps link, and sequential time calculation.
+- [x] **Phase 54.4: Custom Builder & Timeline Scheduling (`CUS-01` to `CUS-05`)**:
+  - [x] Update `desktop_client/views/custom_builder_view.py`:
+    - [x] Implement live search with Clear `✕` button and in-memory 2,673 POI catalog filter.
+    - [x] Display all 8 category groups covering all 16 canonical categories.
+    - [x] Wire `on_add_to_day` in Place Detail sheet.
+    - [x] Parse time ranges and apply dynamic Haversine travel buffers (15-120 min).
+    - [x] Add Daily Budget input in Step 3 settings, municipality on tabs, and auto-scheduling on stop move.
+    - [x] Implement `handle_back() -> bool`.
+- [x] **Phase 54.5: Dialog Helper Primitives (`desktop_client/components/dialogs.py`)**:
+  - [x] Implement `_present_dialog` and `_dismiss_dialog` supporting overlay and pop_dialog cleanly.
+- [x] **Phase 54.6: Verification Matrix (`TC-73` to `TC-85`) & Compilation**:
+  - [x] Implement automated regression tests `TC-73` through `TC-85` in `desktop_client/tests/test_parity_services_and_components.py`.
+  - [x] Run desktop pytest suite (assert 100% pass: 64/64 passed).
+  - [x] Run backend pytest suite (assert 21/21 pass: 21/21 passed).
+  - [x] Run web Vitest suite (assert 348/348 pass with 0 edits in `Project/`: 348/348 passed).
+  - [x] Compile standalone Windows executable `dist/NuevaEcijaTravel/NuevaEcijaTravel.exe`.
+
+
 
 
 

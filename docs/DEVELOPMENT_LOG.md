@@ -4753,6 +4753,109 @@ NEXT STEPS:
 - **Session Results**:
   - Full desktop-to-web functional, contract, and resilience parity achieved. All test suites 100% green. Standalone Windows distribution compiled and verified.
 
+---
+
+## Session 54: Post-Session 53 Desktop-to-Web Parity Specification & Architectural Documentation
+- **Date & Time**: 2026-11-14 17:50:00 (Local)
+- **Objective**: Document comprehensive pre-implementation engineering specification for the 20 post-Session 53 parity defects across Map Tab (`MAP-01` to `MAP-10`), Suggested Itinerary Wizard (`SUG-01` to `SUG-05`), and Custom Builder (`CUS-01` to `CUS-05`), establishing verification gates `TC-73` through `TC-85`.
+- **Pre-Implementation Analysis & Root-Cause Matrix**:
+  1. **Map Pointer & Canvas Architecture (`MAP-01`, `MAP-02`, `MAP-06`, `MAP-08`)**:
+     - `MAP-01`: Outer `ft.Container(bottom=18, left=0, right=0, alignment=Alignment(0, 1))` in `places_view.py:410` generates a full-width invisible Flutter render box blocking mouse events across the map. Fix: Anchor directly at `bottom=18, left=530` with intrinsic width.
+     - `MAP-02`: In `slippy_map_canvas.py:285-298`, `_marker_stack` is nested inside `GestureDetector`. Flutter's pan gesture recognizer wins the gesture arena over marker button `on_click` events. Missing `on_scroll` and `on_double_tap`. Fix: Layer `gesture_surface` with `#01000000` below `_marker_stack`.
+     - `MAP-06`: Background tile threads mutating UI controls directly from `_TILE_EXECUTOR` instead of targeted in-place tile image updates.
+     - `MAP-08`: `main.py` never set window dimensions, `SlippyMapCanvas` hardcoded to 1240x740, bottom controls overlapping zoom controls. Fix: Set `page.window.width = 1366, height = 768`, position floating action buttons at `right=12, bottom=185` (well above zoom at `bottom=24`).
+  2. **State & Input Focus Invalidation (`MAP-05`, `CUS-01`)**:
+     - `MAP-05`: `PlacesView._on_search_change()` calls `_build_content()`, destroying the `TextField` instance (dropping keyboard focus after 1 keystroke) and resetting the map to provincial zoom 10. Fix: Update controls and call `map_component.set_places()` in-place.
+     - `CUS-01`: Step 2 search requires Enter, queries only 60 backend places, and destroys `TextField` on submit. Fix: Live in-memory search with Clear `✕` button across all 2,673 POIs in memory.
+  3. **Route Mode Leaks & Service Bindings (`MAP-03`, `MAP-04`, `CUS-05`)**:
+     - `MAP-03`: `SlippyMapCanvas.__init__()` never invokes `set_route()` when `route_stops` are passed. Fix: Auto-invoke `set_route(auto_fit=True)` on mount.
+     - `MAP-04`: `main.py` unconditionally passes `active_trip=selected_trip` on `/map`, locking the view into Follow-Route mode whenever any trip was previously viewed. Fix: Only pass `active_trip` when query has `itineraryId=` or `followRoute=true`. Implement `recenter_map()`.
+     - `CUS-05`: `main.py:241` references undefined `itinerary_service` (`NameError`). Fix: Instantiate `itinerary_service = get_itinerary_service()` in `main()`. Wire `WorkflowHeader.on_back` to delegate to `content.handle_back()`.
+  4. **Data Normalization & Pacing Engine (`SUG-01` to `SUG-05`, `CUS-02` to `CUS-04`)**:
+     - `SUG-01`: Preference keys sent as human labels (`"Nature & Parks"`) instead of canonical keys (`"nature"`). Fix: Store/send canonical keys with default `{"food", "culture", "resort"}`.
+     - `SUG-02`: `ItineraryDay.display_title` prepends `Day X: ` to already prefixed titles, rendering `"Day 1: Day 1: Cabanatuan City"`. Fix: Guard with `startswith("day ")`.
+     - `SUG-03`: `pacing` checks `fast` instead of `packed` (schedules 3 stops instead of 4); unrated OSM places outscore curated attractions; utility POIs scheduled; no 25km clustering/2-Opt. Fix: Support `"packed"`, filter utilities, add `+20.0` curated boost, 25km clustering, and 2-Opt ordering.
+     - `SUG-04`: Missing bottom Nearby banner and Save/Customize CTAs, missing Maps button and operating hours, hardcoded `"01:30 PM"`. Fix: Add banner and CTAs; compute sequential time.
+     - `CUS-02`: Step 2 shows 5 raw categories instead of 8 grouped categories covering all 16 canonical categories. `Details` dialog missing `on_add_to_day`. Fix: Implement all 8 category groups; pass `on_add_to_day`.
+     - `CUS-03`: Fixed 30m transit buffer crashing on ranges (`"09:30 AM - 11:30 AM"`). Fix: Parse range and ISO formats; add dynamic Haversine buffer (15-120 min).
+     - `CUS-04`: Step 3 missing Daily Budget input, missing municipality on Day tabs, disabled arrow bounds flags missing, reordering stops not recalculating times. Fix: Add budget input, municipality tags, first/last flags, and auto-scheduling.
+- **Verification Plan & Baseline Checks**:
+  - Baseline Web Unit Tests: 32 files passed, 348 unit tests passed in 26.94s (Strict 0 edits in `Project/`).
+  - Baseline Backend Tests: 21 passed in 12.16s against live PostgreSQL.
+  - Baseline Desktop Tests: 51 passed in 1.92s.
+  - Test specifications established for `TC-73` through `TC-85` in `test_parity_services_and_components.py`.
+- **Documentation Updated**:
+  - `docs/KNOWN_ISSUES.md`: Registered Section 16 tracking `MAP-01` to `MAP-10`, `SUG-01` to `SUG-05`, and `CUS-01` to `CUS-05`.
+  - `docs/TODO.md`: Added Phase 54 task breakdown for all 6 sub-phases.
+  - `docs/PROJECT_STATE.md`: Synchronized current milestone and pending implementation steps.
+
+---
+
+## Session 54 (Post-Implementation): Parity Remediation Verification & Standalone Binary Rebuild
+- **Date & Time**: 2026-11-14 18:40:00 (Local)
+- **Objective**: Execute end-to-end implementation of the 20 post-Session 53 parity defects across Map Tab, Suggested Itinerary Wizard, and Custom Builder, conduct automated regression testing (`TC-73` through `TC-85`), verify 0 regressions across web and backend suites, and compile the standalone Windows executable distribution.
+- **Scope & Constraints Maintained**:
+  - **Strict 0 edits in `Project/`**: The Ionic 9 / Angular 22 reference web application remains untouched (all 348 unit tests passing).
+  - Target modules: `desktop_client/` (Python 3.14.3 / Flet 1.1.2) and `backend/` (FastAPI / PostgreSQL 18 / SQLAlchemy 2.0).
+- **Implementation Summary**:
+  1. **Phase 54.1: Interactive SlippyMapCanvas Gestures & Routes (`MAP-02`, `MAP-03`, `MAP-06`, `MAP-07`)**:
+     - `desktop_client/services/place_service.py`: Added top-level `import httpx` eliminating `NameError` in `fetch_live_osm_places()`.
+     - `desktop_client/components/slippy_map_canvas.py`:
+       - Decoupled `gesture_surface` (`#01000000`) placed directly below `_marker_stack`, allowing marker pins to receive taps cleanly without gesture arena contention.
+       - Implemented `on_scroll` (mouse-wheel zoom in/out with center anchoring) and `on_double_tap` (double-click zoom in).
+       - Auto-invoked `set_route()` in `__init__()` with `auto_fit=True` on route mount.
+       - Added `get_viewport_bounds()` returning `(min_lat, min_lng, max_lat, max_lng)`.
+       - Implemented thread-safe `_on_single_tile_cached()` image updater with clean ESRI tile fallback.
+  2. **Phase 54.2: PlacesView & Main App Shell (`MAP-01`, `MAP-04`, `MAP-05`, `MAP-08`, `MAP-09`, `MAP-10`, `CUS-05`)**:
+     - `desktop_client/main.py`:
+       - Initialized `itinerary_service = get_itinerary_service()` in `main()` resolving `NameError`.
+       - Configured window dimensions `page.window.width = 1366, height = 768, min_width = 1024, min_height = 600`.
+       - Wired `_handle_workflow_back()` to check `content.handle_back()`.
+       - Guarded `/map` route to only pass `active_trip=selected_trip` when `itineraryId=` or `followRoute=true` is present in query parameters.
+     - `desktop_client/views/places_view.py`:
+       - Relocated drawer toggle pill to `bottom=18, left=530` with intrinsic width, eliminating the full-width click-blocking overlay container.
+       - Implemented in-place filtering updating `_list_column` and `_empty_state`, preserving `_search_field` keyboard focus and map pan/zoom.
+       - Added multi-select category filter set (`selected_categories`), active filter badge `Filters [N]`, and price tier logic (`all`, `free`, `budget`, `mid`, `luxury`).
+       - Positioned floating action buttons at `right=12, bottom=185` (above zoom controls at `bottom=24`).
+       - Rendered vertical destination sheet drawer with empty-state `"Reset All Filters"` button.
+       - Implemented `recenter_map()` and `handle_back() -> bool`.
+  3. **Phase 54.3: Suggested Wizard & Offline Clustering (`SUG-01` to `SUG-05`)**:
+     - `desktop_client/models/itinerary.py`: Updated `ItineraryDay.display_title` with `startswith("day ")` guard to prevent double prefix `"Day 1: Day 1: ..."`.
+     - `desktop_client/services/itinerary_service.py`:
+       - Supported both `"packed"` and `"fast"` pacing keys for 4 stops/day.
+       - Excluded utility POI categories (`bank_atm`, `fuel_station`, `hospital_clinic`, `pharmacy`, etc.) from candidate tourist slots.
+       - Added `+20.0` curated boost, restricted rating bonus to real non-null ratings, implemented 25km geographic clustering around anchor stop, and applied 2-Opt nearest-neighbor stop ordering.
+       - Added `generate_suggested_itinerary_sync()` synchronous helper.
+     - `desktop_client/views/suggested_wizard_view.py`:
+       - Transmitted canonical preference keys (`nature`, `food`, `culture`, `shopping`, `resort`) with `{"food", "culture", "resort"}` default.
+       - Implemented `handle_back() -> bool` stepping `nearby` → `itinerary` → `form`.
+       - Added bottom Nearby banner card and bottom Accept & Save / Customize in Builder CTAs.
+       - Enriched Nearby cards with operating hours, Google Maps directions link, and sequential Haversine travel time injection.
+  4. **Phase 54.4: Custom Builder & Timeline Scheduling (`CUS-01` to `CUS-05`)**:
+     - `desktop_client/views/custom_builder_view.py`:
+       - Implemented live in-memory search with Clear `✕` button and live filtering without losing field focus.
+       - Displayed all 8 category groups covering all 16 canonical categories.
+       - Wired `on_add_to_day` in Place Detail sheet.
+       - Implemented `_calc_next_time()` parsing range times (`"09:30 AM - 11:30 AM"`) and computing dynamic Haversine travel buffers (15-120 min).
+       - Added Daily Budget input in Step 3 settings, municipality on Day tabs, first/last arrow bounds, and auto-scheduling on stop move.
+       - Implemented `handle_back() -> bool` stepping `timeline` / `browse` → `form`.
+       - Added coordinate validation in custom venue dialog checking both or neither coordinates.
+  5. **Phase 54.5: Dialog Helper Primitives (`desktop_client/components/dialogs.py`)**:
+     - Standardized `present_dialog(page, dialog)` and `dismiss_dialog(page, dialog)` with `_present_dialog` and `_dismiss_dialog` aliases.
+     - Enforced coordinate pair validation in `show_custom_venue_dialog`.
+  6. **Phase 54.6: Verification Matrix (`TC-73` to `TC-85`) & Compilation**:
+     - Implemented 13 automated verification tests in `desktop_client/tests/test_parity_services_and_components.py`.
+     - **Desktop Client Test Suite**: 64 passed in 4.04s (`100% PASS`).
+     - **Backend Test Suite**: 21 passed in 9.26s (`100% PASS`).
+     - **Web Client Unit Test Suite**: 32 test files passed, 348 unit tests passed in 33.64s (`100% PASS`, 0 edits in `Project/`).
+     - **Standalone Binary Compilation**: Rebuilt `dist/NuevaEcijaTravel/NuevaEcijaTravel.exe` (15,975,755 bytes) cleanly via PyInstaller.
+- **Defects Resolved**: 20/20 resolved (`MAP-01` to `MAP-10`, `SUG-01` to `SUG-05`, `CUS-01` to `CUS-05`).
+- **Documentation Updated**:
+  - `docs/KNOWN_ISSUES.md`: Section 16 updated with all 20 defects marked `RESOLVED (Session 54)`.
+  - `docs/TODO.md`: Phase 54 all 6 sub-phases checked off.
+  - `docs/PROJECT_STATE.md`: Synchronized current milestone, test counts, and binary paths.
+
+
 
 
 
