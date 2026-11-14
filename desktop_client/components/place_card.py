@@ -37,12 +37,23 @@ class PlaceCard(ft.Container):
 
     def _build_content(self) -> None:
         # Thumbnail image or fallback with top-left category badge overlay
-        if self.place.image_url and self.place.image_url.startswith("http"):
+        img_src = self.place.resolved_image_path
+        if img_src:
             image_widget = ft.Image(
-                src=self.place.image_url,
+                src=img_src,
                 height=140,
                 width=float("inf"),
                 fit=ft.BoxFit.COVER,
+                error_content=ft.Container(
+                    content=ft.Icon(
+                        ft.Icons.LANDSCAPE_OUTLINED,
+                        size=36,
+                        color=ThemeColors.PRIMARY_BLUE,
+                    ),
+                    height=140,
+                    bgcolor=ThemeColors.PRIMARY_LIGHT,
+                    alignment=ft.Alignment(0, 0),
+                ),
             )
         else:
             image_widget = ft.Container(

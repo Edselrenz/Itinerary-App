@@ -85,12 +85,23 @@ class ApiClient:
             self._client = None
 
     def check_health_sync(self) -> bool:
-        """Synchronous fast socket check of backend availability."""
+        """Synchronous fast socket check of backend availability dynamically probing configured host/port."""
         try:
             import socket
+            from urllib.parse import urlparse
+
+            parsed = urlparse(self.base_url)
+            host = parsed.hostname or "127.0.0.1"
+            if parsed.port:
+                port = parsed.port
+            elif parsed.scheme == "https":
+                port = 443
+            else:
+                port = 80
+
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(0.3)
-            err = sock.connect_ex(("127.0.0.1", 8000))
+            sock.settimeout(0.5)
+            err = sock.connect_ex((host, port))
             sock.close()
             return err == 0
         except Exception:

@@ -299,7 +299,7 @@ class SavedTripsView(ft.Container):
                     content="Export (.ics / .md)",
                     icon=ft.Icons.FILE_DOWNLOAD_OUTLINED,
                     style=ft.ButtonStyle(color=ThemeColors.TEXT_MUTED_LIGHT),
-                    on_click=lambda _: show_export_dialog(self.page, itin),
+                    on_click=lambda _: show_export_dialog(self.safe_page, itin) if self.safe_page else None,
                 ),
                 ft.FilledButton(
                     content="View Details →",
@@ -382,30 +382,44 @@ class SavedTripsView(ft.Container):
         if self.on_select_trip:
             self.on_select_trip(itin)
 
+    @property
+    def safe_page(self) -> Optional[ft.Page]:
+        try:
+            return self.page
+        except Exception:
+            return None
+
     def _delete_trip(self, itin: Itinerary) -> None:
         def confirm():
             async def _worker():
                 await self.itinerary_service.delete_itinerary(itin.id)
                 await self._load_trips_async()
-            try:
-                loop = asyncio.get_running_loop()
-                loop.create_task(_worker())
-            except RuntimeError:
-                asyncio.run(_worker())
+            if self.safe_page:
+                self.safe_page.run_task(_worker)
+            else:
+                try:
+                    loop = asyncio.get_running_loop()
+                    loop.create_task(_worker())
+                except RuntimeError:
+                    pass
 
-        show_confirm_dialog(
-            self.page,
-            title="Delete Itinerary?",
-            message=f"Are you sure you want to delete '{itin.title}'? This cannot be undone.",
-            on_confirm=confirm,
-        )
+        if self.safe_page:
+            show_confirm_dialog(
+                self.safe_page,
+                title="Delete Itinerary?",
+                message=f"Are you sure you want to delete '{itin.title}'? This cannot be undone.",
+                on_confirm=confirm,
+            )
 
     def _load_trips(self) -> None:
-        try:
-            loop = asyncio.get_running_loop()
-            loop.create_task(self._load_trips_async())
-        except RuntimeError:
-            pass
+        if self.safe_page:
+            self.safe_page.run_task(self._load_trips_async)
+        else:
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(self._load_trips_async())
+            except RuntimeError:
+                pass
 
     async def _load_trips_async(self) -> None:
         self.is_loading = True

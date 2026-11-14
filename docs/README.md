@@ -28,6 +28,12 @@ This documentation suite is maintained continuously throughout development to pr
 | [**KNOWN_ISSUES.md**](./KNOWN_ISSUES.md) | Active bugs, intentional limitations, deferred features, and resolution pathways. | Developers, QA |
 | [**SYSTEM_ANALYSIS_AND_TESTING_REPORT.md**](./SYSTEM_ANALYSIS_AND_TESTING_REPORT.md) | Comprehensive system architecture review, test results (localhost & website), and 10 illogical functionality findings & proposals. | All Engineers, QA, Product Leads |
 | [**TODO.md**](./TODO.md) | Granular actionable checklist tracking remaining tasks across all development phases. | Developers |
+| [**DESKTOP_APP_OVERVIEW.md**](./DESKTOP_APP_OVERVIEW.md) | **Desktop Client Master Overview**: Native Python Flet application role, feature mapping to web app, technology stack, and desktop ergonomics. | Desktop Developers, Product Leads |
+| [**DESKTOP_APP_ARCHITECTURE.md**](./DESKTOP_APP_ARCHITECTURE.md) | **Desktop Architecture & Topology**: Component hierarchy, directory layout, reactive view caching, loop-safe async dispatch, session management, and local storage. | System Architects, Desktop Engineers |
+| [**DESKTOP_APP_API_INTEGRATION.md**](./DESKTOP_APP_API_INTEGRATION.md) | **Desktop API Integration**: Asynchronous httpx client, dynamic host/port health probing, OAuth2 bearer auth, refresh flow, endpoints, and guest sync. | Backend & Desktop Engineers |
+| [**DESKTOP_APP_INSTALLATION_AND_BUILD.md**](./DESKTOP_APP_INSTALLATION_AND_BUILD.md) | **Desktop Installation & Distribution**: Python 3.14 setup, dev run scripts, PyInstaller standalone binary compilation (`NuevaEcijaTravel.spec`), and asset bundling. | DevOps, Desktop Developers |
+| [**DESKTOP_APP_QA_AND_TESTING.md**](./DESKTOP_APP_QA_AND_TESTING.md) | **Desktop QA & Verification**: Independent QA audit, master defect ledgers (DEF-01 to DEF-15, BUG-01 to BUG-08), 35 unit tests, and live backend integration. | QA, Test Engineers |
+| [**DESKTOP_APP_PARITY_AND_IMPLEMENTATION_PLAN.md**](./DESKTOP_APP_PARITY_AND_IMPLEMENTATION_PLAN.md) | **Desktop Visual Parity & Execution Roadmap**: Anti-generic travel styling, Figma design tokens, 10-screen parity specs, and 5-phase implementation plan. | UI/UX Designers, Fullstack Engineers |
 
 ---
 
@@ -35,6 +41,7 @@ This documentation suite is maintained continuously throughout development to pr
 
 - **Resuming Development or Context Reset**: Start with [MASTER_CONTINUOUS_DOCUMENTATION_INSTRUCTIONS.md](./MASTER_CONTINUOUS_DOCUMENTATION_INSTRUCTIONS.md) followed by [PROJECT_STATE.md](./PROJECT_STATE.md) and [TODO.md](./TODO.md).
 - **New Developers**: Start with [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md) followed by [CONFIGURATION_GUIDE.md](./CONFIGURATION_GUIDE.md).
+- **Desktop Application Development**: Start with [DESKTOP_APP_OVERVIEW.md](./DESKTOP_APP_OVERVIEW.md) followed by [DESKTOP_APP_ARCHITECTURE.md](./DESKTOP_APP_ARCHITECTURE.md) and [DESKTOP_APP_PARITY_AND_IMPLEMENTATION_PLAN.md](./DESKTOP_APP_PARITY_AND_IMPLEMENTATION_PLAN.md).
 - **Frontend Development**: Reference [API_DOCUMENTATION.md](./API_DOCUMENTATION.md) and [SYSTEM_ARCHITECTURE.md](./SYSTEM_ARCHITECTURE.md).
 - **Backend / Database Development**: Reference [DATABASE_DOCUMENTATION.md](./DATABASE_DOCUMENTATION.md) and [TECHNICAL_DECISIONS.md](./TECHNICAL_DECISIONS.md).
 

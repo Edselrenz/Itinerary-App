@@ -12,6 +12,9 @@ class User:
     id: str
     email: str
     full_name: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    username: Optional[str] = None
     avatar_url: Optional[str] = None
     role: str = "traveler"
     is_active: bool = True
@@ -21,10 +24,29 @@ class User:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "User":
+        first_name = str(data.get("first_name", "")).strip()
+        last_name = str(data.get("last_name", "")).strip()
+        username = str(data.get("username") or data.get("username_normalized") or "").strip()
+        email = str(data.get("email") or data.get("email_normalized") or "").strip()
+        
+        full_name = str(data.get("full_name", "")).strip()
+        if not full_name:
+            if first_name or last_name:
+                full_name = f"{first_name} {last_name}".strip()
+            elif username:
+                full_name = username
+            elif email:
+                full_name = email.split("@")[0]
+            else:
+                full_name = "Traveler"
+
         return cls(
             id=str(data.get("id", "")),
-            email=str(data.get("email", "")),
-            full_name=str(data.get("full_name", "")),
+            email=email,
+            full_name=full_name,
+            first_name=first_name or None,
+            last_name=last_name or None,
+            username=username or None,
             avatar_url=data.get("avatar_url"),
             role=str(data.get("role", "traveler")),
             is_active=bool(data.get("is_active", True)),
@@ -38,6 +60,9 @@ class User:
             "id": self.id,
             "email": self.email,
             "full_name": self.full_name,
+            "first_name": self.first_name,
+            "last_name": self.last_name,
+            "username": self.username,
             "avatar_url": self.avatar_url,
             "role": self.role,
             "is_active": self.is_active,
@@ -73,13 +98,32 @@ class AuthTokenResponse:
 class UserUpdatePayload:
     """Payload to update traveler profile."""
     
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    username: Optional[str] = None
     full_name: Optional[str] = None
     avatar_url: Optional[str] = None
+    current_password: Optional[str] = None
+    new_password: Optional[str] = None
 
     def to_dict(self) -> dict[str, Any]:
         res: dict[str, Any] = {}
-        if self.full_name is not None:
-            res["full_name"] = self.full_name
+        if self.first_name:
+            res["first_name"] = self.first_name
+        elif self.full_name:
+            parts = self.full_name.strip().split(maxsplit=1)
+            res["first_name"] = parts[0]
+            if len(parts) > 1:
+                res["last_name"] = parts[1]
+
+        if self.last_name is not None and "last_name" not in res:
+            res["last_name"] = self.last_name
+        if self.username is not None:
+            res["username"] = self.username
         if self.avatar_url is not None:
             res["avatar_url"] = self.avatar_url
+        if self.current_password:
+            res["current_password"] = self.current_password
+        if self.new_password:
+            res["new_password"] = self.new_password
         return res

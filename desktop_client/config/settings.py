@@ -21,6 +21,18 @@ def _resolve_base_dir() -> Path:
     return Path(__file__).resolve().parent.parent
 
 
+# Hydrate environment variables from local or bundled .env
+try:
+    from dotenv import load_dotenv
+    _bdir = _resolve_base_dir()
+    if (_bdir / ".env").is_file():
+        load_dotenv(_bdir / ".env", override=False)
+    elif (Path.cwd() / ".env").is_file():
+        load_dotenv(Path.cwd() / ".env", override=False)
+except Exception:
+    pass
+
+
 @dataclass(frozen=True)
 class ThemeColors:
     """Design System Color Palette matching the Ionic Angular web client and Figma tokens."""
@@ -56,10 +68,11 @@ class ThemeColors:
     # Neutral Surfaces - Light Mode (Default)
     BG_LIGHT: str = "#f8fafc"
     SURFACE_LIGHT: str = "#ffffff"
+    SURFACE_LIGHT_HOVER: str = "#f1f5f9"
     BORDER_LIGHT: str = "#e2e8f0"
     TEXT_MAIN_LIGHT: str = "#0f172a"
-    TEXT_MUTED_LIGHT: str = "#64748b"
-    TEXT_FAINT_LIGHT: str = "#94a3b8"
+    TEXT_MUTED_LIGHT: str = "#475569"
+    TEXT_FAINT_LIGHT: str = "#64748b"
     TEXT_BLACK: str = "#000000"
 
     # Neutral Surfaces - Dark Mode
@@ -144,13 +157,26 @@ class Settings:
     window_width: int = 1280
     window_height: int = 840
 
-    # Local Storage Directory
+    # Local Storage & Asset Directories
     base_dir: Path = field(default_factory=_resolve_base_dir)
     storage_dir: Path = field(init=False)
+    assets_dir: Path = field(init=False)
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "storage_dir", self.base_dir / "storage")
+        object.__setattr__(self, "assets_dir", self.base_dir / "assets")
         self.storage_dir.mkdir(parents=True, exist_ok=True)
+
+    def get_asset_path(self, rel_path: str) -> str:
+        """Returns string path to bundled asset, fallback to project asset or relative path."""
+        clean_rel = rel_path.lstrip("/\\")
+        p = self.assets_dir / clean_rel
+        if p.is_file():
+            return str(p)
+        proj_p = Path(__file__).resolve().parent.parent.parent / "Project" / "src" / "assets" / clean_rel
+        if proj_p.is_file():
+            return str(proj_p)
+        return str(p)
 
 
 _settings_instance: Settings | None = None
@@ -162,3 +188,104 @@ def get_settings() -> Settings:
     if _settings_instance is None:
         _settings_instance = Settings()
     return _settings_instance
+
+
+@dataclass(frozen=True)
+class ThemePalette:
+    """Reactive color palette for Light and Dark modes."""
+
+    is_dark: bool
+    bg_main: str
+    surface_card: str
+    surface_card_hover: str
+    border_main: str
+    text_primary: str
+    text_muted: str
+    text_faint: str
+    input_bg: str
+    input_border: str
+    primary_blue: str = ThemeColors.PRIMARY_BLUE
+    azure_soft: str = ThemeColors.AZURE_SOFT
+
+    @classmethod
+    def get_palette(cls, is_dark: bool = False) -> "ThemePalette":
+        if is_dark:
+            return cls(
+                is_dark=True,
+                bg_main=ThemeColors.BG_DARK,
+                surface_card=ThemeColors.SURFACE_DARK,
+                surface_card_hover=ThemeColors.SURFACE_DARK_HOVER,
+                border_main=ThemeColors.BORDER_DARK,
+                text_primary=ThemeColors.TEXT_MAIN_DARK,
+                text_muted=ThemeColors.TEXT_MUTED_DARK,
+                text_faint=ThemeColors.TEXT_FAINT_DARK,
+                input_bg=ThemeColors.SURFACE_DARK,
+                input_border=ThemeColors.BORDER_DARK,
+                primary_blue=ThemeColors.PRIMARY_BLUE,
+                azure_soft="#172554",
+            )
+        return cls(
+            is_dark=False,
+            bg_main=ThemeColors.BG_LIGHT,
+            surface_card=ThemeColors.SURFACE_LIGHT,
+            surface_card_hover=ThemeColors.SURFACE_LIGHT_HOVER,
+            border_main=ThemeColors.BORDER_LIGHT,
+            text_primary=ThemeColors.TEXT_BLACK,
+            text_muted=ThemeColors.TEXT_MUTED_LIGHT,
+            text_faint=ThemeColors.TEXT_FAINT_LIGHT,
+            input_bg=ThemeColors.SURFACE_LIGHT,
+            input_border=ThemeColors.BORDER_LIGHT,
+            primary_blue=ThemeColors.PRIMARY_BLUE,
+            azure_soft=ThemeColors.AZURE_SOFT,
+        )
+
+
+def resolve_place_image(place_name: str, image_url: str | None = None) -> str | None:
+    """Resolves local asset photography path for places to prevent generic icon placeholders."""
+    settings = get_settings()
+    if image_url:
+        clean_url = str(image_url).strip()
+        if clean_url.startswith(("assets/", "/assets/", "popular_destinations/")):
+            rel = clean_url.replace("assets/images/", "popular_destinations/").replace("assets/", "")
+            p = settings.assets_dir / rel
+            if p.is_file():
+                return str(p)
+            p2 = settings.assets_dir / "popular_destinations" / Path(clean_url).name
+            if p2.is_file():
+                return str(p2)
+            proj_p = settings.base_dir.parent / "Project" / "src" / clean_url.lstrip("/")
+            if proj_p.is_file():
+                return str(proj_p)
+        elif clean_url.startswith("http://") or clean_url.startswith("https://"):
+            return clean_url
+
+    name_lower = (place_name or "").lower().strip()
+    mapping = {
+        "minalungao": "popular_destinations/minalungao.png",
+        "pantabangan lake": "popular_destinations/pantabangan_lake.png",
+        "pantabangan": "popular_destinations/pantabangan_lake.png",
+        "highland bali": "popular_destinations/highland_bali.png",
+        "george point": "popular_destinations/george_point.png",
+        "casa batik": "popular_destinations/casa_batik.png",
+        "tagpuan": "popular_destinations/tagpuan_gapan.png",
+        "lumang gapan": "popular_destinations/tagpuan_gapan.png",
+        "rohi": "popular_destinations/rohi_paperflower.png",
+        "paperflower": "popular_destinations/rohi_paperflower.png",
+        "museo de bongabon": "popular_destinations/museo_bongabon.png",
+        "bongabon": "popular_destinations/museo_bongabon.png",
+        "thornes": "popular_destinations/thornes_samgyupsal.png",
+        "samgyupsal": "popular_destinations/thornes_samgyupsal.png",
+        "pavilion": "popular_destinations/pavillion_farm.png",
+        "villaronte": "popular_destinations/farm_villaronte.png",
+        "carabao": "popular_destinations/farm_villaronte.png",
+        "la casa prime": "popular_destinations/la_casa_prime.png",
+        "lake farm": "popular_destinations/lake_farm_marre.png",
+    }
+    for kw, rel_path in mapping.items():
+        if kw in name_lower:
+            p = settings.assets_dir / rel_path
+            if p.is_file():
+                return str(p)
+
+    return None
+

@@ -33,11 +33,18 @@ class CustomBuilderView(ft.Container):
     off-grid custom venues, and zero-stop guard validation.
     """
 
-    def __init__(self, on_navigate: Optional[Callable[[str], None]] = None):
+    def __init__(
+        self,
+        on_navigate: Optional[Callable[[str], None]] = None,
+        pre_added_place: Optional[Place] = None,
+        existing_itinerary: Optional[Itinerary] = None,
+    ):
         super().__init__()
         self.on_navigate = on_navigate
         self.place_service = get_place_service()
         self.itinerary_service = get_itinerary_service()
+        self.pre_added_place = pre_added_place
+        self.existing_itinerary = existing_itinerary
 
         self.expand = True
         self.padding = ft.Padding.all(20)
@@ -45,33 +52,57 @@ class CustomBuilderView(ft.Container):
 
         # Itinerary Draft State
         today = date.today()
-        self.trip_title = "My Nueva Ecija Journey"
-        self.destination = "Nueva Ecija"
-        self.start_date_str = (today + timedelta(days=5)).strftime("%Y-%m-%d")
-        self.end_date_str = (today + timedelta(days=6)).strftime("%Y-%m-%d")
-        self.daily_budget = 2500.0
+        if existing_itinerary:
+            self.trip_title = existing_itinerary.title or "My Custom Trip"
+            self.destination = existing_itinerary.destination or "Nueva Ecija"
+            self.start_date_str = existing_itinerary.start_date or (today + timedelta(days=5)).strftime("%Y-%m-%d")
+            self.end_date_str = existing_itinerary.end_date or (today + timedelta(days=6)).strftime("%Y-%m-%d")
+            self.daily_budget = existing_itinerary.daily_budget or 2500.0
+            self.days = list(existing_itinerary.days) if existing_itinerary.days else []
+        else:
+            self.trip_title = "My Nueva Ecija Journey"
+            self.destination = "Nueva Ecija"
+            self.start_date_str = (today + timedelta(days=5)).strftime("%Y-%m-%d")
+            self.end_date_str = (today + timedelta(days=6)).strftime("%Y-%m-%d")
+            self.daily_budget = 2500.0
+            day1_id = str(uuid.uuid4())
+            day2_id = str(uuid.uuid4())
+            self.days = [
+                ItineraryDay(
+                    id=day1_id,
+                    itinerary_id="",
+                    day_number=1,
+                    travel_date=self.start_date_str,
+                    title="Arrival & Exploration",
+                    items=[],
+                ),
+                ItineraryDay(
+                    id=day2_id,
+                    itinerary_id="",
+                    day_number=2,
+                    travel_date=self.end_date_str,
+                    title="Scenic Trails & Dining",
+                    items=[],
+                ),
+            ]
 
-        # Draft Days
-        day1_id = str(uuid.uuid4())
-        day2_id = str(uuid.uuid4())
-        self.days: list[ItineraryDay] = [
-            ItineraryDay(
-                id=day1_id,
-                itinerary_id="",
-                day_number=1,
-                travel_date=self.start_date_str,
-                title="Arrival & Exploration",
-                items=[],
-            ),
-            ItineraryDay(
-                id=day2_id,
-                itinerary_id="",
-                day_number=2,
-                travel_date=self.end_date_str,
-                title="Scenic Trails & Dining",
-                items=[],
-            ),
-        ]
+        # Pre-load place into Day 1 if passed (BUG-08)
+        if pre_added_place and len(self.days) > 0:
+            if not any(item.place_id == pre_added_place.id for item in self.days[0].items):
+                item = ItineraryItem(
+                    id=str(uuid.uuid4()),
+                    day_id=self.days[0].id,
+                    place_id=pre_added_place.id,
+                    place=pre_added_place,
+                    custom_title=pre_added_place.name,
+                    sort_order=1,
+                    planned_time="09:00 AM",
+                    duration_minutes=120,
+                    estimated_cost_max=pre_added_place.estimated_cost_max or 0.0,
+                    estimated_cost_min=pre_added_place.estimated_cost_min or 0.0,
+                )
+                self.days[0].items.insert(0, item)
+
         self.active_day_index = 0
 
         # Catalog Pane State
@@ -83,9 +114,58 @@ class CustomBuilderView(ft.Container):
         # Feedback state
         self.feedback_message: Optional[str] = None
         self.feedback_is_error: bool = False
+        self.is_dirty: bool = bool(pre_added_place)
 
         self._build_content()
         self._load_catalog()
+
+    def has_unsaved_changes(self) -> bool:
+        """Returns True if user has unsaved modifications in draft."""
+        return getattr(self, "is_dirty", False)
+
+    def _dismiss_pre_loaded_banner(self) -> None:
+        self.pre_added_place = None
+        self._build_content()
+        self._safe_update()
+
+    def _auto_schedule_active_day(self, _=None) -> None:
+        """Calculates sequential planned_time strings starting at 09:00 AM with transit buffers."""
+        if not self.days or self.active_day_index >= len(self.days):
+            return
+        day = self.days[self.active_day_index]
+        if not day.items:
+            return
+
+        self.is_dirty = True
+        current_minutes = 9 * 60  # 09:00 AM
+        for idx, item in enumerate(day.items):
+            hrs = (current_minutes // 60) % 24
+            mins = current_minutes % 60
+            ampm = "AM" if hrs < 12 else "PM"
+            display_hrs = hrs if hrs <= 12 else hrs - 12
+            if display_hrs == 0:
+                display_hrs = 12
+            item.planned_time = f"{display_hrs:02d}:{mins:02d} {ampm}"
+            item.sort_order = idx + 1
+            dur = item.duration_minutes or 90
+            current_minutes += dur + 30
+            if 11 * 60 <= current_minutes < 12 * 60 and idx < len(day.items) - 1:
+                current_minutes = 13 * 60
+
+        self._build_content()
+        self._safe_update()
+
+    def _delete_active_day(self, _=None) -> None:
+        """Deletes active day if more than 1 day exists."""
+        if len(self.days) <= 1:
+            return
+        del self.days[self.active_day_index]
+        for i, d in enumerate(self.days):
+            d.day_number = i + 1
+        self.is_dirty = True
+        self.active_day_index = max(0, min(self.active_day_index, len(self.days) - 1))
+        self._build_content()
+        self._safe_update()
 
     def _build_content(self) -> None:
         left_pane = self._build_left_pane()
@@ -192,6 +272,37 @@ class CustomBuilderView(ft.Container):
 
     def _create_catalog_item(self, place: Place) -> ft.Control:
         muni_text = place.municipality_name or "Nueva Ecija"
+        active_day = self.days[self.active_day_index] if self.days else None
+        is_already_added = False
+        if active_day:
+            is_already_added = any(itm.place_id == place.id for itm in active_day.items)
+
+        if is_already_added:
+            action_btn = ft.Container(
+                content=ft.Row(
+                    controls=[
+                        ft.Icon(ft.Icons.CHECK, size=13, color=ThemeColors.EMERALD_PRIMARY),
+                        ft.Text("Added", size=11, weight=ft.FontWeight.BOLD, color=ThemeColors.EMERALD_PRIMARY),
+                    ],
+                    spacing=3,
+                ),
+                bgcolor=ThemeColors.EMERALD_MINT,
+                border=ft.Border.all(1, ThemeColors.EMERALD_PRIMARY),
+                border_radius=6,
+                padding=ft.Padding.symmetric(horizontal=8, vertical=5),
+            )
+        else:
+            action_btn = ft.FilledButton(
+                content="+ Add",
+                style=ft.ButtonStyle(
+                    bgcolor=ThemeColors.PRIMARY_BLUE,
+                    color=ft.Colors.WHITE,
+                    padding=ft.Padding.symmetric(horizontal=10, vertical=4),
+                    shape=ft.RoundedRectangleBorder(radius=6),
+                ),
+                on_click=lambda _, p=place: self._add_place_to_active_day(p),
+            )
+
         return ft.Container(
             content=ft.Row(
                 controls=[
@@ -225,16 +336,7 @@ class CustomBuilderView(ft.Container):
                         spacing=1,
                         expand=True,
                     ),
-                    ft.FilledButton(
-                        content="+ Add",
-                        style=ft.ButtonStyle(
-                            bgcolor=ThemeColors.PRIMARY_BLUE,
-                            color=ft.Colors.WHITE,
-                            padding=ft.Padding.symmetric(horizontal=8, vertical=4),
-                            shape=ft.RoundedRectangleBorder(radius=6),
-                        ),
-                        on_click=lambda _, p=place: self._add_place_to_active_day(p),
-                    ),
+                    action_btn,
                 ],
                 spacing=8,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -409,12 +511,67 @@ class CustomBuilderView(ft.Container):
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
         )
 
+        # Pre-loaded place banner if present
+        pre_loaded_ctrl = ft.Container()
+        if self.pre_added_place:
+            pre_loaded_ctrl = ft.Container(
+                content=ft.Row(
+                    controls=[
+                        ft.Icon(ft.Icons.AUTO_AWESOME, size=16, color=ThemeColors.PRIMARY_BLUE),
+                        ft.Text(f"Pre-loaded '{self.pre_added_place.name}' into Day 1 schedule.", size=12, weight=ft.FontWeight.W_600, color=ThemeColors.PRIMARY_BLUE, expand=True),
+                        ft.IconButton(
+                            icon=ft.Icons.CLOSE,
+                            icon_size=16,
+                            icon_color=ThemeColors.TEXT_MUTED_LIGHT,
+                            tooltip="Dismiss banner",
+                            on_click=lambda _: self._dismiss_pre_loaded_banner(),
+                        ),
+                    ],
+                    spacing=8,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                ),
+                bgcolor=ThemeColors.AZURE_SOFT,
+                border=ft.Border.all(1, ThemeColors.CUSTOM_CARD_BORDER),
+                border_radius=8,
+                padding=ft.Padding.symmetric(horizontal=12, vertical=6),
+                margin=ft.Margin.only(bottom=4),
+            )
+
+        active_day_bar = ft.Row(
+            controls=[
+                ft.Text(
+                    f"{active_day.display_title if active_day else 'Day'} — {active_day.travel_date if active_day else ''}",
+                    size=13,
+                    weight=ft.FontWeight.BOLD,
+                ),
+                ft.Row(
+                    controls=[
+                        ft.TextButton(
+                            content="🕒 Auto-Schedule",
+                            on_click=lambda _: self._auto_schedule_active_day(),
+                        ),
+                        ft.TextButton(
+                            content="🗑 Delete Day",
+                            style=ft.ButtonStyle(color=ThemeColors.ERROR),
+                            visible=len(self.days) > 1,
+                            on_click=lambda _: self._delete_active_day(),
+                        ),
+                    ],
+                    spacing=4,
+                ),
+            ],
+            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        )
+
         return ft.Container(
             content=ft.Column(
                 controls=[
+                    pre_loaded_ctrl,
                     ft.Row(controls=[title_field, stats_pills], spacing=12),
                     ft.Container(height=4),
                     day_tabs_row,
+                    active_day_bar,
                     ft.Divider(height=1, color=ThemeColors.BORDER_LIGHT),
                     feedback_row,
                     timeline_listview,
@@ -455,6 +612,7 @@ class CustomBuilderView(ft.Container):
             items=[],
         )
         self.days.append(new_day)
+        self.is_dirty = True
         self.active_day_index = len(self.days) - 1
         self._build_content()
         self._safe_update()
@@ -477,6 +635,7 @@ class CustomBuilderView(ft.Container):
             place=place,
         )
         active_day.items.append(new_item)
+        self.is_dirty = True
         self.feedback_message = f"Added '{place.name}' to Day {active_day.day_number}."
         self.feedback_is_error = False
         self._build_content()
@@ -489,6 +648,19 @@ class CustomBuilderView(ft.Container):
         def handle_custom_save(venue_data: dict):
             active_day = self.days[self.active_day_index]
             new_order = len(active_day.items) + 1
+            lat = venue_data.get("latitude")
+            lng = venue_data.get("longitude")
+            place_obj = None
+            if lat and lng:
+                place_obj = Place(
+                    id=f"custom-{uuid.uuid4()}",
+                    name=venue_data["custom_title"],
+                    category="custom_venue",
+                    latitude=lat,
+                    longitude=lng,
+                    municipality_name="Nueva Ecija",
+                )
+
             new_item = ItineraryItem(
                 id=str(uuid.uuid4()),
                 day_id=active_day.id,
@@ -499,8 +671,10 @@ class CustomBuilderView(ft.Container):
                 estimated_cost_min=venue_data.get("estimated_cost_min"),
                 estimated_cost_max=venue_data.get("estimated_cost_max"),
                 sort_order=new_order,
+                place=place_obj,
             )
             active_day.items.append(new_item)
+            self.is_dirty = True
             self.feedback_message = f"Added off-grid venue '{new_item.custom_title}' to Day {active_day.day_number}."
             self.feedback_is_error = False
             self._build_content()
@@ -518,6 +692,7 @@ class CustomBuilderView(ft.Container):
             )
             for i, itm in enumerate(active_day.items, 1):
                 itm.sort_order = i
+            self.is_dirty = True
             self._build_content()
             self._safe_update()
 
@@ -531,6 +706,7 @@ class CustomBuilderView(ft.Container):
             )
             for i, itm in enumerate(active_day.items, 1):
                 itm.sort_order = i
+            self.is_dirty = True
             self._build_content()
             self._safe_update()
 
@@ -538,22 +714,42 @@ class CustomBuilderView(ft.Container):
         if not self.page:
             return
 
+        active_day = self.days[self.active_day_index]
+
         def handle_edit_save(data: dict):
             item.planned_time = data.get("planned_time")
             item.duration_minutes = data.get("duration_minutes", 90)
             item.notes = data.get("notes")
             item.estimated_cost_min = data.get("estimated_cost_min")
             item.estimated_cost_max = data.get("estimated_cost_max")
+
+            target_day_num = data.get("target_day")
+            if target_day_num and target_day_num != active_day.day_number:
+                target_day = next((d for d in self.days if d.day_number == target_day_num), None)
+                if target_day:
+                    active_day.items = [i for i in active_day.items if i.id != item.id]
+                    target_day.items.append(item)
+                    for i, itm in enumerate(target_day.items, 1):
+                        itm.sort_order = i
+
+            self.is_dirty = True
             self._build_content()
             self._safe_update()
 
-        show_edit_stop_dialog(self.page, item, handle_edit_save)
+        show_edit_stop_dialog(
+            self.page,
+            item,
+            handle_edit_save,
+            available_days=[d.day_number for d in self.days],
+            current_day=active_day.day_number,
+        )
 
     def _delete_stop(self, item: ItineraryItem) -> None:
         active_day = self.days[self.active_day_index]
         active_day.items = [i for i in active_day.items if i.id != item.id]
         for idx, itm in enumerate(active_day.items, 1):
             itm.sort_order = idx
+        self.is_dirty = True
         self.feedback_message = f"Removed stop from Day {active_day.day_number}."
         self.feedback_is_error = False
         self._build_content()
@@ -566,6 +762,7 @@ class CustomBuilderView(ft.Container):
         def do_reset():
             for d in self.days:
                 d.items = []
+            self.is_dirty = True
             self.feedback_message = "All scheduled stops cleared."
             self.feedback_is_error = False
             self._build_content()
@@ -624,6 +821,7 @@ class CustomBuilderView(ft.Container):
                 )
 
                 saved_itin = await self.itinerary_service.create_itinerary(payload)
+                self.is_dirty = False
                 self.feedback_message = f"Itinerary '{saved_itin.title}' successfully saved!"
                 self.feedback_is_error = False
                 self._build_content()
@@ -640,11 +838,14 @@ class CustomBuilderView(ft.Container):
                 except Exception:
                     pass
 
-        try:
-            loop = asyncio.get_running_loop()
-            loop.create_task(_do_save())
-        except RuntimeError:
-            asyncio.run(_do_save())
+        if self.safe_page:
+            self.safe_page.run_task(_do_save)
+        else:
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(_do_save())
+            except RuntimeError:
+                pass
 
     def _export_draft(self) -> None:
         total_stops = sum(len(d.items) for d in self.days)
@@ -693,7 +894,14 @@ class CustomBuilderView(ft.Container):
                 )
                 self.catalog_places = res.items
             except Exception:
-                self.catalog_places = []
+                from desktop_client.views.dashboard_view import DashboardView
+                fallback = DashboardView()._get_fallback_popular_places()
+                if self.catalog_category and self.catalog_category != "all":
+                    fallback = [p for p in fallback if p.category == self.catalog_category]
+                if self.catalog_search:
+                    s_low = self.catalog_search.lower()
+                    fallback = [p for p in fallback if s_low in p.name.lower() or s_low in (p.municipality_name or "").lower()]
+                self.catalog_places = fallback
             finally:
                 self.catalog_loading = False
                 self._build_content()
@@ -702,8 +910,18 @@ class CustomBuilderView(ft.Container):
                 except Exception:
                     pass
 
+        if self.safe_page:
+            self.safe_page.run_task(_query)
+        else:
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(_query())
+            except RuntimeError:
+                pass
+
+    @property
+    def safe_page(self) -> Optional[ft.Page]:
         try:
-            loop = asyncio.get_running_loop()
-            loop.create_task(_query())
-        except RuntimeError:
-            pass
+            return self.page
+        except Exception:
+            return None

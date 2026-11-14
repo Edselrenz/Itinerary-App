@@ -27,13 +27,15 @@ class Municipality:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Municipality":
+        lat = data.get("center_lat") if data.get("center_lat") is not None else data.get("latitude")
+        lng = data.get("center_lng") if data.get("center_lng") is not None else data.get("longitude")
         return cls(
             id=str(data.get("id", "")),
             name=str(data.get("name", "")),
             zip_code=data.get("zip_code"),
             description=data.get("description"),
-            latitude=float(data["latitude"]) if data.get("latitude") is not None else None,
-            longitude=float(data["longitude"]) if data.get("longitude") is not None else None,
+            latitude=float(lat) if lat is not None else None,
+            longitude=float(lng) if lng is not None else None,
             place_count=data.get("place_count"),
         )
 
@@ -168,6 +170,52 @@ class Place:
         }
         return mapping.get(self.category, self.category.replace("_", " ").title())
 
+    @property
+    def resolved_image_path(self) -> str:
+        """Resolves local asset image or network image for this place."""
+        from desktop_client.config.settings import get_settings, resolve_place_image
+        resolved = resolve_place_image(self.name, self.image_url)
+        if resolved:
+            return resolved
+
+        st = get_settings()
+        if self.image_url:
+            if self.image_url.startswith("http://") or self.image_url.startswith("https://"):
+                return self.image_url
+            clean = self.image_url.replace("assets/", "").lstrip("/\\")
+            return st.get_asset_path(clean)
+
+        nl = self.name.lower()
+        if "minalungao" in nl:
+            return st.get_asset_path("popular_destinations/minalungao.png")
+        if "pantabangan" in nl:
+            return st.get_asset_path("popular_destinations/pantabangan_lake.png")
+        if "highland bali" in nl:
+            return st.get_asset_path("popular_destinations/highland_bali.png")
+        if "casa batik" in nl:
+            return st.get_asset_path("popular_destinations/casa_batik.png")
+        if "george point" in nl:
+            return st.get_asset_path("popular_destinations/george_point.png")
+        if "villaronte" in nl:
+            return st.get_asset_path("popular_destinations/farm_villaronte.png")
+        if "tagpuan" in nl or "gapan" in nl:
+            return st.get_asset_path("popular_destinations/tagpuan_gapan.png")
+        if "marre" in nl:
+            return st.get_asset_path("popular_destinations/lake_farm_marre.png")
+        if "pavilion" in nl:
+            return st.get_asset_path("popular_destinations/pavillion_farm.png")
+        if "la casa prime" in nl:
+            return st.get_asset_path("popular_destinations/la_casa_prime.png")
+        if "museo" in nl or "bongabon" in nl:
+            return st.get_asset_path("popular_destinations/museo_bongabon.png")
+        if "arch" in nl:
+            return st.get_asset_path("popular_destinations/nueva_ecija_arch.png")
+        if "paperflower" in nl or "rohi" in nl:
+            return st.get_asset_path("popular_destinations/rohi_paperflower.png")
+        if "samgyupsal" in nl or "thorne" in nl:
+            return st.get_asset_path("popular_destinations/thornes_samgyupsal.png")
+        return ""
+
 
 @dataclass
 class PaginatedPlaces:
@@ -182,10 +230,24 @@ class PaginatedPlaces:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "PaginatedPlaces":
         items = [Place.from_dict(item) for item in data.get("items", [])]
+        total = int(data.get("total", len(items)))
+        limit = int(data.get("limit") or data.get("page_size") or (len(items) or 20))
+        offset = int(data.get("offset", 0)) if "offset" in data else None
+        
+        if offset is not None and limit > 0:
+            page = (offset // limit) + 1
+        else:
+            page = int(data.get("page", 1))
+            
+        if limit > 0 and total > 0:
+            total_pages = max(1, (total + limit - 1) // limit)
+        else:
+            total_pages = int(data.get("total_pages", 1))
+
         return cls(
             items=items,
-            total=int(data.get("total", len(items))),
-            page=int(data.get("page", 1)),
-            page_size=int(data.get("page_size", len(items))),
-            total_pages=int(data.get("total_pages", 1)),
+            total=total,
+            page=page,
+            page_size=limit,
+            total_pages=total_pages,
         )

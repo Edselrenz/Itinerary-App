@@ -4,20 +4,24 @@ import asyncio
 from typing import Callable, Optional
 import flet as ft
 
-from desktop_client.components.dialogs import show_confirm_dialog
+from desktop_client.components.dialogs import show_place_detail_dialog
 from desktop_client.config.settings import ThemeColors, get_settings
 from desktop_client.core.session import get_session_manager
 from desktop_client.core.storage import get_guest_storage
+from desktop_client.models.place import Place
 from desktop_client.models.user import UserUpdatePayload
 from desktop_client.services.auth_service import get_auth_service
+from desktop_client.services.favorites_service import get_favorites_service
 
 
 class ProfileView(ft.Container):
     """Profile view matching Ionic tabs/profile:
 
-    - Traveler identity row (Authenticated photo vs Guest Explorer).
-    - Unsynced local guest trips banner with [Sync] button.
-    - Settings card (Theme toggle, local cache info, and logout).
+    - Authentic traveler identity row with Pattranite avatar.
+    - Figma-aligned 5-row profile navigation card (Settings, Favorites, Help, About, Logout).
+    - Rounded soft blue square icon boxes and NO chevron arrows.
+    - Sub-window modals for Edit Profile (7 fields), Favorites (backed by FavoritesService),
+      Settings, Help & Support (Provincial Hotlines), and Logout confirmation.
     """
 
     def __init__(
@@ -31,10 +35,11 @@ class ProfileView(ft.Container):
         self.session_manager = get_session_manager()
         self.auth_service = get_auth_service()
         self.guest_storage = get_guest_storage()
+        self.favorites_service = get_favorites_service()
         self.settings = get_settings()
 
         self.expand = True
-        self.padding = ft.Padding.symmetric(horizontal=32, vertical=20)
+        self.padding = ft.Padding.symmetric(horizontal=36, vertical=24)
         self.bgcolor = ThemeColors.BG_LIGHT
 
         self.status_msg: Optional[str] = None
@@ -44,55 +49,106 @@ class ProfileView(ft.Container):
 
     def _build_content(self) -> None:
         user = self.session_manager.current_user
-        is_guest = self.session_manager.is_guest or not self.session_manager.is_authenticated
+        is_guest = (
+            self.session_manager.is_guest or not self.session_manager.is_authenticated
+        )
 
         # Page Title
         title_block = ft.Column(
             controls=[
-                ft.Text("Profile", size=24, weight=ft.FontWeight.W_800, color=ThemeColors.TEXT_BLACK),
-                ft.Text("Account details, sync status, and desktop preferences.", size=12, color=ThemeColors.TEXT_MUTED_LIGHT),
+                ft.Text(
+                    "Profile",
+                    size=28,
+                    weight=ft.FontWeight.W_800,
+                    color=ThemeColors.TEXT_BLACK,
+                ),
+                ft.Text(
+                    "Manage your traveler identity and preferences.",
+                    size=13,
+                    color=ThemeColors.TEXT_MUTED_LIGHT,
+                ),
             ],
             spacing=2,
         )
 
-        # Identity Header Section matching .identity-row
-        name_val = user.full_name if user else "Guest Explorer"
-        email_val = user.email if user else "Browsing in Guest Mode (Offline)"
-
-        avatar_ctrl: ft.Control
+        # 1. Identity Header Section (matching Figma Screen Profile)
+        avatar_path = self.settings.get_asset_path("images/pattranite_avatar.jpg")
         if not is_guest:
-            avatar_ctrl = ft.CircleAvatar(
-                content=ft.Icon(ft.Icons.PERSON, size=32, color=ft.Colors.WHITE),
-                radius=32,
-                bgcolor=ThemeColors.PRIMARY_BLUE,
+            name_val = user.full_name or "Pattranite Limpatiyakorn"
+            handle_val = (
+                f"@{user.username or 'loverrukk'}@gmail.com"
+                if user
+                else "@loverrukk@gmail.com"
+            )
+            avatar_ctrl = ft.Container(
+                content=ft.Image(
+                    src=avatar_path,
+                    width=68,
+                    height=68,
+                    fit=ft.BoxFit.COVER,
+                    border_radius=34,
+                    error_content=ft.CircleAvatar(
+                        content=ft.Icon(
+                            ft.Icons.PERSON, size=34, color=ft.Colors.WHITE
+                        ),
+                        radius=34,
+                        bgcolor=ThemeColors.PRIMARY_BLUE,
+                    ),
+                ),
+                width=68,
+                height=68,
+                border_radius=34,
+                border=ft.Border.all(2, ThemeColors.PRIMARY_BLUE),
             )
             auth_action_btn = ft.Container(
-                content=ft.Text("Edit Profile", size=12, weight=ft.FontWeight.W_700, color=ThemeColors.PRIMARY_BLUE),
-                border=ft.Border.all(1.2, ThemeColors.PRIMARY_BLUE),
+                content=ft.Text(
+                    "Edit Profile",
+                    size=12,
+                    weight=ft.FontWeight.BOLD,
+                    color=ThemeColors.PRIMARY_BLUE,
+                ),
+                border=ft.Border.all(1.5, ThemeColors.PRIMARY_BLUE),
                 border_radius=20,
-                padding=ft.Padding.symmetric(horizontal=14, vertical=6),
+                padding=ft.Padding.symmetric(horizontal=16, vertical=6),
                 ink=True,
                 on_click=lambda _: self._open_edit_profile_dialog(),
             )
         else:
-            avatar_ctrl = ft.CircleAvatar(
-                content=ft.Icon(ft.Icons.PERSON_OUTLINE, size=32, color=ThemeColors.TEXT_MUTED_LIGHT),
-                radius=32,
+            name_val = "Guest Explorer"
+            handle_val = "Browsing in Guest Mode (Offline)"
+            avatar_ctrl = ft.Container(
+                content=ft.Icon(
+                    ft.Icons.PERSON, size=34, color=ThemeColors.TEXT_MUTED_LIGHT
+                ),
+                width=68,
+                height=68,
+                border_radius=34,
                 bgcolor=ThemeColors.SURFACE_DARK_HOVER,
+                alignment=ft.Alignment(0, 0),
             )
             auth_action_btn = ft.Container(
-                content=ft.Text("Log In / Sign Up", size=12, weight=ft.FontWeight.W_700, color=ft.Colors.WHITE),
+                content=ft.Text(
+                    "Log In / Sign Up",
+                    size=12,
+                    weight=ft.FontWeight.BOLD,
+                    color=ft.Colors.WHITE,
+                ),
                 bgcolor=ThemeColors.PRIMARY_BLUE,
                 border_radius=20,
-                padding=ft.Padding.symmetric(horizontal=16, vertical=7),
+                padding=ft.Padding.symmetric(horizontal=18, vertical=7),
                 ink=True,
                 on_click=lambda _: self._navigate("/login"),
             )
 
         identity_info = ft.Column(
             controls=[
-                ft.Text(name_val, size=18, weight=ft.FontWeight.W_800, color=ThemeColors.TEXT_BLACK),
-                ft.Text(email_val, size=12, color=ThemeColors.TEXT_MUTED_LIGHT),
+                ft.Text(
+                    name_val,
+                    size=20,
+                    weight=ft.FontWeight.W_800,
+                    color=ThemeColors.TEXT_BLACK,
+                ),
+                ft.Text(handle_val, size=13, color=ThemeColors.TEXT_MUTED_LIGHT),
                 ft.Container(height=4),
                 auth_action_btn,
             ],
@@ -100,24 +156,25 @@ class ProfileView(ft.Container):
             expand=True,
         )
 
-        identity_row = ft.Container(
+        identity_card = ft.Container(
             content=ft.Row(
                 controls=[avatar_ctrl, identity_info],
-                spacing=18,
+                spacing=20,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
             bgcolor=ThemeColors.SURFACE_LIGHT,
             border=ft.Border.all(1.2, ThemeColors.BORDER_LIGHT),
-            border_radius=18,
-            padding=ft.Padding.all(20),
+            border_radius=20,
+            padding=ft.Padding.all(22),
             shadow=ft.BoxShadow(
                 spread_radius=0,
-                blur_radius=8,
+                blur_radius=12,
                 color=ft.Colors.with_opacity(0.04, "#000000"),
+                offset=ft.Offset(0, 4),
             ),
         )
 
-        # Unsynced Local Guest Trips Migration Prompt matching .sync-banner
+        # 2. Unsynced Local Guest Trips Banner
         guest_trips_count = len(self.guest_storage.list_itineraries())
         sync_banner = ft.Container()
         if guest_trips_count > 0:
@@ -126,7 +183,11 @@ class ProfileView(ft.Container):
                     controls=[
                         ft.Row(
                             controls=[
-                                ft.Icon(ft.Icons.CLOUD_UPLOAD_OUTLINED, size=20, color=ThemeColors.PRIMARY_BLUE),
+                                ft.Icon(
+                                    ft.Icons.CLOUD_UPLOAD_OUTLINED,
+                                    size=20,
+                                    color=ThemeColors.PRIMARY_BLUE,
+                                ),
                                 ft.Text(
                                     f"{guest_trips_count} local {'trip' if guest_trips_count == 1 else 'trips'} not synced",
                                     size=13,
@@ -137,7 +198,9 @@ class ProfileView(ft.Container):
                             spacing=8,
                         ),
                         ft.FilledButton(
-                            content="Sync Now" if not self.is_migrating else "Syncing...",
+                            content=(
+                                "Sync Now" if not self.is_migrating else "Syncing..."
+                            ),
                             style=ft.ButtonStyle(
                                 bgcolor=ThemeColors.PRIMARY_BLUE,
                                 color=ft.Colors.WHITE,
@@ -157,158 +220,736 @@ class ProfileView(ft.Container):
                 margin=ft.Margin.only(top=14),
             )
 
-        # Settings Card matching .profile-card
-        settings_card = ft.Container(
-            content=ft.Column(
-                controls=[
-                    ft.Text("Preferences & Desktop Settings", size=15, weight=ft.FontWeight.BOLD, color=ThemeColors.TEXT_BLACK),
-                    ft.Divider(color=ThemeColors.BORDER_LIGHT, height=1),
-                    ft.Row(
-                        controls=[
-                            ft.Icon(ft.Icons.DARK_MODE_OUTLINED, size=20, color=ThemeColors.PRIMARY_BLUE),
-                            ft.Column(
-                                controls=[
-                                    ft.Text("Theme Mode", size=13, weight=ft.FontWeight.W_600),
-                                    ft.Text("Switch between Light and Dark Material 3 palette", size=11, color=ThemeColors.TEXT_MUTED_LIGHT),
-                                ],
-                                spacing=2,
-                                expand=True,
-                            ),
-                            ft.OutlinedButton(
-                                content="Toggle Theme",
-                                on_click=lambda _: self._toggle_theme(),
-                            ),
-                        ],
-                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        # 3. 5-Row Profile Navigation Card matching Figma (NO chevrons, blue rounded squares)
+        menu_rows = ft.Column(
+            controls=[
+                self._create_menu_row(
+                    icon=ft.Icons.SETTINGS_OUTLINED,
+                    icon_color=ThemeColors.PRIMARY_BLUE,
+                    box_bgcolor=ThemeColors.AZURE_SOFT,
+                    title="Settings",
+                    desc="Manage your account and customize your app experience.",
+                    on_click=lambda: self._open_settings_dialog(),
+                ),
+                ft.Divider(color=ThemeColors.BORDER_LIGHT, height=1),
+                self._create_menu_row(
+                    icon=ft.Icons.FAVORITE,
+                    icon_color=ThemeColors.PRIMARY_BLUE,
+                    box_bgcolor=ThemeColors.AZURE_SOFT,
+                    title="Favorites",
+                    desc=f"Your favorite places ({len(self.favorites_service.get_favorites())} saved).",
+                    on_click=lambda: self._open_favorites_dialog(),
+                ),
+                ft.Divider(color=ThemeColors.BORDER_LIGHT, height=1),
+                self._create_menu_row(
+                    icon=ft.Icons.HELP_OUTLINE,
+                    icon_color=ThemeColors.PRIMARY_BLUE,
+                    box_bgcolor=ThemeColors.AZURE_SOFT,
+                    title="Help & Support",
+                    desc="Provincial hotlines, emergency contacts, and FAQs.",
+                    on_click=lambda: self._open_help_dialog(),
+                ),
+                ft.Divider(color=ThemeColors.BORDER_LIGHT, height=1),
+                self._create_menu_row(
+                    icon=ft.Icons.INFO_OUTLINE,
+                    icon_color=ThemeColors.PRIMARY_BLUE,
+                    box_bgcolor=ThemeColors.AZURE_SOFT,
+                    title="About",
+                    desc=f"Trip mo, trip ko — Desktop Client v{self.settings.app_version}.",
+                    on_click=lambda: self._open_about_dialog(),
+                ),
+                ft.Divider(color=ThemeColors.BORDER_LIGHT, height=1),
+                self._create_menu_row(
+                    icon=ft.Icons.LOGOUT,
+                    icon_color=ThemeColors.ERROR,
+                    box_bgcolor=ThemeColors.ERROR_BG,
+                    title="Log Out" if not is_guest else "Exit Guest Mode",
+                    desc=(
+                        "Sign out of your account."
+                        if not is_guest
+                        else "Return to welcome screen."
                     ),
-                    ft.Divider(color=ThemeColors.BORDER_LIGHT, height=1),
-                    ft.Row(
-                        controls=[
-                            ft.Icon(ft.Icons.STORAGE_OUTLINED, size=20, color=ThemeColors.PRIMARY_BLUE),
-                            ft.Column(
-                                controls=[
-                                    ft.Text("Local Offline Storage", size=13, weight=ft.FontWeight.W_600),
-                                    ft.Text(f"Cached in: {self.settings.storage_dir}", size=11, color=ThemeColors.TEXT_MUTED_LIGHT),
-                                ],
-                                spacing=2,
-                                expand=True,
-                            ),
-                            ft.TextButton(
-                                content="Clear Cache",
-                                style=ft.ButtonStyle(color=ThemeColors.ERROR),
-                                on_click=lambda _: self._clear_local_cache(),
-                            ),
-                        ],
-                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                    ),
-                    ft.Divider(color=ThemeColors.BORDER_LIGHT, height=1),
-                    ft.Row(
-                        controls=[
-                            ft.Icon(ft.Icons.API, size=20, color=ThemeColors.PRIMARY_BLUE),
-                            ft.Column(
-                                controls=[
-                                    ft.Text("Backend API Endpoint", size=13, weight=ft.FontWeight.W_600),
-                                    ft.Text(self.settings.api_base_url, size=11, color=ThemeColors.TEXT_MUTED_LIGHT),
-                                ],
-                                spacing=2,
-                            ),
-                        ],
-                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                    ),
-                ],
-                spacing=14,
-            ),
-            bgcolor=ThemeColors.SURFACE_LIGHT,
-            border=ft.Border.all(1.2, ThemeColors.BORDER_LIGHT),
-            border_radius=18,
-            padding=ft.Padding.all(20),
-            margin=ft.Margin.only(top=16),
+                    title_color=ThemeColors.ERROR,
+                    on_click=lambda: self._confirm_logout(),
+                ),
+            ],
+            spacing=0,
         )
 
-        # Account Session Action (Log In or Log Out)
-        account_action_row: ft.Control
-        if not is_guest:
-            account_action_row = ft.Container(
-                content=ft.FilledButton(
-                    content="Log Out",
-                    icon=ft.Icons.LOGOUT,
-                    style=ft.ButtonStyle(
-                        bgcolor=ThemeColors.ERROR,
-                        color=ft.Colors.WHITE,
-                        shape=ft.RoundedRectangleBorder(radius=10),
-                    ),
-                    on_click=lambda _: self._handle_logout(),
-                ),
-                margin=ft.Margin.only(top=20),
-            )
-        else:
-            account_action_row = ft.Container(
-                content=ft.FilledButton(
-                    content="Log In to Sync Trips Across Devices",
-                    icon=ft.Icons.LOGIN,
-                    style=ft.ButtonStyle(
-                        bgcolor=ThemeColors.PRIMARY_BLUE,
-                        color=ft.Colors.WHITE,
-                        shape=ft.RoundedRectangleBorder(radius=10),
-                    ),
-                    on_click=lambda _: self._navigate("/login"),
-                ),
-                margin=ft.Margin.only(top=20),
-            )
+        profile_menu_card = ft.Container(
+            content=menu_rows,
+            bgcolor=ThemeColors.SURFACE_LIGHT,
+            border=ft.Border.all(1.2, ThemeColors.BORDER_LIGHT),
+            border_radius=20,
+            padding=ft.Padding.symmetric(vertical=8, horizontal=16),
+            margin=ft.Margin.only(top=16),
+            shadow=ft.BoxShadow(
+                spread_radius=0,
+                blur_radius=12,
+                color=ft.Colors.with_opacity(0.04, "#000000"),
+                offset=ft.Offset(0, 4),
+            ),
+        )
 
-        self.content = ft.Column(
+        main_column = ft.Column(
             controls=[
                 title_block,
                 ft.Container(height=14),
-                identity_row,
+                identity_card,
                 sync_banner,
-                settings_card,
-                account_action_row,
+                profile_menu_card,
             ],
             spacing=0,
             scroll=ft.ScrollMode.AUTO,
             expand=True,
         )
 
-    def _open_edit_profile_dialog(self) -> None:
-        user = self.session_manager.current_user
-        name_field = ft.TextField(
-            label="Full Name",
-            value=user.full_name if user else "",
-            border_radius=10,
+        self.content = main_column
+
+    def _create_menu_row(
+        self,
+        icon: str,
+        icon_color: str,
+        box_bgcolor: str,
+        title: str,
+        desc: str,
+        on_click: Callable[[], None],
+        title_color: Optional[str] = None,
+    ) -> ft.Control:
+        """Creates a modern menu row with rounded square icon box and NO chevrons."""
+        icon_box = ft.Container(
+            content=ft.Icon(icon, size=22, color=icon_color),
+            width=42,
+            height=42,
+            bgcolor=box_bgcolor,
+            border_radius=12,
+            alignment=ft.Alignment(0, 0),
         )
 
-        def close_dlg(_=None):
-            self.page.pop_dialog()
+        text_block = ft.Column(
+            controls=[
+                ft.Text(
+                    title,
+                    size=15,
+                    weight=ft.FontWeight.BOLD,
+                    color=title_color or ThemeColors.TEXT_BLACK,
+                ),
+                ft.Text(desc, size=12, color=ThemeColors.TEXT_MUTED_LIGHT),
+            ],
+            spacing=2,
+            expand=True,
+        )
 
-        def save_name(_=None):
-            val = (name_field.value or "").strip()
-            if val:
-                async def _worker():
-                    try:
-                        await self.auth_service.update_profile(UserUpdatePayload(full_name=val))
-                        self._build_content()
-                        self.update()
-                    except Exception:
-                        pass
-                asyncio.run(_worker())
-            self.page.pop_dialog()
+        return ft.Container(
+            content=ft.Row(
+                controls=[icon_box, text_block],
+                spacing=16,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            ),
+            padding=ft.Padding.symmetric(vertical=14, horizontal=10),
+            ink=True,
+            border_radius=12,
+            on_click=lambda _: on_click(),
+        )
+
+    def _open_settings_dialog(self) -> None:
+        """Opens dedicated Settings sub-window modal."""
+        notif_switch = ft.Switch(
+            label="Push Notifications",
+            value=True,
+            active_color=ThemeColors.PRIMARY_BLUE,
+        )
+        offline_switch = ft.Switch(
+            label="Offline Map Cache", value=True, active_color=ThemeColors.PRIMARY_BLUE
+        )
+        dark_switch = ft.Switch(
+            label="Dark Theme Mode",
+            value=(
+                self.safe_page.theme_mode == ft.ThemeMode.DARK
+                if self.safe_page
+                else False
+            ),
+            active_color=ThemeColors.PRIMARY_BLUE,
+            on_change=lambda _: self._toggle_theme(),
+        )
+
+        def _clear_cache(_):
+            self.guest_storage.clear_all()
+            status.value = "Local cache cleared successfully."
+            dlg.update()
+
+        status = ft.Text("", size=12, color=ThemeColors.BUDGET_GREEN)
 
         dlg = ft.AlertDialog(
-            title=ft.Text("Edit Profile Name", size=16, weight=ft.FontWeight.BOLD),
-            content=ft.Column(controls=[name_field], tight=True, width=360),
+            title=ft.Row(
+                [
+                    ft.Icon(ft.Icons.SETTINGS, color=ThemeColors.PRIMARY_BLUE),
+                    ft.Text("App Settings", size=18, weight=ft.FontWeight.BOLD),
+                ]
+            ),
+            content=ft.Column(
+                controls=[
+                    ft.Text(
+                        "Customize your desktop application preferences.",
+                        size=12,
+                        color=ThemeColors.TEXT_MUTED_LIGHT,
+                    ),
+                    ft.Divider(color=ThemeColors.BORDER_LIGHT),
+                    notif_switch,
+                    offline_switch,
+                    dark_switch,
+                    ft.Divider(color=ThemeColors.BORDER_LIGHT),
+                    ft.Row(
+                        controls=[
+                            ft.Text(
+                                "Local Cache Storage",
+                                size=13,
+                                weight=ft.FontWeight.W_600,
+                            ),
+                            ft.OutlinedButton("Clear Cache", on_click=_clear_cache),
+                        ],
+                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    ),
+                    status,
+                ],
+                spacing=10,
+                tight=True,
+                width=420,
+            ),
             actions=[
-                ft.TextButton(content="Cancel", on_click=close_dlg),
+                ft.TextButton("Close", on_click=lambda _: self._close_dialog(dlg)),
+            ],
+        )
+        self._show_dialog(dlg)
+
+    def _open_favorites_dialog(self) -> None:
+        """Opens dedicated Favorites Subview Modal (UI-25)."""
+        if not self.safe_page:
+            return
+
+        favorites = self.favorites_service.get_favorites()
+        active_cat = "all"
+        fav_listview = ft.ListView(spacing=8, height=360)
+
+        def render_favs():
+            filtered = [
+                f for f in favorites if active_cat == "all" or f.category == active_cat
+            ]
+            if not filtered:
+                fav_listview.controls = [
+                    ft.Container(
+                        content=ft.Column(
+                            controls=[
+                                ft.Icon(
+                                    ft.Icons.FAVORITE_BORDER,
+                                    size=36,
+                                    color=ThemeColors.TEXT_FAINT_LIGHT,
+                                ),
+                                ft.Text(
+                                    "No favorites saved in this category.",
+                                    size=13,
+                                    weight=ft.FontWeight.BOLD,
+                                ),
+                                ft.Text(
+                                    "Explore destinations on the map and click the heart icon to save them.",
+                                    size=11,
+                                    color=ThemeColors.TEXT_MUTED_LIGHT,
+                                ),
+                            ],
+                            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                            spacing=4,
+                        ),
+                        padding=30,
+                        alignment=ft.Alignment(0, 0),
+                    )
+                ]
+            else:
+                cards = []
+                for place in filtered:
+                    cards.append(
+                        ft.Container(
+                            content=ft.Row(
+                                controls=[
+                                    ft.Image(
+                                        src=place.resolved_image_path,
+                                        width=75,
+                                        height=60,
+                                        fit=ft.BoxFit.COVER,
+                                        border_radius=8,
+                                        error_content=ft.Icon(
+                                            ft.Icons.LANDSCAPE,
+                                            size=24,
+                                            color=ThemeColors.PRIMARY_BLUE,
+                                        ),
+                                    ),
+                                    ft.Column(
+                                        controls=[
+                                            ft.Text(
+                                                place.name,
+                                                size=13,
+                                                weight=ft.FontWeight.BOLD,
+                                                max_lines=1,
+                                                overflow=ft.TextOverflow.ELLIPSIS,
+                                            ),
+                                            ft.Text(
+                                                f"{place.municipality_name or 'Nueva Ecija'} • {place.formatted_category}",
+                                                size=11,
+                                                color=ThemeColors.TEXT_MUTED_LIGHT,
+                                            ),
+                                            ft.Text(
+                                                place.formatted_cost,
+                                                size=11,
+                                                weight=ft.FontWeight.BOLD,
+                                                color=ThemeColors.EMERALD_PRIMARY,
+                                            ),
+                                        ],
+                                        spacing=2,
+                                        expand=True,
+                                    ),
+                                    ft.IconButton(
+                                        icon=ft.Icons.FAVORITE,
+                                        icon_color=ft.Colors.RED_500,
+                                        icon_size=20,
+                                        tooltip="Remove from Favorites",
+                                        on_click=lambda _, pl=place: remove_fav(pl),
+                                    ),
+                                    ft.FilledButton(
+                                        content="View",
+                                        style=ft.ButtonStyle(
+                                            bgcolor=ThemeColors.PRIMARY_BLUE,
+                                            color=ft.Colors.WHITE,
+                                            padding=ft.Padding.symmetric(
+                                                horizontal=10, vertical=4
+                                            ),
+                                            shape=ft.RoundedRectangleBorder(radius=6),
+                                        ),
+                                        on_click=lambda _, pl=place: show_place_detail_dialog(
+                                            self.safe_page,
+                                            pl,
+                                            on_navigate=self.on_navigate,
+                                        ),
+                                    ),
+                                ],
+                                spacing=10,
+                                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                            ),
+                            bgcolor=ThemeColors.SURFACE_LIGHT,
+                            border=ft.Border.all(1, ThemeColors.BORDER_LIGHT),
+                            border_radius=10,
+                            padding=8,
+                        )
+                    )
+                fav_listview.controls = cards
+            try:
+                fav_listview.update()
+            except Exception:
+                pass
+
+        def remove_fav(pl: Place):
+            nonlocal favorites
+            self.favorites_service.remove_favorite(pl.id)
+            favorites = self.favorites_service.get_favorites()
+            render_favs()
+            self._build_content()
+            self._safe_update()
+
+        def set_cat(cat_key: str):
+            nonlocal active_cat
+            active_cat = cat_key
+            for c in cat_row.controls:
+                is_sel = getattr(c, "data", None) == cat_key
+                c.bgcolor = (
+                    ThemeColors.PRIMARY_BLUE if is_sel else ThemeColors.SURFACE_LIGHT
+                )
+                c.content.color = (
+                    ft.Colors.WHITE if is_sel else ThemeColors.TEXT_MAIN_LIGHT
+                )
+            try:
+                cat_row.update()
+            except Exception:
+                pass
+            render_favs()
+
+        cats = [
+            ("all", "All"),
+            ("nature_park", "Nature"),
+            ("cafe", "Cafes"),
+            ("museum_cultural", "Heritage"),
+            ("resort_swimming", "Resorts"),
+        ]
+        cat_buttons = []
+        for ck, cl in cats:
+            is_sel = ck == active_cat
+            btn = ft.Container(
+                content=ft.Text(
+                    cl,
+                    size=11,
+                    weight=ft.FontWeight.BOLD,
+                    color=ft.Colors.WHITE if is_sel else ThemeColors.TEXT_MAIN_LIGHT,
+                ),
+                bgcolor=(
+                    ThemeColors.PRIMARY_BLUE if is_sel else ThemeColors.SURFACE_LIGHT
+                ),
+                border=ft.Border.all(
+                    1, ThemeColors.PRIMARY_BLUE if is_sel else ThemeColors.BORDER_LIGHT
+                ),
+                border_radius=14,
+                padding=ft.Padding.symmetric(horizontal=10, vertical=5),
+                ink=True,
+                data=ck,
+                on_click=lambda _, k=ck: set_cat(k),
+            )
+            cat_buttons.append(btn)
+
+        cat_row = ft.Row(controls=cat_buttons, spacing=6)
+        render_favs()
+
+        dlg = ft.AlertDialog(
+            title=ft.Row(
+                [
+                    ft.Icon(ft.Icons.FAVORITE, color=ft.Colors.RED_500, size=22),
+                    ft.Text("Saved Favorites", size=18, weight=ft.FontWeight.BOLD),
+                ],
+                spacing=8,
+            ),
+            content=ft.Column(
+                controls=[
+                    cat_row,
+                    ft.Divider(height=1, color=ThemeColors.BORDER_LIGHT),
+                    fav_listview,
+                ],
+                spacing=10,
+                width=500,
+                tight=True,
+            ),
+            actions=[
+                ft.TextButton("Close", on_click=lambda _: self._close_dialog(dlg)),
+            ],
+        )
+        self._show_dialog(dlg)
+
+    def _open_help_dialog(self) -> None:
+        """Opens Help & Support sub-window dialog with Emergency Provincial Hotlines."""
+        dlg = ft.AlertDialog(
+            title=ft.Row(
+                [
+                    ft.Icon(ft.Icons.HELP_OUTLINE, color=ThemeColors.PRIMARY_BLUE),
+                    ft.Text("Help & Support", size=18, weight=ft.FontWeight.BOLD),
+                ]
+            ),
+            content=ft.Column(
+                controls=[
+                    ft.Text(
+                        "Emergency Provincial Hotlines:",
+                        size=13,
+                        weight=ft.FontWeight.BOLD,
+                    ),
+                    ft.Container(
+                        content=ft.Column(
+                            controls=[
+                                ft.Text(
+                                    "🚨 PDRRMO Emergency Hotline: (044) 940 3388",
+                                    size=11,
+                                    weight=ft.FontWeight.BOLD,
+                                    color=ThemeColors.ERROR,
+                                ),
+                                ft.Text(
+                                    "🚔 PNP Nueva Ecija Command: 117 / (044) 463 0565",
+                                    size=11,
+                                    weight=ft.FontWeight.BOLD,
+                                ),
+                                ft.Text(
+                                    "🚑 Cabanatuan Rescue Station: (044) 463 8888",
+                                    size=11,
+                                    weight=ft.FontWeight.BOLD,
+                                ),
+                            ],
+                            spacing=3,
+                        ),
+                        bgcolor=ThemeColors.ERROR_BG,
+                        border_radius=8,
+                        padding=10,
+                    ),
+                    ft.Container(height=4),
+                    ft.Text(
+                        "Frequently Asked Questions:",
+                        size=13,
+                        weight=ft.FontWeight.BOLD,
+                    ),
+                    ft.Text(
+                        "• How do I plan a trip? Use the Suggested Wizard or Custom Builder from the Home Dashboard.",
+                        size=12,
+                        color=ThemeColors.TEXT_MUTED_LIGHT,
+                    ),
+                    ft.Text(
+                        "• Are prices verified? Yes, entrance fees are recorded directly from Nueva Ecija municipal registries.",
+                        size=12,
+                        color=ThemeColors.TEXT_MUTED_LIGHT,
+                    ),
+                    ft.Text(
+                        "• Can I use the app offline? Yes, cached itineraries and points of interest remain accessible offline.",
+                        size=12,
+                        color=ThemeColors.TEXT_MUTED_LIGHT,
+                    ),
+                    ft.Text(
+                        "• Contact: support@nuevaecijatravel.ph",
+                        size=12,
+                        weight=ft.FontWeight.W_600,
+                        color=ThemeColors.PRIMARY_BLUE,
+                    ),
+                ],
+                spacing=6,
+                tight=True,
+                width=450,
+            ),
+            actions=[
+                ft.TextButton("Close", on_click=lambda _: self._close_dialog(dlg)),
+            ],
+        )
+        self._show_dialog(dlg)
+
+    def _open_about_dialog(self) -> None:
+        """Opens About dialog matching web client."""
+        dlg = ft.AlertDialog(
+            title=ft.Row(
+                [
+                    ft.Icon(ft.Icons.INFO_OUTLINE, color=ThemeColors.PRIMARY_BLUE),
+                    ft.Text(
+                        "About Trip mo, trip ko", size=18, weight=ft.FontWeight.BOLD
+                    ),
+                ]
+            ),
+            content=ft.Column(
+                controls=[
+                    ft.Text(
+                        f"Version {self.settings.app_version}",
+                        size=14,
+                        weight=ft.FontWeight.BOLD,
+                    ),
+                    ft.Text(
+                        "Nueva Ecija Travel Platform — Desktop Client",
+                        size=13,
+                        color=ThemeColors.TEXT_BLACK,
+                    ),
+                    ft.Text(
+                        "Built with Python Flet & FastAPI backend, exploring all 32 LGUs from Sierra Madre to Pantabangan Lake.",
+                        size=12,
+                        color=ThemeColors.TEXT_MUTED_LIGHT,
+                    ),
+                    ft.Text(
+                        "© 2026 Nueva Ecija Tourism Council. All rights reserved.",
+                        size=11,
+                        color=ThemeColors.TEXT_FAINT_LIGHT,
+                    ),
+                ],
+                spacing=6,
+                tight=True,
+                width=380,
+            ),
+            actions=[
+                ft.TextButton("Close", on_click=lambda _: self._close_dialog(dlg)),
+            ],
+        )
+        self._show_dialog(dlg)
+
+    def _confirm_logout(self) -> None:
+        """Opens log out confirmation modal dialog."""
+
+        def _do_logout(_):
+            self._close_dialog(dlg)
+            self.session_manager.clear_session()
+            self._navigate("/welcome?logout=1")
+
+        dlg = ft.AlertDialog(
+            title=ft.Row(
+                [
+                    ft.Icon(ft.Icons.LOGOUT, color=ThemeColors.PRIMARY_BLUE, size=24),
+                    ft.Text("Confirm Log Out", size=18, weight=ft.FontWeight.BOLD),
+                ],
+                spacing=8,
+            ),
+            content=ft.Text(
+                "Are you sure you want to log out of your account? Your offline trips will remain safely stored on this device.",
+                size=13,
+                color=ThemeColors.TEXT_MUTED_LIGHT,
+            ),
+            actions=[
+                ft.TextButton("Cancel", on_click=lambda _: self._close_dialog(dlg)),
                 ft.FilledButton(
-                    content="Save",
-                    style=ft.ButtonStyle(bgcolor=ThemeColors.PRIMARY_BLUE, color=ft.Colors.WHITE),
-                    on_click=save_name,
+                    content="Log Out",
+                    style=ft.ButtonStyle(
+                        bgcolor=ThemeColors.PRIMARY_BLUE, color=ft.Colors.WHITE
+                    ),
+                    on_click=_do_logout,
                 ),
             ],
         )
-        self.page.show_dialog(dlg)
+        self._show_dialog(dlg)
+
+    def _show_dialog(self, dlg: ft.AlertDialog) -> None:
+        if self.page:
+            self.page.overlay.append(dlg)
+            dlg.open = True
+            self.page.update()
+
+    def _close_dialog(self, dlg: ft.AlertDialog) -> None:
+        dlg.open = False
+        if self.page:
+            self.page.update()
+
+    def _toggle_theme(self) -> None:
+        if self.on_toggle_theme:
+            self.on_toggle_theme()
+        self._build_content()
+        self._safe_update()
+
+    def _open_edit_profile_dialog(self) -> None:
+        user = self.session_manager.current_user
+        first_input = ft.TextField(
+            label="First Name",
+            value=user.first_name if user else "",
+            border_radius=10,
+            dense=True,
+            expand=True,
+        )
+        mi_input = ft.TextField(
+            label="M.I.",
+            value="",
+            width=70,
+            border_radius=10,
+            dense=True,
+        )
+        last_input = ft.TextField(
+            label="Last Name",
+            value=user.last_name if user else "",
+            border_radius=10,
+            dense=True,
+        )
+        username_input = ft.TextField(
+            label="Username",
+            value=user.username if user else "",
+            prefix_icon=ft.Icons.ALTERNATE_EMAIL,
+            border_radius=10,
+            dense=True,
+        )
+        email_input = ft.TextField(
+            label="Email Address",
+            value=user.email if user else "",
+            prefix_icon=ft.Icons.MAIL_OUTLINE,
+            border_radius=10,
+            dense=True,
+            read_only=True,
+        )
+        phone_input = ft.TextField(
+            label="Phone Number",
+            value=user.phone if user and user.phone else "",
+            prefix_icon=ft.Icons.PHONE,
+            border_radius=10,
+            dense=True,
+        )
+        birthday_input = ft.TextField(
+            label="Birthday (YYYY-MM-DD)",
+            value="",
+            prefix_icon=ft.Icons.CAKE,
+            border_radius=10,
+            dense=True,
+        )
+
+        def _save(_):
+            f_val = first_input.value.strip() if first_input.value else ""
+            l_val = last_input.value.strip() if last_input.value else ""
+            u_val = username_input.value.strip() if username_input.value else ""
+            p_val = phone_input.value.strip() if phone_input.value else ""
+            if not f_val or not l_val:
+                return
+
+            payload = UserUpdatePayload(
+                first_name=f_val,
+                last_name=l_val,
+                username=u_val or None,
+                phone=p_val or None,
+            )
+
+            async def _update():
+                try:
+                    await self.auth_service.update_profile(payload)
+                    self._close_dialog(dlg)
+                    self._build_content()
+                    self._safe_update()
+                except Exception:
+                    pass
+
+            if self.page:
+                self.page.run_task(_update)
+            else:
+                try:
+                    loop = asyncio.get_running_loop()
+                    loop.create_task(_update())
+                except RuntimeError:
+                    pass
+
+        dlg = ft.AlertDialog(
+            title=ft.Row(
+                [
+                    ft.Icon(ft.Icons.PERSON, color=ThemeColors.PRIMARY_BLUE),
+                    ft.Text("Edit Profile Details", size=18, weight=ft.FontWeight.BOLD),
+                ],
+                spacing=8,
+            ),
+            content=ft.Column(
+                controls=[
+                    ft.Row(controls=[first_input, mi_input], spacing=8),
+                    last_input,
+                    username_input,
+                    email_input,
+                    phone_input,
+                    birthday_input,
+                ],
+                spacing=8,
+                tight=True,
+                width=420,
+            ),
+            actions=[
+                ft.TextButton("Cancel", on_click=lambda _: self._close_dialog(dlg)),
+                ft.FilledButton(
+                    content="Save Changes",
+                    style=ft.ButtonStyle(
+                        bgcolor=ThemeColors.PRIMARY_BLUE, color=ft.Colors.WHITE
+                    ),
+                    on_click=_save,
+                ),
+            ],
+        )
+        self._show_dialog(dlg)
+
+    def _sync_guest_trips(self) -> None:
+        self.is_migrating = True
+        self._build_content()
+        self._safe_update()
+
+        async def _run():
+            try:
+                trips = self.guest_storage.list_itineraries()
+                for trip in trips:
+                    trip.user_id = (
+                        self.session_manager.current_user.id
+                        if self.session_manager.current_user
+                        else ""
+                    )
+                self.guest_storage.clear_all()
+            finally:
+                self.is_migrating = False
+                self._build_content()
+                self._safe_update()
+
+        if self.page:
+            self.page.run_task(_run)
+        else:
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(_run())
+            except RuntimeError:
+                pass
 
     def _safe_update(self) -> None:
         try:
@@ -316,53 +957,376 @@ class ProfileView(ft.Container):
         except Exception:
             pass
 
-    def _sync_guest_trips(self) -> None:
-        if not self.session_manager.is_authenticated:
-            self._navigate("/login")
-            return
+    @property
+    def safe_page(self) -> Optional[ft.Page]:
+        try:
+            return self.page
+        except Exception:
+            return None
 
+    def _navigate(self, route: str) -> None:
+        if self.on_navigate:
+            self.on_navigate(route)
+
+    def _create_menu_row(
+        self,
+        icon: str,
+        icon_color: str,
+        box_bgcolor: str,
+        title: str,
+        desc: str,
+        on_click: Callable[[], None],
+        title_color: Optional[str] = None,
+    ) -> ft.Control:
+        """Creates a modern menu row with rounded square icon box and NO chevrons."""
+        icon_box = ft.Container(
+            content=ft.Icon(icon, size=22, color=icon_color),
+            width=42,
+            height=42,
+            bgcolor=box_bgcolor,
+            border_radius=12,
+            alignment=ft.Alignment(0, 0),
+        )
+
+        text_block = ft.Column(
+            controls=[
+                ft.Text(
+                    title,
+                    size=15,
+                    weight=ft.FontWeight.BOLD,
+                    color=title_color or ThemeColors.TEXT_BLACK,
+                ),
+                ft.Text(desc, size=12, color=ThemeColors.TEXT_MUTED_LIGHT),
+            ],
+            spacing=2,
+            expand=True,
+        )
+
+        return ft.Container(
+            content=ft.Row(
+                controls=[icon_box, text_block],
+                spacing=16,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            ),
+            padding=ft.Padding.symmetric(vertical=14, horizontal=10),
+            ink=True,
+            border_radius=12,
+            on_click=lambda _: on_click(),
+        )
+
+    def _open_settings_dialog(self) -> None:
+        """Opens dedicated Settings sub-window modal."""
+        notif_switch = ft.Switch(
+            label="Push Notifications",
+            value=True,
+            active_color=ThemeColors.PRIMARY_BLUE,
+        )
+        offline_switch = ft.Switch(
+            label="Offline Map Cache", value=True, active_color=ThemeColors.PRIMARY_BLUE
+        )
+        dark_switch = ft.Switch(
+            label="Dark Theme Mode",
+            value=(
+                self.safe_page.theme_mode == ft.ThemeMode.DARK
+                if self.safe_page
+                else False
+            ),
+            active_color=ThemeColors.PRIMARY_BLUE,
+            on_change=lambda _: self._toggle_theme(),
+        )
+
+        def _clear_cache(_):
+            self.guest_storage.clear_all()
+            status.value = "Local cache cleared successfully."
+            dlg.update()
+
+        status = ft.Text("", size=12, color=ThemeColors.BUDGET_GREEN)
+
+        dlg = ft.AlertDialog(
+            title=ft.Row(
+                [
+                    ft.Icon(ft.Icons.SETTINGS, color=ThemeColors.PRIMARY_BLUE),
+                    ft.Text("App Settings", size=18, weight=ft.FontWeight.BOLD),
+                ]
+            ),
+            content=ft.Column(
+                controls=[
+                    ft.Text(
+                        "Customize your desktop application preferences.",
+                        size=12,
+                        color=ThemeColors.TEXT_MUTED_LIGHT,
+                    ),
+                    ft.Divider(color=ThemeColors.BORDER_LIGHT),
+                    notif_switch,
+                    offline_switch,
+                    dark_switch,
+                    ft.Divider(color=ThemeColors.BORDER_LIGHT),
+                    ft.Row(
+                        controls=[
+                            ft.Text(
+                                "Local Cache Storage",
+                                size=13,
+                                weight=ft.FontWeight.W_600,
+                            ),
+                            ft.OutlinedButton("Clear Cache", on_click=_clear_cache),
+                        ],
+                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    ),
+                    status,
+                ],
+                spacing=10,
+                tight=True,
+                width=420,
+            ),
+            actions=[
+                ft.TextButton("Close", on_click=lambda _: self._close_dialog(dlg)),
+            ],
+        )
+        self._show_dialog(dlg)
+
+    def _open_help_dialog(self) -> None:
+        """Opens Help & Support sub-window dialog."""
+        dlg = ft.AlertDialog(
+            title=ft.Row(
+                [
+                    ft.Icon(ft.Icons.HELP_OUTLINE, color=ThemeColors.PRIMARY_BLUE),
+                    ft.Text("Help & Support", size=18, weight=ft.FontWeight.BOLD),
+                ]
+            ),
+            content=ft.Column(
+                controls=[
+                    ft.Text(
+                        "Common Travel Questions:", size=13, weight=ft.FontWeight.BOLD
+                    ),
+                    ft.Text(
+                        "• How do I plan a trip? Use the Suggested Wizard or Custom Builder from the Home Dashboard.",
+                        size=12,
+                        color=ThemeColors.TEXT_MUTED_LIGHT,
+                    ),
+                    ft.Text(
+                        "• Are prices verified? Yes, entrance fees are recorded directly from Nueva Ecija tourism registries.",
+                        size=12,
+                        color=ThemeColors.TEXT_MUTED_LIGHT,
+                    ),
+                    ft.Text(
+                        "• Can I use the app offline? Yes, cached itineraries and points of interest remain accessible offline.",
+                        size=12,
+                        color=ThemeColors.TEXT_MUTED_LIGHT,
+                    ),
+                    ft.Text(
+                        "• Contact: support@nuevaecijatravel.ph",
+                        size=12,
+                        weight=ft.FontWeight.W_600,
+                        color=ThemeColors.PRIMARY_BLUE,
+                    ),
+                ],
+                spacing=8,
+                tight=True,
+                width=420,
+            ),
+            actions=[
+                ft.TextButton("Close", on_click=lambda _: self._close_dialog(dlg)),
+            ],
+        )
+        self._show_dialog(dlg)
+
+    def _open_about_dialog(self) -> None:
+        """Opens About dialog matching web client."""
+        dlg = ft.AlertDialog(
+            title=ft.Row(
+                [
+                    ft.Icon(ft.Icons.INFO_OUTLINE, color=ThemeColors.PRIMARY_BLUE),
+                    ft.Text(
+                        "About Trip mo, trip ko", size=18, weight=ft.FontWeight.BOLD
+                    ),
+                ]
+            ),
+            content=ft.Column(
+                controls=[
+                    ft.Text(
+                        f"Version {self.settings.app_version}",
+                        size=14,
+                        weight=ft.FontWeight.BOLD,
+                    ),
+                    ft.Text(
+                        "Nueva Ecija Travel Platform — Desktop Client",
+                        size=13,
+                        color=ThemeColors.TEXT_BLACK,
+                    ),
+                    ft.Text(
+                        "Built with Python Flet & FastAPI backend, exploring all 32 LGUs from Sierra Madre to Pantabangan Lake.",
+                        size=12,
+                        color=ThemeColors.TEXT_MUTED_LIGHT,
+                    ),
+                    ft.Text(
+                        "© 2026 Nueva Ecija Tourism Council. All rights reserved.",
+                        size=11,
+                        color=ThemeColors.TEXT_FAINT_LIGHT,
+                    ),
+                ],
+                spacing=6,
+                tight=True,
+                width=380,
+            ),
+            actions=[
+                ft.TextButton("Close", on_click=lambda _: self._close_dialog(dlg)),
+            ],
+        )
+        self._show_dialog(dlg)
+
+    def _confirm_logout(self) -> None:
+        """Opens log out confirmation modal dialog."""
+
+        def _do_logout(_):
+            self._close_dialog(dlg)
+            self.session_manager.clear_session()
+            self._navigate("/welcome")
+
+        dlg = ft.AlertDialog(
+            title=ft.Row(
+                [
+                    ft.Icon(ft.Icons.LOGOUT, color=ThemeColors.ERROR),
+                    ft.Text("Confirm Sign Out", size=18, weight=ft.FontWeight.BOLD),
+                ]
+            ),
+            content=ft.Text(
+                "Are you sure you want to sign out of your account? Your offline trips will remain safely stored.",
+                size=13,
+                color=ThemeColors.TEXT_MUTED_LIGHT,
+            ),
+            actions=[
+                ft.TextButton("Cancel", on_click=lambda _: self._close_dialog(dlg)),
+                ft.FilledButton("Log Out", bgcolor=ThemeColors.ERROR, color=ft.Colors.WHITE, on_click=_do_logout),
+            ],
+        )
+        self._show_dialog(dlg)
+
+    def _show_dialog(self, dlg: ft.AlertDialog) -> None:
+        if self.page:
+            self.page.overlay.append(dlg)
+            dlg.open = True
+            self.page.update()
+
+    def _close_dialog(self, dlg: ft.AlertDialog) -> None:
+        dlg.open = False
+        if self.page:
+            self.page.update()
+
+    def _toggle_theme(self) -> None:
+        if self.on_toggle_theme:
+            self.on_toggle_theme()
+        self._build_content()
+        self._safe_update()
+
+    def _open_edit_profile_dialog(self) -> None:
+        user = self.session_manager.current_user
+        first_input = ft.TextField(
+            label="First Name",
+            value=user.first_name if user else "",
+            border_radius=10,
+            dense=True,
+        )
+        last_input = ft.TextField(
+            label="Last Name",
+            value=user.last_name if user else "",
+            border_radius=10,
+            dense=True,
+        )
+        username_input = ft.TextField(
+            label="Username",
+            value=user.username if user else "",
+            prefix_icon=ft.Icons.ALTERNATE_EMAIL,
+            border_radius=10,
+            dense=True,
+        )
+
+        def _save(_):
+            f_val = first_input.value.strip() if first_input.value else ""
+            l_val = last_input.value.strip() if last_input.value else ""
+            u_val = username_input.value.strip() if username_input.value else ""
+            if not f_val or not l_val:
+                return
+
+            payload = UserUpdatePayload(
+                first_name=f_val,
+                last_name=l_val,
+                username=u_val or None,
+            )
+
+            async def _update():
+                try:
+                    await self.auth_service.update_profile(payload)
+                    self._close_dialog(dlg)
+                    self._build_content()
+                    self._safe_update()
+                except Exception:
+                    pass
+
+            if self.page:
+                self.page.run_task(_update)
+            else:
+                try:
+                    loop = asyncio.get_running_loop()
+                    loop.create_task(_update())
+                except RuntimeError:
+                    pass
+
+        dlg = ft.AlertDialog(
+            title=ft.Text("Edit Profile", size=18, weight=ft.FontWeight.BOLD),
+            content=ft.Column(
+                controls=[first_input, last_input, username_input],
+                spacing=10,
+                tight=True,
+                width=360,
+            ),
+            actions=[
+                ft.TextButton("Cancel", on_click=lambda _: self._close_dialog(dlg)),
+                ft.FilledButton("Save", bgcolor=ThemeColors.PRIMARY_BLUE, color=ft.Colors.WHITE, on_click=_save),
+            ],
+        )
+        self._show_dialog(dlg)
+
+    def _sync_guest_trips(self) -> None:
         self.is_migrating = True
         self._build_content()
         self._safe_update()
 
-        async def _worker():
+        async def _run():
             try:
-                await self.auth_service.migrate_guest_trips()
+                trips = self.guest_storage.list_itineraries()
+                for trip in trips:
+                    trip.user_id = (
+                        self.session_manager.current_user.id
+                        if self.session_manager.current_user
+                        else ""
+                    )
+                self.guest_storage.clear_all()
             finally:
                 self.is_migrating = False
                 self._build_content()
                 self._safe_update()
 
-        asyncio.run(_worker())
+        if self.page:
+            self.page.run_task(_run)
+        else:
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(_run())
+            except RuntimeError:
+                pass
 
-    def _clear_local_cache(self) -> None:
-        def confirm():
-            self.guest_storage.clear_all()
-            self._build_content()
-            self._safe_update()
+    def _safe_update(self) -> None:
+        try:
+            self.update()
+        except Exception:
+            pass
 
-        show_confirm_dialog(
-            self.page,
-            title="Clear Local Storage Cache?",
-            message="This will delete all guest itineraries stored on this machine.",
-            on_confirm=confirm,
-        )
-
-    def _handle_logout(self) -> None:
-        def confirm():
-            self.session_manager.clear_session()
-            self._navigate("/welcome")
-
-        show_confirm_dialog(
-            self.page,
-            title="Log Out?",
-            message="Are you sure you want to sign out from your account?",
-            on_confirm=confirm,
-        )
-
-    def _toggle_theme(self) -> None:
-        if self.on_toggle_theme:
-            self.on_toggle_theme()
+    @property
+    def safe_page(self) -> Optional[ft.Page]:
+        try:
+            return self.page
+        except Exception:
+            return None
 
     def _navigate(self, route: str) -> None:
         if self.on_navigate:

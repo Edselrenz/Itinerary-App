@@ -1,10 +1,11 @@
 """Traveler Registration and Account Creation View conforming to Figma & Web client."""
 
 import asyncio
+import re
 from typing import Callable, Optional
 import flet as ft
 
-from desktop_client.config.settings import ThemeColors
+from desktop_client.config.settings import ThemeColors, get_settings
 from desktop_client.core.api_client import ApiClientError
 from desktop_client.services.auth_service import get_auth_service
 
@@ -16,6 +17,8 @@ class SignupView(ft.Container):
         super().__init__()
         self.on_navigate = on_navigate
         self.auth_service = get_auth_service()
+        self.settings = get_settings()
+        self._username_manually_edited = False
 
         self.expand = True
         self.alignment = ft.Alignment(0, 0)
@@ -24,6 +27,22 @@ class SignupView(ft.Container):
         self._build_content()
 
     def _build_content(self) -> None:
+        # Top-left back button
+        back_btn = ft.Container(
+            content=ft.Row(
+                controls=[
+                    ft.IconButton(
+                        icon=ft.Icons.ARROW_BACK,
+                        icon_size=20,
+                        icon_color=ThemeColors.TEXT_MAIN_LIGHT,
+                        tooltip="Go back to welcome screen",
+                        on_click=lambda _: self._navigate("/welcome"),
+                    ),
+                ],
+            ),
+            alignment=ft.Alignment(-1, 0),
+        )
+
         # Centered Brand Header
         brand_header = ft.Row(
             controls=[
@@ -34,7 +53,7 @@ class SignupView(ft.Container):
                 ),
                 ft.Text(
                     "Trip mo, trip ko",
-                    size=18,
+                    size=20,
                     weight=ft.FontWeight.W_800,
                     color=ThemeColors.PRIMARY_BLUE,
                 ),
@@ -48,7 +67,7 @@ class SignupView(ft.Container):
             controls=[
                 ft.Text(
                     "Create your account",
-                    size=24,
+                    size=26,
                     weight=ft.FontWeight.W_800,
                     color=ThemeColors.TEXT_BLACK,
                 ),
@@ -59,7 +78,30 @@ class SignupView(ft.Container):
                 ),
             ],
             spacing=4,
+            horizontal_alignment=ft.CrossAxisAlignment.START,
         )
+
+        def _on_name_change(_):
+            if not self._username_manually_edited:
+                first = (self.first_name_input.value or "").strip().lower()
+                last = (self.last_name_input.value or "").strip().lower()
+                first_clean = re.sub(r"[^a-z0-9]", "", first)
+                last_clean = re.sub(r"[^a-z0-9]", "", last)
+                if first_clean and last_clean:
+                    self.username_input.value = f"{first_clean}_{last_clean}"
+                elif first_clean:
+                    self.username_input.value = first_clean
+                elif last_clean:
+                    self.username_input.value = last_clean
+                try:
+                    self.username_input.update()
+                except Exception:
+                    pass
+
+        def _on_username_change(_):
+            val = (self.username_input.value or "").strip()
+            if val:
+                self._username_manually_edited = True
 
         self.first_name_input = ft.TextField(
             label="First Name",
@@ -68,7 +110,9 @@ class SignupView(ft.Container):
             border_color=ThemeColors.BORDER_LIGHT,
             focused_border_color=ThemeColors.PRIMARY_BLUE,
             expand=True,
+            dense=True,
             autofocus=True,
+            on_change=_on_name_change,
         )
 
         self.mi_input = ft.TextField(
@@ -78,6 +122,7 @@ class SignupView(ft.Container):
             border_radius=12,
             border_color=ThemeColors.BORDER_LIGHT,
             focused_border_color=ThemeColors.PRIMARY_BLUE,
+            dense=True,
         )
 
         self.last_name_input = ft.TextField(
@@ -86,6 +131,8 @@ class SignupView(ft.Container):
             border_radius=12,
             border_color=ThemeColors.BORDER_LIGHT,
             focused_border_color=ThemeColors.PRIMARY_BLUE,
+            dense=True,
+            on_change=_on_name_change,
         )
 
         name_row = ft.Row(
@@ -93,34 +140,62 @@ class SignupView(ft.Container):
             spacing=8,
         )
 
-        self.email_input = ft.TextField(
-            label="Email Address",
-            hint_text="traveler@example.com",
-            prefix_icon=ft.Icons.EMAIL_OUTLINED,
+        self.username_input = ft.TextField(
+            label="Username",
+            hint_text="e.g. maria_clara",
+            prefix_icon=ft.Icons.ALTERNATE_EMAIL,
             border_radius=12,
             border_color=ThemeColors.BORDER_LIGHT,
             focused_border_color=ThemeColors.PRIMARY_BLUE,
+            dense=True,
+            on_change=_on_username_change,
         )
+
+        self.email_input = ft.TextField(
+            label="Email Address",
+            hint_text="traveler@example.com",
+            prefix_icon=ft.Icons.MAIL_OUTLINE,
+            border_radius=12,
+            border_color=ThemeColors.BORDER_LIGHT,
+            focused_border_color=ThemeColors.PRIMARY_BLUE,
+            dense=True,
+        )
+
+        def _on_pwd_change(_):
+            val = self.password_input.value or ""
+            if len(val) == 0:
+                self.password_input.helper = "Minimum 8 characters (letters and numbers)"
+            elif len(val) < 8:
+                self.password_input.helper = f"Needs {8 - len(val)} more character(s)"
+            else:
+                self.password_input.helper = "Strong password requirement met"
+            try:
+                self.password_input.update()
+            except Exception:
+                pass
 
         self.password_input = ft.TextField(
             label="Password",
             password=True,
             can_reveal_password=True,
-            prefix_icon=ft.Icons.KEY,
-            helper="At least 6 characters",
+            prefix_icon=ft.Icons.KEY_OUTLINED,
+            helper="Minimum 8 characters (letters and numbers)",
             border_radius=12,
             border_color=ThemeColors.BORDER_LIGHT,
             focused_border_color=ThemeColors.PRIMARY_BLUE,
+            dense=True,
+            on_change=_on_pwd_change,
         )
 
         self.confirm_password_input = ft.TextField(
             label="Confirm Password",
             password=True,
             can_reveal_password=True,
-            prefix_icon=ft.Icons.LOCK_RESET,
+            prefix_icon=ft.Icons.LOCK_OUTLINE,
             border_radius=12,
             border_color=ThemeColors.BORDER_LIGHT,
             focused_border_color=ThemeColors.PRIMARY_BLUE,
+            dense=True,
         )
 
         self.error_text = ft.Text(
@@ -144,49 +219,41 @@ class SignupView(ft.Container):
             visible=False,
         )
 
+        # Solid Blue Pill Create Account Button
         self.submit_btn = ft.Container(
-            content=ft.Text("Create Account", size=15, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
+            content=ft.Text("Sign Up", size=15, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
             bgcolor=ThemeColors.PRIMARY_BLUE,
-            border_radius=12,
+            border_radius=24,
             height=48,
             alignment=ft.Alignment(0, 0),
             ink=True,
             on_click=lambda _: self._handle_signup(),
         )
 
-        footer_links = ft.Column(
+        footer_links = ft.Row(
             controls=[
-                ft.Row(
-                    controls=[
-                        ft.Text("Already have an account?", size=12, color=ThemeColors.TEXT_MUTED_LIGHT),
-                        ft.TextButton(
-                            content="Log In",
-                            style=ft.ButtonStyle(color=ThemeColors.PRIMARY_BLUE),
-                            on_click=lambda _: self._navigate("/login"),
-                        ),
-                    ],
-                    alignment=ft.MainAxisAlignment.CENTER,
-                    spacing=2,
-                ),
+                ft.Text("Already have an account?", size=13, color=ThemeColors.TEXT_MUTED_LIGHT),
                 ft.TextButton(
-                    content="← Back to Welcome / Guest",
-                    style=ft.ButtonStyle(color=ThemeColors.TEXT_MUTED_LIGHT),
-                    on_click=lambda _: self._navigate("/welcome"),
+                    content=ft.Text("Log In", size=13, weight=ft.FontWeight.BOLD, color=ThemeColors.PRIMARY_BLUE),
+                    on_click=lambda _: self._navigate("/login"),
                 ),
             ],
-            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            spacing=2,
+            alignment=ft.MainAxisAlignment.CENTER,
+            spacing=4,
         )
 
         card = ft.Container(
             content=ft.Column(
                 controls=[
+                    back_btn,
                     brand_header,
-                    ft.Container(height=4),
+                    ft.Container(height=2),
                     heading_group,
                     self.error_container,
+                    ft.Container(height=2),
                     name_row,
                     self.last_name_input,
+                    self.username_input,
                     self.email_input,
                     self.password_input,
                     self.confirm_password_input,
@@ -196,20 +263,31 @@ class SignupView(ft.Container):
                     footer_links,
                 ],
                 spacing=8,
-                width=400,
+                width=420,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             ),
             bgcolor=ThemeColors.SURFACE_LIGHT,
-            border_radius=18,
+            border_radius=24,
             border=ft.Border.all(1.2, ThemeColors.BORDER_LIGHT),
-            padding=ft.Padding.symmetric(horizontal=32, vertical=28),
+            padding=ft.Padding.symmetric(horizontal=36, vertical=28),
             shadow=ft.BoxShadow(
                 spread_radius=1,
-                blur_radius=20,
-                color=ft.Colors.with_opacity(0.06, "#000000"),
+                blur_radius=24,
+                color=ft.Colors.with_opacity(0.08, "#000000"),
+                offset=ft.Offset(0, 6),
             ),
         )
 
-        self.content = card
+        self.content = ft.ListView(
+            controls=[
+                ft.Container(
+                    content=card,
+                    alignment=ft.Alignment(0, 0),
+                    padding=ft.Padding.symmetric(vertical=24),
+                )
+            ],
+            expand=True,
+        )
 
     def _safe_update(self) -> None:
         try:
@@ -229,7 +307,7 @@ class SignupView(ft.Container):
     def _handle_signup(self) -> None:
         first_name = (self.first_name_input.value or "").strip()
         last_name = (self.last_name_input.value or "").strip()
-        full_name = f"{first_name} {last_name}".strip() or "Traveler"
+        username = (self.username_input.value or "").strip()
         email = (self.email_input.value or "").strip()
         pwd = (self.password_input.value or "").strip()
         confirm_pwd = (self.confirm_password_input.value or "").strip()
@@ -242,12 +320,16 @@ class SignupView(ft.Container):
             self._show_error("Last name is required.")
             return
 
+        if username and len(username) < 3:
+            self._show_error("Username must be at least 3 characters.")
+            return
+
         if not email:
             self._show_error("Email address is required.")
             return
 
-        if len(pwd) < 6:
-            self._show_error("Password must be at least 6 characters.")
+        if len(pwd) < 8:
+            self._show_error("Password must be at least 8 characters.")
             return
 
         if pwd != confirm_pwd:
@@ -261,16 +343,33 @@ class SignupView(ft.Container):
                 await self.auth_service.register(
                     email=email,
                     password=pwd,
-                    full_name=full_name,
+                    first_name=first_name,
+                    last_name=last_name,
+                    username=username or f"{first_name.lower()}_{last_name.lower()}",
                 )
                 self._navigate("/dashboard")
             except ApiClientError as err:
-                self._show_error(err.message or "Registration failed. Try another email.")
+                self._show_error(err.message or "Registration failed. Try another email or username.")
             except Exception as ex:
                 self._show_error(f"Error connecting to service: {str(ex)}")
 
-        asyncio.run(_do_signup())
+        if self.safe_page:
+            self.safe_page.run_task(_do_signup)
+        else:
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(_do_signup())
+            except RuntimeError:
+                asyncio.run(_do_signup())
+
+    @property
+    def safe_page(self) -> Optional[ft.Page]:
+        try:
+            return self.page
+        except Exception:
+            return None
 
     def _navigate(self, route: str) -> None:
         if self.on_navigate:
             self.on_navigate(route)
+

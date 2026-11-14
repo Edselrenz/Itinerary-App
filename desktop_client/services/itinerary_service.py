@@ -2,11 +2,14 @@
 
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
+import logging
 import uuid
 
 from desktop_client.config.settings import get_settings
-from desktop_client.core.api_client import ApiClient, get_api_client
+from desktop_client.core.api_client import ApiClient, ApiClientError, get_api_client
 from desktop_client.core.session import SessionManager, get_session_manager
+
+logger = logging.getLogger(__name__)
 from desktop_client.core.storage import GuestStorageManager, get_guest_storage
 from desktop_client.models.itinerary import (
     Itinerary,
@@ -169,7 +172,7 @@ class ItineraryService:
         if itinerary.is_guest or not self.session_manager.is_authenticated:
             return self.guest_storage.save_itinerary(itinerary)
 
-        # Update in cloud
+        # Update in cloud via PATCH
         update_data = {
             "title": itinerary.title,
             "destination": itinerary.destination,
@@ -179,7 +182,7 @@ class ItineraryService:
             "preferences": itinerary.preferences,
             "assumptions": itinerary.assumptions,
         }
-        data = await self.api_client.put(f"itineraries/{itinerary.id}", json_data=update_data)
+        data = await self.api_client.patch(f"itineraries/{itinerary.id}", json_data=update_data)
         return Itinerary.from_dict(data)
 
     async def delete_itinerary(self, itinerary_id: str, is_guest: bool = False) -> bool:
@@ -291,12 +294,12 @@ class ItineraryService:
                     {"id": item_id, "day_id": day_id, "sort_order": idx}
                     for idx, item_id in enumerate(ordered_item_ids, 1)
                 ]
-                await self.api_client.put(
-                    f"itineraries/{itinerary.id}/days/{day_id}/reorder",
+                await self.api_client.post(
+                    f"itineraries/{itinerary.id}/reorder",
                     json_data={"items": reorder_items},
                 )
-            except Exception:
-                pass
+            except Exception as err:
+                logger.warning(f"Failed to persist stop reordering to backend: {err}")
         else:
             self.guest_storage.save_itinerary(itinerary)
 

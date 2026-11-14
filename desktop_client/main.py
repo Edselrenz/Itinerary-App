@@ -26,13 +26,16 @@ if getattr(sys, "frozen", False):
 
 from desktop_client.components.header import TopHeader
 from desktop_client.components.sidebar import SidebarNav
-from desktop_client.config.settings import ThemeColors, get_settings
+from desktop_client.config.settings import ThemeColors, ThemePalette, get_settings
 from desktop_client.core.api_client import get_api_client
 from desktop_client.core.session import get_session_manager
+from desktop_client.core.storage import get_guest_storage
 from desktop_client.models.itinerary import Itinerary
+from desktop_client.models.place import Place
 from desktop_client.services.auth_service import get_auth_service
 from desktop_client.views.custom_builder_view import CustomBuilderView
 from desktop_client.views.dashboard_view import DashboardView
+from desktop_client.views.guest_view import GuestView
 from desktop_client.views.login_view import LoginView
 from desktop_client.views.places_view import PlacesView
 from desktop_client.views.profile_view import ProfileView
@@ -58,6 +61,7 @@ def main(page: ft.Page) -> None:
 
     current_route = "/welcome"
     selected_trip: Optional[Itinerary] = None
+    cached_views: dict[str, ft.Control] = {}
 
     # App Shell Components
     sidebar: Optional[SidebarNav] = None
@@ -72,19 +76,73 @@ def main(page: ft.Page) -> None:
         else:
             page.theme_mode = ft.ThemeMode.LIGHT
             page.bgcolor = ThemeColors.BG_LIGHT
-        page.update()
 
-    def navigate_to(route: str, trip_data: Optional[Itinerary] = None) -> None:
+        # Re-theme persistent components and active view
+        if sidebar:
+            sidebar._build_content()
+        if header:
+            header._build_content()
+        navigate_to(current_route, selected_trip)
+
+    def navigate_to(
+        route: str,
+        trip_data: Optional[Itinerary] = None,
+        pre_added_place: Optional[Place] = None,
+        force: bool = False,
+    ) -> None:
         """Central navigation handler switching views and managing shell layout."""
         nonlocal current_route, selected_trip
+
+        # Pending Changes Guard: check if active view has unsaved modifications
+        if not force and content_area and content_area.content and route != current_route:
+            has_unsaved = getattr(content_area.content, "has_unsaved_changes", None)
+            if callable(has_unsaved) and has_unsaved():
+                def _confirm_discard(_):
+                    dlg.open = False
+                    page.update()
+                    navigate_to(route, trip_data, pre_added_place, force=True)
+
+                def _cancel_discard(_):
+                    dlg.open = False
+                    if sidebar:
+                        sidebar.set_active_route(current_route)
+                    page.update()
+
+                dlg = ft.AlertDialog(
+                    title=ft.Row([
+                        ft.Icon(ft.Icons.WARNING_ROUNDED, color=ThemeColors.WARNING),
+                        ft.Text("Discard Unsaved Changes?", weight=ft.FontWeight.BOLD),
+                    ], spacing=10),
+                    content=ft.Text(
+                        "You have unsaved changes in your itinerary. If you leave now, your changes will be discarded.",
+                        size=13,
+                    ),
+                    actions=[
+                        ft.TextButton("Keep Editing", on_click=_cancel_discard),
+                        ft.ElevatedButton(
+                            "Discard & Leave",
+                            bgcolor=ThemeColors.ERROR,
+                            color=ft.Colors.WHITE,
+                            on_click=_confirm_discard,
+                        ),
+                    ],
+                )
+                page.overlay.append(dlg)
+                dlg.open = True
+                page.update()
+                return
+
         current_route = route
         if trip_data:
             selected_trip = trip_data
 
         # Full-screen standalone views (no sidebar shell)
-        if route in ("/welcome", "/login", "/signup"):
-            if route == "/welcome":
-                page.controls = [WelcomeView(on_navigate=navigate_to)]
+        if route in ("/welcome", "/guest", "/login", "/signup") or route.startswith("/welcome"):
+            if route == "/guest":
+                page.controls = [GuestView(on_navigate=navigate_to)]
+            elif route.startswith("/welcome"):
+                is_logout = "logout=1" in route or "loggedOut=true" in route
+                page.controls = [WelcomeView(on_navigate=navigate_to, is_after_logout=is_logout)]
             elif route == "/login":
                 page.controls = [LoginView(on_navigate=navigate_to)]
             elif route == "/signup":
@@ -119,10 +177,17 @@ def main(page: ft.Page) -> None:
             content_area.content = PlacesView(on_navigate=navigate_to)
         elif route == "/suggested":
             header.set_header_context("Suggested Itinerary Wizard", "Automated Proximity Clustering")
-            content_area.content = SuggestedWizardView(on_navigate=navigate_to)
+            if "/suggested" not in cached_views:
+                cached_views["/suggested"] = SuggestedWizardView(on_navigate=navigate_to)
+            content_area.content = cached_views["/suggested"]
         elif route == "/builder":
             header.set_header_context("Custom Itinerary Builder", "Interactive Stop-by-Stop Scheduling")
-            content_area.content = CustomBuilderView(on_navigate=navigate_to)
+            if pre_added_place or "/builder" not in cached_views:
+                cached_views["/builder"] = CustomBuilderView(
+                    on_navigate=navigate_to,
+                    pre_added_place=pre_added_place,
+                )
+            content_area.content = cached_views["/builder"]
         elif route == "/trips":
             header.set_header_context("Saved Itineraries", "Your Planned Trips in Nueva Ecija")
             content_area.content = SavedTripsView(
@@ -135,12 +200,21 @@ def main(page: ft.Page) -> None:
                 on_navigate=navigate_to,
                 on_toggle_theme=toggle_theme,
             )
-        elif route.startswith("/trips/") and selected_trip:
-            header.set_header_context(f"Trip: {selected_trip.title}", "Chronological Timeline & Export")
-            content_area.content = TripDetailView(
-                itinerary=selected_trip,
-                on_back=lambda: navigate_to("/trips"),
-            )
+        elif route.startswith("/trips/"):
+            trip_id = route.split("/trips/")[1].split("?")[0].strip()
+            trip_obj = selected_trip
+            if not trip_obj:
+                guest_storage = get_guest_storage()
+                trip_obj = guest_storage.get_itinerary(trip_id)
+            if trip_obj:
+                header.set_header_context(f"Trip: {trip_obj.title}", "Chronological Timeline & Export")
+                content_area.content = TripDetailView(
+                    itinerary=trip_obj,
+                    on_back=lambda: navigate_to("/trips"),
+                )
+            else:
+                navigate_to("/trips")
+                return
         else:
             header.set_header_context("Home", "Where are you going next?")
             content_area.content = DashboardView(on_navigate=navigate_to)
@@ -203,4 +277,5 @@ def main(page: ft.Page) -> None:
 
 
 if __name__ == "__main__":
-    ft.run(main, view=ft.AppView.FLET_APP)
+    _st = get_settings()
+    ft.run(main, assets_dir=str(_st.assets_dir), view=ft.AppView.FLET_APP)

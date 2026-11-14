@@ -4435,7 +4435,87 @@ NEXT STEPS:
 - **Verification Results**:
   - Python Schema Validation: Verified parsing `"09:00 AM"` -> `09:00:00`, `"01:13 PM"` -> `13:13:00`, and range strings.
   - Vitest Unit Tests: 32/32 suites passed, 348/348 tests passed (100.0%) in 40.59s.
-  - Angular Production Build: Clean compilation in 14.55s with 0 budget violations (styles-TCIV4XIO.css 18.31 kB transfer, all component stylesheets < 16 kB).
+---
+
+## Session 112: Desktop Application Independent QA, Defect Remediation & Master Documentation Consolidation
+- **Date & Time**: 2026-11-14 08:20:00 (Local)
+- **Objective**:
+  - Perform independent QA/QC verification of the Python Flet desktop client (`desktop_client/`), address baseline and dynamic runtime defects (`DEF-01` to `DEF-15`, `BUG-01` to `BUG-08`), and consolidate all desktop documentation into the canonical `/docs` monorepo suite.
+- **Audit Findings & Defect Remediation**:
+  - `BUG-01` (Critical): Added `total_days` and `days_nights_label` properties to `Itinerary` in `desktop_client/models/itinerary.py`, preventing fatal `AttributeError` when rendering saved trip cards in `SavedTripsView`.
+  - `BUG-02` (Critical): Corrected `_fetch_places()` in `desktop_client/views/places_view.py` to pass `municipality_id` and `sort` keyword arguments, and updated `PlaceService.get_places()` to accept aliases defensively.
+  - `BUG-03` (Critical): Implemented `migrate_guest_trips()` in `desktop_client/services/auth_service.py` and `desktop_client/services/itinerary_service.py`, enabling local guest itineraries to sync to cloud accounts.
+  - `BUG-04` (Critical): Imported `ApiClientError` from `desktop_client.core.api_client` in `desktop_client/services/itinerary_service.py`.
+  - `BUG-06` (Critical): Created `desktop_client/core/async_utils.py` implementing `run_async()` for loop-safe task dispatch, eliminating `RuntimeError: asyncio.run() cannot be called from running loop`.
+  - `BUG-08` / `DEF-04` (High): Implemented dynamic host and port extraction from `self.base_url` using `urllib.parse.urlparse` in `core/api_client.py:check_health_sync()`, eliminating hardcoded `127.0.0.1:8000` socket pings.
+  - `DEF-02` (Critical): Rebuilt `AuthService.register()` payload to deliver `first_name`, `last_name`, and explicit `username` adhering to backend `UserRegisterIn` schema.
+  - `DEF-05` (Critical): Updated `ItineraryService.reorder_stops()` to call `POST /itineraries/{id}/reorder` with items list payload.
+  - `DEF-06` (High): Remapped `PlaceService.get_places()` query parameters to `q`, `limit`, `offset`, and `featured` matching FastAPI `PlaceFilterParams`.
+  - `DEF-08` (High): Split `full_name` into `first_name` and `last_name` in `UserUpdatePayload.to_dict()`.
+  - `DEF-09` (High): Changed itinerary update HTTP method from `PUT` to `PATCH /itineraries/{id}`.
+  - `DEF-10` (High): Added `load_dotenv()` call during configuration module initialization in `desktop_client/config/settings.py`.
+  - `DEF-14` (Medium): Mapped `center_lat` and `center_lng` to `latitude` and `longitude` in `Municipality.from_dict`.
+  - `DEF-15` (Low): Darkened `ThemeColors.TEXT_MUTED_LIGHT` to `#475569` for WCAG 2.2 AA compliance (4.8:1 contrast).
+- **Documentation Consolidation into `/docs`**:
+  - Authored 6 first-class technical documents in `docs/`:
+    1. `docs/DESKTOP_APP_OVERVIEW.md`: System overview, feature mapping table, technology stack, and desktop ergonomics.
+    2. `docs/DESKTOP_APP_ARCHITECTURE.md`: Monorepo topology, directory layout, view caching, async dispatch, session management, and local storage.
+    3. `docs/DESKTOP_APP_API_INTEGRATION.md`: Async httpx client, dynamic health probing, OAuth2 bearer auth, refresh flow, endpoints, and guest sync.
+    4. `docs/DESKTOP_APP_INSTALLATION_AND_BUILD.md`: Python 3.14 setup, dev run scripts, PyInstaller standalone binary compilation (`NuevaEcijaTravel.spec`), and asset bundling.
+    5. `docs/DESKTOP_APP_QA_AND_TESTING.md`: Independent QA audit, master defect ledgers (DEF-01 to DEF-15, BUG-01 to BUG-08), 35 unit tests, and live backend integration.
+    6. `docs/DESKTOP_APP_PARITY_AND_IMPLEMENTATION_PLAN.md`: Anti-generic travel styling, Figma design tokens, 10-screen parity specs, and 5-phase implementation plan.
+  - Updated monorepo tracking files: `docs/README.md`, `docs/PROJECT_OVERVIEW.md`, `docs/SYSTEM_ARCHITECTURE.md`, `docs/PROJECT_STATE.md`, `docs/TODO.md`, `docs/KNOWN_ISSUES.md`, and `docs/CHANGELOG.md`.
+- **Packaging & Asset Distribution**:
+  - Synchronized 47 authentic assets (including 24+ local photos, brand marks, and datasets) into `desktop_client/assets/` and `dist/NuevaEcijaTravel/assets`.
+  - Updated `NuevaEcijaTravel.spec` to include assets in PyInstaller data bundling.
+- **Verification Results**:
+  - Desktop Unit Tests: 35/35 passed (0 failures) in 1.98s.
+  - Live FastAPI Backend Integration: 1/1 passed (100%) in 2.42s against live FastAPI and SQLite database.
+  - Web Client Vitest Suite: 32/32 suites passed, 348/348 tests passed (100%) in 26.34s with zero regressions.
+
+---
+
+## Session 113: Full Desktop Web-Parity Implementation, Quality Assurance & Standalone Distribution
+- **Date & Time**: 2026-11-14 09:12:00 (Local)
+- **Objective**:
+  - Implement full visual, ergonomic, and functional parity in the Python Flet desktop client (`desktop_client/`) matching the canonical Ionic Angular web client (`Project/`), while completely preserving `Project/` (0 edits in `Project/`, 348 Vitest tests passing).
+  - Execute independent QA verification, resolve Flet 1.1.2 framework deprecations, and package a standalone Windows executable.
+- **Tasks & Implementations Performed**:
+  1. **App Shell & Routing (`desktop_client/main.py`, `components/sidebar.py`)**:
+     - Added `pendingChangesGuard` to `navigate_to()`: verifies whether the active view has unsaved changes via `has_unsaved_changes()` and presents a modal confirmation dialog before discarding edits.
+     - Preserved active route highlighting in sidebar on route navigation.
+     - Fixed `ft.ElevatedButton` deprecation by replacing with `ft.FilledButton`.
+  2. **Onboarding & Authentication (`views/welcome_view.py`, `guest_view.py`, `login_view.py`, `signup_view.py`)**:
+     - Refactored `welcome_view.py` with consumer travel layout, *"Trip mo, trip ko"* title, and skyline illustration.
+     - Created dedicated `guest_view.py` with full-bleed `guest_hiker_hero.png` photography and zero-data-loss notice.
+     - Implemented after-logout view (`/welcome?logout=1`) with `logout_skyscrapers_blob.png`.
+     - Implemented `Explore Demo Account (Pattranite Persona)` and Forgot Password modal in `login_view.py`.
+     - Implemented 6-field structured registration in `signup_view.py` with middle initial, password matching validation, and username auto-suggestion.
+  3. **Home Dashboard & POI Catalog (`views/dashboard_view.py`, `components/dialogs.py`)**:
+     - Implemented 300ms debounced search with trailing clear button.
+     - Implemented Travel Advisories & Notifications Drawer (`UI-19`) with Pantabangan weather/cash notices.
+     - Implemented Popular Destinations "See all" Catalog Modal (`UI-11`) with horizontal LGU filter pills.
+     - Upgraded `show_place_detail_dialog` with local photography hero, instant `FavoritesService` toggle, live open/closed status pill, and local transit guide (`How to get there?`).
+  4. **Interactive Map Explorer (`views/places_view.py`)**:
+     - Implemented dual-mode view: Catalog Grid vs. Interactive Nueva Ecija Coordinate Pin Explorer Canvas (`UI-14`) with category-colored pins, zoom controls, and Multi-Select Filter Modal.
+     - Connected `+ Add to Trip` button to `navigate_to("/builder", pre_added_place=p)`.
+  5. **Suggested Wizard & Custom Builder (`views/suggested_wizard_view.py`, `custom_builder_view.py`, `components/`)**:
+     - Created reusable `components/destination_picker.py` (32 LGUs + 4-district explorer modal) and `components/date_range_dialog.py` (duration presets).
+     - Upgraded `suggested_wizard_view.py` into a 3-view state machine (`form`, `itinerary`, `nearby`) with Verified Budget Card, Assumptions Box, inter-stop leg commute badges, and nearby amenities injection.
+     - Upgraded `custom_builder_view.py` with dual-pane layout, Stage 1 questionnaire, pre-loaded place banner, active day bar with `Auto-Schedule`, and geofenced off-grid custom venue modal (`15.10–16.25°N`, `120.65–121.50°E`).
+  6. **Trip Detail & Profile Subviews (`views/trip_detail_view.py`, `profile_view.py`)**:
+     - Implemented in-place edit mode in `trip_detail_view.py` with day route metrics, inter-stop commute badges, multi-stop Google Maps launcher, and 4-way share/export dialog.
+     - Implemented 5-row Figma menu card in `profile_view.py` with dedicated `Favorites` Subview Modal (`UI-25`), Emergency Provincial Hotlines in `Help & Support`, 7-field `Edit Profile`, and guest trips migration.
+  7. **Core Services & Commute Guide (`core/commute_guide.py`, `services/favorites_service.py`)**:
+     - Added `distance_km`, `duration_mins`, and `display_text` properties to `LegCommuteInfo` in `commute_guide.py`.
+     - Implemented `FavoritesService` with local JSON persistence, default seed destinations, and reactive toggling.
+  8. **Standalone Windows Build (`NuevaEcijaTravel.spec`, `dist/NuevaEcijaTravel/`)**:
+     - Configured PyInstaller spec with hidden imports for all new services and components.
+     - Built standalone distribution via `python -m PyInstaller NuevaEcijaTravel.spec --clean -y`. Verified `NuevaEcijaTravel.exe` and `_internal/assets` packaging.
+- **Verification Results**:
+  - Desktop Unit & Parity Tests: **43/43 passed (100%)** via `pytest desktop_client/tests/` in 2.27s.
+  - Canonical Web Client Vitest Tests: **348/348 passed (100%)** across 32 test files in 75.73s with **zero regressions and zero edits in `Project/`**.
+  - Standalone Binary: Built and verified in `dist/NuevaEcijaTravel/NuevaEcijaTravel.exe` with `Run_NuevaEcijaTravel_EXE.bat`.
 
 
 

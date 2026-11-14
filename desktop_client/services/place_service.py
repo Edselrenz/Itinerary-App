@@ -1,9 +1,13 @@
 """Place Service managing POI queries, filtering, search, and municipality catalogs."""
 
+import logging
 from typing import Any, Optional
 
+from desktop_client.config.settings import CANONICAL_CATEGORIES
 from desktop_client.core.api_client import ApiClient, get_api_client
 from desktop_client.models.place import Municipality, PaginatedPlaces, Place
+
+logger = logging.getLogger(__name__)
 
 
 class PlaceService:
@@ -24,25 +28,16 @@ class PlaceService:
             if isinstance(data, list):
                 self._municipalities_cache = [Municipality.from_dict(m) for m in data]
                 return self._municipalities_cache
-        except Exception:
-            pass
+        except Exception as err:
+            logger.warning(f"Could not load municipalities from backend: {err}")
 
         return self._municipalities_cache or []
 
     async def get_categories(self, force_refresh: bool = False) -> list[str]:
-        """Fetches the 16 canonical categories from backend."""
-        if self._categories_cache is not None and not force_refresh:
-            return self._categories_cache
-
-        try:
-            data = await self.api_client.get("places/categories")
-            if isinstance(data, list):
-                self._categories_cache = data
-                return self._categories_cache
-        except Exception:
-            pass
-
-        return self._categories_cache or []
+        """Returns the 16 canonical categories conforming to the Nueva Ecija schema."""
+        if self._categories_cache is None or force_refresh:
+            self._categories_cache = [c["key"] for c in CANONICAL_CATEGORIES]
+        return self._categories_cache
 
     async def get_places(
         self,
@@ -54,19 +49,21 @@ class PlaceService:
         is_featured: Optional[bool] = None,
         sort: Optional[str] = None,
     ) -> PaginatedPlaces:
-        """Queries places with multi-criteria filtering."""
+        """Queries places with multi-criteria filtering mapped to backend parameters."""
+        limit = max(1, page_size)
+        offset = max(0, (page - 1) * limit)
         params: dict[str, Any] = {
-            "page": page,
-            "page_size": page_size,
+            "limit": limit,
+            "offset": offset,
         }
         if search and search.strip():
-            params["search"] = search.strip()
+            params["q"] = search.strip()
         if category and category.strip() and category != "all":
-            params["category"] = category.strip()
+            params["categories"] = [category.strip()]
         if municipality_id and municipality_id.strip() and municipality_id != "all":
             params["municipality_id"] = municipality_id.strip()
         if is_featured is not None:
-            params["is_featured"] = is_featured
+            params["featured"] = is_featured
         if sort:
             params["sort"] = sort
 

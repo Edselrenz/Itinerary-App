@@ -1278,9 +1278,55 @@ px cap sync android): **Exit code 0 (6 plugins synchronized)**.
 - [x] **47.4 (P1: Vitest Unit Tests & Backend Verification)**:
   - Add unit tests for `toBackendIsoTime()` with 12-hour AM/PM, 24-hour, range strings, and null inputs.
   - Verify 32/32 suites pass with 100% success rate (348/348 tests).
-- [x] **47.5 (Quality Gates Verification, Remote Deployment & Live Check)**:
-  - Angular production build verification (0 budget violations).
-  - Stage, commit, push to `origin/main`, monitor GitHub Actions, and verify live on GitHub Pages.
+---
+
+## Phase 48: Python Flet Desktop Application Independent QA, Defect Remediation & Web Parity
+- [x] **48.1 (Independent Desktop Project Inspection & Defect Audit)**:
+  - Conduct independent code audit of `desktop_client/` identifying 15 baseline defects (`DEF-01` to `DEF-15`) and 8 dynamic runtime defects (`BUG-01` to `BUG-08`).
+  - Create `DESKTOP_APP_QA/` master test reports (`00` through `08`).
+- [x] **48.2 (Documentation Consolidation into `/docs`)**:
+  - Consolidate all desktop documentation into canonical `/docs` suite:
+    - [x] `docs/DESKTOP_APP_OVERVIEW.md`
+    - [x] `docs/DESKTOP_APP_ARCHITECTURE.md`
+    - [x] `docs/DESKTOP_APP_API_INTEGRATION.md`
+    - [x] `docs/DESKTOP_APP_INSTALLATION_AND_BUILD.md`
+    - [x] `docs/DESKTOP_APP_QA_AND_TESTING.md`
+    - [x] `docs/DESKTOP_APP_PARITY_AND_IMPLEMENTATION_PLAN.md`
+  - Update `docs/README.md`, `docs/PROJECT_OVERVIEW.md`, `docs/SYSTEM_ARCHITECTURE.md`, `docs/PROJECT_STATE.md`, and `docs/CHANGELOG.md`.
+- [x] **48.3 (Core Infrastructure & Baseline Defect Fixes — Phase 1)**:
+  - [x] `desktop_client/core/async_utils.py` with `run_async()` task runner (`BUG-06`).
+  - [x] Add `total_days` and `days_nights_label` properties in `models/itinerary.py` (`BUG-01`).
+  - [x] Fix `get_places()` parameter names to `municipality_id` and `sort` in `views/places_view.py` and `services/place_service.py` (`BUG-02`).
+  - [x] Implement `migrate_guest_trips()` in `services/auth_service.py` (`BUG-03`).
+  - [x] Import `ApiClientError` in `services/itinerary_service.py` (`BUG-04`).
+  - [x] Implement dynamic host/port parsing in `core/api_client.py:check_health_sync()` (`BUG-08` / `DEF-04`).
+  - [x] Darken `TEXT_MUTED_LIGHT` to `#475569` for WCAG 2.2 AA compliance (`DEF-15`).
+  - [x] Hydrate `.env` variables via `load_dotenv()` in `config/settings.py` (`DEF-10`).
+  - [x] Verify with 35 unit tests in `desktop_client/tests/` and live FastAPI backend integration test.
+- [x] **48.4 (App Shell, Onboarding & Authentication Parity — Phase 2)**:
+  - [x] Implement persistent 4-tab sidebar (`Home`, `Map`, `Saved`, `Profile`) with active route preservation in `components/sidebar.py` and `main.py`.
+  - [x] Implement `pendingChangesGuard` unsaved changes confirmation dialog.
+  - [x] Resolve trip ID from storage/service in `main.py` routing (`BUG-05`).
+  - [x] Implement reactive `ThemePalette` dark mode re-theming (`BUG-07`).
+  - [x] Clean up `views/welcome_view.py` with consumer travel layout and implement dedicated `views/guest_view.py` (`guest_hiker_hero.png`).
+  - [x] Implement after-logout screen (`/welcome?logout=1`) with `logout_skyscrapers_blob.png`.
+  - [x] Implement `Explore Demo Account (Pattranite Persona)` and Forgot Password modal in `views/login_view.py`.
+  - [x] Implement 6-field structured registration with Middle Initial in `views/signup_view.py`.
+- [x] **48.5 (Home Dashboard, Rich Place Detail Sheet & Map Explorer — Phase 3)**:
+  - [x] Implement 300ms debounced search with trailing clear button in `views/dashboard_view.py`.
+  - [x] Implement Travel Advisories & Notifications Drawer (`UI-19`).
+  - [x] Implement Popular Destinations "See all" catalog modal (`UI-11`).
+  - [x] Upgrade `components/dialogs.py` (`show_place_detail_dialog`) with Favorite Heart toggle, Open/Closed badge, Operating Hours, and Local Commute Guide (`How to get there?`).
+  - [x] Update `views/places_view.py` with multi-select filter modal and interactive map explorer pane.
+- [x] **48.6 (Suggested Itinerary Wizard & Custom Builder Parity — Phase 4)**:
+  - [x] Create reusable `components/destination_picker.py` (32 LGUs + district modal) and `components/date_range_dialog.py` (duration presets).
+  - [x] Upgrade `views/suggested_wizard_view.py` to 3-view state machine (`form`, `itinerary`, `nearby`) with Verified Budget Card, Assumptions Box, and Leg Commute Badges.
+  - [x] Upgrade `views/custom_builder_view.py` with dual-pane layout, Stage 1 questionnaire, pre-loaded place banner (`BUG-08`), and `[Auto-Schedule]`.
+  - [x] Upgrade Edit Stop dialog (`Move to Day` dropdown) and Off-Grid Custom Venue modal (geofenced pins).
+- [x] **48.7 (Saved Trips, In-Place Editor, Profile Subviews & Quality Gates — Phase 5)**:
+  - [x] Implement In-Place Edit Mode, Day Route Metrics, Multi-Stop Google Maps route launcher, and 4-way Share/Export in `views/trip_detail_view.py`.
+  - [x] Implement 5-row Figma menu card and 5 subviews (`Settings`, `Favorites`, `Edit Profile`, `Help & Support`, `About`) in `views/profile_view.py`.
+  - [x] Verify PyInstaller standalone build and verify zero regressions across web (348 tests) and desktop (43 tests) test suites.
 
 
 

@@ -25,7 +25,8 @@ The project translates the official **Product and Engineering Blueprint** (dated
 | Layer | Technology | Version / Specification | Role in System |
 | :--- | :--- | :--- | :--- |
 | **Mobile / Web Client** | Ionic Framework + Angular | Ionic 9, Angular 22, Capacitor 8 | Hybrid mobile shell for Web, Android, and iOS packaging. |
-| **Local Client Storage** | `@ionic/storage-angular` | v4.0.0 (IndexedDB / LocalStorage) | Local-first persistence for guest travelers under `ne_guest_itineraries_v1`. |
+| **Desktop Client** | Python Flet | Flet >= 1.1.2 (Material 3 Flutter Engine) | Native desktop application for Windows, macOS, and Linux workstation planning. |
+| **Local Client Storage** | `@ionic/storage-angular` & Local JSON | IndexedDB (Web) / JSON Files (Desktop) | Local-first persistence for guest travelers under `ne_guest_itineraries_v1` and `guest_storage.json`. |
 | **Interactive Map** | Leaflet + Leaflet MarkerCluster | Leaflet v1.9.4 | Bounded OpenStreetMap raster tile viewer and marker clustering. |
 | **Backend REST API** | Python + FastAPI | Python 3.11+ / 3.14, FastAPI 0.136+ | Asynchronous REST backend exposing versioned `/api/v1` routes. |
 | **Data Validation & Typing** | Pydantic v2 | Pydantic 2.13+ | Request/response schema validation and settings management. |

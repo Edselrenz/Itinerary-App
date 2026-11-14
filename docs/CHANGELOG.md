@@ -1,3 +1,61 @@
+## [0.48.0] - 2026-11-14
+### Added
+- **Full Desktop Application Parity with Canonical Web Client (Phases 48.1 – 48.7)**:
+  - **Persistent App Shell & Navigation**: 4-tab sidebar (`Home`, `Map`, `Saved`, `Profile`) in `components/sidebar.py` with active route preservation and `pendingChangesGuard` confirmation dialog protecting unsaved edits in Custom Builder and Trip Detail.
+  - **Onboarding & Authentication Flow**:
+    - Consumer travel layout on `views/welcome_view.py` with *"Trip mo, trip ko"* branding and buildings illustration.
+    - Dedicated `views/guest_view.py` with full-bleed `guest_hiker_hero.png` photography and zero-data-loss notice.
+    - After-logout view (`/welcome?logout=1`) with `logout_skyscrapers_blob.png`.
+    - One-click `Explore Demo Account (Pattranite Persona)` and Forgot Password modal in `views/login_view.py`.
+    - 6-field structured registration in `views/signup_view.py` with middle initial, live password validation, and username auto-suggestion.
+  - **Home Dashboard & POI Explorer Parity**:
+    - 300ms debounced search with trailing clear button in `views/dashboard_view.py`.
+    - Travel Advisories & Notifications Drawer (`UI-19`) with Pantabangan weather/cash notices and departure alerts.
+    - Popular Destinations "See all" Catalog Modal (`UI-11`) with horizontal LGU filter pills.
+    - Upgraded `show_place_detail_dialog` in `components/dialogs.py` with local photography hero, instant `FavoritesService` toggle, open/closed live status pill, local transit guide (`How to get there?`), and direct navigation CTAs.
+    - Interactive Nueva Ecija Coordinate Pin Explorer Canvas (`UI-14`) in `views/places_view.py` with category-colored pins, zoom controls, and multi-select filter modal.
+  - **Suggested Wizard & Custom Builder Parity**:
+    - Reusable `components/destination_picker.py` (32 LGUs + 4-district explorer modal) and `components/date_range_dialog.py` (duration presets).
+    - 3-view state machine (`form`, `itinerary`, `nearby`) in `views/suggested_wizard_view.py` with Verified Budget Card, Assumptions Box, inter-stop leg commute badges, and in-place nearby amenities injection.
+    - Dual-pane layout in `views/custom_builder_view.py` with stateful catalog cards (`+ Add` / `✓ Added`), dismissible pre-loaded place banner, active day bar with `Auto-Schedule`, and geofenced off-grid custom venue modal (`15.10–16.25°N`, `120.65–121.50°E`).
+  - **Saved Trips, In-Place Editor & Profile Subviews**:
+    - In-place edit mode in `views/trip_detail_view.py` with day route metrics, inter-stop commute badges, multi-stop Google Maps launcher (`https://www.google.com/maps/dir/?api=1&origin=...`), and 4-way share/export dialog.
+    - 5-row Figma menu card in `views/profile_view.py` with dedicated `Favorites` Subview Modal (`UI-25`), Emergency Provincial Hotlines in `Help & Support`, 7-field `Edit Profile`, and guest trips migration.
+  - **Standalone Windows Executable Distribution**:
+    - Clean PyInstaller compilation (`NuevaEcijaTravel.spec`) bundling all 42 local photography, icons, and dataset files into `dist/NuevaEcijaTravel/`.
+    - Standalone launcher script `Run_NuevaEcijaTravel_EXE.bat`.
+- **Desktop Application Master Documentation Suite in `/docs`**:
+  - Integrated complete documentation for the Python Flet desktop client (`desktop_client/`) into the canonical `/docs` repository hub:
+    - `docs/DESKTOP_APP_OVERVIEW.md`: High-level desktop client overview, role in monorepo, feature mapping to web app, and architecture comparison.
+    - `docs/DESKTOP_APP_ARCHITECTURE.md`: Component hierarchy, directory layout, reactive view caching, loop-safe async dispatch, session management, and local storage.
+    - `docs/DESKTOP_APP_API_INTEGRATION.md`: Asynchronous httpx client, dynamic host/port health probing, OAuth2 bearer auth, refresh flow, endpoints, and guest sync.
+    - `docs/DESKTOP_APP_INSTALLATION_AND_BUILD.md`: Python 3.14 setup, dev run scripts, PyInstaller standalone binary compilation (`NuevaEcijaTravel.spec`), and asset bundling.
+    - `docs/DESKTOP_APP_QA_AND_TESTING.md`: Independent QA audit, master defect ledgers (DEF-01 to DEF-15, BUG-01 to BUG-08), 43 unit tests, and live backend integration.
+    - `docs/DESKTOP_APP_PARITY_AND_IMPLEMENTATION_PLAN.md`: Anti-generic travel styling, Figma design tokens, 10-screen parity specs, and 5-phase implementation plan.
+- **Authentic Asset Synchronization**:
+  - Bundled 42 authentic assets into `desktop_client/assets/` and `dist/NuevaEcijaTravel/_internal/assets`, including 24+ local destination photos (Minalungao, Highland Bali, George Point, Casa Batik), brand marks, and `welcome_hero_buildings.png`.
+
+### Fixed
+- **Desktop Runtime Defects Remediation (Phase 48.3 / BUG-01 to BUG-08)**:
+  - `BUG-01`: Added `total_days` and `days_nights_label` properties in `models/itinerary.py`, preventing fatal `AttributeError` in `SavedTripsView`.
+  - `BUG-02`: Fixed `get_places()` parameter names to `municipality_id` and `sort` in `views/places_view.py` and `services/place_service.py`, eliminating silent `TypeError`.
+  - `BUG-03`: Implemented `migrate_guest_trips()` in `services/auth_service.py`, allowing guest trips to sync to cloud.
+  - `BUG-04`: Imported `ApiClientError` from `core.api_client` in `services/itinerary_service.py`, resolving `NameError`.
+  - `BUG-06` / `DEF-01`: Implemented `run_async()` in `core/async_utils.py` and wrapped task dispatch in `safe_page.run_task`, preventing `RuntimeError: asyncio.run() cannot be called from running loop`.
+  - `BUG-08` / `DEF-04`: Dynamically parsed host and port from `self.base_url` in `core/api_client.py:check_health_sync()`.
+  - `DEF-02`: Rebuilt `register()` payload in `services/auth_service.py` to send `first_name`, `last_name`, `username` matching `UserRegisterIn` schema.
+  - `DEF-05`: Corrected itinerary stop reorder endpoint to `POST /itineraries/{id}/reorder` with items list payload.
+  - `DEF-06`: Remapped `PlaceService.get_places()` query parameters to `q`, `limit`, `offset`, and `featured`.
+  - `DEF-08`: Split `full_name` into `first_name` and `last_name` in `UserUpdatePayload.to_dict()`.
+  - `DEF-09`: Changed itinerary metadata update method from `PUT` to `PATCH /itineraries/{id}`.
+  - `DEF-10`: Added `load_dotenv()` call during configuration initialization in `config/settings.py`.
+  - `DEF-14`: Mapped `center_lat` and `center_lng` to `latitude` and `longitude` in `Municipality.from_dict`.
+  - `DEF-15`: Darkened `TEXT_MUTED_LIGHT` to `#475569` for WCAG 2.2 AA compliance (4.8:1 contrast).
+  - Replaced all deprecated `ft.ElevatedButton` with `ft.FilledButton` across `desktop_client/` views and `main.py`.
+  - Added `distance_km`, `duration_mins`, and `display_text` properties to `LegCommuteInfo` in `commute_guide.py`.
+
+---
+
 ## [0.47.0] - 2026-11-12
 ### Fixed
 - **Invalid Timezone Sign 422 Toast Error on Itinerary Save (`CustomBuilderPage`)**:

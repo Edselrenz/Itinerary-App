@@ -48,12 +48,39 @@ class AuthService:
         )
         return token_resp.user
 
-    async def register(self, email: str, password: str, full_name: str) -> User:
-        """Registers a new traveler account with Argon2id hash."""
+    async def register(
+        self,
+        email: str,
+        password: str,
+        full_name: str = "",
+        first_name: Optional[str] = None,
+        last_name: Optional[str] = None,
+        username: Optional[str] = None,
+    ) -> User:
+        """Registers a new traveler account strictly adhering to backend UserRegisterIn schema."""
+        email_clean = email.strip()
+        first = (first_name or "").strip()
+        last = (last_name or "").strip()
+        if not first and full_name:
+            parts = full_name.strip().split(maxsplit=1)
+            first = parts[0]
+            last = parts[1] if len(parts) > 1 else parts[0]
+        if not first:
+            first = email_clean.split("@")[0] or "Traveler"
+        if not last:
+            last = "Explorer"
+
+        uname = (username or "").strip()
+        if not uname:
+            base_uname = email_clean.split("@")[0].replace(".", "_").replace("-", "_")
+            uname = base_uname if len(base_uname) >= 3 else f"{base_uname}123"
+
         payload = {
-            "email": email.strip(),
+            "first_name": first,
+            "last_name": last,
+            "username": uname,
+            "email": email_clean,
             "password": password,
-            "full_name": full_name.strip(),
         }
         data = await self.api_client.post("auth/register", json_data=payload)
         token_resp = AuthTokenResponse.from_dict(data)
@@ -62,7 +89,14 @@ class AuthService:
             self.session_manager.set_authenticated_session(
                 access_token=token_resp.access_token,
                 refresh_token=token_resp.refresh_token,
-                user=User(id="", email=email, full_name=full_name),
+                user=User(
+                    id="",
+                    email=email_clean,
+                    full_name=f"{first} {last}".strip(),
+                    first_name=first,
+                    last_name=last,
+                    username=uname,
+                ),
                 persist=True,
             )
             user = await self.get_profile()

@@ -126,18 +126,37 @@ class SidebarNav(ft.Container):
         badge_label = "Guest Explorer" if is_guest else "Verified Traveler"
         badge_color = ThemeColors.WARM_GOLD if is_guest else ThemeColors.SUCCESS
 
+        from desktop_client.config.settings import get_settings
+        avatar_path = get_settings().get_asset_path("images/pattranite_avatar.jpg")
+
+        if not is_guest:
+            avatar_widget = ft.Image(
+                src=avatar_path,
+                width=32,
+                height=32,
+                fit=ft.BoxFit.COVER,
+                border_radius=16,
+                error_content=ft.CircleAvatar(
+                    content=ft.Icon(ft.Icons.PERSON, size=18, color=ft.Colors.WHITE),
+                    bgcolor=ThemeColors.PRIMARY_BLUE,
+                    radius=16,
+                ),
+            )
+        else:
+            avatar_widget = ft.CircleAvatar(
+                content=ft.Icon(
+                    ft.Icons.PERSON_OUTLINE,
+                    size=18,
+                    color=ThemeColors.TEXT_MAIN_DARK,
+                ),
+                bgcolor=ThemeColors.SURFACE_DARK_HOVER,
+                radius=16,
+            )
+
         user_card = ft.Container(
             content=ft.Row(
                 controls=[
-                    ft.CircleAvatar(
-                        content=ft.Icon(
-                            ft.Icons.PERSON if not is_guest else ft.Icons.PERSON_OUTLINE,
-                            size=18,
-                            color=ThemeColors.TEXT_MAIN_DARK,
-                        ),
-                        bgcolor=ThemeColors.SURFACE_DARK_HOVER,
-                        radius=16,
-                    ),
+                    avatar_widget,
                     ft.Column(
                         controls=[
                             ft.Text(

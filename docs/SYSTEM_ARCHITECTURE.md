@@ -5,16 +5,17 @@
 The system is organized as a monorepo containing a standalone client, an asynchronous REST API backend, an offline data processing pipeline, and a relational database:
 
 ```text
-┌────────────────────────────────────────────────────────────────────────┐
-│                        Ionic Angular Client (Project/)                 │
-│  ├── Welcome / Login / Signup / Guest Onboarding                       │
-│  ├── Home Tab: Debounced Search, Entry Cards, Popular Carousel         │
-│  ├── Map Tab: Leaflet Map, 16 Category Filters, POI Bottom Sheet       │
-│  ├── Itinerary Flow: Suggested Generator, Custom Builder, Day Timeline │
-│  └── Storage: AuthService (JWT) & GuestStorageService (@ionic/storage) │
-└───────────────────────────────────┬────────────────────────────────────┘
-                                    │ HTTPS REST / JSON
-                                    ▼
+┌───────────────────────────────────────┐   ┌────────────────────────────────────────┐
+│     Ionic Angular Client (Project/)   │   │  Desktop Flet Client (desktop_client/) │
+│  ├── Welcome / Login / Signup / Guest │   │  ├── Single-Window Shell (4 Tabs)      │
+│  ├── Home Tab: Debounced Search       │   │  ├── Suggested Wizard (3-View Machine) │
+│  ├── Map Tab: Leaflet 16 Categories   │   │  ├── Custom Builder (Dual Pane)        │
+│  ├── Suggested & Custom Planners      │   │  ├── Rich Place Sheet & Commute Guide  │
+│  └── Storage: @ionic/storage-angular  │   │  └── Storage: Local JSON Engine        │
+└───────────────────┬───────────────────┘   └───────────────────┬────────────────────┘
+                    │ HTTPS REST / JSON                         │ HTTP REST / JSON
+                    └─────────────────────┬─────────────────────┘
+                                          ▼
 ┌────────────────────────────────────────────────────────────────────────┐
 │                        FastAPI Backend (backend/)                      │
 │  ├── /api/v1/health: Liveness and provincial scope check               │
@@ -49,7 +50,13 @@ The system is organized as a monorepo containing a standalone client, an asynchr
 - **Data Boundary**: The client **never** communicates directly with PostgreSQL or third-party mapping geocoders. All dynamic data is fetched from the FastAPI backend via `HttpClient`.
 - **Offline / Laptop-Down Resilience**: Intercepts HTTP 0, 502, and 504 errors via `authInterceptor` to alert users that the host laptop may be asleep while allowing local guest itineraries to remain operational.
 
-### 2.2 REST API Backend (`backend/`)
+### 2.2 Native Desktop Client (`desktop_client/`)
+- **Technology**: Python 3.14 / 3.11+, Python Flet >= 1.1.2 (Material 3 Flutter Engine), httpx, Pydantic v2.
+- **Role**: Provides a dedicated desktop workstation client mirroring the web client's Figma tokens, workflows, and consumer travel aesthetics.
+- **Data Boundary**: Communicates with the FastAPI backend via asynchronous `httpx.AsyncClient` REST calls with automatic Bearer token injection and refresh.
+- **Offline / Desktop Resilience**: Uses atomic file-based JSON persistence (`guest_storage.json`, `favorites.json`) and bundles canonical datasets (`osm_places.json`, `CANONICAL_OFFLINE_PLACES`) so discovery, wizard planning, and custom building function offline without a server.
+
+### 2.3 REST API Backend (`backend/`)
 - **Technology**: Python 3.14 / 3.11+, FastAPI, Pydantic v2, Uvicorn.
 - **Role**: Validates payloads, manages authentication, performs database transactions, executes search queries, runs the deterministic itinerary recommendation engine, and enforces Broken Object-Level Authorization (BOLA) security checks.
 - **Security**: Password hashing uses Argon2id (`pwdlib`), JWT token generation uses PyJWT with HMAC-SHA256, and Google ID tokens are verified cryptographically server-side.
