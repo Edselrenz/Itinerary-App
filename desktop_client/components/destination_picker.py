@@ -21,9 +21,10 @@ class DestinationPicker(ft.Container):
         value: str = "Nueva Ecija",
         label: str = "Destination / Municipality",
         on_change: Optional[Callable[[str], None]] = None,
+        initial_value: Optional[str] = None,
     ):
         super().__init__()
-        self.selected_destination = value or "Nueva Ecija"
+        self.selected_destination = initial_value or value or "Nueva Ecija"
         self.label = label
         self.on_change = on_change
 

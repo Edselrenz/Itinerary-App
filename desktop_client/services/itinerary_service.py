@@ -70,6 +70,14 @@ class ItineraryService:
         self.active_draft_itinerary = itinerary
         return itinerary
 
+    def set_active_draft_itinerary(self, itinerary: Optional[Itinerary]) -> None:
+        """Stores the active draft preview itinerary in memory."""
+        self.active_draft_itinerary = itinerary
+
+    def get_active_draft_itinerary(self) -> Optional[Itinerary]:
+        """Returns the active draft preview itinerary if present."""
+        return self.active_draft_itinerary
+
     async def generate_offline_suggested_itinerary(
         self,
         request: SuggestedItineraryRequest,

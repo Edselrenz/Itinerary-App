@@ -234,14 +234,18 @@ def test_offline_host_banner_and_splash_overlay():
 
     banner = OfflineHostBanner()
     assert banner.visible is True
+    assert banner.expand is False
+    assert banner.height == 52
 
     # Dismiss test
     banner._dismiss()
     assert banner.visible is False
+    assert banner.height == 0
 
     # Back online
     conn_service.set_host_offline(False)
     assert banner.visible is False
+    assert banner.height == 0
 
     # Splash overlay
     dismissed = []
@@ -361,5 +365,42 @@ def test_interactive_province_map_and_route_map():
     assert route_map.is_expanded is False
     route_map.toggle_expand()
     assert route_map.is_expanded is True
+
+    # Pure-Flet SlippyMapCanvas Test
+    from desktop_client.components.slippy_map_canvas import (
+        SlippyMapCanvas,
+        latlon_to_world_px,
+        world_px_to_latlon,
+        RouteStopPin,
+    )
+
+    # 1. Coordinate projection roundtrip test
+    wx, wy = latlon_to_world_px(15.58, 121.00, 10)
+    rev_lat, rev_lng = world_px_to_latlon(wx, wy, 10)
+    assert abs(rev_lat - 15.58) < 0.001
+    assert abs(rev_lng - 121.00) < 0.001
+
+    # 2. SlippyMapCanvas initialization and clustering
+    canvas_map = SlippyMapCanvas(
+        width=800,
+        height=500,
+        center_lat=15.58,
+        center_lng=121.00,
+        zoom=10,
+        places=sample_places,
+    )
+    assert canvas_map.zoom == 10
+    assert canvas_map.center_lat == 15.58
+    assert canvas_map.center_lng == 121.00
+
+    # 3. Route Pin test
+    pins = [
+        RouteStopPin(index=0, title="Stop 1", lat=15.30, lng=121.14),
+        RouteStopPin(index=1, title="Stop 2", lat=15.81, lng=121.15),
+    ]
+    canvas_map.set_route(pins, auto_fit=True)
+    assert len(canvas_map._route_stops) == 2
+    assert len(canvas_map._route_pts) >= 2  # Road or geodesic polyline populated
+
 
 

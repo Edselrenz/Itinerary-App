@@ -74,9 +74,9 @@ class SessionManager:
         """Enables local guest mode without backend credentials."""
         self.access_token = None
         self.refresh_token = None
-        self.current_user = None
         self.is_guest = True
-        self._clear_disk()
+        self.current_user = User.create_guest()
+        self._save_to_disk()
         self._notify()
 
     def clear_session(self) -> None:

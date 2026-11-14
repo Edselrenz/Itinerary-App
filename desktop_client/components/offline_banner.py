@@ -1,49 +1,125 @@
-"""Nueva Ecija Travel — Global Floating Offline Host Banner (.offline-host-banner).
+"""Compact, non-blocking top connectivity banner matching Project/src/app/app.component.html.
 
-Displays at the top of the root Stack across all views when the backend server
-is unreachable or responding with network errors. Provides immediate offline awareness,
-one-click manual health probe with spinner, and dismiss capability.
+CRITICAL FLET 1.1.2 LAYOUT RULE:
+- `expand` MUST be `False` and `height` MUST be fixed (`52` when visible, `0` when hidden)
+  so it NEVER stretches across the application viewport.
+- Renders an inner dark pill card (width=620, height=42, border_radius=12, bgcolor="#0f172a").
 """
+
+from __future__ import annotations
 
 import asyncio
 from typing import Callable, Optional
 import flet as ft
 
 from desktop_client.config.settings import ThemeColors
-from desktop_client.core.connectivity_service import get_connectivity_service
+from desktop_client.core.connectivity_service import ConnectivityService, get_connectivity_service
 
 
 class OfflineHostBanner(ft.Container):
-    """Global floating banner notifying user of disconnected backend host."""
+    """Floating pill banner (`.offline-host-banner`) rendered at the top of the root Column."""
 
     def __init__(
         self,
+        connectivity_service: Optional[ConnectivityService] = None,
         on_status_change: Optional[Callable[[bool], None]] = None,
-    ):
+        on_retry: Optional[Callable[[], None]] = None,
+    ) -> None:
         super().__init__()
+        self._connectivity = connectivity_service or get_connectivity_service()
         self.on_status_change = on_status_change
-        self.connectivity_service = get_connectivity_service()
+        self._on_retry = on_retry
 
-        self.margin = ft.Margin.only(top=12, left=16, right=16)
-        self.padding = ft.Padding.symmetric(horizontal=16, vertical=10)
-        self.bgcolor = "#0f172a"
-        self.border = ft.Border.all(1, "#f59e0b")
-        self.border_radius = 14
-        self.shadow = ft.BoxShadow(
-            spread_radius=1,
-            blur_radius=16,
-            color=ft.Colors.with_opacity(0.35, "#000000"),
-            offset=ft.Offset(0, 4),
-        )
+        # Strictly non-expanding top bar wrapper
+        self.expand = False
+        self.height = 0
+        self.visible = False
+        self.alignment = ft.Alignment(0, 0)
+        self.padding = ft.Padding.only(top=6, bottom=4, left=16, right=16)
+        self.bgcolor = ft.Colors.TRANSPARENT
 
         self._is_dismissed = False
         self._is_retrying = False
 
-        # Set initial visibility based on connectivity service
-        self.visible = self.connectivity_service.is_host_offline and not self._is_dismissed
+        self._title_text = ft.Text(
+            "You are offline",
+            size=12,
+            weight=ft.FontWeight.W_700,
+            color="#f8fafc",
+        )
+        self._sub_text = ft.Text(
+            "Showing cached Nueva Ecija places & saved itineraries",
+            size=11,
+            color="#94a3b8",
+        )
+        self._retry_btn = ft.Container(
+            content=ft.Row(
+                controls=[
+                    ft.Icon(ft.Icons.REFRESH_ROUNDED, size=13, color="#38bdf8"),
+                    ft.Text("Retry", size=11, weight=ft.FontWeight.W_700, color="#38bdf8"),
+                ],
+                spacing=4,
+                tight=True,
+            ),
+            bgcolor="#1e293b",
+            border_radius=8,
+            padding=ft.Padding.symmetric(horizontal=10, vertical=4),
+            ink=True,
+            on_click=self._handle_retry,
+        )
+        self._dismiss_btn = ft.IconButton(
+            icon=ft.Icons.CLOSE_ROUNDED,
+            icon_size=15,
+            icon_color="#94a3b8",
+            tooltip="Dismiss offline notice",
+            on_click=self._handle_dismiss,
+            style=ft.ButtonStyle(padding=ft.Padding.all(4)),
+        )
 
-        self._build_content()
-        self.connectivity_service.register_listener(self._on_connectivity_event)
+        # Inner dark pill card matching Web App `.offline-banner-content` (max-width 620px, height 42px)
+        self.content = ft.Container(
+            width=620,
+            height=42,
+            bgcolor="#0f172a",
+            border=ft.Border.all(1, "#334155"),
+            border_radius=12,
+            padding=ft.Padding.symmetric(horizontal=14, vertical=6),
+            shadow=ft.BoxShadow(
+                blur_radius=12,
+                color=ft.Colors.with_opacity(0.18, "#0f172a"),
+                offset=ft.Offset(0, 4),
+            ),
+            content=ft.Row(
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                controls=[
+                    ft.Row(
+                        spacing=10,
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                        controls=[
+                            ft.Icon(ft.Icons.CLOUD_OFF_ROUNDED, color="#f59e0b", size=18),
+                            ft.Column(
+                                spacing=0,
+                                alignment=ft.MainAxisAlignment.CENTER,
+                                controls=[self._title_text, self._sub_text],
+                            ),
+                        ],
+                    ),
+                    ft.Row(
+                        spacing=4,
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                        controls=[self._retry_btn, self._dismiss_btn],
+                    ),
+                ],
+            ),
+        )
+
+        # Set initial visibility
+        should_show = self._connectivity.is_host_offline and not self._is_dismissed
+        self.visible = should_show
+        self.height = 52 if should_show else 0
+
+        self._connectivity.register_listener(self._on_connectivity_event)
 
     @property
     def safe_page(self) -> Optional[ft.Page]:
@@ -55,47 +131,76 @@ class OfflineHostBanner(ft.Container):
     def _on_connectivity_event(self, is_offline: Optional[bool] = None) -> None:
         """Invoked automatically by ConnectivityService whenever host state changes."""
         if is_offline is None:
-            is_offline = self.connectivity_service.is_host_offline
+            is_offline = self._connectivity.is_host_offline
+
         if not is_offline:
-            self._is_dismissed = False  # Reset dismiss when coming back online
+            self._is_dismissed = False
             self.visible = False
+            self.height = 0
         else:
-            self.visible = not self._is_dismissed
+            should_show = not self._is_dismissed
+            self.visible = should_show
+            self.height = 52 if should_show else 0
+
+        if self._connectivity.is_checking_health:
+            self._title_text.value = "Reconnecting to server..."
+        else:
+            self._title_text.value = "You are offline"
 
         try:
-            self.update()
+            if self.page:
+                self.update()
         except Exception:
             pass
 
         if self.on_status_change:
             self.on_status_change(is_offline)
 
-    def _dismiss(self, _=None) -> None:
+    def _handle_dismiss(self, _e: Optional[ft.ControlEvent] = None) -> None:
         self._is_dismissed = True
         self.visible = False
+        self.height = 0
+        self._connectivity.dismiss_banner()
         try:
-            self.update()
+            if self.page:
+                self.update()
         except Exception:
             pass
 
-    def _trigger_retry(self, _=None) -> None:
+    _dismiss = _handle_dismiss
+
+
+    def _handle_retry(self, _e: Optional[ft.ControlEvent] = None) -> None:
         if self._is_retrying:
             return
 
+        if self._on_retry:
+            self._on_retry()
+
         self._is_retrying = True
-        self._build_content()
+        self._title_text.value = "Reconnecting to server..."
+        self._retry_btn.content = ft.Row(
+            controls=[
+                ft.ProgressRing(width=12, height=12, stroke_width=2, color="#38bdf8"),
+                ft.Text("Testing...", size=11, color="#38bdf8"),
+            ],
+            spacing=4,
+            tight=True,
+        )
         try:
-            self.update()
+            if self.page:
+                self.update()
         except Exception:
             pass
 
         async def _run_retry():
             try:
-                is_online = await self.connectivity_service.check_host_health()
+                is_online = await self._connectivity.check_host_health()
                 p = self.safe_page
                 if is_online:
                     self._is_dismissed = False
                     self.visible = False
+                    self.height = 0
                     if p:
                         p.snack_bar = ft.SnackBar(
                             content=ft.Row(
@@ -110,6 +215,8 @@ class OfflineHostBanner(ft.Container):
                         )
                 else:
                     self.visible = True
+                    self.height = 52
+                    self._title_text.value = "You are offline"
                     if p:
                         p.snack_bar = ft.SnackBar(
                             content=ft.Row(
@@ -126,9 +233,17 @@ class OfflineHostBanner(ft.Container):
                     p.update()
             finally:
                 self._is_retrying = False
-                self._build_content()
+                self._retry_btn.content = ft.Row(
+                    controls=[
+                        ft.Icon(ft.Icons.REFRESH_ROUNDED, size=13, color="#38bdf8"),
+                        ft.Text("Retry", size=11, weight=ft.FontWeight.W_700, color="#38bdf8"),
+                    ],
+                    spacing=4,
+                    tight=True,
+                )
                 try:
-                    self.update()
+                    if self.page:
+                        self.update()
                 except Exception:
                     pass
 
@@ -141,68 +256,3 @@ class OfflineHostBanner(ft.Container):
                 loop.create_task(_run_retry())
             except RuntimeError:
                 asyncio.run(_run_retry())
-
-    def _build_content(self) -> None:
-        # Retry control: spinner or button
-        if self._is_retrying:
-            retry_ctrl = ft.Container(
-                content=ft.Row(
-                    controls=[
-                        ft.ProgressRing(width=14, height=14, stroke_width=2, color="#f59e0b"),
-                        ft.Text("Checking...", size=12, color="#f59e0b", weight=ft.FontWeight.W_600),
-                    ],
-                    spacing=6,
-                ),
-                padding=ft.Padding.symmetric(horizontal=10, vertical=6),
-            )
-        else:
-            retry_ctrl = ft.Container(
-                content=ft.Row(
-                    controls=[
-                        ft.Icon(ft.Icons.REFRESH, size=14, color="#ffffff"),
-                        ft.Text("Retry", size=12, color="#ffffff", weight=ft.FontWeight.BOLD),
-                    ],
-                    spacing=4,
-                ),
-                bgcolor="#d97706",
-                border_radius=8,
-                padding=ft.Padding.symmetric(horizontal=12, vertical=6),
-                ink=True,
-                on_click=self._trigger_retry,
-            )
-
-        dismiss_btn = ft.IconButton(
-            icon=ft.Icons.CLOSE,
-            icon_size=16,
-            icon_color="#94a3b8",
-            tooltip="Dismiss offline notice",
-            on_click=self._dismiss,
-        )
-
-        self.content = ft.Row(
-            controls=[
-                ft.Icon(ft.Icons.CLOUD_OFF, size=24, color="#f59e0b"),
-                ft.Column(
-                    controls=[
-                        ft.Text(
-                            "Cloud Sync Paused",
-                            size=13,
-                            weight=ft.FontWeight.BOLD,
-                            color=ft.Colors.WHITE,
-                        ),
-                        ft.Text(
-                            "Backend server unreachable. Offline mode is active with local data.",
-                            size=11,
-                            color="#cbd5e1",
-                        ),
-                    ],
-                    spacing=2,
-                    expand=True,
-                ),
-                retry_ctrl,
-                dismiss_btn,
-            ],
-            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-            vertical_alignment=ft.CrossAxisAlignment.CENTER,
-            spacing=12,
-        )

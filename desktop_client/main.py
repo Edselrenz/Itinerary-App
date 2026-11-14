@@ -272,9 +272,11 @@ def main(page: ft.Page) -> None:
 
     session_manager.add_listener(_on_session_changed)
 
-    # Root Layout Hierarchy
+    # Root Layout Hierarchy: offline_banner is placed at top of main_column
+    # so it NEVER stretches across the entire screen via Flutter StackFit.expand
     main_column = ft.Column(
         controls=[
+            offline_banner,
             workflow_header,
             content_area,
             bottom_tab_bar,
@@ -288,7 +290,6 @@ def main(page: ft.Page) -> None:
     root_stack = ft.Stack(
         controls=[
             main_column,
-            offline_banner,
             splash_overlay,
         ],
         expand=True,

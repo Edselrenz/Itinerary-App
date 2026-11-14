@@ -410,16 +410,24 @@ def load_osm_places() -> list[dict[str, Any]]:
 
     # Merge: Put canonical curated places at top
     merged: list[dict[str, Any]] = [p.to_dict() for p in CANONICAL_OFFLINE_PLACES]
-    seen_ids = {p["id"] for p in merged}
-    seen_names = {p["name"].lower().strip() for p in merged}
+    seen_ids = {str(p["id"]) for p in merged}
+    # Curated coordinates (<150m) to override raw OSM counterpart
+    seen_curated_coords = {(round(float(p["latitude"]), 3), round(float(p["longitude"]), 3)) for p in merged if p.get("latitude") and p.get("longitude")}
 
     for item in raw_osm:
         item_id = str(item.get("id", ""))
-        item_name = str(item.get("name", "")).lower().strip()
-        if item_id in seen_ids or item_name in seen_names:
+        if not item_id or item_id in seen_ids:
             continue
+
+        lat = item.get("latitude")
+        lng = item.get("longitude")
+        if lat and lng:
+            coord_key = (round(float(lat), 3), round(float(lng), 3))
+            if coord_key in seen_curated_coords:
+                # Raw OSM POI is already represented by curated destination
+                continue
+
         seen_ids.add(item_id)
-        seen_names.add(item_name)
         merged.append(item)
 
     _CACHED_ALL_PLACES = merged

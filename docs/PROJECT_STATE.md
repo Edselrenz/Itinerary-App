@@ -7,14 +7,18 @@ This document serves as the primary handoff reference for developers and coding 
 ## 1. Project Status Overview
 
 - **Application Name**: Nueva Ecija Travel Itinerary (MVP, GIS Upgrade & Native Desktop Client)
-- **Current Development Phase**: **Phase 49 — Desktop Client Deep Parity Realization & Web-Architecture Alignment (Phases 49.1 – 49.5) — COMPLETED**
+- **Current Development Phase**: **Phase 50 — Desktop Client QA v3 Remediation & Pure-Flet Slippy Map Architecture (COMPLETED)**
 - **Active Git Branch**: `feature/flet-desktop-app`
 - **Active Database Infrastructure**: **PostgreSQL 16 in Docker** (`ne_postgres` on port 5432) active and populated with the complete **2,673-place catalog** (2,656 OSM + 17 curated), 12 municipalities, 4 users, and 5 itineraries. Dual-engine SQLite fallback verified with `connect_timeout=2` fail-fast guard.
 - **Last Verified Working State**:
-  - **Desktop Client Verification**: 47/47 unit and parity tests passed (0 failures) via `pytest`, live backend integration verified, and standalone Windows executable compiled via `NuevaEcijaTravel.spec` with all assets bundled in `dist/NuevaEcijaTravel/`.
+  - **Desktop Client Verification**: 47/47 unit and parity tests passed (0 failures) via `pytest` (`python -m pytest desktop_client/tests/ -v -k "not test_live_backend_integration"`), live backend integration verified, and standalone Windows executable compiled via `NuevaEcijaTravel.spec` with all assets bundled in `dist/NuevaEcijaTravel/`.
   - **Web Client Verification**: 32/32 test files and 348/348 unit tests passing [100%] via Vitest (`npm --prefix Project run test:unit`) with zero regressions and zero edits in `Project/`.
   - **Documentation Consolidation**: All desktop application documentation consolidated and updated into `docs/` (`DESKTOP_APP_OVERVIEW.md`, `DESKTOP_APP_ARCHITECTURE.md`, `DESKTOP_APP_API_INTEGRATION.md`, `DESKTOP_APP_INSTALLATION_AND_BUILD.md`, `DESKTOP_APP_QA_AND_TESTING.md`, `DESKTOP_APP_PARITY_AND_IMPLEMENTATION_PLAN.md`).
-- **Current Active Tasks**: Phase 49 completed across all 5 subphases (49.1 Core Services & 3-Tier Offline Fallback, 49.2 Bottom Tab Bar Shell & Clean Auth, 49.3 Interactive GIS Map Tab, 49.4 Suggested Wizard & Custom Builder Embedded Maps, 49.5 Trip Detail, Profile Settings & PyInstaller Packaging).
+- **Phase 50 Verification & Bugfix Ledger (All 4 User-Reported Regressions Resolved)**:
+  1. `FAIL-01 (Offline Notice Overfilling App)`: Resolved. `OfflineHostBanner` rewritten with `expand=False`, fixed `height=52` (or `0` when hidden/dismissed), transparent container with centered floating pill card (`width=620, height=42, bgcolor="#0f172a"`), and mounted inside root `ft.Column(controls=[offline_banner, workflow_header, content_area, bottom_tab_bar], spacing=0, expand=True)`. Eliminates Flutter `StackFit.expand` stretching.
+  2. `FAIL-02 (Map Broken / Zero POIs / No Polyline)`: Resolved. Built pure-Flet Web-Mercator `SlippyMapCanvas` with 3-plane architecture: Layer 1 OSM tiles, Layer 2 OSRM road geometry (`cv.Canvas` with `#0284c7` inner line & white casing), Layer 3 positioned controls (spatial marker clustering at `zoom < 14` via `.marker-cluster` blue numbered circles `#0084ff`, category teardrop pins at `zoom >= 14`, and numbered route stop badges `1..N`). Fixed deduplication logic in `offline_data.py` to preserve all 2,672 OSM POIs.
+  3. `FAIL-03 (Edit Profile Failing)`: Resolved. Dynamic `User.from_dict()` parsing `first_name`, `last_name`, `username_normalized`, and dynamic `full_name`. `UserUpdatePayload` emits strictly `first_name`, `last_name`, `username`, passwords for `PATCH /api/v1/auth/me` while extended fields persist locally to `storage/profile_extra.json`. Added native file dialog photo picker (`tkinter.filedialog.askopenfilename`) and enabled guest profile customization.
+  4. `FAIL-04 (Suggested Wizard & Custom Builder Mismatched Workflow)`: Resolved. Both views rewritten into exact Web App 3-view state machines (`SuggestedWizardView`: `form` → `itinerary` → `nearby`; `CustomBuilderView`: `form` → `browse` → `timeline`). Wired `set_active_draft_itinerary()`, embedded `ItineraryRouteMap` with `[Full Map]` draft route handoff (`/map?itineraryId=draft`), and inter-stop transit buffer auto-scheduling.
 - **Current Blockers**: **None**.
 
 ---

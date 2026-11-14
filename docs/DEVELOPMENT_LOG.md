@@ -4576,6 +4576,72 @@ NEXT STEPS:
 - **Next Steps**:
   - Present comprehensive parity verification report to user.
 
+---
+
+## Session 116: Deep QA Audit v3 Ingestion & Pre-Development Documentation Synchronization (Phase 50)
+- **Date & Time**: 2026-11-14 11:30:00 (Local)
+- **Objective**:
+  - Ingest `desktop_web_parity_qa_and_implementation_plan.md` (v3 Deep Desktop vs. Web App QA Audit & Antigravity Remediation Specification).
+  - Document all 4 hands-on user-reported failures, root-cause analyses, and concrete architectural specifications across canonical `/docs` files before starting Phase 50 development, in strict compliance with `/coding-and-system-development` and user directives.
+- **4 Critical User-Reported Failures & Root Causes Analyzed**:
+  1. **Failure 1 (Offline notice spans the whole application)**:
+     - Root Cause: In Flet 1.1.2, `OfflineHostBanner` inside root `ft.Stack(expand=True)` triggers Flutter's `StackFit.expand`, causing the `#0f172a` container to stretch across the entire 1280×840 window.
+     - Solution: Place `OfflineHostBanner` inside root `ft.Column(spacing=0, expand=True)` directly above `content_area` with `expand=False`, fixed `height=52` (or `0` when hidden), centered pill card (`width=620, height=42`), and working `[X]` dismiss button.
+  2. **Failure 2 (Map not displaying places or routing like website)**:
+     - Root Cause: `flet_map` runtime instability, non-clickable canvas circles, relative path failure for `osm_places.json` (2,673 POIs), and lack of Web-Mercator tile + vector canvas polyline + interactive marker overlay architecture.
+     - Solution: Implement pure-Flet Web-Mercator `SlippyMapCanvas` (`components/slippy_map_canvas.py`):
+       - Layer 1: 256×256 OSM tiles via `latlon_to_world_px()` math with pan gestures and zoom controls (`Z8..Z18`).
+       - Layer 2: `ft.canvas.Canvas` drawing OSRM road geometry (`#0284c7`, stroke 5) with white casing (stroke 8) and geodesic arc fallback.
+       - Layer 3: Positioned `ft.Container` controls: spatial marker clustering at `zoom < 14` (`.marker-cluster` blue numbered circles `#0084ff`), category pins at `zoom >= 14`, and numbered route stop badges (`1..N`) with stop title pills.
+       - Robust `_find_osm_places_json()` resolving 2,673 POIs from any working directory.
+  3. **Failure 3 (Edit profile does not work properly)**:
+     - Root Cause: FastAPI `UserOut` returns `first_name`, `last_name`, `username_normalized`, `email_normalized` (never `full_name`). `UserUpdateIn` (`PATCH /api/v1/auth/me`) only accepts `first_name`, `last_name`, `username`, passwords (ignores `full_name`). Extended profile fields and Guest edits were wiped out or unsaved.
+     - Solution: Update `desktop_client/models/user.py` with `to_backend_dict()` and `to_extra_dict()`. Update `AuthService.update_profile()` to save extended fields in `LocalStorage` (`profile_extra.json`), and enhance `ProfileView` modal with native file picker (`tkinter.filedialog.askopenfilename`) and avatar presets.
+  4. **Failure 4 (Custom and suggested itinerary do not work like web)**:
+     - Root Cause: Static layouts instead of Web App's 3-view state machines: Suggested Wizard (`form` → `itinerary` → `nearby`) and Custom Builder (`form` → `browse` → `timeline`). Missing draft itinerary handoff to Map.
+     - Solution: Rewrite `SuggestedWizardView` and `CustomBuilderView` to mirror the Web App's exact 3-view workflows:
+       - Suggested Wizard: Pre-save preview (`save_immediately=False`), active draft handoff (`itinerary_service.set_active_draft_itinerary(plan)`), embedded route map with `[Full Map]` launcher to `/map?itineraryId=draft`, inter-stop leg commute badges, `"Nearby Places in [Municipality]"` view, `[Accept & Save]`, and `[Customize in Builder]`.
+       - Custom Builder: 3-stage flow (`form` → `browse` → `timeline`), top segmented switcher (`[+ Add Places]` | `[📅 Your Itinerary (N)]`), target day selector, stateful `[+ Add]` / `[✓ Added]` buttons with driving buffer times, editable Trip Settings, `[Auto-Schedule]`, `[Edit Stop]` modal with `Move to Day` dropdown, and geofenced off-grid custom venue modal.
+- **Documentation Synchronized**:
+  - `docs/DESKTOP_APP_PARITY_AND_IMPLEMENTATION_PLAN.md`: Updated to v3 specification with full root-cause analysis and code architectures.
+  - `docs/TODO.md`: Added Phase 50 (50.1 to 50.6) with granular checkable items.
+  - `docs/PROJECT_STATE.md`: Advanced phase to Phase 50 and detailed pre-development state.
+  - `docs/DESKTOP_APP_ARCHITECTURE.md`: Documented bounded Column layout, `SlippyMapCanvas` 3-layer architecture, and 3-view state machines.
+  - `docs/DESKTOP_APP_QA_AND_TESTING.md`: Added Section 2.3 QA Audit v3 Defect Ledger (`FAIL-01` to `FAIL-04`).
+  - `docs/CHANGELOG.md`: Logged Phase 50 roadmap entry.
+- **Implementation & Remediation Completed (Phase 50 Steps 50.1 – 50.6)**:
+  1. **Step 50.1 (Offline Host Banner & Root Layout — FAIL-01)**:
+     - Rewrote `desktop_client/components/offline_banner.py`: Container with `expand=False`, fixed `height=52` (or `0` when dismissed/online), and centered floating pill card (`width=620, height=42, bgcolor="#0f172a"`).
+     - Refactored `desktop_client/main.py`: Moved `offline_banner` into root `main_column = ft.Column(controls=[offline_banner, workflow_header, content_area, bottom_tab_bar], spacing=0, expand=True)`. Completely eliminates the Flutter `StackFit.expand` stretching bug.
+  2. **Step 50.2 (User Domain Model & Edit Profile FastAPI Contract — FAIL-03)**:
+     - Rewrote `desktop_client/models/user.py`: `User.from_dict()` parses `first_name`, `last_name`, `username_normalized`, and dynamic `full_name`. `UserUpdatePayload` strictly splits and emits `first_name`, `last_name`, `username` for backend `PATCH /api/v1/auth/me`.
+     - Updated `desktop_client/services/auth_service.py`: Added `_save_profile_extra()` and `_load_profile_extra()` persisting extended fields (`middle_initial`, `birthday`, `gender`, `phone_number`, `avatar_url`) to `storage/profile_extra.json`. Added `migrate_guest_trips()`.
+     - Updated `desktop_client/views/profile_view.py`: Added native file picker (`tkinter.filedialog.askopenfilename`), avatar presets, all personal fields, and enabled profile editing for guest users.
+  3. **Step 50.3 (2,673 OSM Places & Pure-Flet Slippy Map Engine — FAIL-02)**:
+     - Copied canonical 2,673 POIs to `desktop_client/assets/data/osm_places.json` and fixed deduplication logic in `desktop_client/core/offline_data.py` (preserving all 2,672 places).
+     - Created `desktop_client/components/slippy_map_canvas.py`: 100% pure-Flet Web-Mercator map:
+       - Layer 1: 256×256 OSM tiles via `latlon_to_world_px(lat, lon, zoom)` with pan gestures (`ft.GestureDetector`) and zoom buttons (`Z8..Z18`).
+       - Layer 2: `ft.canvas.Canvas` drawing OSRM road geometry (`https://router.project-osrm.org/route/v1/driving/...`) with `#0284c7` inner line (width 5), white casing (width 8), and smooth geodesic arc fallback.
+       - Layer 3: Positioned `ft.Container` controls: spatial marker clustering at `zoom < 14` (`.marker-cluster` blue numbered circles `#0084ff`), category pins at `zoom >= 14`, and numbered route stop badges (`1..N`) with stop title pills.
+     - Updated `desktop_client/components/itinerary_route_map.py` and `desktop_client/views/places_view.py` with `SlippyMapCanvas` and draft itinerary handoff (`itineraryId="draft"`).
+  4. **Step 50.4 (Suggested Wizard 3-View State Machine — FAIL-04)**:
+     - Rewrote `desktop_client/views/suggested_wizard_view.py` to match `suggested-wizard.page.html/.ts`:
+       - View 1 (`form`): DestinationAutocomplete with 32 LGUs modal, date range presets, budget presets, preferences pills, travel mode, ratings, `[Find Itinerary]`.
+       - View 2 (`itinerary`): Draft itinerary handoff (`itinerary_service.set_active_draft_itinerary(plan)`), trip summary card, verified place costs card, collapsible Planning Assumptions accordion, embedded `ItineraryRouteMap` (with `[Full Map]` launcher to `/map?itineraryId=draft`), stop cards with inter-stop leg commute badges, `"Nearby Places in [Municipality]"` banner button, `[Accept & Save]`, and `[Customize in Builder]`.
+       - View 3 (`nearby`): Segmented capsule bar (`Restaurants` | `Hospital & Pharmacies` | `Stores`) with `[+ Add to Day X]` and `[Maps]`.
+  5. **Step 50.5 (Custom Builder 3-View State Machine — FAIL-04)**:
+     - Rewrote `desktop_client/views/custom_builder_view.py` to match `custom-builder.page.html/.ts`:
+       - View 0 (`form`): Trip title, destination, dates, budget presets, preferences. `[Start Building Itinerary →]` -> `sync_days_with_date_range()` -> switches to `browse`.
+       - View 1 (`browse`): Top segmented switcher (`[+ Add Places]` active | `[📅 Your Itinerary (N)]`), target day selector, search & category pills, place card grid with stateful `[+ Add]` / `[✓ Added]` buttons (with auto-calculated driving buffer times), sticky footer `[View my Itinerary]`.
+       - View 2 (`timeline`): Top segmented switcher (`[+ Add Places]` | `[📅 Your Itinerary (N)]` active) + `[✓ Save]` button, editable Trip Settings card, day capsule switcher + `[+ Add Day]`, active day header with `[🕒 Auto-Schedule]` and `[🗑 Delete Day]`, embedded `ItineraryRouteMap` (with OSRM route & `[Full Map]` button), ordered stop cards with inter-stop leg commute badges, `[↑]`, `[↓]`, `[✏️ Edit]` (with `Move to Day` dropdown), `[🗑 Remove]`, `[+ Browse & Add Places to Day X]`, `[+ Add Off-Grid Custom Venue]` (geofenced), and sticky footer `[💾 Save Custom Itinerary]`.
+  6. **Step 50.6 (Verification & Standalone Packaging)**:
+     - Executed full desktop client test suite: `python -m pytest desktop_client/tests/ -v -k "not test_live_backend_integration"` -> **47 passed, 1 deselected, 0 failed in 2.13s [100% PASS]**.
+     - Executed canonical web client unit test suite: `npm --prefix Project run test:unit` -> **32 test files passed, 348 unit tests passed in 26.36s [100% GREEN, ZERO EDITS in Project/]**.
+     - Compiled standalone Windows distribution executable via `python -m PyInstaller NuevaEcijaTravel.spec --clean -y`.
+- **Next Step**:
+  - Present final verification summary report to the user detailing resolution of all 4 defect items.
+
+
 
 
 

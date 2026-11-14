@@ -584,7 +584,7 @@ class SuggestedWizardView(ft.Container):
 
         route_map = ItineraryRouteMap(
             day=active_day,
-            on_view_full_map=lambda: self.on_navigate("/map") if self.on_navigate else None,
+            on_view_full_map=lambda: self._open_full_map_draft(),
         )
 
         return ft.Column(
@@ -789,8 +789,17 @@ class SuggestedWizardView(ft.Container):
         self._safe_update()
 
     def _customize_in_builder(self) -> None:
-        if self.on_navigate and self.generated_itinerary:
-            self.on_navigate("/builder", trip_data=self.generated_itinerary)
+        if self.generated_itinerary:
+            self.itinerary_service.set_active_draft_itinerary(self.generated_itinerary)
+            if self.on_navigate:
+                self.on_navigate("/builder?draft=true", trip_data=self.generated_itinerary)
+
+    def _open_full_map_draft(self) -> None:
+        if self.generated_itinerary:
+            self.itinerary_service.set_active_draft_itinerary(self.generated_itinerary)
+            day_num = self.active_day_index + 1
+            if self.on_navigate:
+                self.on_navigate(f"/map?itineraryId=draft&day={day_num}")
 
     def _save_generated_itinerary(self) -> None:
         if not self.generated_itinerary:
@@ -933,6 +942,7 @@ class SuggestedWizardView(ft.Container):
                 )
                 itin = await self.itinerary_service.generate_suggested_itinerary(req)
                 self.generated_itinerary = itin
+                self.itinerary_service.set_active_draft_itinerary(itin)
                 self.active_day_index = 0
                 self.view_mode = "itinerary"
             except ApiClientError as err:

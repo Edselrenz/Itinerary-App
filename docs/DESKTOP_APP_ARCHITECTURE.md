@@ -104,75 +104,73 @@ desktop_client/
 
 ## 2. Layout Shell & Navigation Architecture
 
-The desktop client discards generic enterprise side navigation in favor of the canonical Web App's **Bottom Tab Bar + Contextual Header Architecture**:
+The desktop client discards generic enterprise side navigation in favor of the canonical Web App's **Bottom Tab Bar + Contextual Header Architecture**.
+
+### Critical Flet 1.1.2 Bounded Column Rule:
+In Flet 1.1.2, placing `OfflineHostBanner` inside `ft.Stack(expand=True)` without explicit coordinates triggers Flutter's `StackFit.expand`, causing the banner's dark background to fill the entire application window. To guarantee bounded rendering, the root layout is structured as a vertical `ft.Column(spacing=0, expand=True)`:
 
 ```mermaid
 flowchart TD
-    subgraph RootStack ["ft.Stack (Root Viewport)"]
-        ContentArea["Content Area (expand=True)"]
-        BottomTabBar["BottomTabBar (height=60px)<br/>[Home | Map | Saved | Profile]<br/>(Visible ONLY on Tab Routes)"]
-        OfflineBanner["OfflineHostBanner (Floating Top Overlay)<br/>(Visible across ALL routes when offline)"]
-        SplashOverlay["SplashOverlay (Fullscreen 2.8s Dismiss)<br/>(Visible on Cold Start only)"]
+    subgraph RootColumn ["ft.Column(spacing=0, expand=True) (Root Window)"]
+        OfflineBanner["OfflineHostBanner (expand=False, fixed height=52 or 0)<br/>Floating pill card (width=620, height=42, #0f172a)<br/>(Visible when offline, dismissible with [X])"]
+        ContentArea["Content Area (expand=True)<br/>Active Route View Container"]
+        BottomTabBar["BottomTabBar (expand=False, height=60px)<br/>[Home | Map | Saved | Profile]<br/>(Visible ONLY on Tab Routes)"]
     end
 
     ContentArea --> TabRoutes["Tab Routes (/home, /map, /saved, /profile)"]
-    ContentArea --> WorkflowRoutes["Workflow Routes (/welcome, /guest, /login, /signup, /wizard, /builder, /trips/:id)"]
+    ContentArea --> WorkflowRoutes["Workflow Routes (/welcome, /guest, /login, /signup, /suggested, /builder, /trips/:id)"]
     WorkflowRoutes --> FigmaHeader[".figma-header-bar (Back Arrow + Title + Actions)"]
 ```
 
 ### Route Visibility Rules
 * **Tab Routes (`/home`, `/map`, `/saved`, `/profile`)**:
-  * Main column: `[content_area (expand=True), bottom_tab_bar (height=60)]`.
+  * Main column: `[offline_banner (height=52 or 0), content_area (expand=True), bottom_tab_bar (height=60)]`.
   * `BottomTabBar` displays 4 centered items: `Home`, `Map`, `Saved`, `Profile`. Active item is colored `#0084ff` (Azure).
   * Tapping the `Map` tab while in Follow-Route Mode automatically exits route focus and returns to full province browse mode.
 * **Workflow Routes (`/welcome`, `/guest`, `/login`, `/signup`, `/suggested`, `/builder`, `/trips/:id`)**:
-  * `BottomTabBar` is completely hidden.
+  * `BottomTabBar` is completely hidden (`height=0`, `visible=False`).
   * Screen uses a `.figma-header-bar` containing a `←` back arrow, clean title, and contextual action buttons.
-* **Global Overlays**:
-  * `OfflineHostBanner`: Placed at the top of the root `ft.Stack` with top margin `12px` and `border_radius=14`. Visible across **every route** whenever `connectivity_service.is_host_offline` is `True`.
+* **Global Overlays & Banners**:
+  * `OfflineHostBanner`: Placed as the first child of root `ft.Column` with `expand=False`, fixed `height=52` (or `height=0` when hidden or dismissed). Visible across **every route** whenever `connectivity_service.is_host_offline` is `True`.
   * `SplashOverlay`: Covers the entire viewport on application cold start (`loading_screen.jpg`) with a 2.8s timer, dismissible on click or Escape key.
 
 ---
 
-## 3. Interactive GIS Mapping Engine
+## 3. Interactive Slippy Map Engine (`SlippyMapCanvas`)
 
-The desktop client provides two interactive mapping layers using `flet-map` with a reliable `flet.canvas.Canvas` Web-Mercator vector fallback:
+The desktop client provides a **100% Pure-Flet 1.1.2 Web-Mercator Interactive Slippy Map Engine (`SlippyMapCanvas`)** that bypasses third-party Flutter mapping incompatibilities and unclickable canvas shapes:
 
 ```mermaid
-flowchart LR
-    MapEngine["Map Engine"]
-    MapEngine --> FletMap["flet_map (TileLayer + MarkerLayer + PolylineLayer)"]
-    MapEngine --> CanvasFallback["ft.canvas.Canvas Fallback (Web-Mercator Slippy Tiles)"]
-    
-    FletMap --> MapView["Full-Screen MapView (/map)"]
-    CanvasFallback --> MapView
-    
-    FletMap --> RouteMap["ItineraryRouteMap (180px Embedded Card)"]
-    CanvasFallback --> RouteMap
+flowchart TD
+    subgraph SlippyMapCanvas ["SlippyMapCanvas (Web-Mercator Slippy Map Stack)"]
+        TileLayer["Layer 1: OSM Tile Layer (256x256 ft.Image tiles)<br/>Positioned via latlon_to_world_px with pan gesture & zoom controls"]
+        VectorCanvas["Layer 2: ft.canvas.Canvas Vector Polyline Layer<br/>Outer White Casing (stroke 8) + Inner Blue Road Line (stroke 5)<br/>OSRM Driving Routes with Geodesic Spline Fallback"]
+        MarkerStack["Layer 3: Interactive Marker & Cluster Overlay (ft.Container)<br/>• Zoom < 14: Blue Numbered Clusters (.marker-cluster #0084ff)<br/>• Zoom >= 14: Category-colored teardrop pins with click sheet<br/>• Route Mode: Numbered stop badges (1..N) with stop title pills"]
+    end
 ```
 
 ### 1. Full-Screen Map Tab (`MapView` in `places_view.py`)
-* **Layer 1 (Base Map)**: OpenStreetMap raster tiles centered on Nueva Ecija `(15.58, 121.0)`, bounded between `[15.05, 120.55]` and `[16.25, 121.55]`.
-* **Layer 2 (Pins)**: Category-colored teardrop pins across 16 canonical categories or numbered route badges (`1..N`) in Follow-Route Mode.
-* **Layer 3 (Overlays)**:
+* **Layer 1 (Tile Base Map)**: OpenStreetMap raster tiles centered on Nueva Ecija `(15.58, 121.0)`, bounded between `[15.05, 120.55]` and `[16.25, 121.55]`. Smooth drag-to-pan using `ft.GestureDetector(on_pan_update)` and zoom `Z8..Z18`.
+* **Layer 2 (Spatial Clustering & Pins)**:
+  * At `zoom < 14`: Grid spatial clustering (58px cell size) groups POIs into Web-App-identical blue numbered cluster circles (`#0084ff` outer ring, `#0066cc` inner core). Clicking a cluster zooms into the cluster center by `+2` levels.
+  * At `zoom >= 14`: 16 category-colored teardrop pins with category icons. Clicking a pin opens `PlaceDetailSheet`.
+* **Layer 3 (Search, Filters & POI Drawer)**:
   * Top floating search bar with 300ms debounce and clear button.
   * `[Filters]` button opening the **Multi-Select Filter Modal** (Categories, 32 LGUs, Price Tiers).
   * 17 quick horizontal category pills.
-  * Right floating controls: Live OSM Overpass query button, Locate button, Province reset button, Zoom `+ / -`.
   * Bottom floating `List View (N)` pill opening the collapsible POI drawer.
-  * Slide-up **Interactive POI Bottom Sheet** on pin click.
-* **Follow-Route Mode**: Shows active day stops, draws road polyline, displays top route bar (`[← Back to Plan]`, Day pills, Nearby toggle), and bottom stop carousel.
+* **Follow-Route Mode**: Shows active day stops, draws road polyline via OSRM, displays top route bar (`[← Back to Plan]`, Day pills, Nearby toggle), and bottom stop carousel.
 
 ### 2. Embedded Day Route Map (`ItineraryRouteMap`)
-* **Dimensions**: `180px` collapsible card embedded directly inside active days of:
+* **Dimensions**: `280px` collapsible card embedded directly inside active days of:
   * `SuggestedWizardView` (View 2)
   * `CustomBuilderView` (Timeline pane)
-  * `TripDetailView` (View mode)
+  * `TripDetailView` (Day schedule view)
 * **Functionality**:
   * Fits bounds to active day stops.
-  * Decodes polyline or queries OSRM driving route (geodesic arc offline fallback).
-  * Plots numbered circular stop badges (`1, 2, 3...`).
-  * Features a `[Full Map]` button launching the Map tab in Follow-Route mode.
+  * Fetches road-following geometry from public OSRM API (`fetch_osrm_road_geometry`), falling back to smooth 24-point geodesic arcs when offline.
+  * Plots numbered circular stop badges (`1, 2, 3...`) with stop title pills.
+  * Features a `[🗺️ Full Map]` pill button launching the Map tab in Follow-Route mode (`/map?itineraryId=draft` for unsaved previews or `/map?itineraryId={id}`).
 
 ---
 

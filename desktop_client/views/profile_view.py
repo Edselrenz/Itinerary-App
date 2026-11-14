@@ -82,9 +82,10 @@ class ProfileView(ft.Container):
                 if user and user.username
                 else (user.email if user and user.email else "@traveler")
             )
+            avatar_src = (user.avatar_url if user and user.avatar_url else None) or avatar_path
             avatar_ctrl = ft.Container(
                 content=ft.Image(
-                    src=avatar_path,
+                    src=avatar_src,
                     width=68,
                     height=68,
                     fit=ft.BoxFit.COVER,
@@ -116,10 +117,20 @@ class ProfileView(ft.Container):
                 on_click=lambda _: self._open_edit_profile_dialog(),
             )
         else:
-            name_val = "Guest Explorer"
-            handle_val = "Browsing in Guest Mode (Offline)"
+            name_val = user.full_name if (user and user.first_name) else "Guest Explorer"
+            handle_val = f"@{user.username}" if (user and user.username) else "Browsing in Guest Mode (Offline)"
+            avatar_src = user.avatar_url if (user and user.avatar_url) else None
             avatar_ctrl = ft.Container(
-                content=ft.Icon(
+                content=ft.Image(
+                    src=avatar_src,
+                    width=68,
+                    height=68,
+                    fit=ft.BoxFit.COVER,
+                    border_radius=34,
+                    error_content=ft.Icon(
+                        ft.Icons.PERSON, size=34, color=ThemeColors.TEXT_MUTED_LIGHT
+                    ),
+                ) if avatar_src else ft.Icon(
                     ft.Icons.PERSON, size=34, color=ThemeColors.TEXT_MUTED_LIGHT
                 ),
                 width=68,
@@ -128,18 +139,36 @@ class ProfileView(ft.Container):
                 bgcolor=ThemeColors.SURFACE_DARK_HOVER,
                 alignment=ft.Alignment(0, 0),
             )
-            auth_action_btn = ft.Container(
-                content=ft.Text(
-                    "Log In / Sign Up",
-                    size=12,
-                    weight=ft.FontWeight.BOLD,
-                    color=ft.Colors.WHITE,
-                ),
-                bgcolor=ThemeColors.PRIMARY_BLUE,
-                border_radius=20,
-                padding=ft.Padding.symmetric(horizontal=18, vertical=7),
-                ink=True,
-                on_click=lambda _: self._navigate("/login"),
+            auth_action_btn = ft.Row(
+                controls=[
+                    ft.Container(
+                        content=ft.Text(
+                            "Edit Profile",
+                            size=12,
+                            weight=ft.FontWeight.BOLD,
+                            color=ThemeColors.PRIMARY_BLUE,
+                        ),
+                        border=ft.Border.all(1.5, ThemeColors.PRIMARY_BLUE),
+                        border_radius=20,
+                        padding=ft.Padding.symmetric(horizontal=14, vertical=6),
+                        ink=True,
+                        on_click=lambda _: self._open_edit_profile_dialog(),
+                    ),
+                    ft.Container(
+                        content=ft.Text(
+                            "Log In / Sign Up",
+                            size=12,
+                            weight=ft.FontWeight.BOLD,
+                            color=ft.Colors.WHITE,
+                        ),
+                        bgcolor=ThemeColors.PRIMARY_BLUE,
+                        border_radius=20,
+                        padding=ft.Padding.symmetric(horizontal=14, vertical=6),
+                        ink=True,
+                        on_click=lambda _: self._navigate("/login"),
+                    ),
+                ],
+                spacing=8,
             )
 
         identity_info = ft.Column(
@@ -902,69 +931,224 @@ class ProfileView(ft.Container):
 
     def _open_edit_profile_dialog(self) -> None:
         user = self.session_manager.current_user
+        current_avatar_url = [user.avatar_url if user and user.avatar_url else None]
+
+        # Photo Preview Avatar Control
+        def _get_avatar_content():
+            if current_avatar_url[0]:
+                return ft.Image(
+                    src=current_avatar_url[0],
+                    width=64,
+                    height=64,
+                    fit=ft.BoxFit.COVER,
+                    border_radius=32,
+                    error_content=ft.Icon(ft.Icons.PERSON, size=32, color=ThemeColors.PRIMARY_BLUE),
+                )
+            return ft.Icon(ft.Icons.PERSON, size=32, color=ThemeColors.TEXT_MUTED_LIGHT)
+
+        photo_preview = ft.Container(
+            content=_get_avatar_content(),
+            width=64,
+            height=64,
+            border_radius=32,
+            border=ft.Border.all(2, ThemeColors.PRIMARY_BLUE),
+            alignment=ft.Alignment(0, 0),
+        )
+
+        def _pick_photo(_):
+            try:
+                import tkinter as tk
+                from tkinter import filedialog
+                root = tk.Tk()
+                root.withdraw()
+                root.attributes("-topmost", True)
+                f_path = filedialog.askopenfilename(
+                    title="Select Profile Avatar",
+                    filetypes=[("Image files", "*.png;*.jpg;*.jpeg;*.webp")],
+                )
+                root.destroy()
+                if f_path:
+                    current_avatar_url[0] = f_path
+                    photo_preview.content = _get_avatar_content()
+                    dlg.update()
+            except Exception:
+                pass
+
+        def _remove_photo(_):
+            current_avatar_url[0] = None
+            photo_preview.content = _get_avatar_content()
+            dlg.update()
+
+        def _set_preset_avatar(preset_path: str):
+            current_avatar_url[0] = preset_path
+            photo_preview.content = _get_avatar_content()
+            dlg.update()
+
+        preset_row = ft.Row(
+            controls=[
+                ft.TextButton(
+                    "Hiker",
+                    on_click=lambda _: _set_preset_avatar("assets/guest_hiker_hero.png"),
+                    style=ft.ButtonStyle(padding=ft.Padding.symmetric(horizontal=8, vertical=2)),
+                ),
+                ft.TextButton(
+                    "Default",
+                    on_click=lambda _: _set_preset_avatar("assets/default_avatar_placeholder.png"),
+                    style=ft.ButtonStyle(padding=ft.Padding.symmetric(horizontal=8, vertical=2)),
+                ),
+            ],
+            spacing=4,
+        )
+
+        photo_section = ft.Row(
+            controls=[
+                photo_preview,
+                ft.Column(
+                    controls=[
+                        ft.Row(
+                            controls=[
+                                ft.FilledButton(
+                                    content="Change Photo",
+                                    style=ft.ButtonStyle(
+                                        bgcolor=ThemeColors.PRIMARY_BLUE,
+                                        color=ft.Colors.WHITE,
+                                        padding=ft.Padding.symmetric(horizontal=12, vertical=6),
+                                    ),
+                                    on_click=_pick_photo,
+                                ),
+                                ft.OutlinedButton(
+                                    content="Remove",
+                                    style=ft.ButtonStyle(
+                                        padding=ft.Padding.symmetric(horizontal=10, vertical=6),
+                                    ),
+                                    on_click=_remove_photo,
+                                ),
+                            ],
+                            spacing=8,
+                        ),
+                        ft.Row(
+                            controls=[
+                                ft.Text("Presets:", size=11, color=ThemeColors.TEXT_MUTED_LIGHT),
+                                preset_row,
+                            ],
+                            spacing=4,
+                            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                        ),
+                    ],
+                    spacing=4,
+                    expand=True,
+                ),
+            ],
+            spacing=16,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        )
+
         first_input = ft.TextField(
-            label="First Name",
-            value=user.first_name if user else "",
+            label="First Name *",
+            value=user.first_name if user and user.first_name else "",
             border_radius=10,
             dense=True,
             expand=True,
         )
         mi_input = ft.TextField(
             label="M.I.",
-            value="",
+            value=user.middle_initial if user and user.middle_initial else "",
             width=70,
             border_radius=10,
             dense=True,
+            max_length=2,
         )
         last_input = ft.TextField(
-            label="Last Name",
-            value=user.last_name if user else "",
+            label="Last Name *",
+            value=user.last_name if user and user.last_name else "",
             border_radius=10,
             dense=True,
         )
         username_input = ft.TextField(
             label="Username",
-            value=user.username if user else "",
+            value=user.username if user and user.username else "",
             prefix_icon=ft.Icons.ALTERNATE_EMAIL,
             border_radius=10,
             dense=True,
         )
+        is_guest_user = self.session_manager.is_guest or (user and user.is_guest)
         email_input = ft.TextField(
             label="Email Address",
-            value=user.email if user else "",
+            value=user.email if user and user.email else "",
             prefix_icon=ft.Icons.MAIL_OUTLINE,
             border_radius=10,
             dense=True,
-            read_only=True,
+            read_only=not is_guest_user,
         )
         phone_input = ft.TextField(
             label="Phone Number",
-            value=user.phone if user and user.phone else "",
+            value=user.phone_number if user and user.phone_number else "",
             prefix_icon=ft.Icons.PHONE,
+            hint_text="+63 9XX XXX XXXX",
             border_radius=10,
             dense=True,
         )
         birthday_input = ft.TextField(
             label="Birthday (YYYY-MM-DD)",
-            value="",
+            value=user.birthday if user and user.birthday else "",
             prefix_icon=ft.Icons.CAKE,
+            hint_text="1998-05-12",
+            border_radius=10,
+            dense=True,
+        )
+        gender_options = [
+            ft.dropdown.Option("Male"),
+            ft.dropdown.Option("Female"),
+            ft.dropdown.Option("Non-binary"),
+            ft.dropdown.Option("Prefer not to say"),
+        ]
+        gender_input = ft.Dropdown(
+            label="Gender",
+            options=gender_options,
+            value=user.gender if user and user.gender else None,
+            border_radius=10,
+            dense=True,
+        )
+        budget_input = ft.TextField(
+            label="Default Daily Budget (PHP)",
+            value=str(int(user.default_daily_budget)) if user and user.default_daily_budget else "3000",
+            prefix=ft.Text("₱ "),
             border_radius=10,
             dense=True,
         )
 
+        validation_text = ft.Text("", size=11, color=ThemeColors.ERROR)
+
         def _save(_):
             f_val = first_input.value.strip() if first_input.value else ""
             l_val = last_input.value.strip() if last_input.value else ""
+            mi_val = mi_input.value.strip() if mi_input.value else ""
             u_val = username_input.value.strip() if username_input.value else ""
+            e_val = email_input.value.strip() if email_input.value else ""
             p_val = phone_input.value.strip() if phone_input.value else ""
+            b_val = birthday_input.value.strip() if birthday_input.value else ""
+            g_val = gender_input.value if gender_input.value else ""
+            try:
+                bud_val = float(budget_input.value.replace(",", "").strip()) if budget_input.value else 3000.0
+            except ValueError:
+                bud_val = 3000.0
+
             if not f_val or not l_val:
+                validation_text.value = "First Name and Last Name are required."
+                dlg.update()
                 return
 
             payload = UserUpdatePayload(
                 first_name=f_val,
                 last_name=l_val,
+                middle_initial=mi_val,
                 username=u_val or None,
-                phone=p_val or None,
+                email=e_val or None,
+                phone_number=p_val or None,
+                birthday=b_val or None,
+                gender=g_val or None,
+                default_daily_budget=bud_val,
+                avatar_url=current_avatar_url[0],
             )
 
             async def _update():
@@ -973,8 +1157,23 @@ class ProfileView(ft.Container):
                     self._close_dialog(dlg)
                     self._build_content()
                     self._safe_update()
-                except Exception:
-                    pass
+                    p = self.safe_page
+                    if p:
+                        p.snack_bar = ft.SnackBar(
+                            content=ft.Row(
+                                controls=[
+                                    ft.Icon(ft.Icons.CHECK_CIRCLE, color=ft.Colors.WHITE, size=18),
+                                    ft.Text("Profile updated successfully!", color=ft.Colors.WHITE),
+                                ],
+                                spacing=8,
+                            ),
+                            bgcolor=ThemeColors.SUCCESS,
+                            open=True,
+                        )
+                        p.update()
+                except Exception as err:
+                    validation_text.value = f"Update failed: {str(err)}"
+                    dlg.update()
 
             if self.page:
                 self.page.run_task(_update)
@@ -995,16 +1194,22 @@ class ProfileView(ft.Container):
             ),
             content=ft.Column(
                 controls=[
+                    photo_section,
+                    ft.Divider(color=ThemeColors.BORDER_LIGHT),
                     ft.Row(controls=[first_input, mi_input], spacing=8),
                     last_input,
                     username_input,
                     email_input,
                     phone_input,
                     birthday_input,
+                    gender_input,
+                    budget_input,
+                    validation_text,
                 ],
                 spacing=8,
                 tight=True,
-                width=420,
+                width=460,
+                scroll=ft.ScrollMode.AUTO,
             ),
             actions=[
                 ft.TextButton("Cancel", on_click=lambda _: self._close_dialog(dlg)),

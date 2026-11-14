@@ -5,8 +5,8 @@ from typing import Callable, Optional
 import flet as ft
 
 from desktop_client.components.dialogs import show_place_detail_dialog
-from desktop_client.components.interactive_map import InteractiveProvinceMap
 from desktop_client.components.place_card import PlaceCard
+from desktop_client.components.slippy_map_canvas import RouteStopPin, SlippyMapCanvas
 from desktop_client.config.settings import (
     CANONICAL_CATEGORIES,
     NUEVA_ECIJA_LGUS,
@@ -386,16 +386,37 @@ class PlacesView(ft.Container):
     def recenter_map(self) -> None:
         """Recenter camera to province center."""
         if self.interactive_map:
-            self.interactive_map.recenter()
+            self.interactive_map.set_center_and_zoom(15.58, 121.00, 10)
 
     def _build_map_explorer(self) -> ft.Control:
         """Interactive Provincial GIS Map plotting Nueva Ecija destinations and OSM POIs."""
-        places_to_plot = self.paginated_data.items if self.paginated_data and self.paginated_data.items else self.all_places_cache
+        from desktop_client.core.offline_data import get_all_offline_places
 
-        self.interactive_map = InteractiveProvinceMap(
+        all_raw = get_all_offline_places()
+        places_to_plot: list[Place] = []
+        for raw in all_raw:
+            try:
+                places_to_plot.append(Place.from_dict(raw))
+            except Exception:
+                continue
+
+        if self.selected_category != "all":
+            places_to_plot = [p for p in places_to_plot if p.category == self.selected_category]
+        if self.selected_municipality != "all":
+            places_to_plot = [p for p in places_to_plot if p.municipality_name == self.selected_municipality or p.municipality_id == self.selected_municipality]
+        if self.search_query:
+            sq = self.search_query.lower().strip()
+            places_to_plot = [p for p in places_to_plot if sq in p.name.lower() or sq in (p.municipality_name or "").lower()]
+
+        self.interactive_map = SlippyMapCanvas(
+            width=920,
+            height=520,
+            center_lat=15.58,
+            center_lng=121.00,
+            zoom=10,
             places=places_to_plot,
-            selected_place=self.selected_map_place,
-            on_marker_click=lambda p: self._select_map_place(p),
+            on_place_click=lambda p: self._select_map_place(p),
+            border_radius=16,
         )
 
         map_canvas = ft.Container(
@@ -411,13 +432,13 @@ class PlacesView(ft.Container):
                 ft.Row(
                     controls=[
                         ft.Icon(ft.Icons.MAP, size=18, color=ThemeColors.PRIMARY_BLUE),
-                        ft.Text(f"Nueva Ecija GIS Map Explorer ({len(places_to_plot)} Plotted Destinations)", size=13, weight=ft.FontWeight.BOLD),
+                        ft.Text(f"Nueva Ecija GIS Map Explorer ({len(places_to_plot)} Places Plotted)", size=13, weight=ft.FontWeight.BOLD),
                     ],
                     spacing=6,
                 ),
                 ft.Container(
                     content=ft.Text(
-                        "Click any pin to inspect details",
+                        "Click any cluster to zoom in • Click pin to inspect",
                         size=11,
                         color=ThemeColors.TEXT_MUTED_LIGHT,
                     ),
@@ -489,6 +510,13 @@ class PlacesView(ft.Container):
 
     def _select_map_place(self, place: Place) -> None:
         self.selected_map_place = place
+        p = self.safe_page
+        if p:
+            show_place_detail_dialog(
+                p,
+                place,
+                on_add_to_trip=lambda pl: self.on_navigate("/builder", pre_added_place=pl) if self.on_navigate else None,
+            )
         self._build_content()
         self._safe_update()
 

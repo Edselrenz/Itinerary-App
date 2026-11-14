@@ -1353,6 +1353,45 @@ px cap sync android): **Exit code 0 (6 plugins synchronized)**.
   - [x] Add Server Connection Status & Custom API URL tester in `views/profile_view.py:Settings`.
   - [x] Expand `desktop_client/tests/` to verify all 5 phases and run PyInstaller standalone compilation.
 
+---
+
+## Phase 50: Desktop Client QA v3 Remediation & Pure-Flet Slippy Map Architecture (COMPLETED)
+- [x] **50.1 (Step 1: Fix `OfflineHostBanner` & Root Layout)**:
+  - [x] Replace `desktop_client/components/offline_banner.py` with bounded `OfflineHostBanner` (`expand=False`, fixed `height=52` when visible, `height=0` when hidden/dismissed, inner `width=620, height=42` dark pill card `#0f172a`).
+  - [x] In `desktop_client/main.py`, mount `OfflineHostBanner` as the first child of root `ft.Column(spacing=0, expand=True)` directly above `content_area` (never as an unpositioned child inside `ft.Stack(expand=True)`).
+  - [x] Wire `[✕]` dismiss button to set `visible=False`, `height=0`, and call `page.update()`.
+- [x] **50.2 (Step 2: Domain Model & Edit Profile FastAPI Contract Alignment)**:
+  - [x] Rewrite `desktop_client/models/user.py` so `User.from_dict()` parses `first_name`, `last_name`, `username_normalized`, and `email_normalized` from FastAPI `UserOut`, computing `full_name` dynamically.
+  - [x] Implement `UserUpdatePayload` with `to_backend_dict()` (strictly `first_name`, `last_name`, `username`, passwords for `PATCH /api/v1/auth/me`) and `to_extra_dict()` (`middle_initial`, `birthday`, `gender`, `phone_number`, `avatar_url`, `preferences`, `default_daily_budget`).
+  - [x] Update `AuthService.update_profile()` in `desktop_client/services/auth_service.py` to persist `profile_extra.json` locally and support Guest Mode and Offline Mode gracefully.
+  - [x] Update `ProfileView._open_edit_profile_modal()` in `desktop_client/views/profile_view.py` with full fields, `tkinter.filedialog.askopenfilename` native photo picker, and avatar presets.
+- [x] **50.3 (Step 3: Load All 2,673 OSM Places & Pure-Flet Slippy Map Engine)**:
+  - [x] Update `desktop_client/services/place_service.py` with robust `_find_osm_places_json()` resolving `Project/src/assets/data/osm_places.json` from any directory.
+  - [x] Create `desktop_client/components/slippy_map_canvas.py` implementing 100% pure-Flet Web-Mercator map:
+    - [x] Layer 1: 256×256 OSM tiles via `latlon_to_world_px(lat, lon, zoom)` math with pan gestures (`ft.GestureDetector`) and zoom buttons (`Z8..Z18`).
+    - [x] Layer 2: `ft.canvas.Canvas` drawing OSRM road geometry (`https://router.project-osrm.org/route/v1/driving/...`) with `#0284c7` inner line (stroke 5) and white casing (stroke 8), with geodesic arc fallback.
+    - [x] Layer 3: Positioned `ft.Container` controls: spatial marker clustering at `zoom < 14` (`.marker-cluster` blue numbered circles `#0084ff`), category pins at `zoom >= 14`, and numbered route stop badges (`1..N`) with stop title pills.
+  - [x] Update `desktop_client/components/itinerary_route_map.py` and `desktop_client/views/places_view.py` to embed `SlippyMapCanvas` with draft itinerary handoff (`itineraryId="draft"`).
+- [x] **50.4 (Step 4: Upgrade `SuggestedWizardView` to Exact 3-View Web Workflow)**:
+  - [x] Implement 3-view state machine (`form` → `itinerary` → `nearby`) matching `suggested-wizard.page.html/.ts`.
+  - [x] View 1 (`form`): `DestinationAutocomplete` (32 towns modal + quick chips), Travel Dates modal with duration presets, daily budget presets, preferences pills, travel mode, ratings, `[Find Itinerary]`.
+  - [x] View 2 (`itinerary`): Draft itinerary handoff (`itinerary_service.set_active_draft_itinerary(plan)`), trip summary card, verified place costs card, collapsible Travel Notes & Planning Assumptions accordion, day capsule bar, embedded `ItineraryRouteMap` (with `[Full Map]` launcher to `/map?itineraryId=draft`), stop cards with inter-stop leg commute badges, `"Nearby Places in [Municipality]"` banner button, `[✓ Accept & Save Itinerary]`, and `[✏️ Customize in Builder]`.
+  - [x] View 3 (`nearby`): Segmented capsule bar (`Restaurants` | `Hospital & Pharmacies` | `Stores`) with `[+ Add to Day X]` and `[Maps]`.
+- [x] **50.5 (Step 5: Upgrade `CustomBuilderView` to Exact 3-View Web Workflow)**:
+  - [x] Implement 3-view state machine (`form` → `browse` → `timeline`) matching `custom-builder.page.html/.ts`.
+  - [x] View 0 (`form`): Trip title, destination, dates, budget presets, preferences. `[Start Building Itinerary →]` -> `sync_days_with_date_range()` -> switches to `browse`. (If editing existing trip or draft from wizard, starts in `timeline`).
+  - [x] View 1 (`browse`): Top segmented switcher (`[+ Add Places]` active | `[📅 Your Itinerary (N)]`), target day selector (`Scheduling for: Day 1 (0) | Day 2 (0) | [+]`), search & category pills, place card grid with stateful `[+ Add]` / `[✓ Added]` buttons (with auto-calculated time and travel buffer), sticky footer `[View my Itinerary (N places) →]`.
+  - [x] View 2 (`timeline`): Top segmented switcher (`[+ Add Places]` | `[📅 Your Itinerary (N)]` active) + `[✓ Save]` button, editable Trip Settings card (dates, title, budget), verified place costs card, day capsule switcher + `[+ Add Day]`, active day header with `[🕒 Auto-Schedule]` and `[🗑 Delete Day]`, embedded `ItineraryRouteMap` (with OSRM route & `[Full Map]` button), ordered stop cards with inter-stop leg commute badges, `[↑]`, `[↓]`, `[✏️ Edit]` (with `Move to Day` dropdown), `[🗑 Remove]`, `[+ Browse & Add Places to Day X]`, `[+ Add Off-Grid Custom Venue]` (geofenced), and sticky footer `[💾 Save Custom Itinerary]`.
+- [x] **50.6 (Step 6: Automated Verification & Standalone Packaging)**:
+  - [x] Author and run dedicated test cases in `desktop_client/tests/`:
+    - [x] `test_offline_banner_bounds`: Verifies `expand is False`, `height == 52` when visible, `height == 0` when hidden/dismissed.
+    - [x] `test_user_model_and_edit_profile`: Verifies `User.from_dict()`, `UserUpdatePayload`, and `AuthService.update_profile()` in Authenticated, Offline, and Guest modes.
+    - [x] `test_slippy_map_places_and_routing`: Verifies 2,673 POIs loading, marker clustering at `zoom < 14`, category pins at `zoom >= 14`, and OSRM/geodesic polyline projection with stop badges.
+    - [x] `test_suggested_and_custom_itinerary_parity`: Verifies 3-view workflows for both Suggested Wizard and Custom Builder.
+  - [x] Run complete test suites (`pytest` desktop [47 passed, 1 deselected] + `vitest` web [348 passed]).
+  - [x] Recompile PyInstaller standalone distribution binary `dist/NuevaEcijaTravel/NuevaEcijaTravel.exe`.
+
+
 
 
 

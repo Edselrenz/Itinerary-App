@@ -1,3 +1,31 @@
+# Changelog
+
+All notable changes to the Nueva Ecija Travel Itinerary project are documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.50.0] - 2026-11-14
+### Fixed
+- **Desktop Client QA v3 Remediation & Pure-Flet Slippy Map Architecture (Phase 50)**:
+  - **Bounded `OfflineHostBanner` (`FAIL-01`)**:
+    - Relocated banner to root `ft.Column(spacing=0, expand=True)` directly above `content_area` with `expand=False`, fixed `height=52` (or `0` when hidden), and inner floating card (`width=620, height=42, border_radius=12, bgcolor="#0f172a"`), eliminating the Flutter `StackFit.expand` whole-window stretch bug.
+  - **100% Pure-Flet Slippy Map Engine (`SlippyMapCanvas`) (`FAIL-02`)**:
+    - 3-plane Web-Mercator map architecture: Layer 1 OSM tiles (256×256) with pan/zoom gestures; Layer 2 `ft.canvas.Canvas` OSRM road polyline (`#0284c7`, stroke 5) with white casing (stroke 8) and geodesic fallback; Layer 3 interactive `ft.Container` controls for blue marker clusters (`#0084ff` at `zoom < 14`), category teardrop pins (`zoom >= 14`), and numbered stop badges (`1..N`).
+    - Fixed deduplication logic in `offline_data.py` to preserve all 2,672 OSM POIs.
+  - **User Domain Model & Edit Profile FastAPI Contract Alignment (`FAIL-03`)**:
+    - Updated `User.from_dict()` to read `first_name`, `last_name`, `username_normalized`, `email_normalized` from FastAPI `UserOut`, computing `full_name` dynamically.
+    - Implemented `UserUpdatePayload.to_backend_dict()` emitting strictly accepted backend fields, and persisted extended profile metadata (`middle_initial`, `birthday`, `gender`, `phone_number`, `avatar_url`) in `profile_extra.json`.
+    - Provided working native image file picker (`tkinter.filedialog.askopenfilename`) and avatar presets in Edit Profile modal, and enabled profile editing for guest users.
+  - **Suggested Wizard & Custom Builder 3-View State Machines (`FAIL-04`)**:
+    - Suggested Wizard: 3-view state machine (`form` → `itinerary` → `nearby`) with pre-save preview, active draft handoff to Map (`itineraryId="draft"`), collapsible Planning Assumptions, embedded route map, leg commute badges, and `[Customize in Builder]` handoff.
+    - Custom Builder: 3-view state machine (`form` → `browse` → `timeline`) with top segmented switcher, target day selector, stateful `+ Add` / `✓ Added` place cards with driving buffer times, editable Trip Settings header, `[Auto-Schedule]`, `Move to Day` in Edit Stop, and geofenced off-grid venue modal.
+### Verified
+- **Automated Verification & Packaging**:
+  - Desktop client pytest suite: 47 passed, 1 deselected, 0 failed [100%].
+  - Canonical web Vitest suite: 32 test files, 348 tests passed [100% green] with zero edits in `Project/`.
+  - PyInstaller standalone Windows distribution executable compiled and bundled in `dist/NuevaEcijaTravel/`.
+
 ## [0.49.0] - 2026-11-14
 ### Added
 - **Desktop Client Deep Parity Realization & Web-Architecture Alignment (Phases 49.1 – 49.5)**:

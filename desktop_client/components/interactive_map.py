@@ -155,7 +155,7 @@ class InteractiveProvinceMap(ft.Container):
 
     def _run_map_action(self, coro_func, *args, **kwargs) -> None:
         """Executes map coroutines safely inside or outside an active event loop."""
-        if not coro_func:
+        if not coro_func or not self.safe_page:
             return
 
         async def _execute():
@@ -164,18 +164,7 @@ class InteractiveProvinceMap(ft.Container):
             except Exception:
                 pass
 
-        p = self.safe_page
-        if p:
-            p.run_task(_execute)
-        else:
-            try:
-                loop = asyncio.get_running_loop()
-                loop.create_task(_execute())
-            except RuntimeError:
-                try:
-                    asyncio.run(_execute())
-                except Exception:
-                    pass
+        self.safe_page.run_task(_execute)
 
     def select_place(self, place: Optional[Place], center_on: bool = True) -> None:
         """Highlights a selected destination and centers the map."""

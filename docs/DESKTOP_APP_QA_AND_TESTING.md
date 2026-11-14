@@ -67,6 +67,17 @@ The evaluation spans three defect groups: the deep architectural discrepancies (
 
 ---
 
+### 2.3 QA Audit v3 Defect Ledger (Hands-On User-Reported Regressions)
+
+| Failure # | User-Reported Issue | Root Cause in Flet 1.1.2 & Backend API Contract | Concrete Architectural Fix |
+| :---: | :--- | :--- | :--- |
+| **`FAIL-01`** | **"Offline notice spans the whole application"** | `OfflineHostBanner` inside root `ft.Stack(expand=True)` triggers Flutter's `StackFit.expand`, stretching `#0f172a` container across 1280×840 window. | Mount `OfflineHostBanner` inside root `ft.Column(spacing=0, expand=True)` directly above `content_area` with `expand=False`, fixed `height=52` (or `0` when hidden), and working `[X]` dismiss button. |
+| **`FAIL-02`** | **"Map does not display places or routing like website"** | `flet_map` instability, non-clickable canvas circles, relative path failure for `osm_places.json` (2,673 POIs), and missing Web-Mercator tile + canvas + marker overlay. | Implement `SlippyMapCanvas` with 256×256 OSM tiles, pan gestures, zoom controls, blue marker clusters (`#0084ff` at `zoom < 14`), category pins (`zoom >= 14`), and OSRM road polyline layer with numbered badges (`1..N`). |
+| **`FAIL-03`** | **"Edit profile does not really work properly"** | FastAPI `UserOut` returns `first_name`, `last_name`, `username_normalized`, `email_normalized` (never `full_name`). `UserUpdateIn` ignores `full_name`. Extended fields not saved locally. | Update `User.from_dict()` and `UserUpdatePayload.to_backend_dict()`. Save extended fields in `LocalStorage` (`profile_extra.json`). Provide working native file picker for avatar photos. |
+| **`FAIL-04`** | **"Custom and suggested itinerary do not work the same as web"** | Static layouts instead of Web App's 3-view state machines: Suggested Wizard (`form` → `itinerary` → `nearby`) and Custom Builder (`form` → `browse` → `timeline`). Missing draft itinerary handoff to Map. | Rebuild `SuggestedWizardView` and `CustomBuilderView` to mirror the Web App's exact 3-view state machines, segmented switchers, embedded route maps, and inter-stop leg commute calculators. |
+
+---
+
 ## 3. Test Suites & Execution Instructions
 
 ### 3.1 Running Desktop Unit & Parity Tests
