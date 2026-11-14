@@ -13,6 +13,7 @@ from desktop_client.components.dialogs import (
     show_export_dialog,
     show_place_detail_dialog,
 )
+from desktop_client.components.itinerary_route_map import ItineraryRouteMap
 from desktop_client.components.stop_card import StopCard
 from desktop_client.config.settings import CANONICAL_CATEGORIES, ThemeColors
 from desktop_client.models.itinerary import (
@@ -564,6 +565,14 @@ class CustomBuilderView(ft.Container):
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
         )
 
+        active_day = self.days[self.active_day_index] if self.days else None
+        route_map = ItineraryRouteMap(
+            day=active_day,
+            on_view_full_map=lambda: self.on_navigate("/map") if self.on_navigate else None,
+            initial_expanded=(len(active_day.items) >= 2 if active_day else False),
+            height_expanded=180,
+        )
+
         return ft.Container(
             content=ft.Column(
                 controls=[
@@ -574,6 +583,7 @@ class CustomBuilderView(ft.Container):
                     active_day_bar,
                     ft.Divider(height=1, color=ThemeColors.BORDER_LIGHT),
                     feedback_row,
+                    route_map,
                     timeline_listview,
                     ft.Divider(height=1, color=ThemeColors.BORDER_LIGHT),
                     actions_bar,

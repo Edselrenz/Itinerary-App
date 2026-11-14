@@ -4517,6 +4517,66 @@ NEXT STEPS:
   - Canonical Web Client Vitest Tests: **348/348 passed (100%)** across 32 test files in 75.73s with **zero regressions and zero edits in `Project/`**.
   - Standalone Binary: Built and verified in `dist/NuevaEcijaTravel/NuevaEcijaTravel.exe` with `Run_NuevaEcijaTravel_EXE.bat`.
 
+---
+
+## Session 114: Deep Desktop vs. Web App Re-Evaluation, QA Audit Ingestion & Pre-Development Documentation Synchronization
+- **Date & Time**: 2026-11-14 09:50:00 (Local)
+- **Objective**:
+  - Ingest `desktop_web_parity_qa_and_implementation_plan.md` (v2 Deep Desktop vs. Web App Re-Evaluation, QA Audit & Antigravity Implementation Plan).
+  - Document all architectural corrections, comparison matrices, and phased tasks across the canonical `/docs` monorepo repository before starting Phase 49 implementation, in strict accordance with `/coding-and-system-development`.
+- **Pre-Development Documentation Performed**:
+  1. `docs/DESKTOP_APP_PARITY_AND_IMPLEMENTATION_PLAN.md`: Synchronized to v2 plan, incorporating the 6 core corrections (Bottom Tab Bar layout, true GIS mapping, global floating offline banner, 3-tier offline fallback, clean authentication, and runtime fixes), 14-defect ledger (`QA-01` to `QA-14`), and 5-phase engineering roadmap.
+  2. `docs/DESKTOP_APP_OVERVIEW.md`: Updated feature mapping table, technology stack (including `flet-map >= 0.1.0`), and key architectural differentiators.
+  3. `docs/DESKTOP_APP_ARCHITECTURE.md`: Documented the new layout shell (`BottomTabBar` on `/home`, `/map`, `/saved`, `/profile` and contextual `.figma-header-bar` on workflow routes), the dual-mode interactive GIS engine (`InteractiveProvinceMap` + `ItineraryRouteMap`), `ConnectivityService` with `OfflineHostBanner`, and 3-tier offline data flow.
+  4. `docs/DESKTOP_APP_QA_AND_TESTING.md`: Added Section 2.1 Deep QA Defect Ledger (`QA-01` to `QA-14`) and updated test inventory (43 passing desktop tests, 348 passing web tests).
+  5. `docs/TODO.md`: Added Phase 49 (`49.1` to `49.5`) with granular, checkable items.
+  6. `docs/PROJECT_STATE.md`: Advanced development phase to Phase 49 (Desktop Client Deep Parity Realization & Web-Architecture Alignment).
+- **Core Engineering Principles Enforced**:
+  - Zero edits to `Project/` (canonical web app preserved).
+  - Remove all redundant demo persona (`Pattranite`) buttons and non-functional social buttons (`Google`/`Apple`).
+  - Wire true GIS mapping via `flet-map` with vector canvas fallback.
+  - Implement 3-tier offline resilience so the app never displays empty views or errors when the server is offline.
+- **Next Milestone**:
+  - Execute Phase 49.1: Core Services, 3-Tier Offline Fallback, Connectivity Service & Polyline Utilities.
+
+---
+
+## Session 115: Full Desktop Client Deep Parity Realization (Phases 49.1 – 49.5 Completed)
+- **Date & Time**: 2026-11-14 10:45:00 (Local)
+- **Objective**: Implement full visual, ergonomic, and functional parity for the Python Flet desktop client matching the canonical Ionic Angular web application, following `desktop_web_parity_qa_and_implementation_plan.md` (v2 Deep Re-Evaluation & Implementation Plan) and governing skills (`/coding-and-system-development`).
+- **Tasks Performed**:
+  1. **Phase 49.1: Core Services & 3-Tier Offline Fallback**:
+     - Added `flet-map>=0.1.0` to `desktop_client/requirements.txt` and installed `flet-map-1.1.2`.
+     - Implemented `desktop_client/core/polyline.py`: Google Encoded Polyline encoder/decoder, Haversine distance, geodesic Bezier spline arcs for smooth route preview curves, and multi-stop Google Maps URL builder.
+     - Implemented `desktop_client/core/connectivity_service.py`: Singleton `ConnectivityService` managing online/offline states, threshold checking (2 errors), custom API URL validation/storage, `[Retry]` hooks, and async `/health` polling.
+     - Implemented `desktop_client/core/offline_data.py`: Consolidated 2,673 OSM places + 12 curated places with full photos and pricing, and implemented `get_filtered_local_places()`.
+     - Updated `desktop_client/services/place_service.py` and `desktop_client/services/itinerary_service.py` to seamlessly fall back to local offline places, 32 LGUs metadata, and deterministic corridor clustering engine `generate_offline_suggested_itinerary()`.
+  2. **Phase 49.2: Bottom Tab Bar Shell, Splash Screen & Clean Auth**:
+     - Implemented `desktop_client/components/bottom_tab_bar.py`: Canonical 4-tab bottom navigation bar (`.custom-tab-bar`, 60px) (`Home`, `Map`, `Saved`, `Profile`) with Azure active indicator and route synchronization.
+     - Implemented `desktop_client/components/offline_banner.py`: Floating `.offline-host-banner` at top of root Stack with amber cloud-off icon, `[Retry]` health check button with spinner/toast, and `[X]` temporary dismiss.
+     - Implemented `desktop_client/components/splash_overlay.py`: Cold-start splash screen overlay (`loading_screen.jpg`) with 2.8s auto-dismiss timer and tap-to-dismiss gesture.
+     - Implemented `desktop_client/components/workflow_header.py`: Contextual header bar (`.figma-header-bar`, 54px) for workflow routes (`/suggested`, `/builder`) with back navigation and title.
+     - Refactored `desktop_client/main.py`: Replaced 250px left sidebar and 64px top header with root `ft.Stack` containing content area + `BottomTabBar` (visible only on `/home`, `/map`, `/saved`, `/profile`), floating `OfflineHostBanner`, and `SplashOverlay`. Preserved `pendingChangesGuard`.
+     - Clean Auth: Completely removed redundant Demo Account (`Pattranite Persona`) and dead social buttons (`Google`, `Apple`) from `login_view.py` and `profile_view.py`.
+  3. **Phase 49.3: Interactive GIS Map Tab & Embedded Day Route Map**:
+     - Implemented `desktop_client/components/interactive_map.py` (`InteractiveProvinceMap`): Dual-engine mapping with primary `flet-map` OSM raster tiles and vector `ft.canvas.Canvas` fallback. Plots 16 category-colored destination pins, numbered route stop badges (`1..N`), and polyline routes. Camera controls for Zoom `+ / -`, Recenter Province, Locate Hub (Cabanatuan), and engine switcher.
+     - Implemented `desktop_client/components/itinerary_route_map.py` (`ItineraryRouteMap`): Collapsible `180px` card with numbered stop pins, route polylines, commute metrics badge, and `[Full Map]` navigation button.
+     - Rebuilt `desktop_client/views/places_view.py` as default `MapView` (`/map`) embedding `InteractiveProvinceMap`.
+  4. **Phase 49.4: Suggested Wizard & Custom Builder Embedded Maps**:
+     - Embedded `ItineraryRouteMap` in `desktop_client/views/suggested_wizard_view.py` (View 2: Result view) and connected offline clustering engine fallback.
+     - Embedded `ItineraryRouteMap` in `desktop_client/views/custom_builder_view.py` (Timeline pane) above stop cards with full expand/collapse support.
+  5. **Phase 49.5: Trip Detail, Profile Settings & PyInstaller Packaging**:
+     - Embedded `ItineraryRouteMap` in `desktop_client/views/trip_detail_view.py` replacing static banner.
+     - Added Backend Connection Status & Custom API URL Tester in `desktop_client/views/profile_view.py:Settings` with live health probing, URL saving, and reset to default.
+     - Updated `NuevaEcijaTravel.spec` to bundle `flet_map`, all new components, and core modules.
+     - Expanded automated test suite in `desktop_client/tests/test_parity_services_and_components.py` and verified 47/47 tests passing (100%).
+- **Verification Results**:
+  - `python -m pytest desktop_client/tests/ -v -k "not test_live_backend_integration"`: **47 passed, 1 deselected, 0 failed in 1.05s**.
+  - All 348 web unit tests in `Project/` remain 100% green with zero modifications.
+- **Next Steps**:
+  - Present comprehensive parity verification report to user.
+
+
 
 
 

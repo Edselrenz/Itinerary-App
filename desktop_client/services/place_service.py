@@ -19,19 +19,32 @@ class PlaceService:
         self._categories_cache: Optional[list[str]] = None
 
     async def get_municipalities(self, force_refresh: bool = False) -> list[Municipality]:
-        """Fetches all 32 Nueva Ecija municipalities and cities."""
+        """Fetches all 32 Nueva Ecija municipalities and cities with offline fallback."""
         if self._municipalities_cache is not None and not force_refresh:
             return self._municipalities_cache
 
         try:
             data = await self.api_client.get("municipalities")
-            if isinstance(data, list):
+            if isinstance(data, list) and data:
                 self._municipalities_cache = [Municipality.from_dict(m) for m in data]
                 return self._municipalities_cache
         except Exception as err:
-            logger.warning(f"Could not load municipalities from backend: {err}")
+            logger.info(f"Could not load municipalities from backend, using offline dataset: {err}")
 
-        return self._municipalities_cache or []
+        from desktop_client.core.offline_data import ALL_32_LGUS_METADATA
+        fallback: list[Municipality] = []
+        for name, meta in ALL_32_LGUS_METADATA.items():
+            fallback.append(
+                Municipality(
+                    id=f"muni-{name.lower().replace(' ', '-')}",
+                    name=name,
+                    district=meta.get("district", "Central"),
+                    is_city=meta.get("is_city", False),
+                    poi_count=meta.get("poi_count", 0),
+                )
+            )
+        self._municipalities_cache = fallback
+        return self._municipalities_cache
 
     async def get_categories(self, force_refresh: bool = False) -> list[str]:
         """Returns the 16 canonical categories conforming to the Nueva Ecija schema."""
@@ -49,7 +62,7 @@ class PlaceService:
         is_featured: Optional[bool] = None,
         sort: Optional[str] = None,
     ) -> PaginatedPlaces:
-        """Queries places with multi-criteria filtering mapped to backend parameters."""
+        """Queries places with multi-criteria filtering mapped to backend parameters, falling back offline."""
         limit = max(1, page_size)
         offset = max(0, (page - 1) * limit)
         params: dict[str, Any] = {
@@ -67,8 +80,29 @@ class PlaceService:
         if sort:
             params["sort"] = sort
 
-        data = await self.api_client.get("places", params=params)
-        return PaginatedPlaces.from_dict(data)
+        try:
+            data = await self.api_client.get("places", params=params)
+            return PaginatedPlaces.from_dict(data)
+        except Exception as err:
+            logger.info(f"Using offline place catalog fallback: {err}")
+            from desktop_client.core.offline_data import get_filtered_local_places
+            items, total = get_filtered_local_places(
+                q=search,
+                category=category,
+                municipality_id=municipality_id,
+                is_featured=is_featured,
+                sort=sort,
+                limit=limit,
+                offset=offset,
+            )
+            place_objs = [Place.from_dict(it) for it in items]
+            return PaginatedPlaces(
+                items=place_objs,
+                total=total,
+                page=page,
+                page_size=page_size,
+                pages=max(1, (total + limit - 1) // limit),
+            )
 
     async def get_featured_places(self, limit: int = 6) -> list[Place]:
         """Retrieves top curated destinations for the dashboard."""
@@ -76,19 +110,25 @@ class PlaceService:
             paginated = await self.get_places(page=1, page_size=limit, is_featured=True)
             if paginated.items:
                 return paginated.items
-            # Fallback to general places if no featured flags
             fallback = await self.get_places(page=1, page_size=limit)
             return fallback.items
         except Exception:
             return []
 
     async def get_place_by_id(self, place_id: str) -> Optional[Place]:
-        """Fetches full place details including editorial summary and GIS data."""
+        """Fetches full place details including editorial summary and GIS data with offline lookup."""
         try:
             data = await self.api_client.get(f"places/{place_id}")
-            return Place.from_dict(data)
+            if data:
+                return Place.from_dict(data)
         except Exception:
-            return None
+            pass
+
+        from desktop_client.core.offline_data import get_all_offline_places
+        for p in get_all_offline_places():
+            if str(p.get("id")) == str(place_id):
+                return Place.from_dict(p)
+        return None
 
 
 _place_service_instance: Optional[PlaceService] = None

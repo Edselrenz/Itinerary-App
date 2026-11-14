@@ -5,6 +5,7 @@ from typing import Callable, Optional
 import flet as ft
 
 from desktop_client.components.dialogs import show_place_detail_dialog
+from desktop_client.components.interactive_map import InteractiveProvinceMap
 from desktop_client.components.place_card import PlaceCard
 from desktop_client.config.settings import (
     CANONICAL_CATEGORIES,
@@ -43,7 +44,8 @@ class PlacesView(ft.Container):
         self.selected_price_tier = "all"  # all, free, budget, mid, luxury
         self.search_query = ""
         self.sort_by = ""
-        self.view_mode = "grid"  # 'grid' or 'map'
+        self.view_mode = "map"  # Default to GIS Map mode matching /map tab
+        self.interactive_map: Optional[InteractiveProvinceMap] = None
 
         # Map Explorer State
         self.map_zoom = 1.0
@@ -381,131 +383,27 @@ class PlacesView(ft.Container):
             spacing=0,
         )
 
+    def recenter_map(self) -> None:
+        """Recenter camera to province center."""
+        if self.interactive_map:
+            self.interactive_map.recenter()
+
     def _build_map_explorer(self) -> ft.Control:
-        """Interactive Provincial Coordinate Map Canvas plotting Nueva Ecija POIs."""
+        """Interactive Provincial GIS Map plotting Nueva Ecija destinations and OSM POIs."""
         places_to_plot = self.paginated_data.items if self.paginated_data and self.paginated_data.items else self.all_places_cache
 
-        # Provincial bounding coordinates for Nueva Ecija
-        min_lat, max_lat = 15.15, 16.15
-        min_lng, max_lng = 120.70, 121.40
-        canvas_width = 850 * self.map_zoom
-        canvas_height = 550 * self.map_zoom
-
-        pin_controls: list[ft.Control] = []
-
-        # Background grid / regional landmark markers
-        pin_controls.append(
-            ft.Container(
-                content=ft.Column(
-                    controls=[
-                        ft.Row(
-                            controls=[
-                                ft.Icon(ft.Icons.LANDSCAPE, size=18, color=ThemeColors.TEXT_MUTED_LIGHT),
-                                ft.Text("CARABALLO / SIERRA MADRE MOUNTAIN RIDGE (NORTH-EAST)", size=10, weight=ft.FontWeight.BOLD, color=ThemeColors.TEXT_MUTED_LIGHT),
-                            ],
-                            spacing=6,
-                        ),
-                        ft.Container(expand=True),
-                        ft.Row(
-                            controls=[
-                                ft.Icon(ft.Icons.WATER, size=18, color=ThemeColors.PRIMARY_BLUE),
-                                ft.Text("RIO CHICO & PAMPANGA RIVER VALLEY (CENTRAL-SOUTH)", size=10, weight=ft.FontWeight.BOLD, color=ThemeColors.PRIMARY_BLUE),
-                            ],
-                            spacing=6,
-                        ),
-                    ],
-                    expand=True,
-                ),
-                padding=20,
-                width=canvas_width,
-                height=canvas_height,
-            )
+        self.interactive_map = InteractiveProvinceMap(
+            places=places_to_plot,
+            selected_place=self.selected_map_place,
+            on_marker_click=lambda p: self._select_map_place(p),
         )
 
-        for p in places_to_plot:
-            lat = p.latitude or 15.5
-            lng = p.longitude or 121.0
-            norm_x = (lng - min_lng) / (max_lng - min_lng)
-            norm_y = 1.0 - ((lat - min_lat) / (max_lat - min_lat))
-
-            x_pos = max(20.0, min(canvas_width - 80.0, norm_x * canvas_width))
-            y_pos = max(20.0, min(canvas_height - 60.0, norm_y * canvas_height))
-
-            # Color code pin by category
-            if p.category in ("nature_park", "farm_agritourism"):
-                pin_col = ThemeColors.EMERALD_PRIMARY
-            elif p.category in ("church_religious", "historical_landmark", "museum_cultural"):
-                pin_col = ThemeColors.PRIMARY_BLUE
-            elif p.category in ("resort_swimming", "sports_recreation"):
-                pin_col = "#0d9488"
-            elif p.category in ("cafe", "restaurant"):
-                pin_col = ThemeColors.WARM_GOLD
-            else:
-                pin_col = ThemeColors.AZURE_DEEP
-
-            is_selected = self.selected_map_place and self.selected_map_place.id == p.id
-
-            pin_btn = ft.Container(
-                content=ft.Column(
-                    controls=[
-                        ft.Container(
-                            content=ft.Icon(
-                                ft.Icons.LOCATION_ON,
-                                size=24 if is_selected else 18,
-                                color=ft.Colors.WHITE,
-                            ),
-                            bgcolor=pin_col,
-                            border_radius=12,
-                            padding=4 if is_selected else 2,
-                            border=ft.Border.all(2, ft.Colors.WHITE),
-                            shadow=ft.BoxShadow(blur_radius=6, color=ft.Colors.with_opacity(0.35, "#000000")),
-                        ),
-                        ft.Container(
-                            content=ft.Text(
-                                p.name,
-                                size=9,
-                                weight=ft.FontWeight.BOLD if is_selected else ft.FontWeight.NORMAL,
-                                color=ThemeColors.TEXT_BLACK,
-                                max_lines=1,
-                                overflow=ft.TextOverflow.ELLIPSIS,
-                            ),
-                            bgcolor=ft.Colors.with_opacity(0.85, ft.Colors.WHITE),
-                            border_radius=4,
-                            padding=ft.Padding.symmetric(horizontal=4, vertical=1),
-                        ),
-                    ],
-                    spacing=1,
-                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                    tight=True,
-                ),
-                left=x_pos,
-                top=y_pos,
-                ink=True,
-                on_click=lambda _, pl=p: self._select_map_place(pl),
-            )
-            pin_controls.append(pin_btn)
-
         map_canvas = ft.Container(
-            content=ft.Stack(controls=pin_controls, width=canvas_width, height=canvas_height),
-            bgcolor=ThemeColors.MAP_WATER_BLUE,
+            content=self.interactive_map,
+            height=520,
             border=ft.Border.all(1.5, ThemeColors.BORDER_LIGHT),
             border_radius=16,
             clip_behavior=ft.ClipBehavior.HARD_EDGE,
-            height=460,
-        )
-
-        # Zoom Controls and Explorer Header
-        zoom_in_btn = ft.IconButton(
-            icon=ft.Icons.ZOOM_IN,
-            icon_size=20,
-            tooltip="Zoom in",
-            on_click=lambda _: self._zoom_map(0.2),
-        )
-        zoom_out_btn = ft.IconButton(
-            icon=ft.Icons.ZOOM_OUT,
-            icon_size=20,
-            tooltip="Zoom out",
-            on_click=lambda _: self._zoom_map(-0.2),
         )
 
         header_row = ft.Row(
@@ -513,11 +411,17 @@ class PlacesView(ft.Container):
                 ft.Row(
                     controls=[
                         ft.Icon(ft.Icons.MAP, size=18, color=ThemeColors.PRIMARY_BLUE),
-                        ft.Text(f"Nueva Ecija Spatial Pin Explorer ({len(places_to_plot)} Plotted Destinations)", size=13, weight=ft.FontWeight.BOLD),
+                        ft.Text(f"Nueva Ecija GIS Map Explorer ({len(places_to_plot)} Plotted Destinations)", size=13, weight=ft.FontWeight.BOLD),
                     ],
                     spacing=6,
                 ),
-                ft.Row(controls=[zoom_out_btn, zoom_in_btn], spacing=2),
+                ft.Container(
+                    content=ft.Text(
+                        "Click any pin to inspect details",
+                        size=11,
+                        color=ThemeColors.TEXT_MUTED_LIGHT,
+                    ),
+                ),
             ],
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
         )

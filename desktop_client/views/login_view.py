@@ -151,80 +151,6 @@ class LoginView(ft.Container):
             on_click=lambda _: self._handle_login(),
         )
 
-        # "or" divider
-        or_divider = ft.Row(
-            controls=[
-                ft.Container(expand=True, height=1, bgcolor=ThemeColors.BORDER_LIGHT),
-                ft.Text("or", size=12, color=ThemeColors.TEXT_MUTED_LIGHT, weight=ft.FontWeight.W_500),
-                ft.Container(expand=True, height=1, bgcolor=ThemeColors.BORDER_LIGHT),
-            ],
-            alignment=ft.MainAxisAlignment.CENTER,
-            spacing=10,
-        )
-
-        # Social Login Buttons
-        google_logo_path = self.settings.get_asset_path("images/google_logo.png")
-        google_btn = ft.Container(
-            content=ft.Row(
-                controls=[
-                    ft.Image(
-                        src=google_logo_path,
-                        width=18,
-                        height=18,
-                        fit=ft.BoxFit.CONTAIN,
-                        error_content=ft.Icon(ft.Icons.G_MOBILEDATA, size=18, color=ThemeColors.PRIMARY_BLUE),
-                    ),
-                    ft.Text("Continue with Google", size=13, weight=ft.FontWeight.W_600, color=ThemeColors.TEXT_MAIN_LIGHT),
-                ],
-                alignment=ft.MainAxisAlignment.CENTER,
-                spacing=10,
-            ),
-            border=ft.Border.all(1.2, ThemeColors.BORDER_LIGHT),
-            bgcolor=ThemeColors.SURFACE_LIGHT,
-            border_radius=24,
-            height=44,
-            alignment=ft.Alignment(0, 0),
-            ink=True,
-            on_click=lambda _: self._show_error("Google Sign-In is disabled in this pilot build."),
-        )
-
-        apple_btn = ft.Container(
-            content=ft.Row(
-                controls=[
-                    ft.Icon(ft.Icons.APPLE, size=18, color=ThemeColors.TEXT_BLACK),
-                    ft.Text("Continue with Apple", size=13, weight=ft.FontWeight.W_600, color=ThemeColors.TEXT_BLACK),
-                ],
-                alignment=ft.MainAxisAlignment.CENTER,
-                spacing=10,
-            ),
-            border=ft.Border.all(1.2, ThemeColors.BORDER_LIGHT),
-            bgcolor=ThemeColors.SURFACE_LIGHT,
-            border_radius=24,
-            height=44,
-            alignment=ft.Alignment(0, 0),
-            ink=True,
-            on_click=lambda _: self._show_error("Apple Sign-In is disabled in this pilot build."),
-        )
-
-        # Demo Account Persona Button (Matching Web UI-22 / Pattranite Persona)
-        demo_btn = ft.Container(
-            content=ft.Row(
-                controls=[
-                    ft.Icon(ft.Icons.AUTO_AWESOME, size=18, color=ThemeColors.AZURE_DEEP),
-                    ft.Text("Explore Demo Account (Pattranite Persona)", size=13, weight=ft.FontWeight.BOLD, color=ThemeColors.AZURE_DEEP),
-                ],
-                alignment=ft.MainAxisAlignment.CENTER,
-                spacing=8,
-            ),
-            border=ft.Border.all(1.5, ThemeColors.CUSTOM_CARD_BORDER),
-            bgcolor=ThemeColors.AZURE_SOFT,
-            border_radius=24,
-            height=46,
-            alignment=ft.Alignment(0, 0),
-            ink=True,
-            on_click=lambda _: self._handle_demo_login(),
-        )
-
         footer_links = ft.Row(
             controls=[
                 ft.Text("Don't have an account?", size=13, color=ThemeColors.TEXT_MUTED_LIGHT),
@@ -249,14 +175,9 @@ class LoginView(ft.Container):
                     self.email_input,
                     self.password_input,
                     options_row,
-                    ft.Container(height=2),
+                    ft.Container(height=6),
                     self.submit_btn,
-                    or_divider,
-                    google_btn,
-                    apple_btn,
-                    ft.Container(height=2),
-                    demo_btn,
-                    ft.Container(height=4),
+                    ft.Container(height=6),
                     footer_links,
                 ],
                 spacing=10,
@@ -332,29 +253,6 @@ class LoginView(ft.Container):
                 loop.create_task(_do_login())
             except RuntimeError:
                 asyncio.run(_do_login())
-
-    def _handle_demo_login(self) -> None:
-        """Enters demo persona (Pattranite Limpatiyakorn) matching web client finding 1."""
-        self._clear_error()
-
-        async def _do_demo():
-            try:
-                # Try authenticating with default demo credentials
-                await self.auth_service.login("loverrukk@gmail.com", "Password123!", remember_me=True)
-                self._navigate("/dashboard")
-            except Exception:
-                # Fallback to demo persona guest mode with preloaded Pattranite profile
-                self.auth_service.continue_as_guest()
-                self._navigate("/dashboard")
-
-        if self.safe_page:
-            self.safe_page.run_task(_do_demo)
-        else:
-            try:
-                loop = asyncio.get_running_loop()
-                loop.create_task(_do_demo())
-            except RuntimeError:
-                asyncio.run(_do_demo())
 
     @property
     def safe_page(self) -> Optional[ft.Page]:

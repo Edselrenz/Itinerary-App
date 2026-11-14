@@ -1,3 +1,34 @@
+## [0.49.0] - 2026-11-14
+### Added
+- **Desktop Client Deep Parity Realization & Web-Architecture Alignment (Phases 49.1 – 49.5)**:
+  - **4-Tab Bottom Navigation Bar (`.custom-tab-bar`, 60px)** (`components/bottom_tab_bar.py`):
+    - Replaced the 250px left sidebar and 64px top header with the canonical 4-tab bottom navigation bar (`Home`, `Map`, `Saved`, `Profile`).
+    - Visible on primary tabs; hidden on workflow routes (`/welcome`, `/guest`, `/login`, `/signup`, `/suggested`, `/builder`, `/trips/:id`).
+  - **Contextual Workflow Header Bar (`.figma-header-bar`, 54px)** (`components/workflow_header.py`):
+    - Contextual back navigation header for creation workflows (`/suggested`, `/builder`) with workflow title and subtitle.
+  - **Global Floating Offline Host Banner (`.offline-host-banner`)** (`components/offline_banner.py`):
+    - Pinned to the top of the root `ft.Stack` across all views, displaying when the backend server is unreachable.
+    - Features `[Retry]` health check button with live progress spinner and feedback toast, plus `[X]` temporary dismiss.
+  - **Cold-Start Splash Screen Overlay** (`components/splash_overlay.py`):
+    - Renders `loading_screen.jpg` on application launch with a 2.8s auto-dismiss timer and click-to-dismiss gesture.
+  - **Interactive GIS Map Tab & Dual-Engine Mapping** (`components/interactive_map.py`):
+    - Primary engine: `flet-map` with OpenStreetMap raster tiles, 16 category-colored destination pins, numbered route stop badges (`1..N`), and Google encoded polyline routing.
+    - Fallback engine: Vector `ft.canvas.Canvas` renderer for offline / tile-unreachable scenarios.
+    - Camera controls: Zoom In/Out, Recenter Province, Locate Hub (Cabanatuan), and engine switcher.
+  - **Embedded Itinerary Day Route Map Card (`180px`)** (`components/itinerary_route_map.py`):
+    - Embedded inside `SuggestedWizardView` (result view), `CustomBuilderView` (timeline pane), and `TripDetailView` (schedule view).
+    - Numbered stop markers, connecting route polyline, total day distance and duration estimate, and `[Full Map]` navigation button.
+  - **Clean Authentication**:
+    - Completely removed redundant Demo Account (`Pattranite Persona`) and dead social buttons (`Google`, `Apple`). Clean email/password authentication and guest mode only.
+  - **Backend Server Status & Custom API URL Tester** (`views/profile_view.py:Settings`):
+    - Real-time connection status pill ("Online (HTTP 200)" vs "Offline"), custom API base URL input, `[Test Connection]`, `[Save URL]`, and `[Reset to Default]`.
+  - **3-Tier Offline Resilience & Deterministic Proximity Clustering**:
+    - Consolidated 2,673 OSM places with 12 curated destinations in `PlaceService`.
+    - Fully deterministic `generate_offline_suggested_itinerary()` clustering engine in `ItineraryService` with midday dining anchors and summit limits.
+    - Local `guest_storage.json` fallback for authenticated itinerary writes during host outages.
+  - **Test Suite Expansion**:
+    - 47/47 passing tests in `desktop_client/tests/` with 100% success rate across all components, models, and services.
+
 ## [0.48.0] - 2026-11-14
 ### Added
 - **Full Desktop Application Parity with Canonical Web Client (Phases 48.1 – 48.7)**:

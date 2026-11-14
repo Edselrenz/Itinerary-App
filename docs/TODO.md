@@ -1328,6 +1328,31 @@ px cap sync android): **Exit code 0 (6 plugins synchronized)**.
   - [x] Implement 5-row Figma menu card and 5 subviews (`Settings`, `Favorites`, `Edit Profile`, `Help & Support`, `About`) in `views/profile_view.py`.
   - [x] Verify PyInstaller standalone build and verify zero regressions across web (348 tests) and desktop (43 tests) test suites.
 
+## Phase 49: Desktop Client Deep Parity Realization & Web-Architecture Alignment (Phases 49.1 – 49.5)
+- [x] **49.1 (Core Services, 3-Tier Offline Fallback, Connectivity & Polyline)**:
+  - [x] Add `flet-map>=0.1.0` to `desktop_client/requirements.txt`.
+  - [x] Create `desktop_client/core/polyline.py` (encode/decode polyline, Haversine meters, geodesic arc, multi-stop Google Maps URL).
+  - [x] Create `desktop_client/core/connectivity_service.py` (`GET /api/v1/health` polling, `is_host_offline`, `is_checking_health`, `set_custom_api_url()`, `dismiss_banner()`, listener callbacks).
+  - [x] Update `desktop_client/core/offline_data.py`: Load 2,673 OSM places + 12 curated places + 32 LGU bounds (`load_osm_places()`, `get_filtered_local_places()`).
+  - [x] Port `generate_offline_suggested_itinerary()` to `desktop_client/services/itinerary_service.py` (corridor clustering, midday dining anchor, summit limit, honest assumptions).
+  - [x] Wire 3-tier offline fallback in `PlaceService` and authenticated write fallback to `guest_storage.json`.
+- [x] **49.2 (Bottom Tab Bar Shell, Splash Screen & Clean Auth)**:
+  - [x] Create `desktop_client/components/bottom_tab_bar.py` (`60px`, `Home`, `Map`, `Saved`, `Profile`).
+  - [x] Create `desktop_client/components/offline_banner.py` (`OfflineHostBanner` with `[Retry]` spinner/toast and `[X]` dismiss).
+  - [x] Refactor `desktop_client/main.py`: Delete `SidebarNav` and `TopHeader`. Mount `OfflineHostBanner` at the top of root `ft.Stack` across all views. Show `BottomTabBar` only on tab routes (`/home`, `/map`, `/saved`, `/profile`) and hide on workflow views. Add `SplashOverlay` (2.8s dismiss).
+  - [x] Update `login_view.py`, `signup_view.py`, and `welcome_view.py`: Completely remove Demo Account (`Pattranite Persona`) and dead Google/Apple social buttons. Wire Account Recovery modal in Login.
+- [x] **49.3 (Interactive GIS Map Tab & Embedded Day Route Map)**:
+  - [x] Create `desktop_client/components/interactive_map.py` (`InteractiveProvinceMap` using `flet-map` with vector canvas fallback, category-colored teardrop pins, and Follow-Route mode).
+  - [x] Create `desktop_client/components/itinerary_route_map.py` (`ItineraryRouteMap`: `180px` collapsible card with numbered stop pins and route polylines).
+  - [x] Rebuild `desktop_client/views/places_view.py` as full-screen `MapView` with search bar, Multi-Select Filter Modal, 17 category pills, POI list drawer, and Follow-Route navigation mode.
+- [x] **49.4 (Suggested Wizard & Custom Builder Parity with Embedded Maps)**:
+  - [x] Embed `ItineraryRouteMap` in `views/suggested_wizard_view.py` (View 2) and connect offline clustering engine fallback.
+  - [x] Embed `ItineraryRouteMap` in `views/custom_builder_view.py` (Timeline pane) and align 3-stage flow (`form` -> `browse` -> `timeline`).
+- [x] **49.5 (Trip Detail, Profile Subviews, Quality Assurance & Standalone Packaging)**:
+  - [x] Embed `ItineraryRouteMap` in `views/trip_detail_view.py`.
+  - [x] Add Server Connection Status & Custom API URL tester in `views/profile_view.py:Settings`.
+  - [x] Expand `desktop_client/tests/` to verify all 5 phases and run PyInstaller standalone compilation.
+
 
 
 

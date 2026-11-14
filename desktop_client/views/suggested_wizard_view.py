@@ -8,6 +8,7 @@ import flet as ft
 
 from desktop_client.components.date_range_dialog import show_date_range_dialog
 from desktop_client.components.destination_picker import DestinationPicker
+from desktop_client.components.itinerary_route_map import ItineraryRouteMap
 from desktop_client.components.dialogs import (
     show_export_dialog,
     show_place_detail_dialog,
@@ -581,6 +582,11 @@ class SuggestedWizardView(ft.Container):
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
         )
 
+        route_map = ItineraryRouteMap(
+            day=active_day,
+            on_view_full_map=lambda: self.on_navigate("/map") if self.on_navigate else None,
+        )
+
         return ft.Column(
             controls=[
                 overview_card,
@@ -590,6 +596,8 @@ class SuggestedWizardView(ft.Container):
                 ft.Container(height=12),
                 active_day_header,
                 ft.Container(height=8),
+                route_map,
+                ft.Container(height=12),
                 ft.Column(controls=timeline_items, spacing=6),
             ],
             scroll=ft.ScrollMode.AUTO,

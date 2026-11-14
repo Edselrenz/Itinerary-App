@@ -41,11 +41,25 @@ class ApiClient:
 
     def __init__(self, base_url: Optional[str] = None, timeout: Optional[float] = None):
         settings = get_settings()
-        self.base_url = (base_url or settings.api_base_url).rstrip("/")
+        self._explicit_base_url: Optional[str] = base_url.rstrip("/") if base_url else None
         self.default_timeout = timeout or settings.api_timeout_seconds
         self._token_getter = None
         self._refresh_handler = None
         self._client: Optional[httpx.AsyncClient] = None
+
+    @property
+    def base_url(self) -> str:
+        if self._explicit_base_url:
+            return self._explicit_base_url
+        try:
+            from desktop_client.core.connectivity_service import get_connectivity_service
+            return get_connectivity_service().active_api_base_url.rstrip("/")
+        except Exception:
+            return get_settings().api_base_url.rstrip("/")
+
+    @base_url.setter
+    def base_url(self, val: str) -> None:
+        self._explicit_base_url = val.rstrip("/") if val else None
 
     def set_token_getter(self, getter_func):
         """Sets a callback that provides the current Bearer access token."""
@@ -122,9 +136,6 @@ class ApiClient:
         retried: bool = False,
     ) -> Any:
         """Executes an HTTP request with error handling and automatic retry on 401."""
-        if not self.check_health_sync():
-            raise NetworkError(f"Cannot connect to server at {self.base_url}. Please check if backend is running.")
-
         url = f"{self.base_url}/{endpoint.lstrip('/')}"
         req_headers = self._get_headers(headers)
         req_timeout = timeout or self.default_timeout
@@ -139,11 +150,31 @@ class ApiClient:
                 headers=req_headers,
                 timeout=req_timeout,
             )
+            try:
+                from desktop_client.core.connectivity_service import get_connectivity_service
+                get_connectivity_service().set_host_offline(False)
+            except Exception:
+                pass
         except httpx.ConnectError as err:
+            try:
+                from desktop_client.core.connectivity_service import get_connectivity_service
+                get_connectivity_service().set_host_offline(True, force=True)
+            except Exception:
+                pass
             raise NetworkError(f"Cannot connect to server at {self.base_url}. Please check if backend is running.") from err
         except httpx.TimeoutException as err:
+            try:
+                from desktop_client.core.connectivity_service import get_connectivity_service
+                get_connectivity_service().report_gateway_error()
+            except Exception:
+                pass
             raise NetworkError(f"Request to {endpoint} timed out after {req_timeout}s.") from err
         except httpx.RequestError as err:
+            try:
+                from desktop_client.core.connectivity_service import get_connectivity_service
+                get_connectivity_service().report_gateway_error()
+            except Exception:
+                pass
             raise NetworkError(f"Network error: {str(err)}") from err
 
         # Handle 401 Token Expiry with single automatic refresh retry

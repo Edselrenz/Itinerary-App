@@ -1,6 +1,6 @@
 # Desktop Application Architecture: Python Flet Client
 
-**Framework**: Python Flet >= 1.1.2  
+**Framework**: Python Flet >= 1.1.2 + `flet-map`  
 **Target Monorepo Directory**: `desktop_client/`  
 **Shared Backend API**: FastAPI (`backend/`)  
 **Document Ref**: `docs/DESKTOP_APP_ARCHITECTURE.md`  
@@ -15,14 +15,13 @@ The Python Flet desktop client is organized following strict separation of conce
 desktop_client/
 ├── assets/                          # Bundled local photography, brand marks, and JSON datasets
 │   ├── data/
-│   │   └── osm_places.json          # Curated offline OpenStreetMap POI dataset (2,670+ points)
+│   │   └── osm_places.json          # Curated offline OpenStreetMap POI dataset (2,673 points)
 │   ├── popular_destinations/        # Authentic destination photography (Minalungao, Highland Bali, etc.)
 │   ├── default_avatar_placeholder.png
-│   ├── google_logo.png              # Google brand mark for social sign-in
 │   ├── guest_hiker_hero.png         # Guest onboarding hero illustration
+│   ├── loading_screen.jpg           # Full-bleed splash screen background
 │   ├── logout_skyscrapers_blob.png  # After-logout organic skyline frame
 │   ├── logout_cityscape_silhouette.png # Bottom skyline silhouette
-│   ├── pattranite_avatar.jpg        # Pre-seeded avatar for Pattranite Limpatiyakorn demo persona
 │   └── welcome_hero_buildings.png   # Welcome screen bottom cityscape illustration
 │
 ├── config/                          # Application settings, constants, and color palettes
@@ -34,8 +33,10 @@ desktop_client/
 │   ├── api_client.py                # Asynchronous httpx REST client with bearer token injection
 │   ├── async_utils.py               # Loop-safe task dispatcher (run_async) preventing event loop crashes
 │   ├── commute_guide.py             # Municipal transit hubs, tricycle fares, and Haversine leg commute math
+│   ├── connectivity_service.py      # Host health polling, gateway error tracking, and custom API URL
 │   ├── export.py                    # RFC 5545 iCalendar (.ics), Markdown, JSON, and print HTML export
-│   ├── offline_data.py              # Canonical offline places fallback and 32-LGU district metadata
+│   ├── offline_data.py              # 2,673 OSM places, 12 canonical curated places, and 32 LGU bounds
+│   ├── polyline.py                  # Polyline encode/decode, Haversine, geodesic arc, Google Maps URLs
 │   ├── session.py                   # SessionManager: JWT bearer credentials, traveler profile, guest mode
 │   └── storage.py                   # Local JSON storage engine for guest itineraries and offline cache
 │
@@ -54,21 +55,23 @@ desktop_client/
 │
 ├── components/                      # Reusable, anti-generic Flet UI widgets
 │   ├── __init__.py
+│   ├── bottom_tab_bar.py            # 60px 4-tab bottom navigation (Home, Map, Saved, Profile)
 │   ├── date_range_dialog.py         # Figma travel date picker modal with duration presets (2D/1N, etc.)
 │   ├── destination_picker.py        # 32-LGU autocomplete + quick chips + All 32 Towns district modal
 │   ├── dialogs.py                   # Rich Place Detail Sheet, Stop Editor, Off-Grid Venue Modal, Export
-│   ├── header.py                    # TopHeader: brand title, online/offline status, unread alert bell
+│   ├── interactive_map.py           # InteractiveProvinceMap: flet-map with vector canvas fallback
+│   ├── itinerary_route_map.py       # ItineraryRouteMap: 180px collapsible day route map with numbered pins
+│   ├── offline_banner.py            # Global floating OfflineHostBanner with [Retry] & [X] dismiss
 │   ├── place_card.py                # Consumer destination card with local photography, rating, honest cost
-│   ├── sidebar.py                   # Persistent 4-tab sidebar (Home, Map, Saved, Profile) + dark mode
 │   └── stop_card.py                 # Itinerary stop card with inter-stop leg commute badges (time & fare)
 │
 ├── views/                           # High-level full-screen route containers
 │   ├── __init__.py
-│   ├── custom_builder_view.py       # Dual-pane custom itinerary builder (Catalog + Timeline)
+│   ├── custom_builder_view.py       # 3-stage custom itinerary builder (Form -> Browse -> Timeline)
 │   ├── dashboard_view.py            # Home dashboard, debounced search, alerts drawer, popular carousel
 │   ├── guest_view.py                # Dedicated /guest hero onboarding screen
-│   ├── login_view.py                # Traveler login, password reveal, Pattranite demo persona, recovery
-│   ├── places_view.py               # Map & POI explorer with split-pane layout and multi-select filter modal
+│   ├── login_view.py                # Traveler login, password reveal, forgot password modal
+│   ├── places_view.py               # Full-screen MapView with search, filter drawer, and Follow-Route mode
 │   ├── profile_view.py              # Profile state machine: Main Menu, Settings, Favorites, Edit, Help, About
 │   ├── saved_trips_view.py          # Saved trips grid with days/nights labels and sync status
 │   ├── signup_view.py               # 6-field structured registration with M.I. and live validation
@@ -88,6 +91,7 @@ desktop_client/
 │   ├── test_auth_service.py         # AuthService and SessionManager state transition tests
 │   ├── test_itinerary_service.py    # Itinerary calculations, metrics, and payload format tests
 │   ├── test_live_integration.py     # Live integration test against running FastAPI backend & SQLite
+│   ├── test_parity_services_and_components.py # Parity checks: LGUs, offline places, commute, favorites
 │   ├── test_place_service.py        # Place model, honest pricing, and category tests
 │   ├── test_qa_remediation.py       # Remediation suite for DEF-01 to DEF-15 and BUG-01 to BUG-08
 │   ├── test_storage_export.py       # iCalendar, Markdown, JSON export, and guest CRUD tests
@@ -98,153 +102,133 @@ desktop_client/
 
 ---
 
-## 2. Monorepo Component Topology & Data Flow
+## 2. Layout Shell & Navigation Architecture
+
+The desktop client discards generic enterprise side navigation in favor of the canonical Web App's **Bottom Tab Bar + Contextual Header Architecture**:
 
 ```mermaid
 flowchart TD
-    subgraph Presentation Layer [Desktop UI (Flet Material 3)]
-        Main["main.py (Route Manager & Shell)"]
-        Sidebar["SidebarNav (4 Core Tabs + Dark Toggle)"]
-        Header["TopHeader (Status & Advisories)"]
-        ActiveView["Active View (Preserved Instances)"]
-        Main --> Sidebar
-        Main --> Header
-        Main --> ActiveView
+    subgraph RootStack ["ft.Stack (Root Viewport)"]
+        ContentArea["Content Area (expand=True)"]
+        BottomTabBar["BottomTabBar (height=60px)<br/>[Home | Map | Saved | Profile]<br/>(Visible ONLY on Tab Routes)"]
+        OfflineBanner["OfflineHostBanner (Floating Top Overlay)<br/>(Visible across ALL routes when offline)"]
+        SplashOverlay["SplashOverlay (Fullscreen 2.8s Dismiss)<br/>(Visible on Cold Start only)"]
     end
 
-    subgraph Service & Orchestration Layer
-        AuthSvc["AuthService"]
-        PlaceSvc["PlaceService"]
-        ItinSvc["ItineraryService"]
-        FavSvc["FavoritesService"]
-    end
-
-    subgraph Core Infrastructure Layer
-        ApiClient["ApiClient (httpx Async)"]
-        SessionMgr["SessionManager (JWT Tokens)"]
-        AsyncUtils["async_utils (run_async)"]
-        CommuteGuide["commute_guide (Transit Math)"]
-        OfflineData["offline_data (OSM & Fallback)"]
-        StorageEngine["storage (Guest JSON)"]
-    end
-
-    subgraph Backend & Persistence [FastAPI & Databases]
-        BackendAPI["FastAPI REST API (/api/v1)"]
-        PostgresDB[("PostgreSQL 16 / SQLite 3")]
-    end
-
-    ActiveView --> AuthSvc
-    ActiveView --> PlaceSvc
-    ActiveView --> ItinSvc
-    ActiveView --> FavSvc
-
-    AuthSvc --> ApiClient
-    AuthSvc --> SessionMgr
-    PlaceSvc --> ApiClient
-    PlaceSvc --> OfflineData
-    ItinSvc --> ApiClient
-    ItinSvc --> StorageEngine
-    ItinSvc --> CommuteGuide
-    FavSvc --> StorageEngine
-
-    ApiClient --> BackendAPI
-    BackendAPI --> PostgresDB
+    ContentArea --> TabRoutes["Tab Routes (/home, /map, /saved, /profile)"]
+    ContentArea --> WorkflowRoutes["Workflow Routes (/welcome, /guest, /login, /signup, /wizard, /builder, /trips/:id)"]
+    WorkflowRoutes --> FigmaHeader[".figma-header-bar (Back Arrow + Title + Actions)"]
 ```
+
+### Route Visibility Rules
+* **Tab Routes (`/home`, `/map`, `/saved`, `/profile`)**:
+  * Main column: `[content_area (expand=True), bottom_tab_bar (height=60)]`.
+  * `BottomTabBar` displays 4 centered items: `Home`, `Map`, `Saved`, `Profile`. Active item is colored `#0084ff` (Azure).
+  * Tapping the `Map` tab while in Follow-Route Mode automatically exits route focus and returns to full province browse mode.
+* **Workflow Routes (`/welcome`, `/guest`, `/login`, `/signup`, `/suggested`, `/builder`, `/trips/:id`)**:
+  * `BottomTabBar` is completely hidden.
+  * Screen uses a `.figma-header-bar` containing a `←` back arrow, clean title, and contextual action buttons.
+* **Global Overlays**:
+  * `OfflineHostBanner`: Placed at the top of the root `ft.Stack` with top margin `12px` and `border_radius=14`. Visible across **every route** whenever `connectivity_service.is_host_offline` is `True`.
+  * `SplashOverlay`: Covers the entire viewport on application cold start (`loading_screen.jpg`) with a 2.8s timer, dismissible on click or Escape key.
 
 ---
 
-## 3. Reactive UI State Management & View Navigation
+## 3. Interactive GIS Mapping Engine
 
-### 3.1 Route Management & View Caching in `main.py`
-The desktop application employs a single-window shell model with a persistent left sidebar and top contextual header. Rather than discarding view instances on route transitions, `main.py` maintains an internal view cache:
-
-```python
-class AppState:
-    current_route: str = "/dashboard"
-    cached_views: dict[str, ft.Control] = {}
-    pending_builder_place: Optional[Place] = None
-    selected_trip: Optional[Itinerary] = None
-```
-
-* **Preserving Draft State**: When a user switches from `CustomBuilderView` to `PlacesView` to inspect a location, the active builder timeline and unsaved changes are preserved in `cached_views["/builder"]`.
-* **Unsaved Changes Guard (`pendingChangesGuard`)**: If an active view reports `has_unsaved_changes = True`, attempting to switch routes opens a modal confirmation dialog:
-  ```text
-  ┌────────────────────────────────────────────────────────┐
-  │  Discard unsaved changes?                              │
-  │  You have an unfinished itinerary in progress.         │
-  │  Navigating away will discard your draft stops.        │
-  │                                                        │
-  │     [Keep Editing]       [Discard & Continue]          │
-  └────────────────────────────────────────────────────────┘
-  ```
-
-### 3.2 Loop-Safe Asynchronous Dispatch (`core/async_utils.py`)
-In Python Flet, UI events execute within an active `asyncio` event loop. Attempting to call `asyncio.run(coroutine)` within a synchronous button callback raises `RuntimeError: asyncio.run() cannot be called from a running event loop`.
-
-To guarantee 100% loop safety, all views execute asynchronous logic via `run_async()`:
-
-```python
-import asyncio
-from typing import Any, Callable, Coroutine
-
-def run_async(coro_func: Callable[[], Coroutine[Any, Any, Any]], page: Any = None) -> None:
-    """Dispatches coroutine safely within active Flet environment."""
-    if page is not None and hasattr(page, "run_task"):
-        page.run_task(coro_func)
-        return
-    try:
-        loop = asyncio.get_running_loop()
-        loop.create_task(coro_func())
-    except RuntimeError:
-        asyncio.run(coro_func())
-```
-
----
-
-## 4. Client Session & Credential Architecture (`core/session.py`)
-
-`SessionManager` operates as a thread-safe singleton managing traveler identity, authentication tokens, and guest mode state:
+The desktop client provides two interactive mapping layers using `flet-map` with a reliable `flet.canvas.Canvas` Web-Mercator vector fallback:
 
 ```mermaid
-stateDiagram-v2
-    [*] --> Unauthenticated: Launch Application
-    Unauthenticated --> GuestMode: Click "Continue as Guest"
-    Unauthenticated --> Authenticated: Submit Login / Signup / Demo Account
-    GuestMode --> Authenticated: Login or Register (Triggers migrate_guest_trips)
-    Authenticated --> LoggedOut: Click "Log Out" (Confirmation Modal)
-    LoggedOut --> Unauthenticated: Redirect to /welcome?logout=1
+flowchart LR
+    MapEngine["Map Engine"]
+    MapEngine --> FletMap["flet_map (TileLayer + MarkerLayer + PolylineLayer)"]
+    MapEngine --> CanvasFallback["ft.canvas.Canvas Fallback (Web-Mercator Slippy Tiles)"]
+    
+    FletMap --> MapView["Full-Screen MapView (/map)"]
+    CanvasFallback --> MapView
+    
+    FletMap --> RouteMap["ItineraryRouteMap (180px Embedded Card)"]
+    CanvasFallback --> RouteMap
 ```
 
-### Credential Storage & Security Rules
-1. **Zero Plaintext Passwords**: Passwords are never stored on disk. They are transmitted over HTTPS/HTTP directly to `/api/v1/auth/login` where they are verified against Argon2id hashes.
-2. **Short-Lived Bearer JWTs**: The access token is injected into all outbound API requests via `Authorization: Bearer <token>`.
-3. **Session Persistence**: When `persist=True` (Remember Me), tokens are persisted to `desktop_client/storage/session.json`.
-4. **Session Clearing on Logout**: Logging out immediately wipes in-memory credentials, deletes `session.json` from disk, and notifies all registered view listeners.
+### 1. Full-Screen Map Tab (`MapView` in `places_view.py`)
+* **Layer 1 (Base Map)**: OpenStreetMap raster tiles centered on Nueva Ecija `(15.58, 121.0)`, bounded between `[15.05, 120.55]` and `[16.25, 121.55]`.
+* **Layer 2 (Pins)**: Category-colored teardrop pins across 16 canonical categories or numbered route badges (`1..N`) in Follow-Route Mode.
+* **Layer 3 (Overlays)**:
+  * Top floating search bar with 300ms debounce and clear button.
+  * `[Filters]` button opening the **Multi-Select Filter Modal** (Categories, 32 LGUs, Price Tiers).
+  * 17 quick horizontal category pills.
+  * Right floating controls: Live OSM Overpass query button, Locate button, Province reset button, Zoom `+ / -`.
+  * Bottom floating `List View (N)` pill opening the collapsible POI drawer.
+  * Slide-up **Interactive POI Bottom Sheet** on pin click.
+* **Follow-Route Mode**: Shows active day stops, draws road polyline, displays top route bar (`[← Back to Plan]`, Day pills, Nearby toggle), and bottom stop carousel.
+
+### 2. Embedded Day Route Map (`ItineraryRouteMap`)
+* **Dimensions**: `180px` collapsible card embedded directly inside active days of:
+  * `SuggestedWizardView` (View 2)
+  * `CustomBuilderView` (Timeline pane)
+  * `TripDetailView` (View mode)
+* **Functionality**:
+  * Fits bounds to active day stops.
+  * Decodes polyline or queries OSRM driving route (geodesic arc offline fallback).
+  * Plots numbered circular stop badges (`1, 2, 3...`).
+  * Features a `[Full Map]` button launching the Map tab in Follow-Route mode.
 
 ---
 
-## 5. Local Offline Storage Engine (`core/storage.py`)
+## 4. Global Connectivity Architecture
 
-For guest travelers and offline operations, `GuestStorage` provides atomic, schema-validated file persistence in `desktop_client/storage/guest_storage.json`:
+```mermaid
+sequenceDiagram
+    participant UI as Desktop Views
+    participant Banner as OfflineHostBanner
+    participant CS as ConnectivityService
+    participant Backend as FastAPI /health
 
-```json
-{
-  "version": 1,
-  "guest_id": "guest_550e8400-e29b-41d4-a716-446655440000",
-  "created_at": "2026-11-14T08:00:00Z",
-  "itineraries": [
-    {
-      "id": "itin_local_1",
-      "title": "Bongabon Nature & Farm Tour",
-      "destination": "Bongabon",
-      "start_date": "2026-11-20",
-      "end_date": "2026-11-21",
-      "daily_budget": 2500.0,
-      "days": []
-    }
-  ]
-}
+    CS->>Backend: Async GET /api/v1/health (5s timeout)
+    alt Server Responds 200 OK
+        Backend-->>CS: 200 OK {"status": "healthy"}
+        CS->>Banner: is_host_offline = False
+        Banner->>UI: Slide Up / Hide Banner
+    else Connection Refused / Timeout
+        Backend--xCS: Error / Timeout (threshold >= 2)
+        CS->>Banner: is_host_offline = True
+        Banner->>UI: Slide Down Amber Offline Banner
+    end
+
+    Note over Banner: User clicks [Retry]
+    Banner->>CS: check_host_health()
+    CS->>Banner: ProgressRing active
 ```
 
-* **Atomic File Writes**: Data is serialized to a temporary file (`guest_storage.json.tmp`) and atomically renamed to prevent corruption during unexpected application shutdown.
-* **Automatic Cloud Migration**: When an anonymous guest signs in or creates an account, `AuthService.migrate_guest_trips()` transfers all locally stored itineraries to the traveler's cloud account via `POST /api/v1/itineraries`.
+* **`ConnectivityService` (`core/connectivity_service.py`)**:
+  * Tracks `is_host_offline`, `is_checking_health`, `consecutive_errors`, and `custom_api_url`.
+  * Polls health endpoint and validates custom URLs against trusted protocols and domains.
+* **`OfflineHostBanner` (`components/offline_banner.py`)**:
+  * Amber cloud-offline icon, clear explanation that cloud sync is paused while local trips remain accessible.
+  * Active `[Retry]` button with spinner and SnackBar feedback.
+  * `[X]` dismiss button.
+
+---
+
+## 5. 3-Tier Offline Resilience Architecture
+
+1. **Tier 1 (Places & Municipalities)**:
+   * When offline, `PlaceService.get_places()` immediately queries the in-memory index of 2,673 OSM places + 12 curated places.
+   * `PlaceService.get_municipalities()` returns all 32 LGUs with accurate local counts.
+2. **Tier 2 (Suggested Itinerary Generation)**:
+   * When offline, `ItineraryService.generate_suggested_itinerary()` invokes `generate_offline_suggested_itinerary()`.
+   * Enforces corridor clustering, preference scoring, midday lunch anchor, mountain summit limit, and transparent assumptions.
+3. **Tier 3 (Authenticated Write Fallback)**:
+   * If network error occurs during trip creation, update, or stop editing, the operation automatically falls back to `GuestStorageService` (`guest_storage.json`).
+
+---
+
+## 6. Clean Authentication Architecture
+
+* **Zero Demo Account**: No fake `"Pattranite Persona"` button. Authenticated users see their real profile; unauthenticated users see `"Guest Explorer"`.
+* **Zero Dead Social Buttons**: No non-functional `"Continue with Google"` or `"Continue with Apple"` buttons.
+* **Clean Email/Password Flow**:
+  * `LoginView`: Email, Password, Eye toggle, Remember me, `Forgot password?` Account Recovery modal, and `Continue as Guest` link.
+  * `SignupView`: 6 structured fields (First Name, Middle Initial, Last Name, Username, Email, Password $\ge 8$ chars) with auto-suggested usernames.
+  * `GuestView`: Dedicated `/guest` screen with hero image and cloud migration explanation.

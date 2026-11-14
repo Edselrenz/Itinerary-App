@@ -1,7 +1,12 @@
 """Nueva Ecija Travel — Standalone Python Flet Desktop Application.
 
-Entry point initializing window configuration, persistent sidebar navigation,
-theme controls, health monitoring, and view switching.
+Canonical Entry Point conforming to Web & Figma design parity:
+- 4-Tab Bottom Navigation Bar (.custom-tab-bar, 60px) on primary views (/home, /map, /saved, /profile)
+- Contextual Workflow Header (.figma-header-bar) on creation workflows (/suggested, /builder)
+- Global Floating Offline Host Banner (.offline-host-banner) across all views
+- Cold-Start Splash Overlay (loading_screen.jpg) auto-dismissing after 2.8s
+- Clean email/password authentication & guest mode
+- Pending Changes Guard protecting unsaved itineraries
 """
 
 import asyncio
@@ -24,10 +29,13 @@ if getattr(sys, "frozen", False):
             os.environ["FLET_VIEW_PATH"] = str(cand)
             break
 
-from desktop_client.components.header import TopHeader
-from desktop_client.components.sidebar import SidebarNav
+from desktop_client.components.bottom_tab_bar import BottomTabBar
+from desktop_client.components.offline_banner import OfflineHostBanner
+from desktop_client.components.splash_overlay import SplashOverlay
+from desktop_client.components.workflow_header import WorkflowHeader
 from desktop_client.config.settings import ThemeColors, ThemePalette, get_settings
 from desktop_client.core.api_client import get_api_client
+from desktop_client.core.connectivity_service import get_connectivity_service
 from desktop_client.core.session import get_session_manager
 from desktop_client.core.storage import get_guest_storage
 from desktop_client.models.itinerary import Itinerary
@@ -51,6 +59,7 @@ def main(page: ft.Page) -> None:
     session_manager = get_session_manager()
     api_client = get_api_client()
     auth_service = get_auth_service()
+    connectivity_service = get_connectivity_service()
 
     # Window & Page Setup
     page.title = settings.app_title
@@ -63,13 +72,29 @@ def main(page: ft.Page) -> None:
     selected_trip: Optional[Itinerary] = None
     cached_views: dict[str, ft.Control] = {}
 
-    # App Shell Components
-    sidebar: Optional[SidebarNav] = None
-    header: Optional[TopHeader] = None
+    # App Shell Structure
     content_area = ft.Container(expand=True)
+    workflow_header = WorkflowHeader(title="Workflow", on_back=lambda: navigate_to("/home"))
+    workflow_header.visible = False
+
+    def _on_map_tap():
+        # Reset follow-route or filter on places view if active
+        if current_route in ("/map", "/places") and content_area.content:
+            recenter = getattr(content_area.content, "recenter_map", None)
+            if callable(recenter):
+                recenter()
+
+    bottom_tab_bar = BottomTabBar(
+        current_route="/home",
+        on_navigate=lambda r: navigate_to(r),
+        on_map_tap_when_active=_on_map_tap,
+    )
+    bottom_tab_bar.visible = False
+
+    offline_banner = OfflineHostBanner()
 
     def toggle_theme() -> None:
-        """Toggles between Light and Dark Material 3 theme modes."""
+        """Toggles between Light and Dark theme modes across the entire shell."""
         if page.theme_mode == ft.ThemeMode.LIGHT:
             page.theme_mode = ft.ThemeMode.DARK
             page.bgcolor = ThemeColors.BG_DARK
@@ -77,12 +102,9 @@ def main(page: ft.Page) -> None:
             page.theme_mode = ft.ThemeMode.LIGHT
             page.bgcolor = ThemeColors.BG_LIGHT
 
-        # Re-theme persistent components and active view
-        if sidebar:
-            sidebar._build_content()
-        if header:
-            header._build_content()
-        navigate_to(current_route, selected_trip)
+        bottom_tab_bar._build_content()
+        workflow_header._build_content()
+        navigate_to(current_route, selected_trip, force=True)
 
     def navigate_to(
         route: str,
@@ -90,7 +112,7 @@ def main(page: ft.Page) -> None:
         pre_added_place: Optional[Place] = None,
         force: bool = False,
     ) -> None:
-        """Central navigation handler switching views and managing shell layout."""
+        """Central navigation dispatcher managing route state and shell chrome."""
         nonlocal current_route, selected_trip
 
         # Pending Changes Guard: check if active view has unsaved modifications
@@ -110,8 +132,7 @@ def main(page: ft.Page) -> None:
 
                 def _cancel_discard(_):
                     dlg.open = False
-                    if sidebar:
-                        sidebar.set_active_route(current_route)
+                    bottom_tab_bar.set_active_route(current_route)
                     page.update()
 
                 dlg = ft.AlertDialog(
@@ -132,7 +153,7 @@ def main(page: ft.Page) -> None:
                     ),
                     actions=[
                         ft.TextButton("Keep Editing", on_click=_cancel_discard),
-                        ft.ElevatedButton(
+                        ft.FilledButton(
                             "Discard & Leave",
                             bgcolor=ThemeColors.ERROR,
                             color=ft.Colors.WHITE,
@@ -149,158 +170,150 @@ def main(page: ft.Page) -> None:
         if trip_data:
             selected_trip = trip_data
 
-        # Full-screen standalone views (no sidebar shell)
+        # 1. Fullscreen Standalone Views (Auth & Onboarding)
         if route in ("/welcome", "/guest", "/login", "/signup") or route.startswith(
             "/welcome"
         ):
+            bottom_tab_bar.visible = False
+            workflow_header.visible = False
+
             if route == "/guest":
-                page.controls = [GuestView(on_navigate=navigate_to)]
+                content_area.content = GuestView(on_navigate=navigate_to)
             elif route.startswith("/welcome"):
                 is_logout = "logout=1" in route or "loggedOut=true" in route
-                page.controls = [
-                    WelcomeView(on_navigate=navigate_to, is_after_logout=is_logout)
-                ]
+                content_area.content = WelcomeView(
+                    on_navigate=navigate_to, is_after_logout=is_logout
+                )
             elif route == "/login":
-                page.controls = [LoginView(on_navigate=navigate_to)]
+                content_area.content = LoginView(on_navigate=navigate_to)
             elif route == "/signup":
-                page.controls = [SignupView(on_navigate=navigate_to)]
+                content_area.content = SignupView(on_navigate=navigate_to)
+
             page.update()
             return
 
-        # App Shell Views (Sidebar + Header + Content Area)
-        nonlocal sidebar, header
-        if sidebar is None:
-            sidebar = SidebarNav(
-                current_route=route,
-                on_navigate=navigate_to,
-                on_toggle_theme=toggle_theme,
-            )
-        else:
-            sidebar.set_active_route(route)
+        # 2. Workflow Views (Modal creation & detail with contextual header)
+        if route in ("/suggested", "/builder") or route.startswith("/trips/"):
+            bottom_tab_bar.visible = False
 
-        if header is None:
-            header = TopHeader(
-                title="Home",
-                subtitle="Trip mo, trip ko",
-                on_search_click=lambda: navigate_to("/places"),
-            )
+            if route == "/suggested":
+                workflow_header.visible = True
+                workflow_header.title_text = "Suggested Itinerary Wizard"
+                workflow_header.subtitle_text = "Automated Proximity & Corridor Clustering"
+                workflow_header.on_back = lambda: navigate_to("/home")
+                workflow_header._build_content()
+                if "/suggested" not in cached_views:
+                    cached_views["/suggested"] = SuggestedWizardView(
+                        on_navigate=navigate_to
+                    )
+                content_area.content = cached_views["/suggested"]
 
-        # Resolve view content and update header breadcrumbs
+            elif route == "/builder":
+                workflow_header.visible = True
+                workflow_header.title_text = "Custom Itinerary Builder"
+                workflow_header.subtitle_text = "Interactive Stop-by-Stop Scheduling"
+                workflow_header.on_back = lambda: navigate_to("/home")
+                workflow_header._build_content()
+                if pre_added_place or "/builder" not in cached_views:
+                    cached_views["/builder"] = CustomBuilderView(
+                        on_navigate=navigate_to,
+                        pre_added_place=pre_added_place,
+                    )
+                content_area.content = cached_views["/builder"]
+
+            elif route.startswith("/trips/"):
+                # Trip detail view embeds its own back bar
+                workflow_header.visible = False
+                trip_id = route.split("/trips/")[1].split("?")[0].strip()
+                trip_obj = selected_trip
+                if not trip_obj:
+                    guest_storage = get_guest_storage()
+                    trip_obj = guest_storage.get_itinerary(trip_id)
+                if trip_obj:
+                    content_area.content = TripDetailView(
+                        itinerary=trip_obj,
+                        on_back=lambda: navigate_to("/saved"),
+                    )
+                else:
+                    navigate_to("/saved")
+                    return
+
+            page.update()
+            return
+
+        # 3. Primary 4-Tab Views (Home, Map, Saved, Profile)
+        workflow_header.visible = False
+        bottom_tab_bar.visible = True
+        bottom_tab_bar.set_active_route(route)
+
         if route in ("/dashboard", "/home"):
-            header.set_header_context("Home", "Where are you going next?")
             content_area.content = DashboardView(on_navigate=navigate_to)
-        elif route == "/places":
-            header.set_header_context(
-                "Map & Discover", "Explore 2,670+ destinations across 32 LGUs"
-            )
+        elif route in ("/map", "/places"):
             content_area.content = PlacesView(on_navigate=navigate_to)
-        elif route == "/suggested":
-            header.set_header_context(
-                "Suggested Itinerary Wizard", "Automated Proximity Clustering"
-            )
-            if "/suggested" not in cached_views:
-                cached_views["/suggested"] = SuggestedWizardView(
-                    on_navigate=navigate_to
-                )
-            content_area.content = cached_views["/suggested"]
-        elif route == "/builder":
-            header.set_header_context(
-                "Custom Itinerary Builder", "Interactive Stop-by-Stop Scheduling"
-            )
-            if pre_added_place or "/builder" not in cached_views:
-                cached_views["/builder"] = CustomBuilderView(
-                    on_navigate=navigate_to,
-                    pre_added_place=pre_added_place,
-                )
-            content_area.content = cached_views["/builder"]
-        elif route == "/trips":
-            header.set_header_context(
-                "Saved Itineraries", "Your Planned Trips in Nueva Ecija"
-            )
+        elif route in ("/saved", "/trips"):
             content_area.content = SavedTripsView(
                 on_navigate=navigate_to,
                 on_select_trip=lambda it: navigate_to(f"/trips/{it.id}", it),
             )
         elif route == "/profile":
-            header.set_header_context("Profile", "Traveler Identity & Preferences")
             content_area.content = ProfileView(
                 on_navigate=navigate_to,
                 on_toggle_theme=toggle_theme,
             )
-        elif route.startswith("/trips/"):
-            trip_id = route.split("/trips/")[1].split("?")[0].strip()
-            trip_obj = selected_trip
-            if not trip_obj:
-                guest_storage = get_guest_storage()
-                trip_obj = guest_storage.get_itinerary(trip_id)
-            if trip_obj:
-                header.set_header_context(
-                    f"Trip: {trip_obj.title}", "Chronological Timeline & Export"
-                )
-                content_area.content = TripDetailView(
-                    itinerary=trip_obj,
-                    on_back=lambda: navigate_to("/trips"),
-                )
-            else:
-                navigate_to("/trips")
-                return
         else:
-            header.set_header_context("Home", "Where are you going next?")
             content_area.content = DashboardView(on_navigate=navigate_to)
 
-        shell = ft.Row(
-            controls=[
-                sidebar,
-                ft.Column(
-                    controls=[
-                        header,
-                        content_area,
-                    ],
-                    expand=True,
-                    spacing=0,
-                ),
-            ],
-            expand=True,
-            spacing=0,
-        )
-
-        page.controls = [shell]
         page.update()
 
-    # Subscribe session changes to update header/sidebar
+    # Session change listener
     def _on_session_changed():
-        if sidebar:
-            sidebar._build_content()
-            try:
-                sidebar.update()
-            except Exception:
-                pass
-        if header:
-            header._build_content()
-            try:
-                header.update()
-            except Exception:
-                pass
+        if current_route in ("/profile", "/home", "/dashboard"):
+            navigate_to(current_route, force=True)
 
     session_manager.add_listener(_on_session_changed)
 
-    # Background Backend Health Monitor
+    # Root Layout Hierarchy
+    main_column = ft.Column(
+        controls=[
+            workflow_header,
+            content_area,
+            bottom_tab_bar,
+        ],
+        expand=True,
+        spacing=0,
+    )
+
+    splash_overlay = SplashOverlay(on_dismiss=None)
+
+    root_stack = ft.Stack(
+        controls=[
+            main_column,
+            offline_banner,
+            splash_overlay,
+        ],
+        expand=True,
+    )
+
+    page.controls = [root_stack]
+    page.update()
+
+    # Launch Cold-Start Splash Timer (2.8s auto-dismiss)
+    splash_overlay.start_timer(2.8)
+
+    # Background Host Health Loop (queries every 15s)
     async def check_backend_loop():
         while True:
             try:
-                is_healthy = await api_client.check_health()
-                if header:
-                    header.set_online_status(is_healthy)
+                await connectivity_service.check_host_health(api_client)
             except Exception:
-                if header:
-                    header.set_online_status(False)
+                pass
             await asyncio.sleep(15)
 
     page.run_task(check_backend_loop)
 
-    # Initial routing decision
+    # Initial Route Resolution
     if session_manager.is_authenticated or session_manager.is_guest:
-        navigate_to("/dashboard")
+        navigate_to("/home")
     else:
         navigate_to("/welcome")
 

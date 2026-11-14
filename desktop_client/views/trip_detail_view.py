@@ -11,6 +11,7 @@ from desktop_client.components.dialogs import (
     show_edit_stop_dialog,
     show_export_dialog,
 )
+from desktop_client.components.itinerary_route_map import ItineraryRouteMap
 from desktop_client.components.stop_card import StopCard
 from desktop_client.config.settings import ThemeColors
 from desktop_client.core.commute_guide import get_leg_commute_info
@@ -234,33 +235,13 @@ class TripDetailView(ft.Container):
                     ),
                 )
 
-            route_banner = ft.Container(
-                content=ft.Row(
-                    controls=[
-                        ft.Row(
-                            controls=[
-                                ft.Icon(ft.Icons.ROUTE, color=ThemeColors.PRIMARY_BLUE, size=18),
-                                ft.Text(
-                                    f"Day {active_day.day_number} Route: ~{total_day_dist:.1f} km • ~{time_display} drive • {len(active_day.items)} stops",
-                                    size=12,
-                                    weight=ft.FontWeight.BOLD,
-                                    color=ThemeColors.TEXT_BLACK,
-                                ),
-                            ],
-                            spacing=6,
-                        ),
-                        map_link_btn,
-                    ],
-                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                ),
-                bgcolor=ThemeColors.AZURE_SOFT,
-                border=ft.Border.all(1, ThemeColors.CUSTOM_CARD_BORDER),
-                border_radius=12,
-                padding=ft.Padding.symmetric(horizontal=14, vertical=10),
-                margin=ft.Margin.only(bottom=10),
+            route_banner = ItineraryRouteMap(
+                day=active_day,
+                initial_expanded=(len(active_day.items) >= 2),
+                height_expanded=190,
             )
         else:
+            route_banner = ft.Container()
             timeline_items.append(
                 ft.Container(
                     content=ft.Text("No stops recorded for this day.", size=12, color=ThemeColors.TEXT_MUTED_LIGHT),

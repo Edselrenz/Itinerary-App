@@ -175,3 +175,191 @@ def test_trip_detail_view_edit_mode_and_guard():
 
     detail_view._exit_edit_mode()
     assert detail_view.has_unsaved_changes() is False
+
+
+def test_bottom_tab_bar_and_workflow_header():
+    """Validates 4-tab bottom navigation bar and contextual workflow header."""
+    from desktop_client.components.bottom_tab_bar import BottomTabBar
+    from desktop_client.components.workflow_header import WorkflowHeader
+
+    nav_called = []
+    tab_bar = BottomTabBar(
+        current_route="/home",
+        on_navigate=lambda r: nav_called.append(r),
+    )
+    assert tab_bar.height == 60
+    assert len(tab_bar._tabs_data) == 4
+    tab_keys = [t["key"] for t in tab_bar._tabs_data]
+    assert tab_keys == ["home", "map", "saved", "profile"]
+
+    # Active route resolution
+    assert tab_bar._get_active_tab_key() == "home"
+    tab_bar.set_active_route("/map")
+    assert tab_bar._get_active_tab_key() == "map"
+    tab_bar.set_active_route("/places")
+    assert tab_bar._get_active_tab_key() == "map"
+    tab_bar.set_active_route("/saved")
+    assert tab_bar._get_active_tab_key() == "saved"
+    tab_bar.set_active_route("/trips")
+    assert tab_bar._get_active_tab_key() == "saved"
+    tab_bar.set_active_route("/profile")
+    assert tab_bar._get_active_tab_key() == "profile"
+
+    # Tab click trigger
+    tab_bar._handle_tab_click(tab_bar._tabs_data[1])
+    assert nav_called == ["/map"]
+
+    # Workflow header
+    back_called = []
+    wf_header = WorkflowHeader(
+        title="Suggested Itinerary Wizard",
+        subtitle="Corridor Clustering",
+        on_back=lambda: back_called.append(True),
+    )
+    assert wf_header.height == 54
+    assert wf_header.title_text == "Suggested Itinerary Wizard"
+    if wf_header.on_back:
+        wf_header.on_back()
+    assert back_called == [True]
+
+
+def test_offline_host_banner_and_splash_overlay():
+    """Validates offline banner and cold-start splash overlay."""
+    from desktop_client.components.offline_banner import OfflineHostBanner
+    from desktop_client.components.splash_overlay import SplashOverlay
+    from desktop_client.core.connectivity_service import get_connectivity_service
+
+    conn_service = get_connectivity_service()
+    conn_service.set_host_offline(True, force=True)
+
+    banner = OfflineHostBanner()
+    assert banner.visible is True
+
+    # Dismiss test
+    banner._dismiss()
+    assert banner.visible is False
+
+    # Back online
+    conn_service.set_host_offline(False)
+    assert banner.visible is False
+
+    # Splash overlay
+    dismissed = []
+    splash = SplashOverlay(on_dismiss=lambda: dismissed.append(True))
+    assert splash.visible is not False
+    splash.dismiss()
+    assert splash.visible is False
+    assert dismissed == [True]
+
+
+def test_clean_auth_view_no_demo_persona():
+    """Verifies that LoginView and WelcomeView do not contain dead social buttons or demo persona."""
+    from desktop_client.views.login_view import LoginView
+    from desktop_client.views.welcome_view import WelcomeView
+
+    login = LoginView()
+    # Check that demo account button was removed
+    assert not hasattr(login, "_handle_demo_login")
+    assert not hasattr(login, "demo_btn")
+
+    welcome = WelcomeView()
+    assert welcome is not None
+
+
+def test_interactive_province_map_and_route_map():
+    """Validates InteractiveProvinceMap GIS engine and embedded ItineraryRouteMap card."""
+    from desktop_client.components.interactive_map import InteractiveProvinceMap
+    from desktop_client.components.itinerary_route_map import ItineraryRouteMap
+    from desktop_client.models.place import Place
+    from desktop_client.models.itinerary import ItineraryDay, ItineraryItem
+
+    sample_places = [
+        Place(
+            id="p1",
+            name="Minalungao National Park",
+            category="nature_park",
+            latitude=15.30,
+            longitude=121.14,
+            municipality_name="General Tinio",
+        ),
+        Place(
+            id="p2",
+            name="Pantabangan Lake",
+            category="nature_park",
+            latitude=15.81,
+            longitude=121.15,
+            municipality_name="Pantabangan",
+        ),
+    ]
+
+    clicked_place = []
+    map_ctrl = InteractiveProvinceMap(
+        places=sample_places,
+        on_marker_click=lambda p: clicked_place.append(p),
+    )
+    assert map_ctrl is not None
+    assert map_ctrl.center_lat == 15.58
+    assert map_ctrl.zoom == 10.0
+
+    # Controls testing
+    map_ctrl.center_on_hub()
+    map_ctrl.recenter()
+    assert map_ctrl.center_lat == 15.58
+
+    # Route setting
+    map_ctrl.set_route([
+        {"order": 1, "title": "Stop 1", "latitude": 15.30, "longitude": 121.14},
+        {"order": 2, "title": "Stop 2", "latitude": 15.81, "longitude": 121.15},
+    ])
+    assert len(map_ctrl.route_stops) == 2
+
+    # Canvas fallback toggle
+    assert map_ctrl.use_canvas_fallback is False
+    map_ctrl.toggle_canvas_mode()
+    assert map_ctrl.use_canvas_fallback is True
+    map_ctrl.toggle_canvas_mode()
+    assert map_ctrl.use_canvas_fallback is False
+
+    # ItineraryRouteMap test
+    day = ItineraryDay(
+        id="d1",
+        itinerary_id="itin-1",
+        day_number=1,
+        travel_date="2026-12-01",
+        title="Day 1 Adventure",
+        items=[
+            ItineraryItem(
+                id="item-1",
+                day_id="d1",
+                sort_order=1,
+                place_id="p1",
+                custom_title="Minalungao National Park",
+                place=sample_places[0],
+            ),
+            ItineraryItem(
+                id="item-2",
+                day_id="d1",
+                sort_order=2,
+                place_id="p2",
+                custom_title="Pantabangan Lake",
+                place=sample_places[1],
+            ),
+        ],
+    )
+
+    full_map_triggered = []
+    route_map = ItineraryRouteMap(
+        day=day,
+        on_view_full_map=lambda: full_map_triggered.append(True),
+    )
+    assert route_map is not None
+    dist, mins = route_map._calculate_metrics()
+    assert dist > 0.0
+    assert mins > 0
+
+    route_map.toggle_expand()
+    assert route_map.is_expanded is False
+    route_map.toggle_expand()
+    assert route_map.is_expanded is True
+
+
