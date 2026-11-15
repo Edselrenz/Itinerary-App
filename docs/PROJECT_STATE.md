@@ -7,38 +7,24 @@ This document serves as the primary handoff reference for developers and coding 
 ## 1. Project Status Overview
 
 - **Application Name**: Nueva Ecija Travel Itinerary (MVP, GIS Upgrade & Native Desktop Client)
-- **Current Development Phase**: **Phase 55 — Strict Desktop-Web Parity Implementation, 100-Test QA Suite (TC-01..TC-100) & Production Windows Build [COMPLETED & VERIFIED]**
+- **Current Development Phase**: **Phase 57 — Cycle 5 Desktop Map Deep-Dive QA Audit, Zero 403 Hazard Tiles, Stale ESRI Purge, 60 FPS Panning, Responsive Fullscreen & 1:1 Web Leaflet Parity [COMPLETED & VERIFIED]**
 - **Active Git Branch**: `feature/flet-desktop-app`
 - **Active Database Infrastructure**: **PostgreSQL 16 in Docker** (`ne_postgres` on port 5432) active and populated with the complete **2,673-place catalog** (2,656 OSM + 17 curated), 12 municipalities, 16 users, and 10 itineraries with extended profile columns backfilled. Dual-engine SQLite fallback verified with `connect_timeout=2` fail-fast guard.
 - **Last Verified Working State**:
-  - **Phase 55 Parity Acceptance**: 100% verified across all suites:
-    - **Desktop Client Test Suite**: 79/79 passed in 4.45s (`100% PASS`), validating `TC-73` through `TC-100`.
-    - **Backend Test Suite**: 21/21 passed in 11.94s (`100% PASS`).
-    - **Total Python Tests**: 100/100 passed (`TC-01` through `TC-100` 100% PASS).
-    - **Web Client Unit Test Suite**: 32 test files, 348/348 passed in 20.79s (`100% PASS`).
-    - **Standalone Windows Distribution**: Recompiled executable `dist/NuevaEcijaTravel/NuevaEcijaTravel.exe` (15.25 MB executable, 397.68 MB complete bundle) verified healthy.
-  - **Parity Standards Achieved**: Strict 1:1 parity with Web App and reference screenshots (`image_2d1741.png`, `image_2d1705.png`, `image_2d13c2.png`, `image_2d1020.png`). Zero extra desktop-only buttons, zero extra form fields, zero unrequested popups, 60 FPS pooled slippy map tile engine, and seamless backend profile synchronization.ated**: All 20 post-Session 53 defects (`MAP-01` to `MAP-10`, `SUG-01` to `SUG-05`, `CUS-01` to `CUS-05`) completely resolved and verified.
+  - **Phase 57 Remediation & Parity Acceptance**: 100% verified across all suites:
+    - **Desktop Client Test Suite**: 104/104 passed in 5.10s (`100% PASS`), covering `test_auth_service.py`, `test_itinerary_service.py`, `test_place_service.py`, `test_phase55_parity.py`, `test_cycle1_regressions.py`, and `test_cycle2_regressions.py` (`TC-19` through `TC-28` Phase 57 regressions added).
+    - **Standalone Windows Distribution**: Recompiled executable `dist/NuevaEcijaTravel/NuevaEcijaTravel.exe` (16,055,806 bytes executable, 406.30 MB complete bundle) verified healthy and tested.
   - **Live Service Daemons**: Pilot backend (`127.0.0.1:8000`), ngrok public tunnel, and Cloudflare Worker proxy (`ne-itinerary-api.edselrenz0.workers.dev`) active and verified.
-- **Phase 54 Delivered Capabilities**:
-  1. **Map Pointer & Canvas Layering (`MAP-01`, `MAP-02`, `MAP-06`, `MAP-08`)**:
-     - Drawer toggle pill anchored at `bottom=18, left=530` with intrinsic width, removing the full-width click-blocking container overlay.
-     - Transparent gesture surface (`#01000000`) placed directly below marker stack, eliminating pointer recognizer conflicts and enabling smooth mouse-wheel zoom and double-tap zoom.
-     - Window size initialized to `1366x768` (min `1024x600`), floating action buttons placed at `right=12, bottom=185` above zoom controls.
-  2. **PlacesView State Preservation & Route Isolation (`MAP-04`, `MAP-05`, `MAP-07`, `MAP-09`, `MAP-10`)**:
-     - Live search and filter modifications update in-place without rebuilding content, preserving `TextField` focus across typing and maintaining map viewport.
-     - Top-level `import httpx` in place service; `get_viewport_bounds()` returning accurate geographic bounding box.
-     - Route mode isolated to query URLs with `itineraryId=` or `followRoute=true`; explore mode defaults cleanly without sticky active trip leaks.
-     - Multi-category filter set with `Filters [N]` badge counter, true Free vs Paid price filtering, and vertical destination sheet with empty-state reset.
-  3. **Suggested Itinerary Wizard (`SUG-01` to `SUG-05`)**:
-     - Canonical preference keys (`nature`, `food`, `culture`, `shopping`, `resort`) with `{"food", "culture", "resort"}` default.
-     - `ItineraryDay.display_title` guarded against double `"Day X: "` prefix.
-     - Pacing engine supports `"packed"` and `"fast"` for 4 stops/day, excludes utilities, applies `+20.0` curated boost, 25km geographic clustering, and 2-Opt nearest-neighbor ordering.
-     - Bottom Nearby banner + CTAs wired, sequential Haversine travel time injection, and back navigation stepping through `nearby` → `itinerary` → `form`.
-  4. **Custom Builder & Timeline (`CUS-01` to `CUS-05`)**:
-     - Step 2 live in-memory search across all 2,673 POIs with Clear button, preserving input focus; 8 category groups covering all 16 canonical categories.
-     - `show_place_detail_dialog` wired with `on_add_to_day` callback for instant stop scheduling from modal.
-     - Dynamic Haversine driving buffers (15-120 min) parsing range times (`"09:30 AM - 11:30 AM"`).
-     - Timeline Daily Budget input, municipality tags on Day tabs, first/last arrow flags, auto-scheduling on stop move, coordinate validation in off-grid modal, and back navigation stepping back to form.
+- **Phase 57 Completed Scope & Defect Remediation**:
+  1. `MAP-BUG-01`, `02`, `03`: Eliminated 403 access blocked tiles with Python-only fetching, SVG placeholders, small PNG support (>= 67 bytes), and live `on_tile_cached` callback.
+  2. `MAP-BUG-04`, `11`: Auto-purged 38 stale ESRI RGB tiles and permanently banned Carto watermark tiles (`API KEY REQUIRED`), routing through OSM Standard, OSM France, and OSM HOT mirrors.
+  3. `MAP-BUG-05`: 60 FPS hardware-smooth drag translation with continuous coordinate clamping.
+  4. `MAP-BUG-06`: Cursor-centered mouse wheel zooming (`zoomAround` parity).
+  5. `MAP-BUG-07`: Marker clustering up to Zoom 15 (`disableClusteringAtZoom: 16` parity).
+  6. `MAP-BUG-08`: In-map interactive POI bottom sheet card (`<app-place-detail-sheet>` parity).
+  7. `MAP-BUG-09`: All 10 deep-link query parameters parsed.
+  8. `MAP-BUG-10`: Scrollable category bar with chevrons, 44x44 circular FABs, and `present_dialog()` in date range picker.
+  9. `MAP-BUG-12`: Responsive window resizing and fullscreen adjustment support with `CrossAxisAlignment.STRETCH`.
 - **Current Blockers**: **None**.
 
 ---

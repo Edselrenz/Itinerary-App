@@ -417,3 +417,59 @@ Following the Session 53 re-QA audit against the live reference Web App (`https:
 | **`PAR-04`** | **P1 (HIGH)** | `desktop_client/components/destination_picker.py`, `views/suggested_wizard_view.py` | `TextField.__init__() got an unexpected keyword argument 'prefix_icon_color'` under Flet 1.1.2 runtime. | Removed deprecated parameter in favor of standard icon styling. | **RESOLVED (Session 55)** |
 | **`PAR-05`** | **P2 (MEDIUM)** | `scripts/build_standalone_exe.py` | PyInstaller build failed with `PermissionError: [WinError 5] Access is denied` when an existing instance of `NuevaEcijaTravel.exe` was running in the background. | Terminated orphaned process and added clean process check before recompilation. | **RESOLVED (Session 55)** |
 
+---
+
+## 17. Cycle 4 / Phase 56 Desktop Parity & Runtime Defect Ledger (QA Plan 7 Remediation)
+
+During Phase 56 QA verification against [`desktop_web_parity_qa_and_implementation_plan (7).md`](file:///c:/Users/Edward/Desktop/CaseStudy/desktop_web_parity_qa_and_implementation_plan%20(7).md), 14 defect clusters covering 29 runtime defects were audited, remediated, and verified:
+
+| Defect ID | Severity | Module / Location | Root Cause in Desktop Client | Reference Web Behavior / Remediation Applied | Resolution Status |
+| :--- | :---: | :--- | :--- | :--- | :---: |
+| **`BUG-01`** | **P0 (CRITICAL)** | `desktop_client/main.py:256-263, 326-333` | Post-update `on_resize` and `return` blocks were unindented at 8 spaces in `navigate_to()`. Every route transition aborted immediately after mounting initial view. | Correctly indented inside Section 1 and Section 2 branches. All dashboard cards, tabs, and destinations navigate cleanly. | **RESOLVED (Phase 56)** |
+| **`BUG-02`** | **P1 (HIGH)** | `desktop_client/views/login_view.py`, `signup_view.py` | Successful authentication navigated to `/dashboard` silently with zero visual feedback to traveler. | Added green snackbar toasts (`show_toast`) displaying `"Welcome back, {name}!"` and `"Account created! Welcome to Trip mo, trip ko, {name}!"`. | **RESOLVED (Phase 56)** |
+| **`BUG-03`** | **P1 (HIGH)** | `desktop_client/main.py:168-185` | `splash_overlay` remained inside `root_stack.controls` after fade-out, potentially shielding pointer events on cold boot. | Wired `_on_splash_dismiss()` to explicitly unmount `splash_overlay` from `root_stack.controls`. | **RESOLVED (Phase 56)** |
+| **`BUG-04`** | **P0 (CRITICAL)** | `desktop_client/components/slippy_map_canvas.py` | Map canvas rendered CartoDB watermark tiles (`"API KEY REQUIRED"` watermark stamped over Central Luzon). | Swapped tile source to clean Carto Light / OpenStreetMap raster tile URLs without watermarks. | **RESOLVED (Phase 56)** |
+| **`BUG-05`** | **P1 (HIGH)** | `desktop_client/components/slippy_map_canvas.py:resize_canvas` | Toggling fullscreen or maximizing the window left the map canvas at fixed 1240x740 dimensions. | Added dynamic `page.on_resized` listener dispatching `resize_viewport()`, recalculating width and height on window resize. | **RESOLVED (Phase 56)** |
+| **`BUG-06`** | **P1 (HIGH)** | `desktop_client/components/slippy_map_canvas.py:render_markers` | Marker culling bounds `[-64, width + 64]` caused markers to clip and pop during rapid drag/pan. | Expanded overscan bounds to `[-256, width + 256]` for seamless marker rendering during pan. | **RESOLVED (Phase 56)** |
+| **`BUG-07`** | **P2 (MEDIUM)** | `desktop_client/components/slippy_map_canvas.py:_tile_pool` | Tile pool dictionary was cleared on zoom level change, causing grey tile flashes. | Retained cached tiles across zoom/pan in `_tile_pool`, preventing flashes and reducing network requests. | **RESOLVED (Phase 56)** |
+| **`BUG-08`** | **P1 (HIGH)** | `desktop_client/components/itinerary_route_map.py` | `on_stop_click` callback expected 1 argument (`stop`), but parent views passed 2 arguments (`day_num, stop_idx`), causing `TypeError`. | Inspected callback parameter count using `inspect.signature` to safely support both 1-arg and 2-arg signatures. | **RESOLVED (Phase 56)** |
+| **`BUG-09`** | **P2 (MEDIUM)** | `desktop_client/components/itinerary_route_map.py` | Map re-queried OSRM routing service repeatedly for trips with existing route polylines. | Pre-extracted polyline geometries from saved itinerary data, bypassing redundant external API queries. | **RESOLVED (Phase 56)** |
+| **`BUG-10`** | **P1 (HIGH)** | `desktop_client/models/itinerary.py`, `services/itinerary_service.py` | Unset `daily_budget` caused `TypeError: unsupported format string passed to NoneType` in budget cards. | Enforced safe float defaulting to `2500.0` when `daily_budget` is `None` across models, services, and views. | **RESOLVED (Phase 56)** |
+| **`BUG-11`** | **P1 (HIGH)** | `desktop_client/views/custom_builder_view.py` | Step 2 destination `ResponsiveRow` overflowed viewport without scrollbar, rendering lower cards unreachable. | Wrapped destination grid in `ft.Column(scroll=ft.ScrollMode.AUTO, expand=True)`. | **RESOLVED (Phase 56)** |
+| **`BUG-12`** | **P2 (MEDIUM)** | `desktop_client/config/settings.py` | Views referenced missing `surface_primary` and `border_color` palette attributes; dark mode did not persist across restarts. | Added palette property aliases and wired `set_dark_mode()` to persist and load preferences from `storage/ui_prefs.json`. | **RESOLVED (Phase 56)** |
+| **`BUG-13`** | **P1 (HIGH)** | `desktop_client/core/api_client.py` | 10.0s connect timeout caused prolonged freeze when backend server was stopped before falling back to guest mode. | Hardened initial connect timeout to 2.5s for fast, responsive failover to local offline storage. | **RESOLVED (Phase 56)** |
+| **`BUG-14`** | **P2 (MEDIUM)** | `scripts/build_standalone_exe.py` | PyInstaller build failed with `WinError 5` if an existing `NuevaEcijaTravel.exe` was active in the background. | Added running process check, terminating background processes prior to compiling `dist/NuevaEcijaTravel/NuevaEcijaTravel.exe`. | **RESOLVED (Phase 56)** |
+
+---
+
+## 18. Cycle 5 Desktop Map Deep-Dive QA Audit Ledger (QA Plan 8 Analysis — `MAP-BUG-01` to `MAP-BUG-10`) [RESOLVED IN PHASE 57]
+
+Following an exhaustive inspection of commit `ef2b63e3dc6d1ecc0eb95bc62648ca9d65698490` and screenshot `image_856d6d.jpg` (Desktop `Map` tab at 1920×1080, Z10, showing 2,673 POIs with "403 Access blocked" hazard tiles on the right and beige ESRI seams), 10 root-cause defects were documented, fixed, and verified with 104/104 passing tests:
+
+| Defect ID | Severity | Symptom Observed in `image_856d6d.jpg` & Runtime | Exact File & Line(s) | Root Cause & Resolution Applied | Status |
+| :--- | :---: | :--- | :--- | :--- | :---: |
+| **`MAP-BUG-01`** | **P0 (BLOCKER)** | Yellow-and-black **"403 Access blocked"** tiles on the right side of the map | `desktop_client/components/slippy_map_canvas.py` | Never pass external URLs to `ft.Image.src`. Return SVG placeholder data URIs and fetch via Python with compliant headers + multi-mirror fallback (OSM, OSM FR, OSM HOT). | **RESOLVED (Phase 57)** |
+| **`MAP-BUG-02`** | **P0 (BLOCKER)** | Ocean, lake, and rural tiles (`10_858_466`, `10_858_467`, etc.) never cache and permanently show 403 | `desktop_client/components/slippy_map_canvas.py` | Accept valid PNGs of any size `>= 67` bytes with `_is_valid_osm_png()`, rejecting only 403 hazard signatures. Solid ocean tiles cached cleanly. | **RESOLVED (Phase 57)** |
+| **`MAP-BUG-03`** | **P0 (BLOCKER)** | Background-downloaded tiles never swap in on screen until user pans/zooms | `desktop_client/components/slippy_map_canvas.py` | Wired `on_tile_cached=self._on_tile_cached_live` to update `img_ctrl.src` and call `img_ctrl.update()` on download completion. | **RESOLVED (Phase 57)** |
+| **`MAP-BUG-04`** | **P0 (BLOCKER)** | Mismatched tan/beige tile textures along border coordinates | `desktop_client/assets/tiles_cache/` | Auto-purged 38 stale ESRI RGB tiles via `clean_and_seed_tiles.py` and `_purge_stale_cached_tiles_once()`. Banned Carto watermarked tiles. | **RESOLVED (Phase 57)** |
+| **`MAP-BUG-05`** | **P0 (CRITICAL)** | Dragging/panning stutters (`~25–35 FPS`) and snaps backward near provincial borders | `desktop_client/components/slippy_map_canvas.py` | Lightweight layer containers translated with 16ms throttling (~60 FPS); continuous coordinate clamping during drag. | **RESOLVED (Phase 57)** |
+| **`MAP-BUG-06`** | **P1 (HIGH)** | Mouse wheel scroll zooms toward center of viewport instead of cursor | `desktop_client/components/slippy_map_canvas.py` | Implemented cursor-centered focal zoom calculation (`zoomAround` parity) keeping point under mouse stationary. | **RESOLVED (Phase 57)** |
+| **`MAP-BUG-07`** | **P1 (HIGH)** | Zooming to `Z14` or `Z15` unclusters all 400+ POIs and drops markers | `desktop_client/components/slippy_map_canvas.py` | Clustered up to Zoom 15 (`disableClusteringAtZoom: 16`), tighter radius at Z14-Z15, and raised render cap to 160 at Z16-Z18. | **RESOLVED (Phase 57)** |
+| **`MAP-BUG-08`** | **P1 (HIGH)** | Clicking marker opened full-screen dialog instead of in-map bottom sheet | `desktop_client/views/places_view.py` | Built in-map `_poi_bottom_sheet_host` (<app-place-detail-sheet> parity) with `✨ Start Trip Here`, `+ Add to Trip`, and `Get Directions`. | **RESOLVED (Phase 57)** |
+| **`MAP-BUG-09`** | **P1 (HIGH)** | Deep-link navigation parameters did not filter or auto-focus desktop map | `desktop_client/views/places_view.py` | Parsed all 10 Web-compatible query parameters (`itineraryId`, `followRoute`, `dayNumber`, `lat`, `lng`, `placeId`, `category`, `priceTier`, `search`). | **RESOLVED (Phase 57)** |
+| **`MAP-BUG-10`** | **P2 (MEDIUM)** | Category pills clipped; FABs lacked 44×44 circular styles; raw `overlay.append` | `views/places_view.py`, `date_range_dialog.py` | Enabled `ScrollMode.AUTO` with `‹` / `›` buttons; styled circular semantic FABs; replaced `overlay.append` with `present_dialog()`. | **RESOLVED (Phase 57)** |
+
+---
+
+## 19. Runtime Map Visual Audit: Carto Watermarks & Fullscreen Resize Defect Remediation
+
+Following the audit of screenshots from live testing (`media_1794740243331_c9a4097e.jpg`, `media_1794740262459_5d9bc7a3.jpg`):
+
+| Defect ID | Severity | Root Cause Identified | Remediation Applied | Status |
+| :--- | :---: | :--- | :--- | :---: |
+| **`MAP-BUG-11`** | **P0 (BLOCKER)** | Carto CDN returns 2049-byte watermark PNGs (`"API KEY REQUIRED carto.com/basemaps/apikey"`) when fetched without paid API key. | 1. Removed Carto CDN from fallback list entirely.<br>2. Swapped to OpenStreetMap Standard, OSM France, and OSM HOT raster CDN mirrors.<br>3. Hardened `_is_valid_osm_png` and startup sanitizer to detect and delete 2048/2049 byte tiles and signatures `carto.com` / `API KEY REQUIRED`. | **RESOLVED (Phase 57)** |
+| **`MAP-BUG-12`** | **P1 (HIGH)** | Maximizing the desktop window left the map canvas at 1220px fixed width with an empty gray gutter on the right, because `_on_page_resize` ignored `e.width`/`e.height` and read uninitialized `page.width` (falling back to 1280). In addition, `main_column` lacked horizontal stretch. | 1. In `_on_page_resize(e)`: extracted dynamic logical pixels `getattr(e, "width", None) or page.window.width or page.width` and dispatches new dimensions.<br>2. Added `horizontal_alignment=ft.CrossAxisAlignment.STRETCH` to `main_column` and `width=float("inf")` to `content_area` and `PlacesView`.<br>3. `SlippyMapCanvas.resize_canvas()` updates all layer stacks and dispatches layer rebuild and UI refresh. | **RESOLVED (Phase 57)** |
+
+
+
+

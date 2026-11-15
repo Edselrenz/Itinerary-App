@@ -5,6 +5,74 @@ All notable changes to the Nueva Ecija Travel Itinerary project are documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.54.0] - 2026-11-15
+### Fixed & Completed (Phase 57 - Cycle 5 Desktop Map Deep-Dive & 1:1 Web Parity)
+- **Eliminate OSM "403 Access blocked" Hazard Tiles & Carto Watermarks (`MAP-BUG-01`, `MAP-BUG-02`, `MAP-BUG-03`, `MAP-BUG-11`)**:
+  - Never assign external `https://*.tile.openstreetmap.org/...` URLs directly to `ft.Image.src` (which uses Flutter's Dart `io.HttpClient` without browser headers and triggers OSM 403 blocks).
+  - Serve instant, seamless SVG placeholder data URIs during downloads (ocean blue `#aad3df` east of Aurora, warm land `#f2efe9` inland).
+  - Multi-mirror Python fetcher: Primary OSM Standard with custom desktop application User-Agent & Referer; fallback to OSM France and OSM HOT raster CDN mirrors. Permanently removed Carto CDN URLs to eliminate `"API KEY REQUIRED carto.com/basemaps/apikey"` watermark PNGs.
+  - Wire `on_tile_cached` callback to `_on_tile_cached_live` to dynamically swap local PNGs into active `ft.Image` controls on the UI thread without requiring manual pan/zoom.
+  - Fix ocean and rural tile rejection: accept valid PNG tiles of any size `>= 67` bytes (`_is_valid_osm_png`), replacing the flawed `> 2500` byte check that discarded 103-byte ocean tiles.
+  - Auto-purge and ban 2048/2049 byte Carto watermarks and hazard tiles.
+- **Purge Stale ESRI ArcGIS RGB Tiles (`MAP-BUG-04`)**:
+  - Auto-purge 38 leftover `'RGB'`-mode ESRI ArcGIS World Street Map tiles (`color_type == 2`, beige background `(246, 240, 218)`) from `desktop_client/assets/tiles_cache/` via `_purge_stale_cached_tiles_once()`.
+- **Responsive Fullscreen & Window Maximization (`MAP-BUG-12`)**:
+  - Fixed `_on_page_resize(e)` to extract dynamic logical pixels `getattr(e, "width", None) or page.window.width or page.width` and dispatch to active views.
+  - Added `horizontal_alignment=ft.CrossAxisAlignment.STRETCH` on `main_column` and `width=float("inf")` on `content_area` and `PlacesView` so the map expands across the entire 100% viewport width without gutters.
+  - `SlippyMapCanvas.resize_canvas()` updates all layer stacks and dispatches layer rebuild and UI refresh.
+- **60 FPS GPU-Smooth Dragging & Continuous Coordinate Clamping (`MAP-BUG-05`)**:
+  - Dedicated `_viewport_mover` container wrapping pan and marker stacks, updating only `left` and `top` properties via 16ms throttling (~60 FPS) without re-serializing the entire control stack.
+  - Continuously clamp prospective center coordinates during drag, eliminating violent snap-backs on mouse release near provincial bounds.
+  - Mid-drag seamless rebase when translation exceeds 220px within the 2-tile outer buffer.
+- **Cursor-Centered Mouse Wheel Zooming (`MAP-BUG-06`)**:
+  - Calculate geographic `(lat, lng)` directly under `e.local_position` before zooming and adjust center coordinates at the new zoom level (Leaflet `zoomAround` parity).
+- **Web-Parity Clustering Up to Z15 & Zero Dropped Markers (`MAP-BUG-07`)**:
+  - Match Web Leaflet `disableClusteringAtZoom: 16` (`maxClusterRadius: 40`).
+  - Cluster at all zooms `< 16` (`cell_size = 76.0` at Z9–Z13, `cell_size = 48.0` at Z14–Z15).
+  - Raise render cap to 160 markers at Z16–Z18 so dense POI hubs like Cabanatuan City never drop pins.
+- **PlacesView 1:1 Web Leaflet Parity (`MAP-BUG-08`, `MAP-BUG-09`, `MAP-BUG-10`)**:
+  - Support all 10 Web-compatible deep-link query parameters (`itineraryId`, `followRoute`, `day`/`dayNumber`, `lat`, `lng`, `placeId`, `destination`, `municipality`, `category`, `priceTier`, `search`).
+  - Scrollable category pills bar with horizontal chevrons (`‹` / `›`).
+  - Style right FABs as 44×44 circular pills with semantic colors (`#7c3aed`, `#0284c7`, `#475569`).
+  - In-map interactive POI bottom sheet card (`<app-place-detail-sheet>` parity) with Favorite heart, Commute Guide, and Primary Actions: **`✨ Start Trip Here`**, **`+ Add to Trip`**, and **`Get Directions`**.
+- **DateRangeDialog Overlay Cleanup (`MAP-BUG-10`)**:
+  - Replace raw `self.page.overlay.append(dlg)` with `present_dialog(self.page, dlg)`.
+- **Flet Material 3 Theme Compatibility**:
+  - Eliminated deprecated `background` kwarg from `ft.ColorScheme(...)` in `desktop_client/main.py`.
+- **Standalone Windows Distribution Compiled**:
+  - Built fresh `dist/NuevaEcijaTravel/NuevaEcijaTravel.exe` (15.31 MB, 406.30 MB bundled distribution).
+
+## [0.53.0] - 2026-11-15
+### Fixed
+- **Map Responsiveness, Overscan & Zero Watermark Artifacts (`BUG-03`, `BUG-07`, `BUG-08`, `BUG-09`, `BUG-10`)**:
+  - Purged 74 poisoned `2049-byte` CartoDB watermark tiles (`API KEY REQUIRED carto.com/basemaps/apikey`) and migrated raster tile engine strictly to OpenStreetMap Raster CDN (`https://{sub}.tile.openstreetmap.org/{zoom}/{x}/{y}.png`) matching Web Leaflet baseline.
+  - Added strict tile integrity guard: requires `len(data) > 2500` bytes and valid PNG headers before saving or serving cached tiles.
+  - Bound `page.on_resize` in `main.py`, passed dynamic dimensions to `PlacesView`, and centered `"List View (2673)"` pill dynamically.
+  - Fixed swapped bounding box unpacking in `places_view.py:_refresh_live_places()` from `(min_lat, max_lat, min_lng, max_lng)` to `(min_lat, min_lng, max_lat, max_lng)`, preventing 105-degree Overpass queries.
+  - Eliminated thread-unsafe `self._vector_canvas.update()` in `SlippyMapCanvas._async_osrm()` by scheduling updates on the main event loop via `self.page.run_task()`.
+  - Expanded marker/pin culling margins to `[-256, width + 256]` eliminating pin pop-in during panning. Preserved tile cache in `_tile_pool` on zoom.
+- **Flet 1.1.2 Modal Migrations & Navigation Guard Resolution (`BUG-02`)**:
+  - Replaced legacy `page.overlay.append(dlg); dlg.open = True` across all 14 dialog locations with `present_dialog(page, dlg)` (`page.show_dialog`) and `dismiss_dialog(page, dlg)` (`page.pop_dialog`).
+  - Fixed premature return bug in `main.py:navigate_to`: indented `return` blocks inside Section 1 and Section 2 if-branches so dashboard tabs, buttons, and destinations are never blocked by an accidental premature return.
+  - Configured `_on_splash_dismiss` in `main.py` to completely remove `splash_overlay` from `root_stack.controls` on dismiss, preventing any invisible overlay from intercepting pointer clicks.
+- **Auth Visual Feedback & Settings Persistence (`BUG-01`, `BUG-05`, `BUG-18`, `BUG-20`)**:
+  - Added instant visual feedback toasts (`"Welcome back, {name}!"` and `"Account created! Welcome to Trip mo, trip ko, {name}!"`) upon successful login and registration.
+  - In `settings.py`: imported `Optional` and `Any`, added `surface_primary` and `border_color` aliases to `ThemePalette`, added `TEXT_PRIMARY_LIGHT: str = "#0f172a"` to `ThemeColors`, and persisted `is_dark_mode` in `storage/ui_prefs.json`.
+  - In `api_client.py`: defined `logger = logging.getLogger(__name__)`, added `set_base_url()`, and reduced connect timeout to 2.5s for fast failover to Cloudflare Worker edge.
+  - In `profile_view.py`: wrapped all subviews in `_wrap_centered_scroll` with `width=float("inf")` to eliminate left-stuck layouts on wide monitors.
+- **Itinerary, Routing & Budgeting Parity (`BUG-06`, `BUG-11`, `BUG-12`, `BUG-13`, `BUG-14`, `BUG-15`, `BUG-16`, `BUG-17`, `BUG-19`)**:
+  - In `polyline.py` & `commute_guide.py`: supported `(lat, lng)` tuple coordinates, `custom_lat`, and `custom_lng` in `build_google_maps_day_route_url()`, and aliased `build_google_maps_directions_url`.
+  - In `itinerary.py` & `itinerary_service.py`: guarded `daily_budget` defaulting to 2500.0 if `None`, and added `@property def estimated_cost(self) -> float: return self.representative_cost`.
+  - In `itinerary_route_map.py`: wrapped `on_stop_click` with `inspect.signature` supporting both 1-arg and 2-arg pin callbacks, and decoded polyline geometry from `day_overview_polyline` / `route_polyline_from_prev` to avoid redundant OSRM requests.
+  - In `trip_detail_view.py`: guarded `itin.daily_budget` formatting against `None`, replaced `estimated_cost` with `representative_cost`, and added toast notifications to `_save_changes()`.
+  - In `suggested_wizard_view.py`: guarded `daily_budget` formatting against `None`, and wired `_save_generated_itinerary()` to use `self.generated_itinerary.to_create_payload()`.
+  - In `custom_builder_view.py`: wrapped 60-card `ft.ResponsiveRow` inside `ft.Column(scroll=ft.ScrollMode.AUTO, expand=True)` so all destinations scroll properly.
+### Verified
+- Full desktop test suite: **94 passed, 0 failed (100% green)** in 3.71s (`python -m pytest desktop_client/tests/ -v`).
+- Backend test suite: **21 passed, 0 failed (100% green)**.
+- Web unit test suite: **348 passed, 0 failed (100% green)**.
+- Standalone Windows distribution compiled cleanly: `dist/NuevaEcijaTravel/NuevaEcijaTravel.exe` (16,035,439 bytes).
+
 ## [0.52.0] - 2026-11-14
 ### Fixed
 - **Network Resilience & Edge Proxy Failover (`core/api_client.py` & `core/connectivity_service.py`)**:

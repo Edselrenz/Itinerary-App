@@ -105,7 +105,7 @@ def main(page: ft.Page) -> None:
     cached_views: dict[str, ft.Control] = {}
 
     # App Shell Structure
-    content_area = ft.Container(expand=True)
+    content_area = ft.Container(expand=True, width=float("inf"))
     workflow_header = WorkflowHeader(title="Workflow", on_back=lambda: navigate_to("/home"))
     workflow_header.visible = False
 
@@ -341,12 +341,14 @@ def main(page: ft.Page) -> None:
             content_area.content = DashboardView(on_navigate=navigate_to)
         elif base_route in ("/map", "/places"):
             has_route_param = ("itineraryId=" in route) or ("followRoute=true" in route)
+            init_w = float(getattr(getattr(page, "window", None), "width", None) or page.width or 1280.0)
+            init_h = float(getattr(getattr(page, "window", None), "height", None) or page.height or 840.0)
             content_area.content = PlacesView(
                 on_navigate=navigate_to,
                 route_query=route,
                 active_trip=selected_trip if has_route_param else None,
-                initial_width=page.width,
-                initial_height=page.height,
+                initial_width=init_w,
+                initial_height=init_h,
             )
         elif base_route in ("/saved", "/trips"):
             content_area.content = SavedTripsView(
@@ -408,6 +410,7 @@ def main(page: ft.Page) -> None:
         ],
         expand=True,
         spacing=0,
+        horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
     )
 
     def _on_splash_dismiss() -> None:
@@ -437,13 +440,24 @@ def main(page: ft.Page) -> None:
     def _on_page_resize(e: Any = None) -> None:
         palette = settings.palette
         page.bgcolor = palette.bg_main
+        # Extract true logical pixels from resize event, window, or page
+        new_w = getattr(e, "width", None)
+        new_h = getattr(e, "height", None)
+        if not new_w or not new_h:
+            new_w = getattr(getattr(page, "window", None), "width", None) or page.width or 1280.0
+            new_h = getattr(getattr(page, "window", None), "height", None) or page.height or 840.0
+        new_w = float(new_w)
+        new_h = float(new_h)
+        page.width = new_w
+        page.height = new_h
+
         if content_area:
             content_area.bgcolor = palette.bg_main
             active_ctrl = content_area.content
             if active_ctrl is not None:
                 if hasattr(active_ctrl, "on_resize") and callable(active_ctrl.on_resize):
                     try:
-                        active_ctrl.on_resize(float(page.width or 1280), float(page.height or 840))
+                        active_ctrl.on_resize(new_w, new_h)
                     except Exception:
                         pass
                 elif hasattr(active_ctrl, "_build_content") and callable(active_ctrl._build_content):

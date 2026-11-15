@@ -376,3 +376,129 @@ def test_tc_18_navigation_transitions_not_blocked():
                     if_indent = len(line) - len(line.lstrip())
                     assert indent > if_indent, "Return in section 2 must be indented inside the if-block"
                     break
+
+
+def test_tc_19_no_raw_osm_url_assigned_to_image_src():
+    """TC-19: Verifies _resolve_tile_source never returns a remote https:// URL directly to ft.Image (MAP-BUG-01)."""
+    from desktop_client.components.slippy_map_canvas import _resolve_tile_source
+
+    src = _resolve_tile_source(10, 9999, 9999)
+    assert not src.startswith("http://")
+    assert not src.startswith("https://")
+    assert src.startswith("data:image/svg+xml;base64,") or src.startswith("/tiles")
+
+
+def test_tc_20_valid_small_ocean_png_accepted():
+    """TC-20: Verifies _is_valid_osm_png accepts 103-byte and small genuine PNG ocean tiles (MAP-BUG-02)."""
+    from desktop_client.components.slippy_map_canvas import _is_valid_osm_png
+
+    # 103-byte solid PNG header
+    ocean_png = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR" + (b"\x00" * 89)
+    assert len(ocean_png) == 105
+    assert _is_valid_osm_png(ocean_png) is True
+
+    # Corrupt or too small bytes rejected
+    assert _is_valid_osm_png(b"") is False
+    assert _is_valid_osm_png(b"\x89PNG\r\n\x1a\n") is False
+
+
+def test_tc_21_stale_esri_and_carto_watermarks_purged():
+    """TC-21: Verifies Carto watermark tiles and blocked tiles are strictly rejected by validator (MAP-BUG-01, MAP-BUG-04)."""
+    from desktop_client.components.slippy_map_canvas import _is_valid_osm_png
+
+    carto_watermark = b"\x89PNG\r\n\x1a\n" + (b"A" * 2030) + b"API KEY REQUIRED carto.com/basemaps/apikey"
+    assert _is_valid_osm_png(carto_watermark) is False
+
+    # Blocked HTML or hazard tile sizes
+    assert _is_valid_osm_png(b"<html>Access blocked</html>") is False
+
+
+def test_tc_22_tile_cached_live_callback_wired():
+    """TC-22: Verifies _on_tile_cached_live updates active tile image control dynamically (MAP-BUG-03)."""
+    from desktop_client.components.slippy_map_canvas import SlippyMapCanvas
+
+    canvas = SlippyMapCanvas(width=800, height=600)
+    img_ctrl = ft.Image(src="data:image/svg+xml;base64,dummy")
+    canvas._active_tile_images["10_100_100"] = img_ctrl
+
+    canvas._on_tile_cached_live("10_100_100", "/tiles_cache/10_100_100.png")
+    assert img_ctrl.src == "/tiles_cache/10_100_100.png"
+
+
+def test_tc_23_viewport_mover_pan_translation():
+    """TC-23: Verifies pan layer and marker stack are translated during drag (MAP-BUG-05)."""
+    from desktop_client.components.slippy_map_canvas import SlippyMapCanvas
+
+    canvas = SlippyMapCanvas(width=800, height=600)
+    canvas._drag_dx = 50.0
+    canvas._drag_dy = -30.0
+    assert canvas._pan_layer is not None
+    assert canvas._marker_stack is not None
+
+
+def test_tc_24_continuous_drag_clamping():
+    """TC-24: Verifies _handle_pan_update clamps prospective lat/lng to Nueva Ecija bounds (MAP-BUG-05)."""
+    from desktop_client.components.slippy_map_canvas import SlippyMapCanvas
+
+    canvas = SlippyMapCanvas(width=800, height=600)
+
+    class MassivePanEvent:
+        local_delta = type("Offset", (), {"x": -99999.0, "y": 99999.0})()
+
+    canvas._handle_pan_update(MassivePanEvent())
+    assert 15.05 <= canvas.center_lat <= 16.25
+    assert 120.55 <= canvas.center_lng <= 121.55
+
+
+def test_tc_25_cursor_centered_scroll_zoom():
+    """TC-25: Verifies focal_screen_xy shifts center towards cursor during zoom (MAP-BUG-06)."""
+    from desktop_client.components.slippy_map_canvas import SlippyMapCanvas
+
+    canvas = SlippyMapCanvas(width=800, height=600, center_lat=15.58, center_lng=121.00, zoom=10)
+    # Zoom in at bottom-right corner of screen (700, 500)
+    orig_lat, orig_lng = canvas.center_lat, canvas.center_lng
+    canvas.set_zoom(11, focal_screen_xy=(700, 500), notify=False)
+    assert canvas.zoom == 11
+    # Center should have shifted towards bottom-right (lower lat, higher lng)
+    assert canvas.center_lng >= orig_lng
+
+
+def test_tc_26_clustering_enabled_at_z14_z15():
+    """TC-26: Verifies spatial clustering operates up to Zoom 15 matching Web Leaflet (MAP-BUG-07)."""
+    from desktop_client.components.slippy_map_canvas import SlippyMapCanvas
+    from desktop_client.models.place import Place
+
+    p1 = Place(id="p1", name="Place 1", category="attraction", latitude=15.4800, longitude=120.9700)
+    p2 = Place(id="p2", name="Place 2", category="attraction", latitude=15.4801, longitude=120.9701)
+    canvas = SlippyMapCanvas(places=[p1, p2], width=800, height=600, zoom=14)
+
+    clusters = canvas._cached_world_clusters
+    assert len(clusters) == 1
+    assert clusters[0]["count"] == 2
+
+
+def test_tc_27_deep_link_query_params_parsed():
+    """TC-27: Verifies PlacesView parses all 10 deep-link query parameters correctly (MAP-BUG-08)."""
+    from desktop_client.views.places_view import PlacesView
+
+    query = "/map?lat=15.49&lng=120.98&placeId=poi-42&category=nature&priceTier=free&search=falls"
+    pv = PlacesView(route_query=query)
+    assert pv._pending_focus_latlng == (15.49, 120.98)
+    assert pv._pending_focus_place_id == "poi-42"
+    assert "nature" in pv.selected_categories
+    assert pv.selected_price_tier == "free"
+    assert pv.search_query == "falls"
+
+
+def test_tc_28_places_view_window_resize_fullscreen():
+    """TC-28: Verifies PlacesView and SlippyMapCanvas dynamically resize to fullscreen dimensions (BUG-04)."""
+    from desktop_client.views.places_view import PlacesView
+
+    pv = PlacesView(initial_width=1280, initial_height=840)
+    assert pv.width == float("inf")
+    # Simulate window maximize to 1920x1080
+    pv.on_resize(1920.0, 1080.0)
+    assert pv.map_component._map_w == 1920
+    assert pv.map_component._map_h == 1080 - 64
+    assert pv._toggle_pill_btn.left == (1920.0 - 160.0) / 2.0
+

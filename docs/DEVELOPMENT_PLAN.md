@@ -629,6 +629,34 @@ The bottom navigation bar implements all 4 planned primary tabs (`/tabs/home`, `
 - [x] **47.5: CI/CD Deployment & Remote Verification**:
   - Commit, push, monitor GitHub Actions deployment, and verify live on GitHub Pages.
 
+#### Milestone 48 / Phase 57: Cycle 5 Desktop Map Deep-Dive QA Audit & 1:1 Web Leaflet Parity (COMPLETED)
+- [x] **48.1: Stale ESRI Cache Purge & Pre-Seeding Sanitizer (`MAP-BUG-01`, `MAP-BUG-02`, `MAP-BUG-04`)**:
+  - Implement `clean_and_seed_tiles.py` and auto-sanitizer in `slippy_map_canvas.py` purging 38 stale ESRI RGB tiles (`color_type == 2`) and 403 hazard tiles from `assets/tiles_cache/`.
+  - Accept valid small ocean/rural PNGs (`103–2,499` bytes) with magic header validation (`_is_valid_osm_png`), pre-seeding Z9–Z12 tiles.
+- [x] **48.2: Drop-In Replacement for SlippyMapCanvas (`MAP-BUG-01` to `MAP-BUG-07`)**:
+  - Never return external `https://` URLs to `ft.Image.src` (eliminating Flutter Dart `io.HttpClient` 403 blocks).
+  - Serve SVG data URI placeholders during background fetch and swap in cached tiles live via `on_tile_cached`.
+  - 60 FPS GPU-smooth panning via dedicated lightweight layer translation with 16ms throttling.
+  - Continuous coordinate clamping during pan, preventing boundary snap-back.
+  - Cursor-centered mouse-wheel zoom (`zoomAround` parity).
+  - Web-parity clustering up to Z15 (`disableClusteringAtZoom: 16`) and 160 marker cap at Z16–Z18.
+- [x] **48.3: PlacesView 1:1 Web Leaflet Parity (`MAP-BUG-08`, `MAP-BUG-09`, `MAP-BUG-10`)**:
+  - Support all 10 Web-compatible deep-link query parameters in `_check_and_init_route_mode()`.
+  - Horizontally scrollable category pills bar with `‹` / `›` chevron buttons.
+  - Style right FABs as 44×44 circular pills with semantic colors (`#7c3aed`, `#0284c7`, `#475569`).
+  - In-map interactive POI bottom sheet card (`<app-place-detail-sheet>` parity) with Favorite heart, Commute Guide, and Primary Actions: **`✨ Start Trip Here`**, **`+ Add to Trip`**, and **`Get Directions`**.
+- [x] **48.4: DateRangeDialog Overlay Cleanup (`MAP-BUG-10`)**:
+  - Replace raw `self.page.overlay.append(dlg)` with `present_dialog(self.page, dlg)`.
+- [x] **48.5: Automated Test Suite Expansion (TC-19 to TC-28)**:
+  - Add regression specs verifying tile security, small PNG caching, ESRI cache purge, live tile callbacks, continuous clamping, cursor-centered scroll, clustering at Z14-Z15, deep-link query params, and dialog presentation (104/104 passing tests).
+- [x] **48.6: Release Compilation & Distribution**:
+  - Compile standalone Windows executable `NuevaEcijaTravel.exe` (15.31 MB, 406.30 MB bundled distribution).
+- [x] **48.7: Responsive Fullscreen & Theme Keyword Hotfix (`MAP-BUG-11`, `MAP-BUG-12`)**:
+  - Removed deprecated `background` kwarg from `ft.ColorScheme`.
+  - Fixed `_on_page_resize` to pass dynamic logical pixels from `PageResizeEvent` and added `CrossAxisAlignment.STRETCH`.
+  - Purged and permanently banned Carto watermark tiles (`API KEY REQUIRED`) from raster tile engine.
+
+
 
 
 
