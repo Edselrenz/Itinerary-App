@@ -273,7 +273,7 @@ class Itinerary:
             destination=str(data.get("destination", "Nueva Ecija")),
             start_date=str(data.get("start_date", "")),
             end_date=str(data.get("end_date", "")),
-            daily_budget=float(data.get("daily_budget", 2500.0)),
+            daily_budget=float(data.get("daily_budget") if data.get("daily_budget") is not None else 2500.0),
             preferences=list(data.get("preferences") or []),
             type=str(data.get("type", "custom")),
             assumptions=list(data.get("assumptions") or []),

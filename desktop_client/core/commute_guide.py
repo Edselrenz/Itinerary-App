@@ -252,7 +252,7 @@ def get_leg_commute_info(prev_stop: Any, curr_stop: Any) -> LegCommuteInfo:
 
 def get_multi_stop_google_maps_url(stops: list[Any], travel_mode: str = "driving") -> Optional[str]:
     """Generates Google Maps navigation URL for a list of sequential itinerary stops."""
-    from desktop_client.core.polyline import build_google_maps_directions_url
+    from desktop_client.core.polyline import build_google_maps_day_route_url
 
-    return build_google_maps_directions_url(stops, travel_mode=travel_mode)
+    return build_google_maps_day_route_url(stops, travel_mode=travel_mode)
 

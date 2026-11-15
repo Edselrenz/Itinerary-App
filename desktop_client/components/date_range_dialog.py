@@ -138,8 +138,17 @@ def show_date_range_dialog(
     preset_row = ft.Row(controls=preset_buttons, spacing=6, wrap=True)
 
     def close_dlg(_=None):
+        if hasattr(page, "pop_dialog"):
+            try:
+                page.pop_dialog()
+                return
+            except Exception:
+                pass
         dlg.open = False
-        page.update()
+        try:
+            page.update()
+        except Exception:
+            pass
 
     def apply_dates(_=None):
         s_val = (start_input.value or "").strip()
@@ -190,6 +199,9 @@ def show_date_range_dialog(
         ],
     )
 
-    page.overlay.append(dlg)
-    dlg.open = True
-    page.update()
+    if hasattr(page, "show_dialog"):
+        page.show_dialog(dlg)
+    else:
+        page.overlay.append(dlg)
+        dlg.open = True
+        page.update()

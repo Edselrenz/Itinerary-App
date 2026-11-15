@@ -253,13 +253,13 @@ def main(page: ft.Page) -> None:
                 content_area.content = SignupView(on_navigate=navigate_to)
 
             page.update()
-        if content_area and content_area.content is not None:
-            active_ctrl = content_area.content
-            if hasattr(active_ctrl, "on_resize") and callable(active_ctrl.on_resize):
-                try:
-                    active_ctrl.on_resize(float(page.width or 1280), float(page.height or 840))
-                except Exception:
-                    pass
+            if content_area and content_area.content is not None:
+                active_ctrl = content_area.content
+                if hasattr(active_ctrl, "on_resize") and callable(active_ctrl.on_resize):
+                    try:
+                        active_ctrl.on_resize(float(page.width or 1280), float(page.height or 840))
+                    except Exception:
+                        pass
             return
 
         # 2. Workflow Views (Modal creation & detail with contextual header)
@@ -323,13 +323,13 @@ def main(page: ft.Page) -> None:
                     return
 
             page.update()
-        if content_area and content_area.content is not None:
-            active_ctrl = content_area.content
-            if hasattr(active_ctrl, "on_resize") and callable(active_ctrl.on_resize):
-                try:
-                    active_ctrl.on_resize(float(page.width or 1280), float(page.height or 840))
-                except Exception:
-                    pass
+            if content_area and content_area.content is not None:
+                active_ctrl = content_area.content
+                if hasattr(active_ctrl, "on_resize") and callable(active_ctrl.on_resize):
+                    try:
+                        active_ctrl.on_resize(float(page.width or 1280), float(page.height or 840))
+                    except Exception:
+                        pass
             return
 
         # 3. Primary 4-Tab Views (Home, Map, Saved, Profile)
@@ -410,7 +410,15 @@ def main(page: ft.Page) -> None:
         spacing=0,
     )
 
-    splash_overlay = SplashOverlay(on_dismiss=None)
+    def _on_splash_dismiss() -> None:
+        try:
+            if splash_overlay in root_stack.controls:
+                root_stack.controls.remove(splash_overlay)
+                page.update()
+        except Exception:
+            pass
+
+    splash_overlay = SplashOverlay(on_dismiss=_on_splash_dismiss)
 
     root_stack = ft.Stack(
         controls=[

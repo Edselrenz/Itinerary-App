@@ -397,7 +397,7 @@ class SignupView(ft.Container):
             self.submit_btn.disabled = True
             self._safe_update()
             try:
-                await self.auth_service.register(
+                user = await self.auth_service.register(
                     email=email,
                     password=pwd,
                     first_name=first_name,
@@ -409,6 +409,10 @@ class SignupView(ft.Container):
                     await self.auth_service.migrate_guest_trips()
                 except Exception:
                     pass
+                if self.safe_page:
+                    name = (user.first_name if user and user.first_name else first_name or "").strip()
+                    msg = f"Account created! Welcome to Trip mo, trip ko, {name}!" if name else "Account created! Welcome to Trip mo, trip ko!"
+                    show_toast(self.safe_page, msg, bgcolor=ThemeColors.SUCCESS)
                 self._navigate("/dashboard")
             except ApiClientError as err:
                 self._show_error(err.message or "Registration failed. Try another email or username.")

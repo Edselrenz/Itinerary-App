@@ -252,7 +252,7 @@ class PlacesView(ft.Container):
             )
         if hasattr(self, "_drawer_container"):
             self._drawer_container.visible = self.is_drawer_open
-            self._drawer_container.content = self._build_drawer_content()
+            self._drawer_container.content = self._build_drawer_content() if self.is_drawer_open else ft.Container()
 
         if self.map_component:
             if self.is_follow_route_mode and not self.show_nearby_pois_in_route:
@@ -694,7 +694,7 @@ class PlacesView(ft.Container):
             border_radius=16,
             padding=ft.Padding.all(12),
             shadow=ft.BoxShadow(blur_radius=16, color=ft.Colors.with_opacity(0.2, "#0f172a"), offset=ft.Offset(0, -4)),
-            content=self._build_drawer_content(),
+            content=self._build_drawer_content() if self.is_drawer_open else ft.Container(),
         )
         return self._drawer_container
 
@@ -966,8 +966,24 @@ class PlacesView(ft.Container):
 
     def _on_search_change(self, val: str) -> None:
         self.search_query = val
-        self._apply_filters()
-        self._update_in_place(reset_viewport=False)
+        self._search_change_version = getattr(self, "_search_change_version", 0) + 1
+        current_ver = self._search_change_version
+
+        async def _debounced():
+            await asyncio.sleep(0.25)
+            if getattr(self, "_search_change_version", 0) == current_ver:
+                self._apply_filters()
+                self._update_in_place(reset_viewport=False)
+
+        if self.safe_page:
+            try:
+                self.safe_page.run_task(_debounced)
+            except Exception:
+                self._apply_filters()
+                self._update_in_place(reset_viewport=False)
+        else:
+            self._apply_filters()
+            self._update_in_place(reset_viewport=False)
 
     def _clear_search(self) -> None:
         self.search_query = ""
@@ -1008,9 +1024,9 @@ class PlacesView(ft.Container):
 
         async def _do():
             try:
-                min_lat, max_lat, min_lng, max_lng = (15.1, 16.15, 120.7, 121.4)
+                min_lat, min_lng, max_lat, max_lng = (15.1, 120.7, 16.15, 121.4)
                 if self.map_component:
-                    min_lat, max_lat, min_lng, max_lng = self.map_component.get_viewport_bounds()
+                    min_lat, min_lng, max_lat, max_lng = self.map_component.get_viewport_bounds()
 
                 discovered = await self.place_service.fetch_live_osm_places(
                     min_lat=min_lat,

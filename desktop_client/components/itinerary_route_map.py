@@ -235,11 +235,52 @@ class ItineraryRouteMap(ft.Container):
 
         # Build Slippy Map Canvas with Route Stops & Road Geometry
         route_stops = self._extract_route_stops()
+        route_polyline_points = None
+        if self.day:
+            from desktop_client.core.polyline import decode_polyline
+            if getattr(self.day, "day_overview_polyline", None):
+                try:
+                    route_polyline_points = decode_polyline(self.day.day_overview_polyline)
+                except Exception:
+                    route_polyline_points = None
+            if not route_polyline_points:
+                pts = []
+                for it in sorted(self.day.items, key=lambda x: x.sort_order):
+                    poly = getattr(it, "route_polyline_from_prev", None)
+                    if poly:
+                        try:
+                            dec = decode_polyline(poly)
+                            if pts:
+                                pts.extend(dec[1:])
+                            else:
+                                pts.extend(dec)
+                        except Exception:
+                            pass
+                if len(pts) >= 2:
+                    route_polyline_points = pts
+
+        def _dispatch_stop_click(idx: int, stop_pin: RouteStopPin) -> None:
+            if not self.on_stop_click:
+                return
+            import inspect
+            try:
+                sig = inspect.signature(self.on_stop_click)
+                if len(sig.parameters) >= 2:
+                    self.on_stop_click(idx, stop_pin)
+                else:
+                    self.on_stop_click(idx)
+            except Exception:
+                try:
+                    self.on_stop_click(idx)
+                except Exception:
+                    pass
+
         self.map_component = SlippyMapCanvas(
             width=760,
             height=self.height_expanded,
             route_stops=route_stops,
-            on_stop_click=lambda idx, s: self.on_stop_click(idx) if self.on_stop_click else None,
+            route_polyline_points=route_polyline_points,
+            on_stop_click=_dispatch_stop_click,
             border_radius=8,
         )
 

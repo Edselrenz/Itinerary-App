@@ -61,7 +61,6 @@ class DashboardView(ft.Container):
             self.saved_itineraries = []
 
         self._build_content()
-        self._load_data()
 
     def did_mount(self) -> None:
         self._load_data()

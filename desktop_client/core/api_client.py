@@ -96,7 +96,7 @@ class ApiClient:
         """Returns or creates the underlying httpx.AsyncClient."""
         if self._client is None or self._client.is_closed:
             self._client = httpx.AsyncClient(
-                timeout=httpx.Timeout(self.default_timeout, connect=5.0),
+                timeout=httpx.Timeout(self.default_timeout, connect=2.5),
                 follow_redirects=True,
             )
         return self._client

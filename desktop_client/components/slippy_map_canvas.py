@@ -481,8 +481,14 @@ class SlippyMapCanvas(ft.Container):
                     if pts and len(pts) >= 2:
                         self._route_pts = pts
                         self._render_route_vectors()
-                        if self.page:
-                            self._vector_canvas.update()
+                        p = self.page
+                        if p is not None:
+                            async def _apply_vectors_on_main():
+                                try:
+                                    self._vector_canvas.update()
+                                except Exception:
+                                    pass
+                            p.run_task(_apply_vectors_on_main)
                 except Exception:
                     pass
 
@@ -501,7 +507,6 @@ class SlippyMapCanvas(ft.Container):
             new_z = max(10, min(18, int(zoom)))
             if new_z != self.zoom:
                 self.zoom = new_z
-                self._tile_pool.clear()
                 self._cluster_cache_key = None
         self.redraw()
 
@@ -513,7 +518,6 @@ class SlippyMapCanvas(ft.Container):
         clamped = max(10, min(18, int(new_zoom)))
         if clamped != self.zoom:
             self.zoom = clamped
-            self._tile_pool.clear()
             self._cluster_cache_key = None
             self.redraw()
 
@@ -533,7 +537,6 @@ class SlippyMapCanvas(ft.Container):
         if len(valid) == 1:
             self.center_lat, self.center_lng = self._clamp_center(valid[0][0], valid[0][1])
             self.zoom = 14
-            self._tile_pool.clear()
             self._cluster_cache_key = None
             self.redraw()
             return
@@ -560,7 +563,6 @@ class SlippyMapCanvas(ft.Container):
                 break
         if best_z != self.zoom:
             self.zoom = best_z
-            self._tile_pool.clear()
             self._cluster_cache_key = None
         self.redraw()
 
@@ -598,6 +600,8 @@ class SlippyMapCanvas(ft.Container):
                 self._canvas_stack.update()
         except Exception:
             pass
+
+    resize_viewport = resize_canvas
 
     def _handle_pan_start(self, e: Any) -> None:
         self._is_panning = True
@@ -860,7 +864,7 @@ class SlippyMapCanvas(ft.Container):
         for item in self._cached_world_items:
             px = half_w + (item["wx"] - cx)
             py = half_h + (item["wy"] - cy)
-            if px < -36 or px > self._map_w + 36 or py < -36 or py > self._map_h + 36:
+            if px < -256 or px > self._map_w + 256 or py < -256 or py > self._map_h + 256:
                 continue
             if item["type"] == "cluster":
                 controls.append(
@@ -879,7 +883,7 @@ class SlippyMapCanvas(ft.Container):
             if not stop.lat or not stop.lng:
                 continue
             sx, sy = self._latlon_to_viewport(stop.lat, stop.lng)
-            if -40 <= sx <= self._map_w + 40 and -40 <= sy <= self._map_h + 40:
+            if -256 <= sx <= self._map_w + 256 and -256 <= sy <= self._map_h + 256:
                 controls.append(self._build_route_stop_badge(stop, sx, sy))
 
         self._marker_stack.controls = controls

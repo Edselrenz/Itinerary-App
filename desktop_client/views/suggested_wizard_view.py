@@ -708,7 +708,7 @@ class SuggestedWizardView(ft.Container):
                                 controls=[
                                     ft.Text(f"{num_days} {'day' if num_days == 1 else 'days'}", size=12, color=ThemeColors.TEXT_MUTED_LIGHT),
                                     ft.Text("•", size=12, color=ThemeColors.TEXT_MUTED_LIGHT),
-                                    ft.Text(f"₱ {itin.daily_budget:,.0f}/day", size=12, weight=ft.FontWeight.BOLD, color=ThemeColors.EMERALD_PRIMARY),
+                                    ft.Text(f"₱ {float(itin.daily_budget or self.daily_budget_val or 2500.0):,.0f}/day", size=12, weight=ft.FontWeight.BOLD, color=ThemeColors.EMERALD_PRIMARY),
                                 ],
                                 spacing=6,
                             ),
@@ -755,7 +755,7 @@ class SuggestedWizardView(ft.Container):
                                 ],
                                 spacing=6,
                             ),
-                            ft.Text(f"Target: ₱{itin.daily_budget:,.0f}/day", size=11, color="#166534"),
+                            ft.Text(f"Target: ₱{float(itin.daily_budget or self.daily_budget_val or 2500.0):,.0f}/day", size=11, color="#166534"),
                         ],
                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     ),

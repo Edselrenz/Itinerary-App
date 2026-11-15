@@ -352,3 +352,27 @@ def test_tc_17_main_page_theme_color_scheme_compatibility():
     )
     dark_theme = ft.Theme(color_scheme=dark_cs)
     assert dark_theme.color_scheme.primary == ThemeColors.PRIMARY_BLUE
+
+
+def test_tc_18_navigation_transitions_not_blocked():
+    """TC-18: Verifies standalone and workflow view returns are indented inside if blocks so navigation is never trapped."""
+    import inspect
+    import desktop_client.main as main_mod
+
+    src = inspect.getsource(main_mod.main)
+    lines = src.splitlines()
+    for idx, line in enumerate(lines):
+        if "if route in (\"/welcome\"" in line:
+            for sub_line in lines[idx + 1 : idx + 35]:
+                if sub_line.strip() == "return":
+                    indent = len(sub_line) - len(sub_line.lstrip())
+                    if_indent = len(line) - len(line.lstrip())
+                    assert indent > if_indent, "Return in section 1 must be indented inside the if-block"
+                    break
+        if "if base_route in (\"/suggested\"" in line:
+            for sub_line in lines[idx + 1 : idx + 80]:
+                if sub_line.strip() == "return" and "navigate_to(\"/saved\")" not in lines[idx]:
+                    indent = len(sub_line) - len(sub_line.lstrip())
+                    if_indent = len(line) - len(line.lstrip())
+                    assert indent > if_indent, "Return in section 2 must be indented inside the if-block"
+                    break

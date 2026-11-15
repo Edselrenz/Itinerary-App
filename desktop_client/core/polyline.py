@@ -145,9 +145,12 @@ def build_google_maps_day_route_url(stops: Sequence[Any], travel_mode: str = "dr
         lat: Optional[float] = None
         lng: Optional[float] = None
 
-        if isinstance(stop, dict):
-            lat = stop.get("latitude") or (stop.get("place") or {}).get("latitude")
-            lng = stop.get("longitude") or (stop.get("place") or {}).get("longitude")
+        if isinstance(stop, (tuple, list)) and len(stop) >= 2:
+            lat = float(stop[0])
+            lng = float(stop[1])
+        elif isinstance(stop, dict):
+            lat = stop.get("latitude") or stop.get("custom_lat") or stop.get("lat") or (stop.get("place") or {}).get("latitude")
+            lng = stop.get("longitude") or stop.get("custom_lng") or stop.get("lng") or (stop.get("place") or {}).get("longitude")
         else:
             # Dataclass or Pydantic model
             place = getattr(stop, "place", None)
@@ -155,8 +158,16 @@ def build_google_maps_day_route_url(stops: Sequence[Any], travel_mode: str = "dr
                 lat = getattr(place, "latitude", None)
                 lng = getattr(place, "longitude", None)
             if lat is None:
-                lat = getattr(stop, "latitude", None)
-                lng = getattr(stop, "longitude", None)
+                lat = (
+                    getattr(stop, "latitude", None)
+                    or getattr(stop, "custom_lat", None)
+                    or getattr(stop, "lat", None)
+                )
+                lng = (
+                    getattr(stop, "longitude", None)
+                    or getattr(stop, "custom_lng", None)
+                    or getattr(stop, "lng", None)
+                )
 
         if lat is not None and lng is not None and (-90.0 <= lat <= 90.0) and (-180.0 <= lng <= 180.0):
             coords.append((float(lat), float(lng)))
@@ -183,3 +194,7 @@ def build_google_maps_day_route_url(stops: Sequence[Any], travel_mode: str = "dr
         base_url += f"&waypoints={waypoints}"
 
     return base_url
+
+
+# Backward-compatible alias for commute guide and places view callers
+build_google_maps_directions_url = build_google_maps_day_route_url

@@ -182,6 +182,12 @@ class Settings:
 
     def set_dark_mode(self, is_dark: bool) -> None:
         object.__setattr__(self, "_is_dark_mode", bool(is_dark))
+        try:
+            import json
+            prefs_file = self.storage_dir / "ui_prefs.json"
+            prefs_file.write_text(json.dumps({"is_dark_mode": bool(is_dark)}), encoding="utf-8")
+        except Exception:
+            pass
 
     @property
     def palette(self) -> "ThemePalette":
@@ -198,6 +204,15 @@ class Settings:
         object.__setattr__(self, "storage_dir", self.base_dir / "storage")
         object.__setattr__(self, "assets_dir", self.base_dir / "assets")
         self.storage_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            import json
+            prefs_file = self.storage_dir / "ui_prefs.json"
+            if prefs_file.is_file():
+                data = json.loads(prefs_file.read_text(encoding="utf-8"))
+                if "is_dark_mode" in data:
+                    object.__setattr__(self, "_is_dark_mode", bool(data["is_dark_mode"]))
+        except Exception:
+            pass
 
     def get_asset_path(self, rel_path: str) -> str:
         """Resolves bundled asset path across assets/, assets/images/, and assets/images/popular_destinations/."""
@@ -307,6 +322,14 @@ class ThemePalette:
     @property
     def bg_primary(self) -> str:
         return self.bg_main
+
+    @property
+    def surface_primary(self) -> str:
+        return self.surface_card
+
+    @property
+    def border_color(self) -> str:
+        return self.border_main
 
     @classmethod
     def get_palette(cls, is_dark: bool = False) -> "ThemePalette":

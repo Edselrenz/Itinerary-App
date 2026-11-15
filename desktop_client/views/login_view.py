@@ -305,11 +305,15 @@ class LoginView(ft.Container):
             self.submit_btn.disabled = True
             self._safe_update()
             try:
-                await self.auth_service.login(email, pwd, remember_me=self.remember_cb.value or False)
+                user = await self.auth_service.login(email, pwd, remember_me=self.remember_cb.value or False)
                 try:
                     await self.auth_service.migrate_guest_trips()
                 except Exception:
                     pass
+                if self.safe_page:
+                    name = (user.first_name if user and user.first_name else "").strip()
+                    msg = f"Welcome back, {name}!" if name else "Welcome back! Login successful."
+                    show_toast(self.safe_page, msg, bgcolor=ThemeColors.SUCCESS)
                 self._navigate("/dashboard")
             except ApiClientError as err:
                 self._show_error(err.message or "Login failed. Check your credentials.")

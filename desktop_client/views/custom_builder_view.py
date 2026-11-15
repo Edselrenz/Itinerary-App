@@ -844,12 +844,15 @@ class CustomBuilderView(ft.Container):
             )
 
         cards = [self._build_place_grid_card(p, p.id in added_place_ids) for p in matched[:60]]
-        return ft.Container(
-            content=ft.ResponsiveRow(
-                controls=[ft.Container(content=c, col={"sm": 12, "md": 6, "lg": 4}) for c in cards],
-                spacing=12,
-                run_spacing=12,
-            ),
+        return ft.Column(
+            controls=[
+                ft.ResponsiveRow(
+                    controls=[ft.Container(content=c, col={"sm": 12, "md": 6, "lg": 4}) for c in cards],
+                    spacing=12,
+                    run_spacing=12,
+                )
+            ],
+            scroll=ft.ScrollMode.AUTO,
             expand=True,
         )
 

@@ -123,7 +123,7 @@ class TripDetailView(ft.Container):
                                 border_radius=6,
                                 padding=ft.Padding.symmetric(horizontal=8, vertical=3),
                             ),
-                            ft.Text(f"₱{itin.daily_budget:,.0f}/day", size=13, weight=ft.FontWeight.W_600, color=ThemeColors.TEXT_MUTED_LIGHT),
+                            ft.Text(f"₱{float(itin.daily_budget or 2500.0):,.0f}/day", size=13, weight=ft.FontWeight.W_600, color=ThemeColors.TEXT_MUTED_LIGHT),
                         ],
                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     ),
@@ -181,7 +181,7 @@ class TripDetailView(ft.Container):
 
         # Expandable Assumptions Info Box
         assumptions_items = itin.assumptions or [
-            f"Daily target budget: ₱{itin.daily_budget:,.0f} / day",
+            f"Daily target budget: ₱{float(itin.daily_budget or 2500.0):,.0f} / day",
             "Lunch scheduled between 12:00 PM – 1:00 PM",
             "Transit durations estimated based on standard provincial road conditions",
         ]
@@ -934,9 +934,13 @@ class TripDetailView(ft.Container):
                 self.itinerary = updated
                 self.is_dirty = False
                 self.is_edit_mode = False
-            except Exception:
+                if self.safe_page:
+                    show_toast(self.safe_page, "Changes saved successfully!", bgcolor=ThemeColors.SUCCESS)
+            except Exception as e:
                 self.is_dirty = False
                 self.is_edit_mode = False
+                if self.safe_page:
+                    show_toast(self.safe_page, f"Failed to save changes: {e}", is_error=True)
             finally:
                 self._build_content()
                 self._safe_update()

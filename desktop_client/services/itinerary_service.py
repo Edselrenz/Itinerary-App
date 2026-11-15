@@ -549,7 +549,7 @@ class ItineraryService:
             destination=request.destination or "Nueva Ecija",
             start_date=request.start_date,
             end_date=request.end_date,
-            daily_budget=request.daily_budget,
+            daily_budget=float(request.daily_budget if request.daily_budget is not None else 2500.0),
             preferences=request.preferences or [],
             type="suggested",
             assumptions=assumptions,
