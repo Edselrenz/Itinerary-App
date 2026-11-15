@@ -7,24 +7,20 @@ This document serves as the primary handoff reference for developers and coding 
 ## 1. Project Status Overview
 
 - **Application Name**: Nueva Ecija Travel Itinerary (MVP, GIS Upgrade & Native Desktop Client)
-- **Current Development Phase**: **Phase 57 — Cycle 5 Desktop Map Deep-Dive QA Audit, Zero 403 Hazard Tiles, Stale ESRI Purge, 60 FPS Panning, Responsive Fullscreen & 1:1 Web Leaflet Parity [COMPLETED & VERIFIED]**
+- **Current Development Phase**: **Phase 59 — Desktop Map Fullscreen Auto-Adjust & Carto Watermark Elimination (`MAP-FIX-01` to `MAP-FIX-05`) [COMPLETED & VERIFIED]**
 - **Active Git Branch**: `feature/flet-desktop-app`
-- **Active Database Infrastructure**: **PostgreSQL 16 in Docker** (`ne_postgres` on port 5432) active and populated with the complete **2,673-place catalog** (2,656 OSM + 17 curated), 12 municipalities, 16 users, and 10 itineraries with extended profile columns backfilled. Dual-engine SQLite fallback verified with `connect_timeout=2` fail-fast guard.
+- **Active Database Infrastructure**: **PostgreSQL 16 in Docker** (`ne_postgres` on port 5432) and local SQLite (`nueva_ecija_travel.db`) fully synchronized with all 21 user accounts, 2,673 places, 12 municipalities, and 10 itineraries.
 - **Last Verified Working State**:
-  - **Phase 57 Remediation & Parity Acceptance**: 100% verified across all suites:
-    - **Desktop Client Test Suite**: 104/104 passed in 5.10s (`100% PASS`), covering `test_auth_service.py`, `test_itinerary_service.py`, `test_place_service.py`, `test_phase55_parity.py`, `test_cycle1_regressions.py`, and `test_cycle2_regressions.py` (`TC-19` through `TC-28` Phase 57 regressions added).
-    - **Standalone Windows Distribution**: Recompiled executable `dist/NuevaEcijaTravel/NuevaEcijaTravel.exe` (16,055,806 bytes executable, 406.30 MB complete bundle) verified healthy and tested.
+  - **Phase 59 Remediation & Parity Acceptance**: 100% verified across all suites:
+    - **Desktop Client Test Suite**: 109/109 passed in 14.73s (`100% PASS`), covering `test_auth_service.py`, `test_itinerary_service.py`, `test_place_service.py`, `test_cycle2_regressions.py` (`TC-19` through `TC-30`), and all UI consistency/storage suites.
+    - **Standalone Windows Distribution**: Recompiled executable `dist/NuevaEcijaTravel/NuevaEcijaTravel.exe` verified healthy and tested.
   - **Live Service Daemons**: Pilot backend (`127.0.0.1:8000`), ngrok public tunnel, and Cloudflare Worker proxy (`ne-itinerary-api.edselrenz0.workers.dev`) active and verified.
-- **Phase 57 Completed Scope & Defect Remediation**:
-  1. `MAP-BUG-01`, `02`, `03`: Eliminated 403 access blocked tiles with Python-only fetching, SVG placeholders, small PNG support (>= 67 bytes), and live `on_tile_cached` callback.
-  2. `MAP-BUG-04`, `11`: Auto-purged 38 stale ESRI RGB tiles and permanently banned Carto watermark tiles (`API KEY REQUIRED`), routing through OSM Standard, OSM France, and OSM HOT mirrors.
-  3. `MAP-BUG-05`: 60 FPS hardware-smooth drag translation with continuous coordinate clamping.
-  4. `MAP-BUG-06`: Cursor-centered mouse wheel zooming (`zoomAround` parity).
-  5. `MAP-BUG-07`: Marker clustering up to Zoom 15 (`disableClusteringAtZoom: 16` parity).
-  6. `MAP-BUG-08`: In-map interactive POI bottom sheet card (`<app-place-detail-sheet>` parity).
-  7. `MAP-BUG-09`: All 10 deep-link query parameters parsed.
-  8. `MAP-BUG-10`: Scrollable category bar with chevrons, 44x44 circular FABs, and `present_dialog()` in date range picker.
-  9. `MAP-BUG-12`: Responsive window resizing and fullscreen adjustment support with `CrossAxisAlignment.STRETCH`.
+- **Phase 59 Completed Scope & Defect Remediation**:
+  1. `MAP-FIX-01`: Hooked `page.window.on_event` for native OS window events (`MAXIMIZE`, `UNMAXIMIZE`, `RESTORE`, `RESIZED`, `RESIZE`, `ENTER_FULL_SCREEN`, `LEAVE_FULL_SCREEN`). Implemented `_get_viewport_dimensions(e)` checking `PageResizeEvent` -> `page.width/height` -> `window.width/height` -> settings default, preventing Python from pinning the viewport to 1280x840.
+  2. `MAP-FIX-02`: Wrapped `main_column` inside `main_container` with `left=0, top=0, right=0, bottom=0, expand=True` inside `root_stack`. Added `left=0, top=0, right=0, bottom=0` to `map_wrapper` in `PlacesView`, guaranteeing 100% full bleed stretch across any maximized display.
+  3. `MAP-FIX-03`: Replaced dead 404 HOT tile mirror with verified active `https://{sub}.tile.openstreetmap.de/{zoom}/{x}/{y}.png`. Confirmed Carto CDN is 100% excluded from candidate URLs.
+  4. `MAP-FIX-04`: Hardened `_is_valid_osm_png()` to reject Carto watermark range `2040 <= len(data) <= 2060` and signatures `CartoDB`, `cartocdn`. In `resize_canvas()`, added `self.page.update()` for immediate repainting.
+  5. `MAP-FIX-05`: Added `test_tc_29_carto_watermark_signatures_and_ranges_rejected` and `test_tc_30_main_window_fullscreen_and_viewport_resolution`. All 109 tests passing.
 - **Current Blockers**: **None**.
 
 ---

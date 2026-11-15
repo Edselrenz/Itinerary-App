@@ -5,6 +5,44 @@ All notable changes to the Nueva Ecija Travel Itinerary project are documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.56.0] - 2026-11-15
+### Fixed & Completed (Phase 59 - Map Fullscreen Auto-Adjust & Carto Watermark Remediation)
+- **Native OS Window Event Listener & Viewport Resolution (`MAP-FIX-01`)**:
+  - Bound `page.window.on_event = _on_window_event` to listen for native desktop window state changes: `MAXIMIZE`, `UNMAXIMIZE`, `RESTORE`, `RESIZED`, `RESIZE`, `ENTER_FULL_SCREEN`, and `LEAVE_FULL_SCREEN`.
+  - Implemented `_get_viewport_dimensions(e)` checking `PageResizeEvent` -> `page.width/height` (Flutter logical canvas) -> `window.width/height` -> settings default fallback.
+  - Eliminated Python assignments `page.width = new_w` and `page.height = new_h` in `_on_page_resize()`, preventing Python from pinning the viewport to default 1280x840.
+- **Stack Positioned Fill Geometry (`MAP-FIX-02`)**:
+  - Wrapped `main_column` inside `main_container = ft.Container(content=main_column, left=0, top=0, right=0, bottom=0, expand=True)` inside `root_stack`.
+  - Added `left=0, top=0, right=0, bottom=0` to `map_wrapper = ft.Container(content=self.map_component, left=0, top=0, right=0, bottom=0, expand=True, clip_behavior=ft.ClipBehavior.HARD_EDGE)` in `PlacesView`, ensuring `PlacesView`'s Stack expands the map canvas across 100% of the screen.
+  - Updated `did_mount()` in `PlacesView` to read `safe_page.width` before `window.width`.
+- **OpenStreetMap Mirror Routing & German OSM Mirror Integration (`MAP-FIX-03`)**:
+  - Replaced dead 404 HOT mirror with active `https://{sub}.tile.openstreetmap.de/{zoom}/{x}/{y}.png`.
+  - Verified 100% zero Carto CDN endpoints in candidate tile URLs.
+- **Carto Watermark Filter & Startup Cache Sanitization (`MAP-FIX-04`)**:
+  - Added `CartoDB` and `cartocdn` to `_OSM_BLOCKED_SIGNATURES`.
+  - Hardened `_is_valid_osm_png(data: bytes)` to reject Carto watermark range `2040 <= len(data) <= 2060` (where Carto watermark text is encoded in IDAT pixels).
+  - Updated `_on_tile_cached_live()` to query `img_ctrl.page or self.page` and refresh the live image control seamlessly.
+  - Updated `resize_canvas()` to invoke `self.page.update()` for immediate repainting.
+- **Automated Regression Test Suite Expansion (`MAP-FIX-05`)**:
+  - Added `test_tc_29_carto_watermark_signatures_and_ranges_rejected` and `test_tc_30_main_window_fullscreen_and_viewport_resolution`.
+  - Verified full desktop pytest suite: **109/109 tests passing (100% green)** in 14.73s.
+
+## [0.55.0] - 2026-11-15
+### Fixed & Completed (Phase 58 - Desktop Authentication Parity & Cold Launch Unblocking)
+- **Database User Account Synchronization (`AUTH-FIX-01`)**:
+  - Synchronized all 21 user accounts and Argon2id password hashes bidirectionally between PostgreSQL container and SQLite database.
+- **Cold Launch Splash Overlay Pointer Barrier Fix (`AUTH-FIX-02`)**:
+  - In `SplashOverlay.dismiss()`: set `content = None`, `on_click = None`, `visible = False`.
+  - In `_on_splash_dismiss()`: called `root_stack.controls.remove(splash_overlay); root_stack.update(); page.update()` to purge Flutter hit-test barrier.
+- **Visual Feedback on Login & Signup (`AUTH-FIX-03`)**:
+  - Updated `_safe_update()` to call `safe_page.update()`, propagating `ProgressRing` spinner and error banner immediately to the client.
+- **Fast Localhost Endpoint Prioritization (`AUTH-FIX-04`)**:
+  - Prioritized `http://127.0.0.1:8000/api/v1` before Cloudflare Worker edge proxy in connectivity candidate list.
+- **Auth Rate Limit Normalization (`AUTH-FIX-05`)**:
+  - Relaxed rate limiter to `30/minute` and added explicit HTTP 429 message in `ApiClient`.
+- **Auto-Navigation on Auth State Change (`AUTH-FIX-06`)**:
+  - Auto-transition from `/welcome`, `/login`, or `/signup` to `/home` upon successful auth. Added 3 unit tests (107/107 passing).
+
 ## [0.54.0] - 2026-11-15
 ### Fixed & Completed (Phase 57 - Cycle 5 Desktop Map Deep-Dive & 1:1 Web Parity)
 - **Eliminate OSM "403 Access blocked" Hazard Tiles & Carto Watermarks (`MAP-BUG-01`, `MAP-BUG-02`, `MAP-BUG-03`, `MAP-BUG-11`)**:

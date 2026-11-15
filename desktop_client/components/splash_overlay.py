@@ -39,6 +39,8 @@ class SplashOverlay(ft.Container):
             return
         self._is_dismissed = True
         self.visible = False
+        self.content = None
+        self.on_click = None
         try:
             self.update()
         except Exception:
@@ -46,13 +48,13 @@ class SplashOverlay(ft.Container):
         if self.on_dismiss:
             self.on_dismiss()
 
-    def start_timer(self, delay_seconds: float = 2.8) -> None:
+    def start_timer(self, delay_seconds: float = 2.8, page: Optional[ft.Page] = None) -> None:
         """Schedules auto-dismissal after delay_seconds."""
         async def _dismiss_later():
             await asyncio.sleep(delay_seconds)
             self.dismiss()
 
-        p = self.safe_page
+        p = page or self.safe_page
         if p:
             p.run_task(_dismiss_later)
         else:

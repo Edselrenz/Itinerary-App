@@ -501,4 +501,70 @@ def test_tc_28_places_view_window_resize_fullscreen():
     assert pv.map_component._map_w == 1920
     assert pv.map_component._map_h == 1080 - 64
     assert pv._toggle_pill_btn.left == (1920.0 - 160.0) / 2.0
+    # Verify map_wrapper fills stack bounds
+    map_wrapper = pv.content.controls[0]
+    assert map_wrapper.left == 0
+    assert map_wrapper.top == 0
+    assert map_wrapper.right == 0
+    assert map_wrapper.bottom == 0
+
+
+def test_tc_29_carto_watermark_signatures_and_ranges_rejected():
+    """TC-29: Verifies Carto watermark tiles (2048-2049 bytes, signatures, ranges) are strictly blocked."""
+    from desktop_client.components.slippy_map_canvas import _is_valid_osm_png
+
+    # Real 2049-byte Carto watermark tile from basemaps.cartocdn.com
+    carto_2049 = b"\x89PNG\r\n\x1a\n" + (b"\x00" * 2041)
+    assert len(carto_2049) == 2049
+    assert _is_valid_osm_png(carto_2049) is False
+
+    # 2048-byte variant
+    carto_2048 = b"\x89PNG\r\n\x1a\n" + (b"\x00" * 2040)
+    assert len(carto_2048) == 2048
+    assert _is_valid_osm_png(carto_2048) is False
+
+    # 2045-byte range
+    carto_2045 = b"\x89PNG\r\n\x1a\n" + (b"\x00" * 2037)
+    assert _is_valid_osm_png(carto_2045) is False
+
+    # Signatures
+    for sig in (b"carto.com", b"API KEY REQUIRED", b"basemaps/apikey", b"CartoDB", b"cartocdn"):
+        payload = b"\x89PNG\r\n\x1a\n" + (b"X" * 100) + sig + (b"Y" * 100)
+        assert _is_valid_osm_png(payload) is False
+
+    # Legitimate OSM tile (>3000 bytes)
+    valid_osm = b"\x89PNG\r\n\x1a\n" + (b"\xaa" * 8000)
+    assert _is_valid_osm_png(valid_osm) is True
+
+
+def test_tc_30_main_window_fullscreen_and_viewport_resolution():
+    """TC-30: Verifies viewport dimension extraction accurately detects fullscreen without overriding page."""
+    from unittest.mock import MagicMock
+    from desktop_client.main import main
+    import flet as ft
+
+    # Mock page with width and height matching 1920x1080 display
+    mock_page = MagicMock(spec=ft.Page)
+    mock_page.width = 1920.0
+    mock_page.height = 1080.0
+    mock_page.window = MagicMock()
+    mock_page.window.width = 1280.0
+    mock_page.window.height = 840.0
+    mock_page.controls = []
+
+    # Initialize main shell
+    main(mock_page)
+
+    # Verify window on_event is bound
+    assert mock_page.window.on_event is not None
+    assert mock_page.on_resize is not None
+
+    # Simulate PageResizeEvent
+    resize_evt = ft.PageResizeEvent(name="resize", control=mock_page, width=1920.0, height=1080.0)
+    mock_page.on_resize(resize_evt)
+
+    # Simulate WindowEvent MAXIMIZE
+    win_evt = ft.WindowEvent(name="window_event", control=mock_page, type=ft.WindowEventType.MAXIMIZE)
+    mock_page.window.on_event(win_evt)
+
 

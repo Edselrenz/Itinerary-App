@@ -44,7 +44,7 @@ def make_token_response(user: User) -> TokenOut:
 
 
 @router.post("/register", response_model=TokenOut, status_code=status.HTTP_201_CREATED)
-@limiter.limit("5/minute")
+@limiter.limit("30/minute")
 def register(
     request: Request,
     payload: UserRegisterIn,
@@ -56,7 +56,7 @@ def register(
 
 
 @router.post("/login", response_model=TokenOut)
-@limiter.limit("5/minute")
+@limiter.limit("30/minute")
 def login(
     request: Request,
     payload: UserLoginIn,

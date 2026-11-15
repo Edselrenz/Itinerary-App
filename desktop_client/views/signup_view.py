@@ -344,6 +344,13 @@ class SignupView(ft.Container):
         self._safe_update()
 
     def _safe_update(self) -> None:
+        p = self.safe_page
+        if p:
+            try:
+                p.update()
+                return
+            except Exception:
+                pass
         try:
             self.update()
         except Exception:
@@ -419,9 +426,10 @@ class SignupView(ft.Container):
             except Exception as ex:
                 self._show_error(f"Error connecting to service: {str(ex)}")
             finally:
-                self.submit_btn.content = ft.Text("Sign Up", size=15, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE)
-                self.submit_btn.disabled = False
-                self._safe_update()
+                if not getattr(self.auth_service.session_manager, "is_authenticated", False):
+                    self.submit_btn.content = ft.Text("Sign Up", size=15, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE)
+                    self.submit_btn.disabled = False
+                    self._safe_update()
 
         if self.safe_page:
             self.safe_page.run_task(_do_signup)
@@ -438,6 +446,8 @@ class SignupView(ft.Container):
 
     @property
     def safe_page(self) -> Optional[ft.Page]:
+        if getattr(self, "_mock_page", None):
+            return self._mock_page
         try:
             return self.page
         except Exception:

@@ -225,10 +225,10 @@ class ConnectivityService:
                     break
 
         for fallback in [
+            "http://127.0.0.1:8000/api/v1",
             self.CLOUDFLARE_WORKER_API_URL,
             "https://anybody-cube-surprise.ngrok-free.dev/api/v1",
             self.settings.api_base_url if self.settings.api_base_url and "127.0.0.1" not in self.settings.api_base_url and "localhost" not in self.settings.api_base_url else None,
-            "http://127.0.0.1:8000/api/v1",
         ]:
             if fallback:
                 clean = fallback.strip().rstrip("/")

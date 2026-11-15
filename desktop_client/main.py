@@ -99,6 +99,29 @@ def main(page: ft.Page) -> None:
     except Exception:
         pass
 
+    def _get_viewport_dimensions(e: Any = None) -> tuple[float, float]:
+        """Extract reliable viewport dimensions in logical pixels without overriding Flet Page."""
+        # 1. From PageResizeEvent payload if available
+        ew = getattr(e, "width", None)
+        eh = getattr(e, "height", None)
+        if ew and eh and float(ew) > 320 and float(eh) > 240:
+            return float(ew), float(eh)
+
+        # 2. From page.width / page.height (current Flutter viewport logical pixels)
+        pw = getattr(page, "width", None)
+        ph = getattr(page, "height", None)
+        if pw and ph and float(pw) > 320 and float(ph) > 240:
+            return float(pw), float(ph)
+
+        # 3. From page.window.width / page.window.height
+        ww = getattr(getattr(page, "window", None), "width", None)
+        wh = getattr(getattr(page, "window", None), "height", None)
+        if ww and wh and float(ww) > 320 and float(wh) > 240:
+            return float(ww), float(wh)
+
+        # 4. Fallback to settings defaults
+        return float(settings.window_width), float(settings.window_height)
+
     current_route = "/welcome"
     selected_trip: Optional[Itinerary] = None
     previous_route: str = "/saved"
@@ -257,7 +280,8 @@ def main(page: ft.Page) -> None:
                 active_ctrl = content_area.content
                 if hasattr(active_ctrl, "on_resize") and callable(active_ctrl.on_resize):
                     try:
-                        active_ctrl.on_resize(float(page.width or 1280), float(page.height or 840))
+                        vw, vh = _get_viewport_dimensions()
+                        active_ctrl.on_resize(vw, vh)
                     except Exception:
                         pass
             return
@@ -327,7 +351,8 @@ def main(page: ft.Page) -> None:
                 active_ctrl = content_area.content
                 if hasattr(active_ctrl, "on_resize") and callable(active_ctrl.on_resize):
                     try:
-                        active_ctrl.on_resize(float(page.width or 1280), float(page.height or 840))
+                        vw, vh = _get_viewport_dimensions()
+                        active_ctrl.on_resize(vw, vh)
                     except Exception:
                         pass
             return
@@ -341,14 +366,13 @@ def main(page: ft.Page) -> None:
             content_area.content = DashboardView(on_navigate=navigate_to)
         elif base_route in ("/map", "/places"):
             has_route_param = ("itineraryId=" in route) or ("followRoute=true" in route)
-            init_w = float(getattr(getattr(page, "window", None), "width", None) or page.width or 1280.0)
-            init_h = float(getattr(getattr(page, "window", None), "height", None) or page.height or 840.0)
+            vw, vh = _get_viewport_dimensions()
             content_area.content = PlacesView(
                 on_navigate=navigate_to,
                 route_query=route,
                 active_trip=selected_trip if has_route_param else None,
-                initial_width=init_w,
-                initial_height=init_h,
+                initial_width=vw,
+                initial_height=vh,
             )
         elif base_route in ("/saved", "/trips"):
             content_area.content = SavedTripsView(
@@ -372,7 +396,8 @@ def main(page: ft.Page) -> None:
             active_ctrl = content_area.content
             if hasattr(active_ctrl, "on_resize") and callable(active_ctrl.on_resize):
                 try:
-                    active_ctrl.on_resize(float(page.width or 1280), float(page.height or 840))
+                    vw, vh = _get_viewport_dimensions()
+                    active_ctrl.on_resize(vw, vh)
                 except Exception:
                     pass
 
@@ -394,6 +419,8 @@ def main(page: ft.Page) -> None:
             last_auth_identity = new_auth_identity
             if current_route in ("/home", "/dashboard"):
                 navigate_to(current_route, force=True)
+            elif current_route in ("/welcome", "/login", "/signup") and (session_manager.is_authenticated or session_manager.is_guest):
+                navigate_to("/home", force=True)
             elif current_route == "/profile" and not session_manager.is_authenticated and not session_manager.is_guest:
                 navigate_to("/welcome", force=True)
 
@@ -413,10 +440,20 @@ def main(page: ft.Page) -> None:
         horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
     )
 
+    main_container = ft.Container(
+        content=main_column,
+        left=0,
+        top=0,
+        right=0,
+        bottom=0,
+        expand=True,
+    )
+
     def _on_splash_dismiss() -> None:
         try:
             if splash_overlay in root_stack.controls:
                 root_stack.controls.remove(splash_overlay)
+                root_stack.update()
                 page.update()
         except Exception:
             pass
@@ -425,7 +462,7 @@ def main(page: ft.Page) -> None:
 
     root_stack = ft.Stack(
         controls=[
-            main_column,
+            main_container,
             splash_overlay,
         ],
         expand=True,
@@ -434,22 +471,15 @@ def main(page: ft.Page) -> None:
     page.controls = [root_stack]
     page.update()
 
-    # Launch Cold-Start Splash Timer (2.8s auto-dismiss)
-    splash_overlay.start_timer(2.8)
+    # Launch Cold-Start Splash Timer (0.8s for auth/guest, 2.0s for fresh launch)
+    init_splash_delay = 0.8 if (session_manager.is_authenticated or session_manager.is_guest) else 2.0
+    splash_overlay.start_timer(delay_seconds=init_splash_delay, page=page)
 
     def _on_page_resize(e: Any = None) -> None:
         palette = settings.palette
         page.bgcolor = palette.bg_main
-        # Extract true logical pixels from resize event, window, or page
-        new_w = getattr(e, "width", None)
-        new_h = getattr(e, "height", None)
-        if not new_w or not new_h:
-            new_w = getattr(getattr(page, "window", None), "width", None) or page.width or 1280.0
-            new_h = getattr(getattr(page, "window", None), "height", None) or page.height or 840.0
-        new_w = float(new_w)
-        new_h = float(new_h)
-        page.width = new_w
-        page.height = new_h
+
+        new_w, new_h = _get_viewport_dimensions(e)
 
         if content_area:
             content_area.bgcolor = palette.bg_main
@@ -470,6 +500,24 @@ def main(page: ft.Page) -> None:
             page.update()
         except Exception:
             pass
+
+    def _on_window_event(e: ft.WindowEvent) -> None:
+        event_type = getattr(e, "type", None)
+        if event_type in (
+            ft.WindowEventType.MAXIMIZE,
+            ft.WindowEventType.UNMAXIMIZE,
+            ft.WindowEventType.RESTORE,
+            ft.WindowEventType.RESIZED,
+            ft.WindowEventType.RESIZE,
+            ft.WindowEventType.ENTER_FULL_SCREEN,
+            ft.WindowEventType.LEAVE_FULL_SCREEN,
+        ):
+            _on_page_resize()
+
+    try:
+        page.window.on_event = _on_window_event
+    except Exception:
+        pass
 
     page.on_resize = _on_page_resize
     page.on_resized = _on_page_resize

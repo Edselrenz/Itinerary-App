@@ -228,6 +228,9 @@ class ApiClient:
             detail = self._extract_error_detail(response)
             raise AuthenticationError(detail, status_code=response.status_code)
 
+        if response.status_code == 429:
+            raise ApiClientError("Too many login attempts. Please wait a moment and try again.", status_code=429)
+
         if response.status_code == 404:
             detail = self._extract_error_detail(response)
             raise NotFoundError(detail, status_code=404)

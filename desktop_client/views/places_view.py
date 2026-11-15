@@ -119,8 +119,11 @@ class PlacesView(ft.Container):
             return None
 
     def did_mount(self) -> None:
-        pw = getattr(self.safe_page, "width", None) or getattr(getattr(self.safe_page, "window", None), "width", None)
-        ph = getattr(self.safe_page, "height", None) or getattr(getattr(self.safe_page, "window", None), "height", None)
+        pw = getattr(self.safe_page, "width", None)
+        ph = getattr(self.safe_page, "height", None)
+        if not pw or not ph or float(pw) < 320 or float(ph) < 240:
+            pw = getattr(getattr(self.safe_page, "window", None), "width", None)
+            ph = getattr(getattr(self.safe_page, "window", None), "height", None)
         if pw and ph:
             try:
                 self.on_resize(float(pw), float(ph))
@@ -402,6 +405,10 @@ class PlacesView(ft.Container):
 
         map_wrapper = ft.Container(
             content=self.map_component,
+            left=0,
+            top=0,
+            right=0,
+            bottom=0,
             expand=True,
             clip_behavior=ft.ClipBehavior.HARD_EDGE,
         )

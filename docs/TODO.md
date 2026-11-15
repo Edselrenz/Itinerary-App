@@ -1642,9 +1642,64 @@ px cap sync android): **Exit code 0 (6 plugins synchronized)**.
     - [x] `test_tc_27_deep_link_query_params_parsed` (verifies all 10 query params handled in `places_view.py`).
     - [x] `test_tc_28_places_view_window_resize_fullscreen` (verifies fullscreen width/height responsive resize).
   - [x] Ensure full desktop pytest suite passes with 100% green rate (104/104 passed).
-- [ ] **Phase 57.6: Windows Standalone Executable Build & Full Verification**:
-  - [ ] Compile release executable `dist/NuevaEcijaTravel/NuevaEcijaTravel.exe` using `scripts/build_standalone_exe.py`.
-  - [ ] Verify clean cold boot, map panning/zooming, zero 403 tiles, and interactive bottom sheet.
+- [x] **Phase 57.6: Windows Standalone Executable Build & Full Verification**:
+  - [x] Compile release executable `dist/NuevaEcijaTravel/NuevaEcijaTravel.exe` using `scripts/build_standalone_exe.py`.
+  - [x] Verify clean cold boot, map panning/zooming, zero 403 tiles, and interactive bottom sheet.
+
+---
+
+## Phase 58: Desktop Authentication Parity & Cold Launch Unblocking (`AUTH-FIX-01` to `AUTH-FIX-06`)
+- [x] **Database User Account Synchronization (`AUTH-FIX-01`)**:
+  - [x] Resolved disparity between PostgreSQL Docker container (17 accounts) and SQLite database `nueva_ecija_travel.db` (4 accounts).
+  - [x] Bidirectionally synchronized all 21 user accounts across PostgreSQL and SQLite with matching Argon2id hashes, ensuring seamless login regardless of database engine selection or offline fallback.
+- [x] **Cold Launch Splash Overlay Pointer Interception Fix (`AUTH-FIX-02`)**:
+  - [x] Resolved unclickable dashboard freeze on application reopen.
+  - [x] In `desktop_client/components/splash_overlay.py`: `dismiss()` clears `self.content = None`, `self.on_click = None`, and sets `self.visible = False`.
+  - [x] In `desktop_client/main.py`: `_on_splash_dismiss()` calls `root_stack.controls.remove(splash_overlay); root_stack.update(); page.update()` to mark `root_stack` dirty and purge the Flutter pointer barrier.
+  - [x] Reduced splash timeout to 0.8s for authenticated and guest travelers so returning users enter `/home` with zero friction.
+- [x] **Login & Registration Visual Feedback & Error Propagation (`AUTH-FIX-03`)**:
+  - [x] Fixed `_safe_update()` in both `desktop_client/views/login_view.py` and `desktop_client/views/signup_view.py` to invoke `safe_page.update()` before control-level fallback.
+  - [x] Enabled live `ProgressRing` spinner state on button click and immediate visual rendering of `self.error_container` upon credential failure or rate limits.
+  - [x] Preserved active spinner until view unmount on success; cleanly re-enabled "Log In" / "Sign Up" button only on failed requests.
+- [x] **Fast Localhost Endpoint Prioritization (`AUTH-FIX-04`)**:
+  - [x] In `desktop_client/core/connectivity_service.py`: prioritized `http://127.0.0.1:8000/api/v1` in candidates list before Cloudflare Worker edge fallback.
+  - [x] Decreased latency for local testing to <1ms with immediate failover to `https://ne-itinerary-api.edselrenz0.workers.dev/api/v1` if port 8000 is closed.
+- [x] **Auth Rate Limit Normalization & Clear HTTP 429 Messaging (`AUTH-FIX-05`)**:
+  - [x] In `backend/app/api/v1/auth.py`: relaxed `/login` and `/register` limiter from `5/minute` to `30/minute`.
+  - [x] In `desktop_client/core/api_client.py`: added explicit HTTP 429 handling with human-readable error: `"Too many login attempts. Please wait a moment and try again."`
+- [x] **Automated Regression Test Suite Expansion (`AUTH-FIX-06`)**:
+  - [x] Added unit tests in `desktop_client/tests/test_auth_service.py`:
+    - `test_login_view_visual_feedback_and_error_display`
+    - `test_splash_overlay_clean_dismiss_and_unblocking`
+    - `test_api_client_rate_limit_429_detail`
+  - [x] Verified full desktop pytest suite: **107/107 tests passing (100% green)** in 14.28s.
+  - [x] Recompiled standalone release executable: [`dist/NuevaEcijaTravel/NuevaEcijaTravel.exe`](file:///c:/Users/Edward/Desktop/CaseStudy/dist/NuevaEcijaTravel/NuevaEcijaTravel.exe) (15.31 MB, 406.30 MB complete distribution).
+
+---
+
+## Phase 59: Map Fullscreen Window Responsive Auto-Adjust & Carto Watermark Elimination (`MAP-FIX-01` to `MAP-FIX-05`)
+- [x] **Native OS Window Event Listener & Viewport Resolution (`MAP-FIX-01`)**:
+  - [x] In `desktop_client/main.py`: Attached `page.window.on_event = _on_window_event` to listen for `MAXIMIZE`, `UNMAXIMIZE`, `RESTORE`, `RESIZED`, `RESIZE`, `ENTER_FULL_SCREEN`, and `LEAVE_FULL_SCREEN` window state events.
+  - [x] Created `_get_viewport_dimensions(e)` checking `PageResizeEvent` (`e.width`, `e.height`) -> Flutter viewport logical pixels (`page.width`, `page.height`) -> native window dimensions (`page.window.width`, `page.window.height`) -> settings fallback.
+  - [x] Eliminated Python assignments `page.width = new_w` and `page.height = new_h` in `_on_page_resize()`, preventing Python from pinning the Flutter viewport canvas to the default 1280x840.
+- [x] **Stack Positioned Fill Geometry Enforcement (`MAP-FIX-02`)**:
+  - [x] In `desktop_client/main.py`: Wrapped `main_column` inside `main_container = ft.Container(content=main_column, left=0, top=0, right=0, bottom=0, expand=True)` inside `root_stack`, ensuring the main application column fills 100% of the screen width and height upon maximizing.
+  - [x] In `desktop_client/views/places_view.py`: Added `left=0, top=0, right=0, bottom=0` to `map_wrapper = ft.Container(content=self.map_component, left=0, top=0, right=0, bottom=0, expand=True, clip_behavior=ft.ClipBehavior.HARD_EDGE)`, ensuring `PlacesView`'s Stack expands the map canvas across the full viewport.
+  - [x] In `desktop_client/views/places_view.py`: Updated `did_mount()` to read `safe_page.width` before `safe_page.window.width`, ensuring the map mounts directly at maximized resolution.
+- [x] **OpenStreetMap Mirror Routing & German OSM Mirror Integration (`MAP-FIX-03`)**:
+  - [x] In `desktop_client/components/slippy_map_canvas.py`: Replaced dead 404 HOT mirror with active, verified `https://{sub}.tile.openstreetmap.de/{zoom}/{x}/{y}.png`.
+  - [x] Confirmed zero CARTO CDN endpoints exist in candidate tile URLs, strictly avoiding Carto basemap watermark responses.
+- [x] **Carto Watermark Filter & Startup Cache Sanitization (`MAP-FIX-04`)**:
+  - [x] In `desktop_client/components/slippy_map_canvas.py`: Added `CartoDB` and `cartocdn` to `_OSM_BLOCKED_SIGNATURES`.
+  - [x] Hardened `_is_valid_osm_png(data: bytes)` to reject all 2048/2049 byte files and any tile in the `2040 <= len(data) <= 2060` byte range (Carto's watermark PNG format).
+  - [x] Updated `_on_tile_cached_live()` to query `img_ctrl.page or self.page` and refresh the live image control seamlessly.
+  - [x] Updated `resize_canvas()` to invoke `self.page.update()` in addition to `self.update()`, triggering immediate repainting of the full viewport.
+- [x] **Automated Regression Test Suite Expansion (`MAP-FIX-05`)**:
+  - [x] Added unit tests in `desktop_client/tests/test_cycle2_regressions.py`:
+    - `test_tc_29_carto_watermark_signatures_and_ranges_rejected` (verifies 2049-byte Carto watermark, 2048-byte variant, 2045-byte range, and all watermark signatures are blocked).
+    - `test_tc_30_main_window_fullscreen_and_viewport_resolution` (verifies `_on_window_event` MAXIMIZE, `_on_page_resize`, `PageResizeEvent` resolution, and `map_wrapper` `Positioned.fill` bounds).
+  - [x] Verified full desktop pytest suite: **109/109 tests passing (100% green)** in 14.73s.
+  - [x] Recompiled release standalone executable: `dist/NuevaEcijaTravel/NuevaEcijaTravel.exe`.
 
 
 

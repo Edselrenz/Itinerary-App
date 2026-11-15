@@ -59,6 +59,8 @@ _OSM_BLOCKED_SIGNATURES = (
     b"carto.com",
     b"API KEY REQUIRED",
     b"basemaps/apikey",
+    b"CartoDB",
+    b"cartocdn",
 )
 
 
@@ -144,6 +146,9 @@ def _is_valid_osm_png(data: bytes) -> bool:
     if data[:8] != b"\x89PNG\r\n\x1a\n":
         return False
     if len(data) in (2048, 2049, 21645, 21644, 15403):
+        return False
+    # Carto "API KEY REQUIRED" watermark tiles are exactly 2048-2049 bytes
+    if 2040 <= len(data) <= 2060:
         return False
     for sig in _OSM_BLOCKED_SIGNATURES:
         if sig in data:
@@ -238,7 +243,7 @@ def _resolve_tile_source(
                 },
             ),
             (
-                f"https://{sub}.tile.openstreetmap.fr/hot/{zoom}/{x}/{y}.png",
+                f"https://{sub}.tile.openstreetmap.de/{zoom}/{x}/{y}.png",
                 {
                     "User-Agent": "TripMoTripKoNuevaEcijaDesktop/2.5 (+https://edselrenz.github.io/Itinerary-App/)",
                     "Referer": "https://edselrenz.github.io/Itinerary-App/",
@@ -716,6 +721,8 @@ class SlippyMapCanvas(ft.Container):
         self._rebuild_layers(notify=True)
         try:
             self.update()
+            if getattr(self, "page", None):
+                self.page.update()
         except Exception:
             pass
 
@@ -1086,7 +1093,8 @@ class SlippyMapCanvas(ft.Container):
             return
         img_ctrl.src = asset_path
         try:
-            if self.page:
+            p = getattr(img_ctrl, "page", None) or getattr(self, "page", None)
+            if p:
                 img_ctrl.update()
         except Exception:
             pass
