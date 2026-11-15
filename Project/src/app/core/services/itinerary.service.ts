@@ -1080,10 +1080,8 @@ export class ItineraryService {
       } else {
         // Dynamic assignment preventing cross-day repetition
         if (d === 0 && anchorPlace) {
-          if (!isSingleDay || !this.isAccommodationPlace(anchorPlace)) {
-            dayPlaces.push(anchorPlace);
-            markPlaceUsed(anchorPlace);
-          }
+          dayPlaces.push(anchorPlace);
+          markPlaceUsed(anchorPlace);
         }
 
         // Find unused candidates from matchedPool using fuzzy deduplication (PREF-06)

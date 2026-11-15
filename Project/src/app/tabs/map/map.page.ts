@@ -987,7 +987,7 @@ export class MapPage implements OnInit, AfterViewInit, OnDestroy {
   public startTripHere(place: Place): void {
     this.router.navigate(['/suggested-wizard'], {
       queryParams: {
-        destination: place.municipality_name || place.name,
+        destination: place.municipality_name || 'Nueva Ecija',
         placeId: place.id,
       },
     });

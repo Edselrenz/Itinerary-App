@@ -3637,6 +3637,169 @@ body.dark {
       }
     }
   }
+
+  /* Content wrappers using their actual template class names */
+  .home-content,
+  .history-content,
+  .map-content,
+  .profile-content,
+  .fav-content,
+  .wizard-content,
+  .builder-content,
+  .detail-content,
+  .welcome-content,
+  .guest-content,
+  .login-content,
+  .signup-content {
+    --background: #0b1120 !important;
+    background: #0b1120 !important;
+    color: #f1f5f9 !important;
+  }
+
+  /* Toolbars & Headers */
+  .history-toolbar,
+  .builder-toolbar,
+  .detail-toolbar,
+  .wizard-toolbar,
+  .figma-header-bar,
+  .history-filter-header,
+  .view-mode-bar {
+    --background: #0f172a !important;
+    --border-color: #1e293b !important;
+    background: #0f172a !important;
+    border-color: #1e293b !important;
+    color: #f8fafc !important;
+  }
+
+  /* Headings that were pitch-black #000000 / #0f172a on dark background */
+  .header-title,
+  .section-heading,
+  .dest-title,
+  .result-title,
+  .itin-title,
+  .saved-trips-headline,
+  .history-title,
+  .builder-title,
+  .figma-header-title,
+  .main-heading,
+  .group-label,
+  .browse-main-heading,
+  .day-bold-heading,
+  .day-headline,
+  .trip-destination-title,
+  .stop-title-text,
+  .card-place-title,
+  .stop-name-heading,
+  .nearby-card-title,
+  .empty-filter-title,
+  .empty-state-title,
+  .empty-itin-title,
+  .sheet-title,
+  .drawer-title,
+  .drawer-card-name,
+  .filter-modal-title,
+  .filter-section-title,
+  .action-card.custom-card .card-heading {
+    color: #f8fafc !important;
+  }
+
+  /* Subtitles & Muted Copy */
+  .saved-trips-subheadline,
+  .itin-destination,
+  .itin-dates,
+  .day-italic-sub,
+  .stop-timing-block,
+  .nearby-intro-description,
+  .card-place-muni,
+  .stop-muni-text,
+  .action-card.custom-card .card-copy {
+    color: #94a3b8 !important;
+  }
+
+  /* Cards, Containers & Sheets */
+  .history-itinerary-card,
+  .result-card,
+  .empty-itinerary-card,
+  .figma-trip-card,
+  .figma-stop-card,
+  .figma-nearby-card,
+  .figma-input-box,
+  .place-browser-card,
+  .trip-settings-card,
+  .active-day-timeline-card,
+  .places-empty-box,
+  .day-empty-stops-box,
+  .trip-details-card,
+  .timeline-stop-card,
+  .expenses-summary-card,
+  .detail-sheet-card,
+  .poi-bottom-sheet,
+  .poi-list-drawer,
+  .drawer-place-card,
+  .map-filter-modal .filter-modal-wrap,
+  .picker-modal-sheet,
+  .picker-place-card,
+  .date-picker-modal-card,
+  .commute-guide-box,
+  .autocomplete-input-box,
+  .suggestions-dropdown,
+  .regional-explorer-modal {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    color: #f8fafc !important;
+  }
+
+  /* Inputs & Search Bars */
+  .search-input,
+  .history-search-field,
+  .search-input-field,
+  .core-input,
+  .settings-input,
+  .modal-input,
+  .modal-textarea,
+  .picker-search-input,
+  .date-picker-trigger-text,
+  .autocomplete-native-input {
+    background-color: transparent !important;
+    color: #f8fafc !important;
+  }
+
+  .settings-input,
+  .search-input-pill,
+  .search-bar-wrap,
+  .picker-search-bar {
+    background-color: #0f172a !important;
+    border-color: #334155 !important;
+  }
+
+  .search-icon {
+    color: #94a3b8 !important;
+  }
+
+  /* Pills, Capsules & Tabs */
+  .segment-pill,
+  .figma-pref-pill,
+  .trip-tag-pill,
+  .figma-day-capsule-bar,
+  .nearby-category-capsule-bar,
+  .timeline-day-tab,
+  .target-day-chip,
+  .quick-dest-chip,
+  .view-mode-tab,
+  .days-nights-pill,
+  .filter-choice-chip,
+  .muni-chip,
+  .price-tier-btn {
+    background: #0f172a !important;
+    border-color: #334155 !important;
+    color: #cbd5e1 !important;
+
+    &.active {
+      background: #0084ff !important;
+      border-color: #0084ff !important;
+      color: #ffffff !important;
+    }
+  }
 }
 
 /* ========================================================

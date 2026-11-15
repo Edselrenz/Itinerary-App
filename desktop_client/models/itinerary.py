@@ -107,6 +107,11 @@ class ItineraryItem:
             return float(self.place.estimated_cost_min)
         return 0.0
 
+    @property
+    def estimated_cost(self) -> float:
+        """Alias for representative_cost ensuring parity across view calculations."""
+        return self.representative_cost
+
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "ItineraryItem":
         place_obj = None
@@ -353,6 +358,7 @@ class SuggestedItineraryRequest:
     min_rating: Optional[float] = None
     include_live_places: bool = True
     anchor_place_id: Optional[str] = None
+    anchor_place_payload: Optional[dict[str, Any]] = None
 
     def to_dict(self) -> dict[str, Any]:
         res: dict[str, Any] = {
@@ -371,6 +377,8 @@ class SuggestedItineraryRequest:
             res["min_rating"] = self.min_rating
         if self.anchor_place_id is not None:
             res["anchor_place_id"] = self.anchor_place_id
+        if self.anchor_place_payload is not None:
+            res["anchor_place_payload"] = self.anchor_place_payload
         return res
 
 

@@ -91,11 +91,6 @@ class PlacesView(ft.Container):
 
         self.map_component: Optional[SlippyMapCanvas] = None
         self._build_content()
-        try:
-            loop = asyncio.get_running_loop()
-            loop.create_task(self._async_bootstrap())
-        except RuntimeError:
-            pass
 
     @property
     def safe_page(self) -> Optional[ft.Page]:
@@ -107,8 +102,14 @@ class PlacesView(ft.Container):
             return None
 
     def did_mount(self) -> None:
+        async def _bootstrap():
+            try:
+                await self._async_bootstrap()
+            except Exception:
+                pass
+
         if self.safe_page is not None:
-            self.safe_page.run_task(self._async_bootstrap)
+            self.safe_page.run_task(_bootstrap)
 
     def _check_and_init_route_mode(self) -> None:
         """Determines if /map was launched with an itinerary route parameter."""

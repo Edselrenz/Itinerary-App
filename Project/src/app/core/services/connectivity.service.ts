@@ -181,11 +181,13 @@ export class ConnectivityService {
     }
     this.isDismissedManually = false;
   }
+  public readonly CLOUDFLARE_WORKER_API_URL = 'https://ne-itinerary-api.edselrenz0.workers.dev/api/v1';
+
   /**
    * Actively probes the backend health endpoint to verify connectivity.
+   * Automatically attempts failover to Cloudflare Worker tunnel if local or custom URL fails.
    */
   public checkHostHealth(): Observable<boolean> {
-
     this.isCheckingHealthSubject.next(true);
 
     const healthUrl = `${this.activeApiBaseUrl}/health`;
@@ -193,31 +195,35 @@ export class ConnectivityService {
     return this.http.get<HealthResponse>(healthUrl).pipe(
       timeout(5000),
       tap(() => {
-
         this.isCheckingHealthSubject.next(false);
-
         this.setHostOffline(false);
-
       }),
-
       map(() => true),
-
       catchError(() => {
-
+        if (this.activeApiBaseUrl !== this.CLOUDFLARE_WORKER_API_URL) {
+          return this.http.get<HealthResponse>(`${this.CLOUDFLARE_WORKER_API_URL}/health`).pipe(
+            timeout(5000),
+            tap(() => {
+              this.isCheckingHealthSubject.next(false);
+              this.setHostOffline(false);
+            }),
+            map(() => true),
+            catchError(() => {
+              this.isCheckingHealthSubject.next(false);
+              this.isDismissedManually = false;
+              this.consecutiveErrors = this.ERROR_THRESHOLD;
+              this.isHostOfflineSubject.next(true);
+              return of(false);
+            })
+          );
+        }
         this.isCheckingHealthSubject.next(false);
-
         this.isDismissedManually = false;
-
         this.consecutiveErrors = this.ERROR_THRESHOLD;
-
         this.isHostOfflineSubject.next(true);
-
         return of(false);
-
       })
-
     );
-
   }
 
 }

@@ -8,7 +8,12 @@ from pathlib import Path
 from typing import Callable, Optional
 import flet as ft
 
-from desktop_client.components.dialogs import show_place_detail_dialog, show_toast
+from desktop_client.components.dialogs import (
+    close_overlay_dialog,
+    open_overlay_dialog,
+    show_place_detail_dialog,
+    show_toast,
+)
 from desktop_client.config.settings import ThemeColors, get_settings
 from desktop_client.core.connectivity_service import get_connectivity_service
 from desktop_client.core.session import get_session_manager
@@ -1253,15 +1258,10 @@ class ProfileView(ft.Container):
         self._show_dialog(dlg)
 
     def _show_dialog(self, dlg: ft.AlertDialog) -> None:
-        if self.page:
-            self.page.overlay.append(dlg)
-            dlg.open = True
-            self.page.update()
+        open_overlay_dialog(self.page, dlg)
 
     def _close_dialog(self, dlg: ft.AlertDialog) -> None:
-        dlg.open = False
-        if self.page:
-            self.page.update()
+        close_overlay_dialog(self.page, dlg)
 
     def _toggle_theme(self) -> None:
         if self.on_toggle_theme:

@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 import sys
 from dataclasses import dataclass, field
+from typing import Any, Optional
 
 
 def _resolve_base_dir() -> Path:
@@ -81,6 +82,7 @@ class ThemeColors:
     SURFACE_LIGHT_HOVER: str = "#f1f5f9"
     BORDER_LIGHT: str = "#e2e8f0"
     TEXT_MAIN_LIGHT: str = "#0f172a"
+    TEXT_PRIMARY_LIGHT: str = "#0f172a"
     TEXT_MUTED_LIGHT: str = "#475569"
     TEXT_FAINT_LIGHT: str = "#64748b"
     TEXT_BLACK: str = "#000000"
@@ -91,6 +93,7 @@ class ThemeColors:
     SURFACE_DARK_HOVER: str = "#1e293b"
     BORDER_DARK: str = "#243247"
     TEXT_MAIN_DARK: str = "#f8fafc"
+    TEXT_PRIMARY_DARK: str = "#f8fafc"
     TEXT_MUTED_DARK: str = "#94a3b8"
     TEXT_FAINT_DARK: str = "#64748b"
 
@@ -156,7 +159,7 @@ class Settings:
     app_title: str = "Trip mo, trip ko — Nueva Ecija Desktop"
     brand_name: str = "Trip mo, trip ko"
     app_version: str = "1.0.0"
-    api_base_url: str = os.getenv("API_BASE_URL", "http://127.0.0.1:8000/api/v1")
+    api_base_url: str = os.getenv("API_BASE_URL", "https://ne-itinerary-api.edselrenz0.workers.dev/api/v1")
     api_timeout_seconds: float = float(os.getenv("API_TIMEOUT_SECONDS", "15.0"))
     itinerary_gen_timeout_seconds: float = float(os.getenv("ITINERARY_GEN_TIMEOUT_SECONDS", "45.0"))
     debug: bool = os.getenv("DEBUG", "False").lower() in ("true", "1", "yes")
@@ -171,6 +174,18 @@ class Settings:
     base_dir: Path = field(default_factory=_resolve_base_dir)
     storage_dir: Path = field(init=False)
     assets_dir: Path = field(init=False)
+    _is_dark_mode: bool = field(default=False, init=False)
+
+    @property
+    def is_dark_mode(self) -> bool:
+        return self._is_dark_mode
+
+    def set_dark_mode(self, is_dark: bool) -> None:
+        object.__setattr__(self, "_is_dark_mode", bool(is_dark))
+
+    @property
+    def palette(self) -> "ThemePalette":
+        return ThemePalette.get_palette(self._is_dark_mode)
 
     @property
     def project_root(self) -> Path:
@@ -289,6 +304,10 @@ class ThemePalette:
     primary_blue: str = ThemeColors.PRIMARY_BLUE
     azure_soft: str = ThemeColors.AZURE_SOFT
 
+    @property
+    def bg_primary(self) -> str:
+        return self.bg_main
+
     @classmethod
     def get_palette(cls, is_dark: bool = False) -> "ThemePalette":
         if is_dark:
@@ -387,52 +406,15 @@ def is_placeholder_avatar(url: Optional[str]) -> bool:
     )
 
 
-def resolve_avatar_path(avatar_url: Optional[str]) -> Optional[str]:
+def resolve_avatar_path(avatar_url: Optional[str], user_id: str = "traveler") -> Optional[str]:
     """
     Resolve an avatar URL (HTTP/HTTPS, base64 data URI, or local path) into a
     source string that Flet 1.1.2 `ft.Image(src=...)` can render reliably on Desktop & Mobile.
-    Decodes `data:image/...;base64,...` into `assets/avatars_cache/avatar_<sha1>.<ext>`
-    and returns the relative asset path `"avatars_cache/avatar_<sha1>.<ext>"`.
+    Delegates to `Settings.resolve_avatar_path`.
     """
     if is_placeholder_avatar(avatar_url):
         return None
-
-    raw = str(avatar_url).strip()
-    if raw.startswith("data:image/"):
-        try:
-            header, b64_data = raw.split(",", 1)
-            ext = "png"
-            m = re.search(r"data:image/([a-zA-Z0-9+]+)", header)
-            if m:
-                fmt = m.group(1).lower()
-                if fmt in ("jpeg", "jpg"):
-                    ext = "jpg"
-                elif fmt == "webp":
-                    ext = "webp"
-                elif fmt == "gif":
-                    ext = "gif"
-            img_bytes = base64.b64decode(b64_data)
-            digest = hashlib.sha1(img_bytes).hexdigest()[:20]
-            st = get_settings()
-            avatars_dir = st.assets_dir / "avatars_cache"
-            avatars_dir.mkdir(parents=True, exist_ok=True)
-            out_file = avatars_dir / f"avatar_{digest}.{ext}"
-            if not out_file.exists():
-                out_file.write_bytes(img_bytes)
-            return f"avatars_cache/avatar_{digest}.{ext}"
-        except Exception:
-            return None
-
-    if raw.startswith(("http://", "https://")):
-        return raw
-
-    cleaned = raw.lstrip("/")
-    if cleaned.startswith("assets/"):
-        cleaned = cleaned[len("assets/"):]
-    st = get_settings()
-    if (st.assets_dir / cleaned).exists():
-        return cleaned
-    return None
+    return get_settings().resolve_avatar_path(avatar_url, user_id=user_id)
 
 
 class ResponsiveLayout:

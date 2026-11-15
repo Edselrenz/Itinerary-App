@@ -47,7 +47,10 @@ class DashboardView(ft.Container):
         if loaded:
             self.destinations = [p for p in loaded if getattr(p, "is_featured", False) or (getattr(p, "rating", 0) or 0) >= 4.5][:10]
         try:
-            self.saved_itineraries = list(self.itinerary_service.guest_storage.list_itineraries())[:5]
+            if not self.session_manager.is_authenticated:
+                self.saved_itineraries = list(self.itinerary_service.guest_storage.list_itineraries())[:5]
+            else:
+                self.saved_itineraries = []
         except Exception:
             self.saved_itineraries = []
 

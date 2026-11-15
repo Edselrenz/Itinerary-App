@@ -11,6 +11,7 @@ import {
   IonTitle,
   IonToolbar,
   ToastController,
+  ViewWillEnter,
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import {
@@ -53,7 +54,7 @@ export type HistoryFilterSegment = 'all' | 'upcoming' | 'past' | 'suggested' | '
     IonButton,
   ],
 })
-export class HistoryPage implements OnInit, OnDestroy {
+export class HistoryPage implements OnInit, OnDestroy, ViewWillEnter {
   public savedItineraries: Itinerary[] = [];
   public searchTerm = '';
   public activeSegment: HistoryFilterSegment = 'all';
@@ -117,8 +118,8 @@ export class HistoryPage implements OnInit, OnDestroy {
     return this.savedItineraries.filter((itin) => {
       // 1. Text Search Filter
       if (query) {
-        const matchesTitle = itin.title.toLowerCase().includes(query);
-        const matchesDest = itin.destination.toLowerCase().includes(query);
+        const matchesTitle = (itin.title || '').toLowerCase().includes(query);
+        const matchesDest = (itin.destination || '').toLowerCase().includes(query);
         if (!matchesTitle && !matchesDest) return false;
       }
 
@@ -126,9 +127,9 @@ export class HistoryPage implements OnInit, OnDestroy {
       const endOrStart = (itin.end_date || itin.start_date || '').split('T')[0];
       switch (this.activeSegment) {
         case 'upcoming':
-          return endOrStart >= today;
+          return endOrStart ? endOrStart >= today : true;
         case 'past':
-          return endOrStart < today;
+          return endOrStart ? endOrStart < today : false;
         case 'suggested':
           return itin.type === 'suggested';
         case 'custom':

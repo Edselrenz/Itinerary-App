@@ -190,6 +190,29 @@ class ItineraryService:
         for p in all_places:
             if p.get("id") not in curated_ids:
                 curated_pool.append(p)
+                curated_ids.add(p.get("id"))
+
+        # Include loaded places from PlaceService (live OSM / API-merged POIs)
+        try:
+            from desktop_client.services.place_service import get_place_service
+            loaded_places = [
+                p.to_dict() for p in get_place_service().get_loaded_places()
+                if str(p.category or "").lower() not in UTILITY_CATEGORIES
+            ]
+            for p in loaded_places:
+                if p.get("id") not in curated_ids:
+                    curated_pool.append(p)
+                    curated_ids.add(p.get("id"))
+        except Exception:
+            pass
+
+        # If anchor_place_payload is supplied, ensure it exists in pool
+        anchor_payload = getattr(request, "anchor_place_payload", None)
+        if anchor_payload and isinstance(anchor_payload, dict):
+            a_id = anchor_payload.get("id")
+            if a_id and a_id not in curated_ids:
+                curated_pool.insert(0, anchor_payload)
+                curated_ids.add(a_id)
 
         target_dest = (request.destination or "").lower().strip()
         is_targeting_muni = bool(target_dest and "nueva ecija" not in target_dest and "province" not in target_dest)
@@ -316,8 +339,15 @@ class ItineraryService:
             day_places: list[dict[str, Any]] = []
 
             # Lock anchor place as Stop 1 of Day 1 (UC-S1)
-            if d_idx == 0 and request.anchor_place_id:
-                anchor_match = next((p for p in curated_pool if str(p.get("id")) == str(request.anchor_place_id)), None)
+            anchor_match = None
+            if d_idx == 0:
+                if request.anchor_place_id:
+                    anchor_match = next((p for p in curated_pool if str(p.get("id")) == str(request.anchor_place_id)), None)
+                if not anchor_match and getattr(request, "anchor_place_payload", None):
+                    p_id = request.anchor_place_payload.get("id")
+                    anchor_match = next((p for p in curated_pool if str(p.get("id")) == str(p_id)), None)
+                    if not anchor_match:
+                        anchor_match = request.anchor_place_payload
                 if anchor_match:
                     day_places.append(anchor_match)
                     mark_used(anchor_match)
@@ -385,30 +415,58 @@ class ItineraryService:
                     mark_used(selected)
 
             # 2-Opt nearest-neighbor stop ordering with lodging at day end
-            lodging = [p for p in day_places if is_lodging(str(p.get("category", "")).lower())]
-            non_lodging = [p for p in day_places if not is_lodging(str(p.get("category", "")).lower())]
-            if len(non_lodging) > 2:
-                ordered = [non_lodging[0]]
-                rem = list(non_lodging[1:])
-                while rem:
-                    curr_lat = float(ordered[-1].get("latitude") or 0.0)
-                    curr_lng = float(ordered[-1].get("longitude") or 0.0)
-                    best_idx = 0
-                    best_d = float("inf")
-                    for idx, r in enumerate(rem):
-                        r_lat = float(r.get("latitude") or 0.0)
-                        r_lng = float(r.get("longitude") or 0.0)
-                        if curr_lat and curr_lng and r_lat and r_lng:
-                            d = haversine_distance_meters(curr_lat, curr_lng, r_lat, r_lng)
-                        else:
-                            d = 999999
-                        if d < best_d:
-                            best_d = d
-                            best_idx = idx
-                    ordered.append(rem.pop(best_idx))
-                day_places = ordered + lodging
+            if d_idx == 0 and anchor_match and len(day_places) > 0:
+                first_stop = day_places[0]
+                remaining_stops = day_places[1:]
+                lodging = [p for p in remaining_stops if is_lodging(str(p.get("category", "")).lower())]
+                non_lodging = [p for p in remaining_stops if not is_lodging(str(p.get("category", "")).lower())]
+                if len(non_lodging) > 1:
+                    ordered = [non_lodging[0]]
+                    rem = list(non_lodging[1:])
+                    while rem:
+                        curr_lat = float(ordered[-1].get("latitude") or 0.0)
+                        curr_lng = float(ordered[-1].get("longitude") or 0.0)
+                        best_idx = 0
+                        best_d = float("inf")
+                        for idx, r in enumerate(rem):
+                            r_lat = float(r.get("latitude") or 0.0)
+                            r_lng = float(r.get("longitude") or 0.0)
+                            if curr_lat and curr_lng and r_lat and r_lng:
+                                d = haversine_distance_meters(curr_lat, curr_lng, r_lat, r_lng)
+                            else:
+                                d = 999999
+                            if d < best_d:
+                                best_d = d
+                                best_idx = idx
+                        ordered.append(rem.pop(best_idx))
+                    day_places = [first_stop] + ordered + lodging
+                else:
+                    day_places = [first_stop] + non_lodging + lodging
             else:
-                day_places = non_lodging + lodging
+                lodging = [p for p in day_places if is_lodging(str(p.get("category", "")).lower())]
+                non_lodging = [p for p in day_places if not is_lodging(str(p.get("category", "")).lower())]
+                if len(non_lodging) > 2:
+                    ordered = [non_lodging[0]]
+                    rem = list(non_lodging[1:])
+                    while rem:
+                        curr_lat = float(ordered[-1].get("latitude") or 0.0)
+                        curr_lng = float(ordered[-1].get("longitude") or 0.0)
+                        best_idx = 0
+                        best_d = float("inf")
+                        for idx, r in enumerate(rem):
+                            r_lat = float(r.get("latitude") or 0.0)
+                            r_lng = float(r.get("longitude") or 0.0)
+                            if curr_lat and curr_lng and r_lat and r_lng:
+                                d = haversine_distance_meters(curr_lat, curr_lng, r_lat, r_lng)
+                            else:
+                                d = 999999
+                            if d < best_d:
+                                best_d = d
+                                best_idx = idx
+                        ordered.append(rem.pop(best_idx))
+                    day_places = ordered + lodging
+                else:
+                    day_places = non_lodging + lodging
 
             items: list[ItineraryItem] = []
             cur_time = datetime.strptime("09:30 AM", "%I:%M %p")

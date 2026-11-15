@@ -13,7 +13,7 @@ import asyncio
 import os
 from pathlib import Path
 import sys
-from typing import Optional
+from typing import Any, Optional
 import urllib.parse
 import flet as ft
 
@@ -31,6 +31,7 @@ if getattr(sys, "frozen", False):
             break
 
 from desktop_client.components.bottom_tab_bar import BottomTabBar
+from desktop_client.components.dialogs import close_overlay_dialog, open_overlay_dialog
 from desktop_client.components.offline_banner import OfflineHostBanner
 from desktop_client.components.splash_overlay import SplashOverlay
 from desktop_client.components.workflow_header import WorkflowHeader
@@ -66,10 +67,28 @@ def main(page: ft.Page) -> None:
 
     # Window & Page Setup
     page.title = settings.app_title
-    page.theme_mode = ft.ThemeMode.LIGHT
+    page.theme_mode = ft.ThemeMode.DARK if settings.is_dark_mode else ft.ThemeMode.LIGHT
     page.padding = 0
     page.spacing = 0
-    page.bgcolor = ThemeColors.BG_LIGHT
+    page.theme = ft.Theme(
+        color_scheme=ft.ColorScheme(
+            background=ThemeColors.BG_LIGHT,
+            surface=ThemeColors.SURFACE_LIGHT,
+            on_background=ThemeColors.TEXT_BLACK,
+            on_surface=ThemeColors.TEXT_BLACK,
+            primary=ThemeColors.PRIMARY_BLUE,
+        )
+    )
+    page.dark_theme = ft.Theme(
+        color_scheme=ft.ColorScheme(
+            background=ThemeColors.BG_DARK,
+            surface=ThemeColors.SURFACE_DARK,
+            on_background=ThemeColors.TEXT_MAIN_DARK,
+            on_surface=ThemeColors.TEXT_MAIN_DARK,
+            primary=ThemeColors.PRIMARY_BLUE,
+        )
+    )
+    page.bgcolor = settings.palette.bg_primary
     try:
         page.window.width = settings.window_width
         page.window.height = settings.window_height
@@ -172,14 +191,12 @@ def main(page: ft.Page) -> None:
             if callable(has_unsaved) and has_unsaved():
 
                 def _confirm_discard(_):
-                    dlg.open = False
-                    page.update()
+                    close_overlay_dialog(page, dlg)
                     navigate_to(route, trip_data, pre_added_place, force=True)
 
                 def _cancel_discard(_):
-                    dlg.open = False
+                    close_overlay_dialog(page, dlg)
                     bottom_tab_bar.set_active_route(current_route)
-                    page.update()
 
                 dlg = ft.AlertDialog(
                     title=ft.Row(
@@ -207,9 +224,7 @@ def main(page: ft.Page) -> None:
                         ),
                     ],
                 )
-                page.overlay.append(dlg)
-                dlg.open = True
-                page.update()
+                open_overlay_dialog(page, dlg)
                 return
 
         current_route = route

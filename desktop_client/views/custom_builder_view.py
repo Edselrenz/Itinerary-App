@@ -20,7 +20,13 @@ import uuid
 import flet as ft
 
 from desktop_client.components.destination_picker import DestinationPicker
-from desktop_client.components.dialogs import show_date_range_dialog, show_place_detail_dialog, show_toast
+from desktop_client.components.dialogs import (
+    close_overlay_dialog,
+    open_overlay_dialog,
+    show_date_range_dialog,
+    show_place_detail_dialog,
+    show_toast,
+)
 from desktop_client.components.itinerary_route_map import ItineraryRouteMap
 from desktop_client.components.stop_card import StopCard
 from desktop_client.config.settings import ThemeColors, get_settings
@@ -128,7 +134,7 @@ class CustomBuilderView(ft.Container):
     def did_mount(self) -> None:
         async def _load():
             try:
-                await self.place_service.list_places()
+                await self.place_service.get_places(page=1, page_size=250)
             except Exception:
                 pass
         if self.safe_page is not None:
@@ -140,24 +146,28 @@ class CustomBuilderView(ft.Container):
 
     def handle_back(self) -> bool:
         """Handles back button stepping through state machine with unsaved changes guard (UC-C14)."""
-        if self.is_dirty:
-            self._prompt_discard_changes()
-            return True
-
         if self.active_view == "browse":
             self.active_view = "timeline" if self.total_stops_count > 0 else "form"
             self._build_content()
             self._safe_update()
             return True
-        elif self.active_view == "timeline":
-            if self.existing_itinerary is None:
+
+        if self.active_view == "timeline":
+            if self.existing_itinerary is None and not self.is_draft_from_wizard:
                 self.active_view = "form"
                 self._build_content()
                 self._safe_update()
                 return True
+            if self.is_dirty:
+                self._prompt_discard_changes()
+                return True
             self._navigate("/home")
             return True
-        elif self.active_view == "form":
+
+        if self.active_view == "form":
+            if self.is_dirty:
+                self._prompt_discard_changes()
+                return True
             if self.on_back:
                 self.on_back()
             else:
@@ -169,15 +179,11 @@ class CustomBuilderView(ft.Container):
     def _prompt_discard_changes(self) -> None:
         def _do_discard(_):
             self.is_dirty = False
-            dlg.open = False
-            if self.safe_page:
-                self.safe_page.update()
+            close_overlay_dialog(self.safe_page, dlg)
             self._navigate("/home")
 
         def _keep_editing(_):
-            dlg.open = False
-            if self.safe_page:
-                self.safe_page.update()
+            close_overlay_dialog(self.safe_page, dlg)
 
         dlg = ft.AlertDialog(
             title=ft.Text("Discard Changes?", size=18, weight=ft.FontWeight.BOLD),
@@ -187,10 +193,7 @@ class CustomBuilderView(ft.Container):
                 ft.FilledButton("Discard", style=ft.ButtonStyle(bgcolor=ThemeColors.ERROR, color=ft.Colors.WHITE), on_click=_do_discard),
             ],
         )
-        if self.safe_page:
-            self.safe_page.overlay.append(dlg)
-            dlg.open = True
-            self.safe_page.update()
+        open_overlay_dialog(self.safe_page, dlg)
 
     def sync_days_with_date_range(self) -> None:
         """Aligns self.days with start_date_str and end_date_str."""
@@ -282,13 +285,12 @@ class CustomBuilderView(ft.Container):
                 d.day_number = i + 1
             self.is_dirty = True
             self.active_day_index = max(0, min(self.active_day_index, len(self.days) - 1))
+            close_overlay_dialog(self.safe_page, dlg)
             self._build_content()
             self._safe_update()
 
         def _cancel(_):
-            dlg.open = False
-            if self.safe_page:
-                self.safe_page.update()
+            close_overlay_dialog(self.safe_page, dlg)
 
         dlg = ft.AlertDialog(
             title=ft.Text(f"Delete Day {cur_day.day_number}?", size=18, weight=ft.FontWeight.BOLD),
@@ -298,10 +300,7 @@ class CustomBuilderView(ft.Container):
                 ft.FilledButton("Delete Day", style=ft.ButtonStyle(bgcolor=ThemeColors.ERROR, color=ft.Colors.WHITE), on_click=_confirm_delete),
             ],
         )
-        if self.safe_page:
-            self.safe_page.overlay.append(dlg)
-            dlg.open = True
-            self.safe_page.update()
+        open_overlay_dialog(self.safe_page, dlg)
 
     def _add_new_day(self, _=None) -> None:
         """Appends a new day to the custom itinerary."""
@@ -596,9 +595,7 @@ class CustomBuilderView(ft.Container):
                 lost_stops = sum(len(d.items) for d in self.days[new_days_count:])
                 if lost_stops > 0:
                     def _confirm_shorten(_):
-                        dlg.open = False
-                        if self.safe_page:
-                            self.safe_page.update()
+                        close_overlay_dialog(self.safe_page, dlg)
                         self.start_date_str = s
                         self.end_date_str = e
                         self.sync_days_with_date_range()
@@ -607,9 +604,7 @@ class CustomBuilderView(ft.Container):
                         self._safe_update()
 
                     def _cancel_shorten(_):
-                        dlg.open = False
-                        if self.safe_page:
-                            self.safe_page.update()
+                        close_overlay_dialog(self.safe_page, dlg)
 
                     dlg = ft.AlertDialog(
                         title=ft.Text("Shorten Trip Duration?", size=18, weight=ft.FontWeight.BOLD),
@@ -619,10 +614,7 @@ class CustomBuilderView(ft.Container):
                             ft.FilledButton("Discard & Shorten", style=ft.ButtonStyle(bgcolor=ThemeColors.ERROR, color=ft.Colors.WHITE), on_click=_confirm_shorten),
                         ],
                     )
-                    if self.safe_page:
-                        self.safe_page.overlay.append(dlg)
-                        dlg.open = True
-                        self.safe_page.update()
+                    open_overlay_dialog(self.safe_page, dlg)
                     return
 
             self.start_date_str = s
@@ -1334,9 +1326,7 @@ class CustomBuilderView(ft.Container):
         stop_name = item.custom_title or (item.place.name if item.place else "Stop")
 
         def _do_remove(_):
-            dlg.open = False
-            if self.safe_page:
-                self.safe_page.update()
+            close_overlay_dialog(self.safe_page, dlg)
             if item in day.items:
                 day.items.remove(item)
                 for i, itm in enumerate(day.items):
@@ -1346,9 +1336,7 @@ class CustomBuilderView(ft.Container):
                 self._safe_update()
 
         def _cancel(_):
-            dlg.open = False
-            if self.safe_page:
-                self.safe_page.update()
+            close_overlay_dialog(self.safe_page, dlg)
 
         dlg = ft.AlertDialog(
             title=ft.Text("Remove Stop?", size=18, weight=ft.FontWeight.BOLD),
@@ -1358,10 +1346,7 @@ class CustomBuilderView(ft.Container):
                 ft.FilledButton("Remove", style=ft.ButtonStyle(bgcolor=ThemeColors.ERROR, color=ft.Colors.WHITE), on_click=_do_remove),
             ],
         )
-        if self.safe_page:
-            self.safe_page.overlay.append(dlg)
-            dlg.open = True
-            self.safe_page.update()
+        open_overlay_dialog(self.safe_page, dlg)
 
     def _open_edit_stop_dialog(self, item: ItineraryItem) -> None:
         """Edit stop modal with Move to Day dropdown reindexing both source and target days (UC-C10)."""
@@ -1391,9 +1376,7 @@ class CustomBuilderView(ft.Container):
         )
 
         def _close_dlg(_=None):
-            dlg.open = False
-            if self.safe_page:
-                self.safe_page.update()
+            close_overlay_dialog(self.safe_page, dlg)
 
         def _save_edit(_):
             c_min = None
@@ -1443,10 +1426,7 @@ class CustomBuilderView(ft.Container):
                 ft.FilledButton("Save Changes", on_click=_save_edit),
             ],
         )
-        if self.safe_page:
-            self.safe_page.overlay.append(dlg)
-            dlg.open = True
-            self.safe_page.update()
+        open_overlay_dialog(self.safe_page, dlg)
 
     # UC-C12: 2-Tab Place Picker & Off-Grid Venue Modal with Duplicate Guard & Collapsible Coordinates
     def _open_custom_venue_dialog(self, initial_tab: str = "offgrid") -> None:
@@ -1479,16 +1459,12 @@ class CustomBuilderView(ft.Container):
                     # Duplicate check
                     if any(it.place_id == p_target.id for it in active_day.items):
                         def _confirm_dup(_):
-                            dup_dlg.open = False
-                            if self.safe_page:
-                                self.safe_page.update()
+                            close_overlay_dialog(self.safe_page, dup_dlg)
                             self._add_place_direct(p_target)
                             _close_main()
 
                         def _cancel_dup(_):
-                            dup_dlg.open = False
-                            if self.safe_page:
-                                self.safe_page.update()
+                            close_overlay_dialog(self.safe_page, dup_dlg)
 
                         dup_dlg = ft.AlertDialog(
                             title=ft.Text("Duplicate Destination", size=18, weight=ft.FontWeight.BOLD),
@@ -1498,10 +1474,7 @@ class CustomBuilderView(ft.Container):
                                 ft.FilledButton("Add Stop", on_click=_confirm_dup),
                             ],
                         )
-                        if self.safe_page:
-                            self.safe_page.overlay.append(dup_dlg)
-                            dup_dlg.open = True
-                            self.safe_page.update()
+                        open_overlay_dialog(self.safe_page, dup_dlg)
                         return
 
                     self._add_place_direct(p_target)
@@ -1553,10 +1526,23 @@ class CustomBuilderView(ft.Container):
         def _toggle_coords(_):
             coords_expanded[0] = not coords_expanded[0]
             coords_col.visible = coords_expanded[0]
-            coords_toggle_btn.text = "Hide Coordinates ▲" if coords_expanded[0] else "Pin Coordinates (Lat / Lng) — Optional ▼"
+            coords_toggle_btn.content = ft.Text(
+                "Hide Coordinates ▲" if coords_expanded[0] else "Pin Coordinates (Lat / Lng) — Optional ▼",
+                size=12,
+                color=ThemeColors.PRIMARY_BLUE,
+                weight=ft.FontWeight.W_600,
+            )
             _update_dlg_content()
 
-        coords_toggle_btn = ft.TextButton("Pin Coordinates (Lat / Lng) — Optional ▼", on_click=_toggle_coords)
+        coords_toggle_btn = ft.TextButton(
+            content=ft.Text(
+                "Pin Coordinates (Lat / Lng) — Optional ▼",
+                size=12,
+                color=ThemeColors.PRIMARY_BLUE,
+                weight=ft.FontWeight.W_600,
+            ),
+            on_click=_toggle_coords,
+        )
         err_text = ft.Text("", size=11, color=ThemeColors.ERROR, visible=False)
 
         tab_body = ft.Container()
@@ -1608,9 +1594,7 @@ class CustomBuilderView(ft.Container):
         )
 
         def _close_main(_=None):
-            dlg.open = False
-            if self.safe_page:
-                self.safe_page.update()
+            close_overlay_dialog(self.safe_page, dlg)
 
         def _save_offgrid(_):
             name = name_field.value.strip()
@@ -1702,10 +1686,7 @@ class CustomBuilderView(ft.Container):
             ],
         )
         dlg_holder[0] = dlg
-        if self.safe_page:
-            self.safe_page.overlay.append(dlg)
-            dlg.open = True
-            self.safe_page.update()
+        open_overlay_dialog(self.safe_page, dlg)
 
     def _add_place_direct(self, place: Place) -> None:
         day = self.days[self.active_day_index]

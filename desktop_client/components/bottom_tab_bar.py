@@ -97,6 +97,14 @@ class BottomTabBar(ft.Container):
         except Exception:
             pass
 
+    def refresh_theme(self) -> None:
+        """Rebuilds bottom tab bar colors for active Light/Dark theme."""
+        self._build_content()
+        try:
+            self.update()
+        except Exception:
+            pass
+
     def _handle_tab_click(self, tab: dict) -> None:
         active_key = self._get_active_tab_key()
         if tab["key"] == "map" and active_key == "map":
@@ -123,7 +131,7 @@ class BottomTabBar(ft.Container):
         for tab in self._tabs_data:
             is_active = (tab["key"] == active_key)
             icon = tab["icon_active"] if is_active else tab["icon_inactive"]
-            color = ThemeColors.PRIMARY_BLUE if is_active else ThemeColors.TEXT_MUTED_LIGHT
+            color = ThemeColors.PRIMARY_BLUE if is_active else palette.text_muted
             font_weight = ft.FontWeight.W_700 if is_active else ft.FontWeight.W_500
 
             tab_ctrl = ft.Container(

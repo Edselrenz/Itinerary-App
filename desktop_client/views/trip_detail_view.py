@@ -388,7 +388,7 @@ class TripDetailView(ft.Container):
 
         # Estimated activity expenses footer card
         total_activity_expenses = sum(
-            float(itm.estimated_cost or 0.0)
+            float(itm.representative_cost)
             for d in itin.days
             for itm in d.items
         )
@@ -469,15 +469,21 @@ class TripDetailView(ft.Container):
         if not active_day:
             return
         new_stop = ItineraryItem(
+            id=str(uuid.uuid4()),
+            day_id=active_day.id,
+            sort_order=len(active_day.items) + 1,
             place_id=place.id,
             place=place,
-            day_number=active_day.day_number,
-            order_index=len(active_day.items),
+            custom_title=place.name,
+            custom_lat=place.latitude,
+            custom_lng=place.longitude,
+            planned_time="02:00 PM",
             duration_minutes=60,
-            travel_mode=self.itinerary.travel_mode or "driving",
+            estimated_cost_min=place.estimated_cost_min,
+            estimated_cost_max=place.estimated_cost_max,
+            travel_mode_from_prev="DRIVE",
         )
         active_day.items.append(new_stop)
-        self.itinerary.total_stops = sum(len(d.items) for d in self.itinerary.days)
         self.is_dirty = True
         if self.safe_page:
             show_toast(self.safe_page, f"Added {place.name} to Day {active_day.day_number}!", bgcolor=ThemeColors.SUCCESS)

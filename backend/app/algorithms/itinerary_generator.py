@@ -307,8 +307,35 @@ def generate_suggested_itinerary_data(
     if total_days > 14:
         raise ValueError("Suggested itineraries are currently supported up to 14 days.")
 
-    # 2. Determine initial geographic anchor
-    anchor_lat, anchor_lng, resolved_area = resolve_geographic_anchor(db, request.destination)
+    # 2. Determine initial geographic anchor & resolve starting POI (REG-06)
+    anchor_place: Place | None = None
+    if getattr(request, "anchor_place_id", None):
+        anchor_place = db.get(Place, request.anchor_place_id)
+    if not anchor_place and getattr(request, "anchor_place_payload", None):
+        raw_payload = request.anchor_place_payload
+        pid = raw_payload.get("id")
+        pname = raw_payload.get("name")
+        if pid:
+            try:
+                parsed_id = uuid.UUID(str(pid))
+                anchor_place = db.get(Place, parsed_id)
+            except (ValueError, TypeError, AttributeError):
+                parsed_id = None
+            if not anchor_place:
+                anchor_place = db.scalar(select(Place).where(Place.source_record_id == str(pid)))
+        if not anchor_place and pname:
+            anchor_place = db.scalar(select(Place).where(Place.name == str(pname)))
+        if not anchor_place and raw_payload.get("latitude") and raw_payload.get("longitude"):
+            try:
+                anchor_place = google_maps_service.upsert_google_place_to_db(db, raw_payload)
+            except Exception:
+                pass
+
+    if anchor_place:
+        anchor_lat, anchor_lng = float(anchor_place.latitude), float(anchor_place.longitude)
+        resolved_area = anchor_place.municipality.name if anchor_place.municipality else (anchor_place.municipality_name or request.destination)
+    else:
+        anchor_lat, anchor_lng, resolved_area = resolve_geographic_anchor(db, request.destination)
     preferred_categories = resolve_preference_categories(request.preferences)
 
     # 3. Fetch candidate POIs (CR-013: SQL bounding-box pre-filtering)
@@ -377,6 +404,9 @@ def generate_suggested_itinerary_data(
 
     if not candidate_places:
         raise ValueError("No active destinations found in Nueva Ecija database.")
+
+    if anchor_place and not any(p.id == anchor_place.id for p in candidate_places):
+        candidate_places.insert(0, anchor_place)
 
     # Track already scheduled places across the entire trip with fuzzy name and proximity deduplication (PREF-06)
     scheduled_place_ids: set[uuid.UUID] = set()
@@ -460,8 +490,11 @@ def generate_suggested_itinerary_data(
                 )
                 scored_candidates.append((s, p))
 
-            scored_candidates.sort(key=lambda x: x[0], reverse=True)
-            best_score, chosen_place = scored_candidates[0]
+            if day_idx == 0 and slot_idx == 0 and anchor_place is not None:
+                chosen_place = anchor_place
+            else:
+                scored_candidates.sort(key=lambda x: x[0], reverse=True)
+                best_score, chosen_place = scored_candidates[0]
 
             mark_place_scheduled(chosen_place)
             day_categories.append(chosen_place.category)
@@ -506,31 +539,53 @@ def generate_suggested_itinerary_data(
             })
 
         # 2-Opt TSP Permutation Optimization & Dynamic Road Pacing
-        non_acc = [it for it in day_items if not is_accommodation_place(it["place"])]
-        acc = [it for it in day_items if is_accommodation_place(it["place"])]
-
-        if len(non_acc) > 1:
-            best_perm = None
-            best_dist = float("inf")
-            day_start_coord = (anchor_lat, anchor_lng)
-            for perm in itertools.permutations(non_acc):
-                total_d = haversine_distance_km(
-                    day_start_coord[0], day_start_coord[1], perm[0]["place"].latitude, perm[0]["place"].longitude
-                )
-                for i in range(len(perm) - 1):
-                    total_d += haversine_distance_km(
-                        perm[i]["place"].latitude, perm[i]["place"].longitude, perm[i + 1]["place"].latitude, perm[i + 1]["place"].longitude
-                    )
-                if acc:
-                    total_d += haversine_distance_km(
-                        perm[-1]["place"].latitude, perm[-1]["place"].longitude, acc[0]["place"].latitude, acc[0]["place"].longitude
-                    )
-                if total_d < best_dist:
-                    best_dist = total_d
-                    best_perm = perm
-            ordered_items = list(best_perm) + acc
+        if day_idx == 0 and anchor_place is not None and len(day_items) > 0:
+            anchor_it = day_items[0]
+            other_items = day_items[1:]
+            other_non_acc = [it for it in other_items if not is_accommodation_place(it["place"])]
+            other_acc = [it for it in other_items if is_accommodation_place(it["place"])]
+            if len(other_non_acc) > 1:
+                best_perm = None
+                best_dist = float("inf")
+                start_c = (anchor_it["place"].latitude, anchor_it["place"].longitude)
+                for perm in itertools.permutations(other_non_acc):
+                    total_d = haversine_distance_km(start_c[0], start_c[1], perm[0]["place"].latitude, perm[0]["place"].longitude)
+                    for i in range(len(perm) - 1):
+                        total_d += haversine_distance_km(perm[i]["place"].latitude, perm[i]["place"].longitude, perm[i + 1]["place"].latitude, perm[i + 1]["place"].longitude)
+                    if other_acc:
+                        total_d += haversine_distance_km(perm[-1]["place"].latitude, perm[-1]["place"].longitude, other_acc[0]["place"].latitude, other_acc[0]["place"].longitude)
+                    if total_d < best_dist:
+                        best_dist = total_d
+                        best_perm = perm
+                ordered_items = [anchor_it] + list(best_perm) + other_acc
+            else:
+                ordered_items = [anchor_it] + other_non_acc + other_acc
         else:
-            ordered_items = non_acc + acc
+            non_acc = [it for it in day_items if not is_accommodation_place(it["place"])]
+            acc = [it for it in day_items if is_accommodation_place(it["place"])]
+
+            if len(non_acc) > 1:
+                best_perm = None
+                best_dist = float("inf")
+                day_start_coord = (anchor_lat, anchor_lng)
+                for perm in itertools.permutations(non_acc):
+                    total_d = haversine_distance_km(
+                        day_start_coord[0], day_start_coord[1], perm[0]["place"].latitude, perm[0]["place"].longitude
+                    )
+                    for i in range(len(perm) - 1):
+                        total_d += haversine_distance_km(
+                            perm[i]["place"].latitude, perm[i]["place"].longitude, perm[i + 1]["place"].latitude, perm[i + 1]["place"].longitude
+                        )
+                    if acc:
+                        total_d += haversine_distance_km(
+                            perm[-1]["place"].latitude, perm[-1]["place"].longitude, acc[0]["place"].latitude, acc[0]["place"].longitude
+                        )
+                    if total_d < best_dist:
+                        best_dist = total_d
+                        best_perm = perm
+                ordered_items = list(best_perm) + acc
+            else:
+                ordered_items = non_acc + acc
 
         # Calculate dynamic travel arrival times and leg routes
         curr_dt = datetime.combine(travel_date, time(9, 0))

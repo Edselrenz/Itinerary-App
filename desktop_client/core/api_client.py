@@ -1,8 +1,11 @@
 """Asynchronous HTTP Client for Nueva Ecija Travel API."""
 
 import asyncio
+import logging
 from typing import Any, Optional
 import httpx
+
+logger = logging.getLogger(__name__)
 
 from desktop_client.config.settings import get_settings
 
@@ -60,6 +63,10 @@ class ApiClient:
 
     @base_url.setter
     def base_url(self, val: str) -> None:
+        self._explicit_base_url = val.rstrip("/") if val else None
+
+    def set_base_url(self, val: str) -> None:
+        """Sets explicit API base URL, updating internal state."""
         self._explicit_base_url = val.rstrip("/") if val else None
 
     def set_token_getter(self, getter_func):

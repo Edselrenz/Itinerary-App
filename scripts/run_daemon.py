@@ -3,8 +3,9 @@ import sys
 import os
 import time
 import re
+from pathlib import Path
 
-project_root = r"C:\Users\Edward\Desktop\CaseStudy"
+project_root = str(Path(__file__).resolve().parent.parent)
 os.chdir(project_root)
 
 # 1. Start Uvicorn if not already on 8000

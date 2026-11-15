@@ -34,7 +34,11 @@ class SavedTripsView(ft.Container):
         self.search_term = ""
 
         try:
-            self.itineraries: list[Itinerary] = list(self.itinerary_service.guest_storage.list_itineraries())
+            from desktop_client.core.session import get_session_manager
+            if not get_session_manager().is_authenticated:
+                self.itineraries: list[Itinerary] = list(self.itinerary_service.guest_storage.list_itineraries())
+            else:
+                self.itineraries = []
         except Exception:
             self.itineraries = []
         self.is_loading = False
@@ -430,11 +434,17 @@ class SavedTripsView(ft.Container):
             )
 
     def _load_trips(self) -> None:
+        async def _load():
+            try:
+                await self._load_trips_async()
+            except Exception:
+                pass
+
         if self.safe_page:
-            self.safe_page.run_task(self._load_trips_async)
+            self.safe_page.run_task(_load)
         else:
             try:
-                asyncio.get_running_loop().create_task(self._load_trips_async())
+                asyncio.get_running_loop().create_task(_load())
             except RuntimeError:
                 pass
 

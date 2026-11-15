@@ -104,9 +104,16 @@ class SuggestedWizardView(ft.Container):
         self.is_generating = False
         self.destination_val = initial_destination or "Nueva Ecija"
         self.anchor_place_id = anchor_place_id
-        if anchor_place and anchor_place.municipality_name:
-            self.destination_val = anchor_place.municipality_name
-            self.anchor_place_id = anchor_place.id
+        self.anchor_place: Optional[Place] = anchor_place
+        if self.anchor_place_id and not self.anchor_place:
+            for p in self.place_service.get_loaded_places():
+                if str(p.id) == str(self.anchor_place_id):
+                    self.anchor_place = p
+                    break
+        if self.anchor_place and self.anchor_place.municipality_name and (
+            not initial_destination or initial_destination == "Nueva Ecija"
+        ):
+            self.destination_val = self.anchor_place.municipality_name
 
         today = date.today()
         d2 = today + timedelta(days=2)
@@ -257,6 +264,23 @@ class SuggestedWizardView(ft.Container):
             weight=ft.FontWeight.W_800,
             color=ThemeColors.TEXT_BLACK,
         )
+
+        anchor_banner = ft.Container()
+        if self.anchor_place:
+            anchor_banner = ft.Container(
+                content=ft.Row(
+                    controls=[
+                        ft.Icon(ft.Icons.AUTO_AWESOME, color=ThemeColors.PRIMARY_BLUE, size=18),
+                        ft.Text(f"Starting Trip at: {self.anchor_place.name} (Stop 1, Day 1)", size=13, weight=ft.FontWeight.BOLD, color=ThemeColors.PRIMARY_BLUE),
+                    ],
+                    spacing=8,
+                ),
+                bgcolor=ThemeColors.INFO_BG,
+                border=ft.Border.all(1, ThemeColors.PRIMARY_BLUE),
+                border_radius=8,
+                padding=ft.Padding.symmetric(horizontal=12, vertical=8),
+                margin=ft.Margin.only(bottom=10),
+            )
 
         # 1. Destination
         dest_picker = DestinationPicker(
@@ -504,6 +528,7 @@ class SuggestedWizardView(ft.Container):
             content=ft.Column(
                 controls=[
                     heading,
+                    anchor_banner,
                     ft.Container(height=12),
                     dest_block,
                     ft.Container(height=6),
@@ -615,6 +640,7 @@ class SuggestedWizardView(ft.Container):
                     travel_mode=self.travel_mode_val,
                     min_rating=self.min_rating_val,
                     anchor_place_id=self.anchor_place_id,
+                    anchor_place_payload=self.anchor_place.to_dict() if self.anchor_place else None,
                 )
                 itinerary = await self.itinerary_service.generate_suggested_itinerary(req)
                 if itinerary:
@@ -1299,41 +1325,8 @@ class SuggestedWizardView(ft.Container):
 
         async def _run():
             try:
-                from desktop_client.models.itinerary import ItineraryCreatePayload
-                days_payload = []
-                for d in self.generated_itinerary.days:
-                    items_payload = []
-                    for idx, item in enumerate(d.items):
-                        items_payload.append({
-                            "place_id": item.place_id or (item.place.id if item.place else None),
-                            "day_number": d.day_number,
-                            "order_index": idx,
-                            "start_time": item.start_time,
-                            "duration_minutes": item.duration_minutes,
-                            "notes": item.notes,
-                            "estimated_cost": item.estimated_cost,
-                            "travel_time_from_prev_mins": item.travel_time_from_prev_mins,
-                            "travel_mode": item.travel_mode or self.travel_mode_val,
-                            "place_payload": item.place.to_dict() if item.place else None,
-                        })
-                    days_payload.append({
-                        "day_number": d.day_number,
-                        "date": d.date,
-                        "theme": d.theme,
-                        "items": items_payload,
-                    })
-
-                payload = ItineraryCreatePayload(
-                    title=self.generated_itinerary.title,
-                    description=self.generated_itinerary.description,
-                    destination=self.generated_itinerary.destination or self.destination_val,
-                    start_date=self.generated_itinerary.start_date or self.start_date_val,
-                    end_date=self.generated_itinerary.end_date or self.end_date_val,
-                    total_budget=self.generated_itinerary.total_budget,
-                    travel_mode=self.generated_itinerary.travel_mode or self.travel_mode_val,
-                    is_suggested=True,
-                    days=days_payload,
-                )
+                self.generated_itinerary.type = "suggested"
+                payload = self.generated_itinerary.to_create_payload()
                 saved = await self.itinerary_service.create_itinerary(payload)
                 self.itinerary_service.clear_active_draft_itinerary()
                 if self.safe_page:

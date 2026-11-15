@@ -45,7 +45,7 @@ const resolveApiBaseUrl = (fallback: string): string => {
 export const environment = {
   production: false,
   get apiBaseUrl(): string {
-    return resolveApiBaseUrl('http://127.0.0.1:8000/api/v1');
+    return resolveApiBaseUrl('https://ne-itinerary-api.edselrenz0.workers.dev/api/v1');
   },
   tileUrlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
   tileAttribution:

@@ -9,6 +9,7 @@ import {
   IonModal,
   IonSpinner,
   ToastController,
+  ViewWillEnter,
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import {
@@ -98,7 +99,7 @@ export interface DestinationItem {
     PlaceDetailSheetComponent,
   ],
 })
-export class HomePage implements OnInit, OnDestroy {
+export class HomePage implements OnInit, OnDestroy, ViewWillEnter {
   public isGuestMode = false;
   public searchControl = new FormControl('');
   public selectedDestination: DestinationItem | null = null;
@@ -185,6 +186,19 @@ export class HomePage implements OnInit, OnDestroy {
 
     // 4. Setup 300ms Debounced Local Search via RxJS switchMap
     this.setupSearchPipeline();
+  }
+
+  public ionViewWillEnter(): void {
+    this.itineraryService.refreshItineraries().subscribe({
+      next: (items) => {
+        this.savedItineraries = items || [];
+        this.buildNotifications(this.savedItineraries);
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.cdr.markForCheck();
+      },
+    });
   }
 
   public ngOnDestroy(): void {

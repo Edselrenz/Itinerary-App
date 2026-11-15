@@ -314,10 +314,22 @@ class SuggestedItineraryRequest(BaseModel):
     anchor_place_id: uuid.UUID | None = None
     anchor_place_payload: dict | None = None
 
-    @field_validator("anchor_place_id", mode="before")
+    @model_validator(mode="before")
     @classmethod
-    def coerce_anchor_id(cls, v: Any) -> uuid.UUID | None:
-        return _safe_parse_uuid(v)
+    def normalize_anchor_place(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        out = dict(data)
+        raw_aid = out.get("anchor_place_id")
+        if raw_aid is not None and raw_aid != "":
+            parsed = _safe_parse_uuid(raw_aid)
+            if parsed is None:
+                payload = dict(out.get("anchor_place_payload") or {})
+                if not payload.get("id"):
+                    payload["id"] = str(raw_aid)
+                out["anchor_place_payload"] = payload
+            out["anchor_place_id"] = parsed
+        return out
 
     @model_validator(mode="after")
     def validate_dates(self) -> "SuggestedItineraryRequest":
