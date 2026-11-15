@@ -18,7 +18,7 @@ from typing import Callable, Optional
 import flet as ft
 
 from desktop_client.components.slippy_map_canvas import RouteStopPin, SlippyMapCanvas
-from desktop_client.config.settings import ThemeColors
+from desktop_client.config.settings import ThemeColors, get_settings
 from desktop_client.core.commute_guide import get_leg_commute_info
 from desktop_client.models.itinerary import ItineraryDay, ItineraryItem
 from desktop_client.models.place import Place
@@ -122,6 +122,9 @@ class ItineraryRouteMap(ft.Container):
         return pins
 
     def _build_content(self) -> None:
+        palette = get_settings().palette
+        self.bgcolor = palette.surface_card
+        self.border = ft.Border.all(1, palette.border_main)
         day_num = self.day.day_number if self.day else 1
         num_stops = len(self.day.items) if self.day else 0
         total_km, total_mins = self._calculate_metrics()
@@ -134,7 +137,7 @@ class ItineraryRouteMap(ft.Container):
                     f"Day {day_num} Route Preview",
                     size=14,
                     weight=ft.FontWeight.W_700,
-                    color=ThemeColors.TEXT_BLACK,
+                    color=palette.text_primary,
                 ),
                 ft.Container(
                     content=ft.Text(

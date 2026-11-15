@@ -8,7 +8,7 @@ from typing import Callable, Optional
 import flet as ft
 
 from desktop_client.components.dialogs import show_confirm_dialog
-from desktop_client.config.settings import ThemeColors
+from desktop_client.config.settings import ThemeColors, get_settings
 from desktop_client.models.itinerary import Itinerary
 from desktop_client.services.itinerary_service import get_itinerary_service
 
@@ -25,6 +25,7 @@ class SavedTripsView(ft.Container):
         self.on_navigate = on_navigate
         self.on_select_trip = on_select_trip
         self.itinerary_service = get_itinerary_service()
+        self.settings = get_settings()
 
         self.expand = True
         self.padding = 0
@@ -49,6 +50,7 @@ class SavedTripsView(ft.Container):
         self._load_trips()
 
     def _build_content(self) -> None:
+        self.bgcolor = self.settings.palette.bg_main
         # Top Header Bar matching .history-toolbar in image_2d1020.png
         top_toolbar = ft.Container(
             bgcolor=ThemeColors.SURFACE_LIGHT,
@@ -220,6 +222,11 @@ class SavedTripsView(ft.Container):
             content=ft.Column(controls=body_controls, spacing=0, scroll=ft.ScrollMode.AUTO, expand=True),
         )
         self.content = ft.Column(controls=[top_toolbar, scroll_area], spacing=0, expand=True)
+
+    def on_resize(self, width: float, height: float) -> None:
+        """Dynamically scales saved trips view on window resize (BUG-04)."""
+        self._build_content()
+        self._safe_update()
 
     def _create_segment_pill(self, key: str, label: str, is_active: bool) -> ft.Control:
         return ft.Container(

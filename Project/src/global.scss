@@ -3800,6 +3800,93 @@ body.dark {
       color: #ffffff !important;
     }
   }
+
+  /* Auth & Onboarding Containers (Login, Signup, Welcome, Guest) (BUG-06) */
+  .login-content,
+  .signup-content,
+  .welcome-content,
+  .guest-page-content,
+  .login-screen-container,
+  .signup-screen-container,
+  .welcome-screen-wrapper,
+  .guest-screen-container,
+  .guest-content-section {
+    --background: #0b1120 !important;
+    background: #0b1120 !important;
+    color: #f8fafc !important;
+  }
+
+  /* Auth Titles & Prompts that were hardcoded #000000 */
+  .brand-title,
+  .welcome-title,
+  .signup-title,
+  .hero-headline,
+  .guest-title,
+  .remember-text,
+  .footer-prompt,
+  .switch-prompt {
+    color: #f8fafc !important;
+  }
+
+  .welcome-subtitle,
+  .signup-subtitle,
+  .hero-subtitle,
+  .guest-subtitle,
+  .or-divider-text,
+  .divider-text {
+    color: #94a3b8 !important;
+  }
+
+  .or-divider-line,
+  .divider-line {
+    background: #334155 !important;
+    background-color: #334155 !important;
+  }
+
+  /* Login & Signup Input Fields */
+  .field-container {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+
+    &:focus-within {
+      border-color: #38bdf8 !important;
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.18) !important;
+    }
+  }
+
+  .native-field-input {
+    color: #f8fafc !important;
+
+    &::placeholder {
+      color: #64748b !important;
+    }
+  }
+
+  /* Google / Apple Social Pill Buttons & Guest Outline Buttons */
+  .social-pill-btn,
+  .guest-pill-btn,
+  .outline-pill-btn {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    color: #f8fafc !important;
+
+    .social-btn-text {
+      color: #f8fafc !important;
+    }
+
+    .apple-logo-icon {
+      color: #f8fafc !important;
+    }
+
+    &:active {
+      background: #0f172a !important;
+    }
+  }
+
+  .floating-back-btn {
+    background: rgba(15, 23, 42, 0.65) !important;
+    color: #f8fafc !important;
+  }
 }
 
 /* ========================================================

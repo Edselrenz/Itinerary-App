@@ -72,20 +72,22 @@ def main(page: ft.Page) -> None:
     page.spacing = 0
     page.theme = ft.Theme(
         color_scheme=ft.ColorScheme(
-            background=ThemeColors.BG_LIGHT,
             surface=ThemeColors.SURFACE_LIGHT,
-            on_background=ThemeColors.TEXT_BLACK,
             on_surface=ThemeColors.TEXT_BLACK,
             primary=ThemeColors.PRIMARY_BLUE,
+            on_primary=ft.Colors.WHITE,
+            surface_container=ThemeColors.BG_LIGHT,
+            surface_container_lowest=ThemeColors.BG_LIGHT,
         )
     )
     page.dark_theme = ft.Theme(
         color_scheme=ft.ColorScheme(
-            background=ThemeColors.BG_DARK,
             surface=ThemeColors.SURFACE_DARK,
-            on_background=ThemeColors.TEXT_MAIN_DARK,
             on_surface=ThemeColors.TEXT_MAIN_DARK,
             primary=ThemeColors.PRIMARY_BLUE,
+            on_primary=ft.Colors.WHITE,
+            surface_container=ThemeColors.BG_DARK,
+            surface_container_lowest=ThemeColors.BG_DARK,
         )
     )
     page.bgcolor = settings.palette.bg_primary
@@ -401,9 +403,24 @@ def main(page: ft.Page) -> None:
     # Launch Cold-Start Splash Timer (2.8s auto-dismiss)
     splash_overlay.start_timer(2.8)
 
-    def _on_page_resize(e):
+    def _on_page_resize(e: Any = None) -> None:
         palette = settings.palette
-        page.bgcolor = palette.bg_primary
+        page.bgcolor = palette.bg_main
+        if content_area:
+            content_area.bgcolor = palette.bg_main
+            active_ctrl = content_area.content
+            if active_ctrl is not None:
+                if hasattr(active_ctrl, "on_resize") and callable(active_ctrl.on_resize):
+                    try:
+                        active_ctrl.on_resize(float(page.width or 1280), float(page.height or 840))
+                    except Exception:
+                        pass
+                elif hasattr(active_ctrl, "_build_content") and callable(active_ctrl._build_content):
+                    try:
+                        active_ctrl._build_content()
+                        active_ctrl.update()
+                    except Exception:
+                        pass
         page.update()
 
     page.on_resized = _on_page_resize

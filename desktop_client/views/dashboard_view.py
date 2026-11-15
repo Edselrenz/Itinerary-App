@@ -4,8 +4,13 @@ import asyncio
 from typing import Callable, Optional
 import flet as ft
 
-from desktop_client.components.dialogs import show_place_detail_dialog
-from desktop_client.config.settings import ThemeColors
+from desktop_client.components.dialogs import (
+    close_overlay_dialog,
+    open_overlay_dialog,
+    show_place_detail_dialog,
+    show_toast,
+)
+from desktop_client.config.settings import ThemeColors, get_settings
 from desktop_client.core.session import get_session_manager
 from desktop_client.models.itinerary import Itinerary
 from desktop_client.models.place import Place
@@ -27,12 +32,13 @@ class DashboardView(ft.Container):
         super().__init__()
         self.on_navigate = on_navigate
         self.session_manager = get_session_manager()
+        self.settings = get_settings()
         self.place_service = get_place_service()
         self.itinerary_service = get_itinerary_service()
 
         self.expand = True
         self.padding = ft.Padding.symmetric(horizontal=32, vertical=20)
-        self.bgcolor = ThemeColors.BG_LIGHT
+        self.bgcolor = self.settings.palette.bg_main
 
         # Data State
         self.destinations: list[Place] = []
@@ -146,6 +152,11 @@ class DashboardView(ft.Container):
         else:
             dynamic_section = self._build_standard_home_layout()
 
+        from desktop_client.config.settings import ResponsiveLayout
+        pw = float(self.safe_page.width) if (self.safe_page and self.safe_page.width) else 1280.0
+        metrics = ResponsiveLayout.get_metrics(pw)
+        max_w = metrics["dashboard_max_width"]
+
         main_column = ft.Column(
             controls=[
                 top_header_row,
@@ -155,11 +166,25 @@ class DashboardView(ft.Container):
                 dynamic_section,
             ],
             spacing=0,
-            scroll=ft.ScrollMode.AUTO,
-            expand=True,
         )
 
-        self.content = main_column
+        self.content = ft.Column(
+            controls=[
+                ft.Row(
+                    alignment=ft.MainAxisAlignment.CENTER,
+                    controls=[ft.Container(width=max_w, content=main_column)],
+                )
+            ],
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            scroll=ft.ScrollMode.AUTO,
+            expand=True,
+            width=float("inf"),
+        )
+
+    def on_resize(self, width: float, height: float) -> None:
+        """Dynamically scales dashboard container on window resize (BUG-04)."""
+        self._build_content()
+        self._safe_update()
 
     def _build_standard_home_layout(self) -> ft.Control:
         # Planner Cards Grid (2-column layout matching .planner-cards-grid)
@@ -688,129 +713,159 @@ class DashboardView(ft.Container):
         self._safe_update()
 
     def _on_bell_clicked(self) -> None:
-        """Opens Travel Advisories & Notifications Drawer / Modal (UI-19)."""
-        self.unread_notifications = 0
-        self._build_content()
-        self._safe_update()
+        """Opens Travel Advisories & Notifications Modal matching Web home.page.html (UI-19)."""
         if not self.safe_page:
             return
 
+        self.unread_notifications = 0
+        self._build_content()
+        self._safe_update()
+
         from desktop_client.core.storage import get_guest_storage
+
+        palette = self.settings.palette
         guest_count = len(get_guest_storage().list_itineraries())
         is_guest = self.session_manager.is_guest
 
-        notif_items = [
-            # 1. Weather & Cash Advisory
-            ft.Container(
+        def _close_notif(_=None):
+            close_overlay_dialog(self.safe_page, dlg)
+
+        def _nav_from_notif(target_route: str, trip_obj: Optional[Itinerary] = None):
+            close_overlay_dialog(self.safe_page, dlg)
+            if self.on_navigate:
+                if trip_obj is not None:
+                    self.on_navigate(target_route, trip_obj)
+                else:
+                    self.on_navigate(target_route)
+
+        def _notif_card(icon, icon_color, icon_bg, title, message, timestamp, action_label, on_click):
+            return ft.Container(
+                bgcolor=palette.surface_card_hover if palette.is_dark else "#f8fafc",
+                border=ft.Border.all(1, palette.border_main),
+                border_radius=14,
+                padding=12,
+                ink=True,
+                on_click=lambda _: on_click(),
                 content=ft.Row(
+                    spacing=12,
+                    vertical_alignment=ft.CrossAxisAlignment.START,
                     controls=[
-                        ft.Icon(ft.Icons.WB_SUNNY_ROUNDED, color=ThemeColors.WARM_GOLD, size=24),
+                        ft.Container(
+                            width=36,
+                            height=36,
+                            border_radius=10,
+                            bgcolor=icon_bg,
+                            alignment=ft.Alignment(0, 0),
+                            content=ft.Icon(icon, color=icon_color, size=19),
+                        ),
                         ft.Column(
+                            spacing=3,
+                            expand=True,
                             controls=[
-                                ft.Text("Pantabangan & Upland Travel Advisory", size=13, weight=ft.FontWeight.BOLD),
-                                ft.Text(
-                                    "Prepare cash when visiting Pantabangan Lake & Highland Bali. Cellular signals and ATM availability in upland barangays are limited.",
-                                    size=11,
-                                    color=ThemeColors.TEXT_MUTED_LIGHT,
+                                ft.Row(
+                                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                                    controls=[
+                                        ft.Text(title, size=13, weight=ft.FontWeight.BOLD, color=palette.text_primary, expand=True),
+                                        ft.Text(timestamp, size=10, color=palette.text_faint),
+                                    ],
+                                ),
+                                ft.Text(message, size=11.5, color=palette.text_muted),
+                                ft.Row(
+                                    spacing=4,
+                                    controls=[
+                                        ft.Text(action_label, size=11, weight=ft.FontWeight.BOLD, color=ThemeColors.PRIMARY_BLUE),
+                                        ft.Icon(ft.Icons.ARROW_FORWARD_ROUNDED, size=12, color=ThemeColors.PRIMARY_BLUE),
+                                    ],
                                 ),
                             ],
-                            spacing=2,
-                            expand=True,
                         ),
                     ],
-                    spacing=12,
-                    cross_axis_alignment=ft.CrossAxisAlignment.START,
                 ),
-                bgcolor=ThemeColors.AMBER_LIGHT,
-                border_radius=12,
-                padding=12,
+            )
+
+        notif_items: list[ft.Control] = [
+            _notif_card(
+                icon=ft.Icons.WB_SUNNY_ROUNDED,
+                icon_color=ThemeColors.WARM_GOLD,
+                icon_bg=ThemeColors.AMBER_LIGHT,
+                title="Pantabangan & Upland Travel Advisory",
+                message="Prepare cash when visiting Pantabangan Lake & Highland Bali. Cellular signals and ATM availability in upland barangays are limited.",
+                timestamp="Just now",
+                action_label="Plan Upland Trip",
+                on_click=lambda: _nav_from_notif("/suggested?destination=Pantabangan"),
+            ),
+            _notif_card(
+                icon=ft.Icons.MAP_ROUNDED,
+                icon_color=ThemeColors.EMERALD_PRIMARY,
+                icon_bg=ThemeColors.SUCCESS_BG,
+                title="Offline Map & 2,673 POIs Ready",
+                message="All 32 Nueva Ecija municipalities and curated landmarks are cached locally for offline mountain and rural navigation.",
+                timestamp="15m ago",
+                action_label="Explore Interactive Map",
+                on_click=lambda: _nav_from_notif("/map"),
             ),
         ]
 
-        # 2. Upcoming trip departures
         if self.saved_itineraries:
             upcoming = self.saved_itineraries[0]
-            notif_items.append(
-                ft.Container(
-                    content=ft.Row(
-                        controls=[
-                            ft.Icon(ft.Icons.AIRPLANEMODE_ACTIVE, color=ThemeColors.PRIMARY_BLUE, size=24),
-                            ft.Column(
-                                controls=[
-                                    ft.Text(f"Upcoming Trip: {upcoming.title}", size=13, weight=ft.FontWeight.BOLD),
-                                    ft.Text(
-                                        f"Scheduled for {upcoming.start_date or 'soon'} in {upcoming.destination or 'Nueva Ecija'} ({len(upcoming.days)} days).",
-                                        size=11,
-                                        color=ThemeColors.TEXT_MUTED_LIGHT,
-                                    ),
-                                ],
-                                spacing=2,
-                                expand=True,
-                            ),
-                        ],
-                        spacing=12,
-                        cross_axis_alignment=ft.CrossAxisAlignment.START,
-                    ),
-                    bgcolor=ThemeColors.AZURE_SOFT,
-                    border_radius=12,
-                    padding=12,
-                )
+            notif_items.insert(
+                0,
+                _notif_card(
+                    icon=ft.Icons.AIRPLANEMODE_ACTIVE,
+                    icon_color=ThemeColors.PRIMARY_BLUE,
+                    icon_bg=ThemeColors.AZURE_SOFT,
+                    title=f"Upcoming Trip: {upcoming.title}",
+                    message=f"Scheduled for {upcoming.start_date or 'soon'} in {upcoming.destination or 'Nueva Ecija'} ({len(upcoming.days)} days).",
+                    timestamp="Active Plan",
+                    action_label="Open Itinerary",
+                    on_click=lambda: _nav_from_notif(f"/trips/{upcoming.id}", upcoming),
+                ),
             )
 
-        # 3. Guest Sync Status
         if is_guest and guest_count > 0:
             notif_items.append(
-                ft.Container(
-                    content=ft.Row(
-                        controls=[
-                            ft.Icon(ft.Icons.CLOUD_OFF, color=ThemeColors.ERROR, size=24),
-                            ft.Column(
-                                controls=[
-                                    ft.Text(f"{guest_count} Itinerar{'ies' if guest_count > 1 else 'y'} in Local Guest Mode", size=13, weight=ft.FontWeight.BOLD),
-                                    ft.Text(
-                                        "Your itineraries are stored on this device only. Create a cloud account to sync them permanently across your devices.",
-                                        size=11,
-                                        color=ThemeColors.TEXT_MUTED_LIGHT,
-                                    ),
-                                ],
-                                spacing=2,
-                                expand=True,
-                            ),
-                        ],
-                        spacing=12,
-                        cross_axis_alignment=ft.CrossAxisAlignment.START,
-                    ),
-                    bgcolor=ThemeColors.ERROR_BG,
-                    border_radius=12,
-                    padding=12,
+                _notif_card(
+                    icon=ft.Icons.CLOUD_OFF,
+                    icon_color=ThemeColors.ERROR,
+                    icon_bg=ThemeColors.ERROR_BG,
+                    title=f"{guest_count} Itinerar{'ies' if guest_count > 1 else 'y'} in Local Guest Mode",
+                    message="Your itineraries are stored on this device only. Log in or sign up to sync them permanently to your cloud account.",
+                    timestamp="Sync Notice",
+                    action_label="Sign In to Sync",
+                    on_click=lambda: _nav_from_notif("/login"),
                 )
             )
 
-        def close_notif(_):
-            dlg.open = False
-            self.safe_page.update()
-
         dlg = ft.AlertDialog(
+            bgcolor=palette.surface_card,
             title=ft.Row(
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 controls=[
-                    ft.Icon(ft.Icons.NOTIFICATIONS_ACTIVE, color=ThemeColors.PRIMARY_BLUE, size=20),
-                    ft.Text("Travel Advisories & Notifications", size=16, weight=ft.FontWeight.BOLD),
+                    ft.Row(
+                        spacing=8,
+                        controls=[
+                            ft.Icon(ft.Icons.NOTIFICATIONS_ACTIVE, color=ThemeColors.PRIMARY_BLUE, size=20),
+                            ft.Column(
+                                spacing=1,
+                                controls=[
+                                    ft.Text("Notifications", size=16, weight=ft.FontWeight.W_800, color=palette.text_primary),
+                                    ft.Text("Travel reminders & itinerary updates", size=11, color=palette.text_muted),
+                                ],
+                            ),
+                        ],
+                    ),
+                    ft.IconButton(icon=ft.Icons.CLOSE_ROUNDED, icon_color=palette.text_muted, on_click=_close_notif),
                 ],
-                spacing=8,
             ),
-            content=ft.Column(
-                controls=notif_items,
-                spacing=10,
-                width=450,
-                tight=True,
+            content=ft.Container(
+                width=460,
+                content=ft.Column(controls=notif_items, spacing=10, tight=True, scroll=ft.ScrollMode.AUTO),
             ),
             actions=[
-                ft.TextButton("Close", on_click=close_notif),
+                ft.TextButton("Close", on_click=_close_notif),
             ],
         )
-        self.safe_page.overlay.append(dlg)
-        dlg.open = True
-        self.safe_page.update()
+        open_overlay_dialog(self.safe_page, dlg)
 
     def _open_popular_catalog_modal(self) -> None:
         """Opens Popular Destinations 'See all' Catalog Modal (UI-11) with LGU filter pills."""
@@ -907,21 +962,21 @@ class DashboardView(ft.Container):
         render_grid()
 
         def close_modal(_):
-            dlg.open = False
-            self.safe_page.update()
+            close_overlay_dialog(self.safe_page, dlg)
 
         dlg = ft.AlertDialog(
+            bgcolor=self.settings.palette.surface_card,
             title=ft.Row(
                 controls=[
                     ft.Icon(ft.Icons.EXPLORE, color=ThemeColors.PRIMARY_BLUE, size=22),
-                    ft.Text("Popular Destinations Catalog", size=16, weight=ft.FontWeight.BOLD),
+                    ft.Text("Popular Destinations Catalog", size=16, weight=ft.FontWeight.BOLD, color=self.settings.palette.text_primary),
                 ],
                 spacing=8,
             ),
             content=ft.Column(
                 controls=[
                     pill_row,
-                    ft.Divider(height=1, color=ThemeColors.BORDER_LIGHT),
+                    ft.Divider(height=1, color=self.settings.palette.border_main),
                     grid_container,
                 ],
                 width=520,
@@ -932,9 +987,7 @@ class DashboardView(ft.Container):
                 ft.TextButton("Close", on_click=close_modal),
             ],
         )
-        self.safe_page.overlay.append(dlg)
-        dlg.open = True
-        self.safe_page.update()
+        open_overlay_dialog(self.safe_page, dlg)
 
     def _get_fallback_popular_places(self) -> list[Place]:
         return [

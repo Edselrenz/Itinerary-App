@@ -415,7 +415,10 @@ class TripDetailView(ft.Container):
             margin=ft.Margin.only(bottom=16),
         )
 
-        return ft.Column(
+        pw = float(self.safe_page.width) if (self.safe_page and self.safe_page.width) else 1280.0
+        card_w = min(860.0, max(320.0, pw - 48.0))
+
+        inner_col = ft.Column(
             controls=[
                 top_nav,
                 ft.Container(height=8),
@@ -431,9 +434,26 @@ class TripDetailView(ft.Container):
                 nearby_banner,
                 expenses_card,
             ],
-            scroll=ft.ScrollMode.AUTO,
             spacing=0,
         )
+
+        return ft.Column(
+            controls=[
+                ft.Row(
+                    alignment=ft.MainAxisAlignment.CENTER,
+                    controls=[ft.Container(width=card_w, content=inner_col)],
+                )
+            ],
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            scroll=ft.ScrollMode.AUTO,
+            expand=True,
+            width=float("inf"),
+        )
+
+    def on_resize(self, width: float, height: float) -> None:
+        """Dynamically recomputes card width on window resize (BUG-04)."""
+        self._build_content()
+        self._safe_update()
 
     def _toggle_assumptions(self) -> None:
         self.is_assumptions_expanded = not self.is_assumptions_expanded
@@ -539,10 +559,12 @@ class TripDetailView(ft.Container):
 
         tabs_row = ft.Row(controls=cat_chips, spacing=8)
 
-        # Places in nearby category
-        all_loaded = self.place_service.get_loaded_places()
-        matching = [p for p in all_loaded if p.category == self.nearby_category]
+        # Places in nearby category (BUG-17: grouped category lookups matching Web app)
+        matching = self.place_service.get_nearby_places(self.itinerary.destination, self.nearby_category)
         if not matching:
+            matching = self.place_service.get_nearby_places(None, self.nearby_category)
+        if not matching:
+            all_loaded = self.place_service.get_loaded_places()
             matching = [p for p in all_loaded if self.nearby_category in (p.category or "").lower()][:10]
 
         place_cards = []

@@ -26,6 +26,9 @@ class LoginView(ft.Container):
         self._build_content()
 
     def _build_content(self) -> None:
+        palette = self.settings.palette
+        self.bgcolor = palette.bg_main
+
         # Top-left back button row
         back_btn = ft.Container(
             content=ft.Row(
@@ -33,7 +36,7 @@ class LoginView(ft.Container):
                     ft.IconButton(
                         icon=ft.Icons.ARROW_BACK,
                         icon_size=20,
-                        icon_color=ThemeColors.TEXT_MAIN_LIGHT,
+                        icon_color=palette.text_primary,
                         tooltip="Go back to welcome screen",
                         on_click=lambda _: self._navigate("/welcome"),
                     ),
@@ -68,12 +71,12 @@ class LoginView(ft.Container):
                     "Welcome back!",
                     size=26,
                     weight=ft.FontWeight.W_800,
-                    color=ThemeColors.TEXT_BLACK,
+                    color=palette.text_primary,
                 ),
                 ft.Text(
                     "Log in to continue your journey.",
                     size=13,
-                    color=ThemeColors.TEXT_MUTED_LIGHT,
+                    color=palette.text_muted,
                 ),
             ],
             spacing=4,
@@ -85,7 +88,9 @@ class LoginView(ft.Container):
             hint_text="traveler@example.com",
             prefix_icon=ft.Icons.MAIL_OUTLINE,
             border_radius=12,
-            border_color=ThemeColors.BORDER_LIGHT,
+            border_color=palette.input_border,
+            bgcolor=palette.input_bg,
+            text_style=ft.TextStyle(color=palette.text_primary),
             focused_border_color=ThemeColors.PRIMARY_BLUE,
             autofocus=True,
             dense=True,
@@ -97,7 +102,9 @@ class LoginView(ft.Container):
             can_reveal_password=True,
             prefix_icon=ft.Icons.KEY_OUTLINED,
             border_radius=12,
-            border_color=ThemeColors.BORDER_LIGHT,
+            border_color=palette.input_border,
+            bgcolor=palette.input_bg,
+            text_style=ft.TextStyle(color=palette.text_primary),
             focused_border_color=ThemeColors.PRIMARY_BLUE,
             dense=True,
         )
@@ -167,12 +174,13 @@ class LoginView(ft.Container):
             content=ft.Row(
                 controls=[
                     ft.Image(src="assets/images/google_logo.png", width=18, height=18),
-                    ft.Text("Continue with Google", size=13, weight=ft.FontWeight.W_600, color=ThemeColors.TEXT_MAIN_LIGHT),
+                    ft.Text("Continue with Google", size=13, weight=ft.FontWeight.W_600, color=palette.text_primary),
                 ],
                 alignment=ft.MainAxisAlignment.CENTER,
                 spacing=8,
             ),
-            border=ft.Border.all(1.2, ThemeColors.BORDER_LIGHT),
+            bgcolor=palette.surface_card,
+            border=ft.Border.all(1.2, palette.border_main),
             border_radius=24,
             height=44,
             alignment=ft.Alignment(0, 0),
@@ -183,13 +191,14 @@ class LoginView(ft.Container):
         apple_btn = ft.Container(
             content=ft.Row(
                 controls=[
-                    ft.Icon(ft.Icons.APPLE, size=20, color=ft.Colors.BLACK),
-                    ft.Text("Continue with Apple", size=13, weight=ft.FontWeight.W_600, color=ThemeColors.TEXT_MAIN_LIGHT),
+                    ft.Icon(ft.Icons.APPLE, size=20, color=palette.text_primary),
+                    ft.Text("Continue with Apple", size=13, weight=ft.FontWeight.W_600, color=palette.text_primary),
                 ],
                 alignment=ft.MainAxisAlignment.CENTER,
                 spacing=8,
             ),
-            border=ft.Border.all(1.2, ThemeColors.BORDER_LIGHT),
+            bgcolor=palette.surface_card,
+            border=ft.Border.all(1.2, palette.border_main),
             border_radius=24,
             height=44,
             alignment=ft.Alignment(0, 0),
@@ -199,7 +208,7 @@ class LoginView(ft.Container):
 
         footer_links = ft.Row(
             controls=[
-                ft.Text("Don't have an account?", size=13, color=ThemeColors.TEXT_MUTED_LIGHT),
+                ft.Text("Don't have an account?", size=13, color=palette.text_muted),
                 ft.TextButton(
                     content=ft.Text("Sign Up", size=13, weight=ft.FontWeight.BOLD, color=ThemeColors.PRIMARY_BLUE),
                     on_click=lambda _: self._navigate("/signup"),
@@ -234,9 +243,9 @@ class LoginView(ft.Container):
                 width=420,
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             ),
-            bgcolor=ThemeColors.SURFACE_LIGHT,
+            bgcolor=palette.surface_card,
             border_radius=24,
-            border=ft.Border.all(1.2, ThemeColors.BORDER_LIGHT),
+            border=ft.Border.all(1.2, palette.border_main),
             padding=ft.Padding.symmetric(horizontal=36, vertical=28),
             shadow=ft.BoxShadow(
                 spread_radius=1,
@@ -256,6 +265,11 @@ class LoginView(ft.Container):
             ],
             expand=True,
         )
+
+    def on_resize(self, width: float, height: float) -> None:
+        """Dynamically recomputes login view on window resize (BUG-04)."""
+        self._build_content()
+        self._safe_update()
 
     def _safe_update(self) -> None:
         try:

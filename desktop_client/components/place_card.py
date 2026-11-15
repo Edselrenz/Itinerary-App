@@ -3,7 +3,7 @@
 from typing import Callable, Optional
 import flet as ft
 
-from desktop_client.config.settings import ThemeColors
+from desktop_client.config.settings import ThemeColors, get_settings
 from desktop_client.models.place import Place
 
 
@@ -39,6 +39,9 @@ class PlaceCard(ft.Container):
         self._build_content()
 
     def _build_content(self) -> None:
+        palette = get_settings().palette
+        self.bgcolor = palette.surface_card
+        self.border = ft.Border.all(1.2, palette.border_main)
         # Thumbnail image or fallback with top-left category badge overlay
         img_h = 92 if self.compact else 140
         img_src = self.place.resolved_image_path
@@ -196,14 +199,14 @@ class PlaceCard(ft.Container):
                         self.place.name,
                         size=14,
                         weight=ft.FontWeight.BOLD,
-                        color=ThemeColors.TEXT_MAIN_LIGHT,
+                        color=palette.text_primary,
                         max_lines=2,
                         overflow=ft.TextOverflow.ELLIPSIS,
                     ),
                     location_row,
                     ft.Container(height=2),
                     cost_chip,
-                    ft.Divider(height=1, color=ThemeColors.BORDER_LIGHT),
+                    ft.Divider(height=1, color=palette.border_main),
                     actions_row,
                 ],
                 spacing=6,

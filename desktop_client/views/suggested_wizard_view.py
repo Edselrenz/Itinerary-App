@@ -237,6 +237,7 @@ class SuggestedWizardView(ft.Container):
         )
 
     def _build_content(self) -> None:
+        self.bgcolor = self.settings.palette.bg_main
         header = self._build_header_bar()
         if self.is_generating:
             body = self._build_generating_view()
@@ -252,6 +253,11 @@ class SuggestedWizardView(ft.Container):
             spacing=0,
             expand=True,
         )
+
+    def on_resize(self, width: float, height: float) -> None:
+        """Dynamically recomputes wizard view on window resize (BUG-04)."""
+        self._build_content()
+        self._safe_update()
 
     # =========================================================================
     # VIEW 1: WIZARD FORM (UC-S02 - UC-S06)

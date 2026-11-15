@@ -54,7 +54,8 @@ class ProfileView(ft.Container):
 
         self.expand = True
         self.padding = ft.Padding.symmetric(horizontal=36, vertical=24)
-        self.bgcolor = ThemeColors.BG_LIGHT
+        self.alignment = ft.Alignment(0, -1)
+        self.bgcolor = self.settings.palette.bg_main
 
         # In-page subview state matching Web ProfilePage.viewMode
         self.view_mode: str = "profile"  # 'profile' | 'edit' | 'settings' | 'favorites' | 'help' | 'about'
@@ -72,8 +73,41 @@ class ProfileView(ft.Container):
         self._fav_search_query: str = ""
         self._fav_selected_cat: str = "ALL"
         self._open_faq_index: Optional[int] = 0
+        self._fav_cards_col: Optional[ft.Column] = None
+        self._fav_search_field: Optional[ft.TextField] = None
 
         self._build_content()
+
+    def _get_card_width(self, narrow: bool = False) -> float:
+        """Dynamic responsive card width scaling with window size (BUG-04)."""
+        from desktop_client.config.settings import ResponsiveLayout
+        pw = float(self.safe_page.width) if (self.safe_page and self.safe_page.width) else 1280.0
+        metrics = ResponsiveLayout.get_metrics(pw)
+        if metrics["is_mobile"]:
+            return max(300.0, pw - 36.0)
+        if narrow:
+            return min(520.0, max(420.0, pw * 0.46))
+        return min(720.0, max(560.0, pw * 0.56))
+
+    def _wrap_centered_scroll(self, inner_card: ft.Control) -> ft.Control:
+        """Horizontally centers fixed-to-responsive width cards in Flet (BUG-04)."""
+        return ft.Column(
+            controls=[
+                ft.Row(
+                    alignment=ft.MainAxisAlignment.CENTER,
+                    controls=[inner_card],
+                )
+            ],
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            scroll=ft.ScrollMode.AUTO,
+            expand=True,
+            width=float("inf"),
+        )
+
+    def on_resize(self, width: float, height: float) -> None:
+        """Invoked on window resize to smoothly recompute card widths (BUG-04)."""
+        self._build_content()
+        self._safe_update()
 
     @property
     def _subview(self) -> str:
@@ -97,6 +131,8 @@ class ProfileView(ft.Container):
         return False
 
     def _build_content(self) -> None:
+        palette = self.settings.palette
+        self.bgcolor = palette.bg_main
         if self.view_mode == "edit":
             self.content = self._build_edit_profile_subview()
         elif self.view_mode == "settings":
@@ -116,12 +152,14 @@ class ProfileView(ft.Container):
     def _build_main_profile_view(self) -> ft.Control:
         user = self.session_manager.current_user
         is_guest = self.session_manager.is_guest or not self.session_manager.is_authenticated
+        palette = self.settings.palette
+        card_w = self._get_card_width(narrow=False)
 
         title_header = ft.Text(
             "Profile",
             size=30,
             weight=ft.FontWeight.W_800,
-            color=ThemeColors.TEXT_BLACK,
+            color=palette.text_primary,
         )
 
         if not is_guest and user:
@@ -170,7 +208,7 @@ class ProfileView(ft.Container):
                 width=84,
                 height=84,
                 border_radius=42,
-                bgcolor="#e2e8f0",
+                bgcolor="#e2e8f0" if not palette.is_dark else "#1e293b",
                 alignment=ft.Alignment(0, 0),
             )
             action_pill = ft.Container(
@@ -192,8 +230,8 @@ class ProfileView(ft.Container):
                 avatar_ctrl,
                 ft.Column(
                     controls=[
-                        ft.Text(name_val, size=20, weight=ft.FontWeight.W_800, color=ThemeColors.TEXT_BLACK),
-                        ft.Text(handle_val, size=14, color=ThemeColors.TEXT_FAINT_LIGHT),
+                        ft.Text(name_val, size=20, weight=ft.FontWeight.W_800, color=palette.text_primary),
+                        ft.Text(handle_val, size=14, color=palette.text_faint),
                         ft.Container(height=2),
                         action_pill,
                     ],
@@ -219,7 +257,7 @@ class ProfileView(ft.Container):
                                     f"{guest_trips_count} local {'trip' if guest_trips_count == 1 else 'trips'} not synced",
                                     size=13,
                                     weight=ft.FontWeight.W_600,
-                                    color=ThemeColors.TEXT_BLACK,
+                                    color=palette.text_primary,
                                 ),
                             ],
                             spacing=8,
@@ -237,18 +275,18 @@ class ProfileView(ft.Container):
                     ],
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 ),
-                bgcolor=ThemeColors.PRIMARY_LIGHT,
-                border=ft.Border.all(1, ThemeColors.CUSTOM_CARD_BORDER),
+                bgcolor=ThemeColors.PRIMARY_LIGHT if not palette.is_dark else "#0f2038",
+                border=ft.Border.all(1, ThemeColors.CUSTOM_CARD_BORDER if not palette.is_dark else "#1e3a5f"),
                 border_radius=14,
                 padding=ft.Padding.symmetric(horizontal=16, vertical=10),
-                width=560,
+                width=card_w,
             )
 
-        # 5-Row Rounded White Card matching image_2d13c2.png verbatim
+        # 5-Row Rounded Card matching image_2d13c2.png
         menu_card = ft.Container(
-            width=560,
-            bgcolor=ThemeColors.SURFACE_LIGHT,
-            border=ft.Border.all(1, ThemeColors.BORDER_LIGHT),
+            width=card_w,
+            bgcolor=palette.surface_card,
+            border=ft.Border.all(1, palette.border_main),
             border_radius=20,
             padding=ft.Padding.symmetric(horizontal=22, vertical=10),
             shadow=ft.BoxShadow(
@@ -267,7 +305,7 @@ class ProfileView(ft.Container):
                         desc="Manage your account and customize your app experience.",
                         on_click=lambda: self._open_settings_dialog(),
                     ),
-                    ft.Divider(color="#f1f5f9", height=1),
+                    ft.Divider(color=palette.border_main, height=1),
                     self._create_menu_row(
                         icon=ft.Icons.FAVORITE,
                         icon_color=ThemeColors.PRIMARY_BLUE,
@@ -275,7 +313,7 @@ class ProfileView(ft.Container):
                         desc="Your favorite places, all saved in one place. Find them whenever you're ready to explore.",
                         on_click=lambda: self._open_favorites_dialog(),
                     ),
-                    ft.Divider(color="#f1f5f9", height=1),
+                    ft.Divider(color=palette.border_main, height=1),
                     self._create_menu_row(
                         icon=ft.Icons.HELP_ROUNDED,
                         icon_color=ThemeColors.PRIMARY_BLUE,
@@ -283,7 +321,7 @@ class ProfileView(ft.Container):
                         desc="Get assistance and find answers to common questions.",
                         on_click=lambda: self._open_help_dialog(),
                     ),
-                    ft.Divider(color="#f1f5f9", height=1),
+                    ft.Divider(color=palette.border_main, height=1),
                     self._create_menu_row(
                         icon=ft.Icons.INFO_ROUNDED,
                         icon_color=ThemeColors.PRIMARY_BLUE,
@@ -291,7 +329,7 @@ class ProfileView(ft.Container):
                         desc=f"Version {self.settings.app_version}.",
                         on_click=lambda: self._open_about_dialog(),
                     ),
-                    ft.Divider(color="#f1f5f9", height=1),
+                    ft.Divider(color=palette.border_main, height=1),
                     self._create_menu_row(
                         icon=ft.Icons.LOGOUT_ROUNDED,
                         icon_color=ThemeColors.ERROR if not is_guest else ThemeColors.PRIMARY_BLUE,
@@ -304,27 +342,22 @@ class ProfileView(ft.Container):
             ),
         )
 
-        return ft.Column(
-            controls=[
-                ft.Container(
-                    width=560,
-                    content=ft.Column(
-                        controls=[
-                            title_header,
-                            ft.Container(height=16),
-                            identity_row,
-                            ft.Container(height=18),
-                            sync_banner,
-                            menu_card,
-                        ],
-                        spacing=0,
-                        horizontal_alignment=ft.CrossAxisAlignment.START,
-                    ),
-                )
-            ],
-            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            scroll=ft.ScrollMode.AUTO,
-            expand=True,
+        return self._wrap_centered_scroll(
+            ft.Container(
+                width=card_w,
+                content=ft.Column(
+                    controls=[
+                        title_header,
+                        ft.Container(height=16),
+                        identity_row,
+                        ft.Container(height=18),
+                        sync_banner,
+                        menu_card,
+                    ],
+                    spacing=0,
+                    horizontal_alignment=ft.CrossAxisAlignment.START,
+                ),
+            )
         )
 
     def _create_menu_row(
@@ -337,6 +370,7 @@ class ProfileView(ft.Container):
         title_color: Optional[str] = None,
     ) -> ft.Control:
         """Creates a clean menu row matching image_2d13c2.png (clean icon on left, bold title + description on right)."""
+        palette = self.settings.palette
         return ft.Container(
             content=ft.Row(
                 controls=[
@@ -351,12 +385,12 @@ class ProfileView(ft.Container):
                                 title,
                                 size=16,
                                 weight=ft.FontWeight.W_700,
-                                color=title_color or ThemeColors.TEXT_BLACK,
+                                color=title_color or palette.text_primary,
                             ),
                             ft.Text(
                                 desc,
                                 size=13,
-                                color=ThemeColors.TEXT_FAINT_LIGHT,
+                                color=palette.text_faint,
                             ),
                         ],
                         spacing=3,
@@ -568,35 +602,31 @@ class ProfileView(ft.Container):
             on_click=_save_changes,
         )
 
-        return ft.Column(
-            controls=[
-                ft.Container(
-                    width=440,
-                    content=ft.Column(
-                        controls=[
-                            header_row,
-                            ft.Container(height=12),
-                            ft.Container(content=avatar_section, alignment=ft.Alignment(0, 0)),
-                            ft.Container(height=14),
-                            error_banner,
-                            first_block,
-                            mi_block,
-                            last_block,
-                            bday_block,
-                            gender_block,
-                            email_block,
-                            phone_block,
-                            ft.Container(height=12),
-                            save_btn,
-                            ft.Container(height=24),
-                        ],
-                        spacing=10,
-                    ),
-                )
-            ],
-            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            scroll=ft.ScrollMode.AUTO,
-            expand=True,
+        card_w = self._get_card_width(narrow=True)
+        return self._wrap_centered_scroll(
+            ft.Container(
+                width=card_w,
+                content=ft.Column(
+                    controls=[
+                        header_row,
+                        ft.Container(height=12),
+                        ft.Container(content=avatar_section, alignment=ft.Alignment(0, 0)),
+                        ft.Container(height=14),
+                        error_banner,
+                        first_block,
+                        mi_block,
+                        last_block,
+                        bday_block,
+                        gender_block,
+                        email_block,
+                        phone_block,
+                        ft.Container(height=12),
+                        save_btn,
+                        ft.Container(height=24),
+                    ],
+                    spacing=10,
+                ),
+            )
         )
 
     # =========================================================================
@@ -604,6 +634,8 @@ class ProfileView(ft.Container):
     # =========================================================================
     def _build_settings_subview(self) -> ft.Control:
         is_dark = bool(self.safe_page and self.safe_page.theme_mode == ft.ThemeMode.DARK)
+        palette = self.settings.palette
+        card_w = self._get_card_width(narrow=False)
 
         header_row = ft.Row(
             controls=[
@@ -614,7 +646,7 @@ class ProfileView(ft.Container):
                     tooltip="Back to profile",
                     on_click=lambda _: self._close_subview(),
                 ),
-                ft.Text("Settings", size=26, weight=ft.FontWeight.W_800, color=ThemeColors.TEXT_BLACK),
+                ft.Text("Settings", size=26, weight=ft.FontWeight.W_800, color=palette.text_primary),
             ],
             spacing=8,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -636,13 +668,13 @@ class ProfileView(ft.Container):
             title_col = (
                 ft.Column(
                     controls=[
-                        ft.Text(title, size=15, weight=ft.FontWeight.W_700, color=ThemeColors.TEXT_BLACK),
-                        ft.Text(subtitle, size=12, color=ThemeColors.TEXT_FAINT_LIGHT),
+                        ft.Text(title, size=15, weight=ft.FontWeight.W_700, color=palette.text_primary),
+                        ft.Text(subtitle, size=12, color=palette.text_faint),
                     ],
                     spacing=2,
                 )
                 if subtitle
-                else ft.Text(title, size=15, weight=ft.FontWeight.W_700, color=ThemeColors.TEXT_BLACK)
+                else ft.Text(title, size=15, weight=ft.FontWeight.W_700, color=palette.text_primary)
             )
             row_controls: list[ft.Control] = [
                 ft.Row(
@@ -670,9 +702,9 @@ class ProfileView(ft.Container):
             )
 
         settings_card = ft.Container(
-            width=560,
-            bgcolor=ThemeColors.SURFACE_LIGHT,
-            border=ft.Border.all(1, ThemeColors.BORDER_LIGHT),
+            width=card_w,
+            bgcolor=palette.surface_card,
+            border=ft.Border.all(1, palette.border_main),
             border_radius=20,
             padding=ft.Padding.symmetric(horizontal=22, vertical=8),
             shadow=ft.BoxShadow(
@@ -690,21 +722,21 @@ class ProfileView(ft.Container):
                         title="Account Information",
                         on_click=lambda: self._open_edit_profile_dialog(),
                     ),
-                    ft.Divider(color="#f1f5f9", height=1),
+                    ft.Divider(color=palette.border_main, height=1),
                     # Row 2: Notifications
                     _settings_row(
                         icon=ft.Icons.NOTIFICATIONS,
                         title="Notifications",
                         trailing=notif_switch,
                     ),
-                    ft.Divider(color="#f1f5f9", height=1),
+                    ft.Divider(color=palette.border_main, height=1),
                     # Row 3: Privacy & Security
                     _settings_row(
                         icon=ft.Icons.LOCK,
                         title="Privacy & Security",
                         on_click=lambda: self._open_privacy_security_alert(),
                     ),
-                    ft.Divider(color="#f1f5f9", height=1),
+                    ft.Divider(color=palette.border_main, height=1),
                     # Row 4: Language
                     _settings_row(
                         icon=ft.Icons.LANGUAGE,
@@ -713,11 +745,11 @@ class ProfileView(ft.Container):
                             "Filipino" if self.current_language == "fil" else "English",
                             size=14,
                             weight=ft.FontWeight.W_500,
-                            color=ThemeColors.TEXT_BLACK,
+                            color=palette.text_primary,
                         ),
                         on_click=lambda: self._toggle_language(),
                     ),
-                    ft.Divider(color="#f1f5f9", height=1),
+                    ft.Divider(color=palette.border_main, height=1),
                     # Row 5: App Appearance
                     _settings_row(
                         icon=ft.Icons.DARK_MODE_OUTLINED if is_dark else ft.Icons.WB_SUNNY_OUTLINED,
@@ -726,11 +758,11 @@ class ProfileView(ft.Container):
                             "Dark" if is_dark else "Light",
                             size=14,
                             weight=ft.FontWeight.W_500,
-                            color=ThemeColors.TEXT_BLACK,
+                            color=palette.text_primary,
                         ),
                         on_click=lambda: self._toggle_theme(),
                     ),
-                    ft.Divider(color="#f1f5f9", height=1),
+                    ft.Divider(color=palette.border_main, height=1),
                     # Row 6: Clear Cache
                     _settings_row(
                         icon=ft.Icons.DELETE_OUTLINE,
@@ -742,29 +774,31 @@ class ProfileView(ft.Container):
             ),
         )
 
-        return ft.Column(
-            controls=[
-                ft.Container(
-                    width=560,
-                    content=ft.Column(
-                        controls=[
-                            header_row,
-                            ft.Container(height=14),
-                            settings_card,
-                        ],
-                        spacing=0,
-                    ),
-                )
-            ],
-            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            scroll=ft.ScrollMode.AUTO,
-            expand=True,
+        return self._wrap_centered_scroll(
+            ft.Container(
+                width=card_w,
+                content=ft.Column(
+                    controls=[
+                        header_row,
+                        ft.Container(height=14),
+                        settings_card,
+                    ],
+                    spacing=0,
+                ),
+            )
         )
 
     def _on_fav_search_change(self, val: str) -> None:
         self._fav_search_query = val
-        self._build_content()
-        self._safe_update()
+        if hasattr(self, "_fav_cards_col") and self._fav_cards_col is not None:
+            self._fav_cards_col.controls = self._render_fav_cards()
+            try:
+                self._fav_cards_col.update()
+            except Exception:
+                self._safe_update()
+        else:
+            self._build_content()
+            self._safe_update()
 
     def _set_fav_category(self, cat: str) -> None:
         self._fav_selected_cat = cat
@@ -776,10 +810,7 @@ class ProfileView(ft.Container):
         self._build_content()
         self._safe_update()
 
-    # =========================================================================
-    # VIEW 4: FAVORITES IN-PAGE SUBVIEW
-    # =========================================================================
-    def _build_favorites_subview(self) -> ft.Control:
+    def _render_fav_cards(self) -> list[ft.Control]:
         favorites = self.favorites_service.get_favorites()
         q = self._fav_search_query.strip().lower()
         filtered = [
@@ -787,65 +818,7 @@ class ProfileView(ft.Container):
             if (not q or q in p.name.lower() or q in (p.municipality_name or "").lower())
             and (self._fav_selected_cat == "ALL" or self._fav_selected_cat.lower() in (p.category or "").lower() or self._fav_selected_cat.lower() in (p.formatted_category or "").lower())
         ]
-
-        header_row = ft.Row(
-            controls=[
-                ft.IconButton(
-                    icon=ft.Icons.ARROW_BACK,
-                    icon_color=ThemeColors.PRIMARY_BLUE,
-                    icon_size=22,
-                    on_click=lambda _: self._close_subview(),
-                ),
-                ft.Text("Favorites", size=24, weight=ft.FontWeight.W_800, color=ThemeColors.TEXT_BLACK),
-                ft.Container(
-                    content=ft.Text(str(len(filtered)), size=11, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
-                    bgcolor=ThemeColors.PRIMARY_BLUE,
-                    border_radius=10,
-                    padding=ft.Padding.symmetric(horizontal=8, vertical=2),
-                ),
-            ],
-            spacing=8,
-            vertical_alignment=ft.CrossAxisAlignment.CENTER,
-        )
-
-        fav_search_field = ft.TextField(
-            hint_text="Search saved places...",
-            prefix_icon=ft.Icons.SEARCH,
-            value=self._fav_search_query,
-            dense=True,
-            border_radius=10,
-            on_change=lambda e: self._on_fav_search_change(e.control.value),
-        )
-
-        categories = [
-            ("ALL", "All Places"),
-            ("nature_park", "Nature & Parks"),
-            ("museum_cultural", "Culture & Heritage"),
-            ("restaurant", "Cafes & Dining"),
-            ("resort_swimming", "Resorts & Stays"),
-            ("farm", "Farm & Agri-Tourism"),
-        ]
-        cat_chips = []
-        for c_key, c_label in categories:
-            is_sel = (self._fav_selected_cat == c_key)
-            cat_chips.append(
-                ft.Container(
-                    content=ft.Text(
-                        c_label,
-                        size=11,
-                        weight=ft.FontWeight.BOLD if is_sel else ft.FontWeight.NORMAL,
-                        color=ft.Colors.WHITE if is_sel else ThemeColors.TEXT_MAIN_LIGHT,
-                    ),
-                    bgcolor=ThemeColors.PRIMARY_BLUE if is_sel else ThemeColors.SURFACE_LIGHT,
-                    border=ft.Border.all(1, ThemeColors.PRIMARY_BLUE if is_sel else ThemeColors.BORDER_LIGHT),
-                    border_radius=12,
-                    padding=ft.Padding.symmetric(horizontal=12, vertical=6),
-                    ink=True,
-                    on_click=lambda _, k=c_key: self._set_fav_category(k),
-                )
-            )
-        category_scroller = ft.Row(controls=cat_chips, spacing=6, scroll=ft.ScrollMode.AUTO)
-
+        palette = self.settings.palette
         cards: list[ft.Control] = []
         if filtered:
             for place in filtered:
@@ -864,8 +837,8 @@ class ProfileView(ft.Container):
 
                 cards.append(
                     ft.Container(
-                        bgcolor=ThemeColors.SURFACE_LIGHT,
-                        border=ft.Border.all(1, ThemeColors.BORDER_LIGHT),
+                        bgcolor=palette.surface_card,
+                        border=ft.Border.all(1, palette.border_main),
                         border_radius=14,
                         padding=12,
                         content=ft.Row(
@@ -880,8 +853,8 @@ class ProfileView(ft.Container):
                                 ),
                                 ft.Column(
                                     controls=[
-                                        ft.Text(place.name, size=14, weight=ft.FontWeight.BOLD),
-                                        ft.Text(place.municipality_name or "Nueva Ecija", size=12, color=ThemeColors.TEXT_MUTED_LIGHT),
+                                        ft.Text(place.name, size=14, weight=ft.FontWeight.BOLD, color=palette.text_primary),
+                                        ft.Text(place.municipality_name or "Nueva Ecija", size=12, color=palette.text_muted),
                                         ft.Text(place.formatted_cost, size=12, weight=ft.FontWeight.BOLD, color=ThemeColors.EMERALD_PRIMARY),
                                     ],
                                     spacing=2,
@@ -912,8 +885,8 @@ class ProfileView(ft.Container):
                     content=ft.Column(
                         controls=[
                             ft.Icon(ft.Icons.FAVORITE_BORDER, size=42, color=ThemeColors.PRIMARY_BLUE),
-                            ft.Text("No Favorite Places Saved", size=16, weight=ft.FontWeight.BOLD),
-                            ft.Text("Browse destinations and tap the heart icon to save your personal favorite spots right here.", size=12, color=ThemeColors.TEXT_MUTED_LIGHT),
+                            ft.Text("No Favorite Places Saved", size=16, weight=ft.FontWeight.BOLD, color=palette.text_primary),
+                            ft.Text("Browse destinations and tap the heart icon to save your personal favorite spots right here.", size=12, color=palette.text_muted),
                             ft.FilledButton(
                                 content="Explore Destinations",
                                 style=ft.ButtonStyle(bgcolor=ThemeColors.PRIMARY_BLUE, color=ft.Colors.WHITE),
@@ -925,36 +898,113 @@ class ProfileView(ft.Container):
                     ),
                 )
             )
+        return cards
 
-        return ft.Column(
+    # =========================================================================
+    # VIEW 4: FAVORITES IN-PAGE SUBVIEW
+    # =========================================================================
+    def _build_favorites_subview(self) -> ft.Control:
+        palette = self.settings.palette
+        card_w = self._get_card_width(narrow=False)
+
+        favorites = self.favorites_service.get_favorites()
+        q = self._fav_search_query.strip().lower()
+        filtered_count = len([
+            p for p in favorites
+            if (not q or q in p.name.lower() or q in (p.municipality_name or "").lower())
+            and (self._fav_selected_cat == "ALL" or self._fav_selected_cat.lower() in (p.category or "").lower() or self._fav_selected_cat.lower() in (p.formatted_category or "").lower())
+        ])
+
+        header_row = ft.Row(
             controls=[
+                ft.IconButton(
+                    icon=ft.Icons.ARROW_BACK,
+                    icon_color=ThemeColors.PRIMARY_BLUE,
+                    icon_size=22,
+                    on_click=lambda _: self._close_subview(),
+                ),
+                ft.Text("Favorites", size=24, weight=ft.FontWeight.W_800, color=palette.text_primary),
                 ft.Container(
-                    width=560,
-                    content=ft.Column(
-                        controls=[
-                            header_row,
-                            fav_search_field,
-                            category_scroller,
-                            ft.Container(height=4),
-                            *cards,
-                        ],
-                        spacing=10,
-                    ),
-                )
+                    content=ft.Text(str(filtered_count), size=11, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
+                    bgcolor=ThemeColors.PRIMARY_BLUE,
+                    border_radius=10,
+                    padding=ft.Padding.symmetric(horizontal=8, vertical=2),
+                ),
             ],
-            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            scroll=ft.ScrollMode.AUTO,
-            expand=True,
+            spacing=8,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        )
+
+        self._fav_search_field = ft.TextField(
+            hint_text="Search saved places...",
+            prefix_icon=ft.Icons.SEARCH,
+            value=self._fav_search_query,
+            dense=True,
+            border_radius=10,
+            bgcolor=palette.input_bg,
+            border_color=palette.input_border,
+            text_style=ft.TextStyle(color=palette.text_primary),
+            on_change=lambda e: self._on_fav_search_change(e.control.value),
+        )
+
+        categories = [
+            ("ALL", "All Places"),
+            ("nature_park", "Nature & Parks"),
+            ("museum_cultural", "Culture & Heritage"),
+            ("restaurant", "Cafes & Dining"),
+            ("resort_swimming", "Resorts & Stays"),
+            ("farm", "Farm & Agri-Tourism"),
+        ]
+        cat_chips = []
+        for c_key, c_label in categories:
+            is_sel = (self._fav_selected_cat == c_key)
+            cat_chips.append(
+                ft.Container(
+                    content=ft.Text(
+                        c_label,
+                        size=11,
+                        weight=ft.FontWeight.BOLD if is_sel else ft.FontWeight.NORMAL,
+                        color=ft.Colors.WHITE if is_sel else palette.text_primary,
+                    ),
+                    bgcolor=ThemeColors.PRIMARY_BLUE if is_sel else palette.surface_card,
+                    border=ft.Border.all(1, ThemeColors.PRIMARY_BLUE if is_sel else palette.border_main),
+                    border_radius=12,
+                    padding=ft.Padding.symmetric(horizontal=12, vertical=6),
+                    ink=True,
+                    on_click=lambda _, k=c_key: self._set_fav_category(k),
+                )
+            )
+        category_scroller = ft.Row(controls=cat_chips, spacing=6, scroll=ft.ScrollMode.AUTO)
+
+        self._fav_cards_col = ft.Column(controls=self._render_fav_cards(), spacing=10)
+
+        return self._wrap_centered_scroll(
+            ft.Container(
+                width=card_w,
+                content=ft.Column(
+                    controls=[
+                        header_row,
+                        self._fav_search_field,
+                        category_scroller,
+                        ft.Container(height=4),
+                        self._fav_cards_col,
+                    ],
+                    spacing=10,
+                ),
+            )
         )
 
     # =========================================================================
     # VIEW 5 & 6: HELP & SUPPORT AND ABOUT IN-PAGE SUBVIEWS
     # =========================================================================
     def _build_help_subview(self) -> ft.Control:
+        palette = self.settings.palette
+        card_w = self._get_card_width(narrow=False)
+
         header_row = ft.Row(
             controls=[
                 ft.IconButton(icon=ft.Icons.ARROW_BACK, icon_color=ThemeColors.PRIMARY_BLUE, icon_size=22, on_click=lambda _: self._close_subview()),
-                ft.Text("Help & Support", size=24, weight=ft.FontWeight.W_800, color=ThemeColors.TEXT_BLACK),
+                ft.Text("Help & Support", size=24, weight=ft.FontWeight.W_800, color=palette.text_primary),
             ],
             spacing=8,
         )
@@ -983,7 +1033,7 @@ class ProfileView(ft.Container):
                         controls=[
                             ft.Row(
                                 controls=[
-                                    ft.Text(q, size=13, weight=ft.FontWeight.BOLD, expand=True),
+                                    ft.Text(q, size=13, weight=ft.FontWeight.BOLD, color=palette.text_primary, expand=True),
                                     ft.Icon(
                                         ft.Icons.KEYBOARD_ARROW_UP if is_open else ft.Icons.KEYBOARD_ARROW_DOWN,
                                         size=18,
@@ -993,15 +1043,15 @@ class ProfileView(ft.Container):
                                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                             ),
                             ft.Container(
-                                content=ft.Text(a, size=12, color=ThemeColors.TEXT_MUTED_LIGHT),
+                                content=ft.Text(a, size=12, color=palette.text_muted),
                                 visible=is_open,
                                 padding=ft.Padding.only(top=6),
                             ),
                         ],
                         spacing=2,
                     ),
-                    bgcolor=ThemeColors.SURFACE_LIGHT,
-                    border=ft.Border.all(1, ThemeColors.BORDER_LIGHT),
+                    bgcolor=palette.surface_card,
+                    border=ft.Border.all(1, palette.border_main),
                     border_radius=12,
                     padding=14,
                     ink=True,
@@ -1010,34 +1060,34 @@ class ProfileView(ft.Container):
             )
 
         card = ft.Container(
-            width=560,
+            width=card_w,
             content=ft.Column(
                 spacing=10,
                 controls=[
-                    ft.Text("Frequently Asked Questions", size=16, weight=ft.FontWeight.W_800),
+                    ft.Text("Frequently Asked Questions", size=16, weight=ft.FontWeight.W_800, color=palette.text_primary),
                     *faq_controls,
                 ],
             ),
         )
-        return ft.Column(
-            controls=[ft.Container(width=560, content=ft.Column(controls=[header_row, ft.Container(height=12), card]))],
-            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            scroll=ft.ScrollMode.AUTO,
-            expand=True,
+        return self._wrap_centered_scroll(
+            ft.Container(width=card_w, content=ft.Column(controls=[header_row, ft.Container(height=12), card]))
         )
 
     def _build_about_subview(self) -> ft.Control:
+        palette = self.settings.palette
+        card_w = self._get_card_width(narrow=False)
+
         header_row = ft.Row(
             controls=[
                 ft.IconButton(icon=ft.Icons.ARROW_BACK, icon_color=ThemeColors.PRIMARY_BLUE, icon_size=22, on_click=lambda _: self._close_subview()),
-                ft.Text("About", size=24, weight=ft.FontWeight.W_800, color=ThemeColors.TEXT_BLACK),
+                ft.Text("About", size=24, weight=ft.FontWeight.W_800, color=palette.text_primary),
             ],
             spacing=8,
         )
         card = ft.Container(
-            width=560,
-            bgcolor=ThemeColors.SURFACE_LIGHT,
-            border=ft.Border.all(1, ThemeColors.BORDER_LIGHT),
+            width=card_w,
+            bgcolor=palette.surface_card,
+            border=ft.Border.all(1, palette.border_main),
             border_radius=20,
             padding=24,
             content=ft.Column(
@@ -1045,38 +1095,35 @@ class ProfileView(ft.Container):
                 spacing=10,
                 controls=[
                     ft.Icon(ft.Icons.INFO_ROUNDED, size=44, color=ThemeColors.PRIMARY_BLUE),
-                    ft.Text("Nueva Ecija Travel Companion", size=18, weight=ft.FontWeight.W_800),
+                    ft.Text("Nueva Ecija Travel Companion", size=18, weight=ft.FontWeight.W_800, color=palette.text_primary),
                     ft.Text("Trip mo, trip ko", size=13, weight=ft.FontWeight.BOLD, color=ThemeColors.PRIMARY_BLUE),
                     ft.Text(
                         "Comprehensive travel and itinerary planning companion engineered for travelers exploring all 32 municipalities and 5 component cities of Nueva Ecija, Philippines.",
                         size=12,
-                        color=ThemeColors.TEXT_MUTED_LIGHT,
+                        color=palette.text_muted,
                         text_align=ft.TextAlign.CENTER,
                     ),
-                    ft.Divider(color="#f1f5f9", height=12),
+                    ft.Divider(color=palette.border_main, height=12),
                     ft.Row(
                         controls=[
-                            ft.Text("Version", size=13, color=ThemeColors.TEXT_MUTED_LIGHT),
-                            ft.Text(self.settings.app_version, size=13, weight=ft.FontWeight.BOLD),
+                            ft.Text("Version", size=13, color=palette.text_muted),
+                            ft.Text(self.settings.app_version, size=13, weight=ft.FontWeight.BOLD, color=palette.text_primary),
                         ],
                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     ),
-                    ft.Divider(color="#f1f5f9", height=12),
+                    ft.Divider(color=palette.border_main, height=12),
                     ft.Row(
                         controls=[
-                            ft.Text("Open Data Attribution", size=13, color=ThemeColors.TEXT_MUTED_LIGHT),
-                            ft.Text("OpenStreetMap & GIS Nueva Ecija", size=13, weight=ft.FontWeight.BOLD),
+                            ft.Text("Open Data Attribution", size=13, color=palette.text_muted),
+                            ft.Text("OpenStreetMap & GIS Nueva Ecija", size=13, weight=ft.FontWeight.BOLD, color=palette.text_primary),
                         ],
                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     ),
                 ],
             ),
         )
-        return ft.Column(
-            controls=[ft.Container(width=560, content=ft.Column(controls=[header_row, ft.Container(height=12), card]))],
-            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            scroll=ft.ScrollMode.AUTO,
-            expand=True,
+        return self._wrap_centered_scroll(
+            ft.Container(width=card_w, content=ft.Column(controls=[header_row, ft.Container(height=12), card]))
         )
 
     # =========================================================================
@@ -1258,10 +1305,10 @@ class ProfileView(ft.Container):
         self._show_dialog(dlg)
 
     def _show_dialog(self, dlg: ft.AlertDialog) -> None:
-        open_overlay_dialog(self.page, dlg)
+        open_overlay_dialog(self.safe_page, dlg)
 
     def _close_dialog(self, dlg: ft.AlertDialog) -> None:
-        close_overlay_dialog(self.page, dlg)
+        close_overlay_dialog(self.safe_page, dlg)
 
     def _toggle_theme(self) -> None:
         if self.on_toggle_theme:

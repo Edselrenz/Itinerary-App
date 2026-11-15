@@ -3,7 +3,7 @@
 from typing import Callable, Optional
 import flet as ft
 
-from desktop_client.config.settings import ThemeColors
+from desktop_client.config.settings import ThemeColors, get_settings
 from desktop_client.models.itinerary import ItineraryItem
 
 
@@ -48,6 +48,9 @@ class StopCard(ft.Container):
         self._build_content()
 
     def _build_content(self) -> None:
+        palette = get_settings().palette
+        self.bgcolor = palette.surface_card
+        self.border = ft.Border.all(1.2, palette.border_main)
         # Sequence number badge (matching Web UI blue circles)
         sequence_badge = ft.Container(
             content=ft.Text(
@@ -154,7 +157,7 @@ class StopCard(ft.Container):
                         title_text,
                         size=13,
                         weight=ft.FontWeight.BOLD,
-                        color=ThemeColors.TEXT_MAIN_LIGHT,
+                        color=palette.text_primary,
                         max_lines=1,
                         overflow=ft.TextOverflow.ELLIPSIS,
                     ),

@@ -324,3 +324,31 @@ def test_tc_16_places_view_did_mount_coroutine():
     pv.did_mount()
     assert len(tasks_passed) == 1
     assert inspect.iscoroutinefunction(tasks_passed[0])
+
+
+def test_tc_17_main_page_theme_color_scheme_compatibility():
+    """TC-17: Verifies Theme and ColorScheme in main.py do not pass deprecated kwargs like 'background'."""
+    from desktop_client.config.settings import ThemeColors
+
+    # Flet 1.1.2 Material 3 ColorScheme uses surface/on_surface/surface_container, NOT background
+    light_cs = ft.ColorScheme(
+        surface=ThemeColors.SURFACE_LIGHT,
+        on_surface=ThemeColors.TEXT_BLACK,
+        primary=ThemeColors.PRIMARY_BLUE,
+        on_primary=ft.Colors.WHITE,
+        surface_container=ThemeColors.BG_LIGHT,
+        surface_container_lowest=ThemeColors.BG_LIGHT,
+    )
+    light_theme = ft.Theme(color_scheme=light_cs)
+    assert light_theme.color_scheme.primary == ThemeColors.PRIMARY_BLUE
+
+    dark_cs = ft.ColorScheme(
+        surface=ThemeColors.SURFACE_DARK,
+        on_surface=ThemeColors.TEXT_MAIN_DARK,
+        primary=ThemeColors.PRIMARY_BLUE,
+        on_primary=ft.Colors.WHITE,
+        surface_container=ThemeColors.BG_DARK,
+        surface_container_lowest=ThemeColors.BG_DARK,
+    )
+    dark_theme = ft.Theme(color_scheme=dark_cs)
+    assert dark_theme.color_scheme.primary == ThemeColors.PRIMARY_BLUE

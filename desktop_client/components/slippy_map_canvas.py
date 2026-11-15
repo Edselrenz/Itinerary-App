@@ -39,7 +39,7 @@ def _resolve_tile_source(
     y: int,
     on_tile_cached: Optional[Callable[[str, str], None]] = None,
 ) -> str:
-    """Returns local path to bundled/cached OSM tile or ESRI / OSM fallback without watermark tiles."""
+    """Returns local path to bundled/cached CartoDB Voyager/OSM tile or matching CDN URL."""
     tile_key = f"{zoom}_{x}_{y}"
     cached_src = _TILE_PATH_CACHE.get(tile_key)
     if cached_src:
@@ -63,20 +63,23 @@ def _resolve_tile_source(
         _TILE_PATH_CACHE[tile_key] = c_str
         return c_str
 
-    # 3. Schedule background download from ESRI World Street Map or OSM fallback
+    # 3. Schedule background download from CartoDB Voyager (matching bundled Nueva Ecija tiles & Web app!)
+    sub = ("a", "b", "c")[(x + y) % 3]
+    voyager_url = f"https://{sub}.basemaps.cartocdn.com/rastertiles/voyager/{zoom}/{x}/{y}.png"
+
     if tile_key not in _QUEUED_TILES:
         _QUEUED_TILES.add(tile_key)
 
         def _fetch():
             urls = [
-                f"https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{zoom}/{y}/{x}",
+                voyager_url,
                 f"https://tile.openstreetmap.org/{zoom}/{x}/{y}.png",
             ]
             for url in urls:
                 req = urllib.request.Request(
                     url,
                     headers={
-                        "User-Agent": "TripMoTripKo-NuevaEcija/3.0 (Educational Travel App)",
+                        "User-Agent": "TripMoTripKo-NuevaEcija/3.0 (+https://edselrenz.github.io/Itinerary-App)",
                         "Accept": "image/png,image/*;q=0.8",
                     },
                 )
@@ -90,6 +93,11 @@ def _resolve_tile_source(
                                 tmp.replace(cache_file)
                                 c_path = str(cache_file)
                                 _TILE_PATH_CACHE[tile_key] = c_path
+                                if on_tile_cached:
+                                    try:
+                                        on_tile_cached(tile_key, c_path)
+                                    except Exception:
+                                        pass
                                 break
                 except Exception:
                     continue
@@ -97,8 +105,8 @@ def _resolve_tile_source(
 
         _TILE_EXECUTOR.submit(_fetch)
 
-    # 4. Return ESRI World Street Map direct URL while background caching finishes
-    return f"https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{zoom}/{y}/{x}"
+    # 4. Return CartoDB Voyager direct URL immediately so texture never changes outside Nueva Ecija
+    return voyager_url
 
 
 # Category Pin Palette matching Project/src/app/tabs/map/map.page.scss (.pin-cat-*)
@@ -278,7 +286,7 @@ class SlippyMapCanvas(ft.Container):
         self.height = self._map_h
         self.border_radius = border_radius
         self.clip_behavior = ft.ClipBehavior.HARD_EDGE
-        self.bgcolor = "#e2e8f0"
+        self.bgcolor = "#f4f1ea"
         self.border = ft.Border.all(1, "#cbd5e1")
 
         self.center_lat = max(NUEVA_ECIJA_MIN_LAT, min(NUEVA_ECIJA_MAX_LAT, float(center_lat)))
@@ -382,48 +390,30 @@ class SlippyMapCanvas(ft.Container):
             content=ft.Text("© OpenStreetMap contributors • OSRM", size=9, color="#475569"),
         )
 
-        # Transparent hit-test plane inside GestureDetector
-        hit_test_bg = ft.Container(
-            width=self._map_w,
-            height=self._map_h,
-            bgcolor="#01000000",
-        )
-
-        # GestureDetector wraps the interactive map layers so mouse scroll-wheel zoom and pan drag
-        # work everywhere across the map (including over markers), while marker taps still fire on_click!
-        gesture_surface = ft.GestureDetector(
+        # Dedicated transparent hit-test gesture surface (#01000000) placed below _marker_stack
+        self._gesture_surface = ft.GestureDetector(
             on_pan_start=self._handle_pan_start,
             on_pan_update=self._handle_pan_update,
             on_pan_end=self._handle_pan_end,
             on_scroll=self._handle_scroll,
             on_double_tap=lambda _: self.set_zoom(self.zoom + 1),
-            drag_interval=16,
-            content=hit_test_bg,
+            drag_interval=24,
+            content=ft.Container(bgcolor="#01000000", expand=True),
         )
-        self._gesture_surface = gesture_surface
 
-        # Outer GestureDetector captures scroll-wheel and drag events even when pointer is over _marker_stack
         inner_stack = ft.Stack(
             width=self._map_w,
             height=self._map_h,
             controls=[
                 self._pan_layer,
-                gesture_surface,
+                self._gesture_surface,
                 self._marker_stack,
                 controls_overlay,
                 attribution_badge,
             ],
         )
         self._canvas_stack = inner_stack
-
-        self.content = ft.GestureDetector(
-            on_pan_start=self._handle_pan_start,
-            on_pan_update=self._handle_pan_update,
-            on_pan_end=self._handle_pan_end,
-            on_scroll=self._handle_scroll,
-            drag_interval=16,
-            content=inner_stack,
-        )
+        self.content = inner_stack
 
         if self._route_stops:
             self.set_route(
@@ -573,6 +563,32 @@ class SlippyMapCanvas(ft.Container):
             self._cluster_cache_key = None
         self.redraw()
 
+    def resize_canvas(self, new_w: int, new_h: int) -> None:
+        """Dynamically resizes map viewport and recalculates overscan tiles."""
+        self._map_w = max(320, int(new_w))
+        self._map_h = max(220, int(new_h))
+        self.width = self._map_w
+        self.height = self._map_h
+        if hasattr(self, "_tile_stack"):
+            self._tile_stack.width = self._map_w
+            self._tile_stack.height = self._map_h
+        if hasattr(self, "_vector_canvas"):
+            self._vector_canvas.width = self._map_w
+            self._vector_canvas.height = self._map_h
+        if hasattr(self, "_pan_layer"):
+            self._pan_layer.width = self._map_w
+            self._pan_layer.height = self._map_h
+        if hasattr(self, "_marker_stack"):
+            self._marker_stack.width = self._map_w
+            self._marker_stack.height = self._map_h
+        if hasattr(self, "_viewport_mover"):
+            self._viewport_mover.width = self._map_w
+            self._viewport_mover.height = self._map_h
+        if hasattr(self, "_canvas_stack"):
+            self._canvas_stack.width = self._map_w
+            self._canvas_stack.height = self._map_h
+        self.redraw()
+
     def _handle_pan_start(self, e: Any) -> None:
         self._is_panning = True
         self._drag_dx = 0.0
@@ -586,34 +602,30 @@ class SlippyMapCanvas(ft.Container):
         self._drag_dx += dx
         self._drag_dy += dy
 
-        # Fast-path O(1) GPU container translation within 1-tile overscan ring (zero DOM rebuilds!)
-        if abs(self._drag_dx) < 220 and abs(self._drag_dy) < 220 and hasattr(self, "_pan_layer"):
-            self._pan_layer.left = self._drag_dx
-            self._pan_layer.top = self._drag_dy
-            if hasattr(self, "_marker_stack"):
-                self._marker_stack.left = self._drag_dx
-                self._marker_stack.top = self._drag_dy
-            if self.page is not None:
+        now = time.monotonic()
+        if abs(self._drag_dx) < 240 and abs(self._drag_dy) < 240:
+            self._pan_layer.left = round(self._drag_dx, 1)
+            self._pan_layer.top = round(self._drag_dy, 1)
+            self._marker_stack.left = round(self._drag_dx, 1)
+            self._marker_stack.top = round(self._drag_dy, 1)
+            if self.page is not None and (now - self._last_pan_redraw >= 0.028):
+                self._last_pan_redraw = now
                 try:
-                    self._pan_layer.update()
-                    if hasattr(self, "_marker_stack"):
-                        self._marker_stack.update()
+                    self._canvas_stack.update()
                 except Exception:
                     pass
             return
 
-        # Commit shift when crossing overscan boundary
         cx, cy = latlon_to_world_px(self.center_lat, self.center_lng, self.zoom)
         new_lat, new_lng = world_px_to_latlon(cx - self._drag_dx, cy - self._drag_dy, self.zoom)
         self.center_lat, self.center_lng = self._clamp_center(new_lat, new_lng)
         self._drag_dx = 0.0
         self._drag_dy = 0.0
-        if hasattr(self, "_pan_layer"):
-            self._pan_layer.left = 0
-            self._pan_layer.top = 0
-        if hasattr(self, "_marker_stack"):
-            self._marker_stack.left = 0
-            self._marker_stack.top = 0
+        self._pan_layer.left = 0
+        self._pan_layer.top = 0
+        self._marker_stack.left = 0
+        self._marker_stack.top = 0
+        self._last_pan_redraw = now
         self.redraw()
 
     def _handle_pan_end(self, e: Any = None) -> None:
@@ -624,12 +636,10 @@ class SlippyMapCanvas(ft.Container):
             self.center_lat, self.center_lng = self._clamp_center(new_lat, new_lng)
             self._drag_dx = 0.0
             self._drag_dy = 0.0
-            if hasattr(self, "_pan_layer"):
-                self._pan_layer.left = 0
-                self._pan_layer.top = 0
-            if hasattr(self, "_marker_stack"):
-                self._marker_stack.left = 0
-                self._marker_stack.top = 0
+            self._pan_layer.left = 0
+            self._pan_layer.top = 0
+            self._marker_stack.left = 0
+            self._marker_stack.top = 0
             self.redraw()
 
     def _handle_scroll(self, e: Any) -> None:
@@ -674,8 +684,8 @@ class SlippyMapCanvas(ft.Container):
         tiles: list[ft.Control] = []
         active_imgs: dict[str, ft.Image] = {}
 
-        for tx in range(min_tx, max_tx + 1):
-            for ty in range(min_ty, max_ty + 1):
+        for tx in range(min_tx - 1, max_tx + 2):
+            for ty in range(min_ty - 1, max_ty + 2):
                 if ty < 0 or ty >= num_tiles:
                     continue
                 wrapped_tx = tx % num_tiles
@@ -711,8 +721,12 @@ class SlippyMapCanvas(ft.Container):
                 tiles.append(tile_cont)
 
         # Bound tile pool size to prevent memory bloat
-        if len(self._tile_pool) > 160:
-            visible_keys = {f"{self.zoom}_{tx % num_tiles}_{ty}" for tx in range(min_tx, max_tx + 1) for ty in range(min_ty, max_ty + 1)}
+        if len(self._tile_pool) > 200:
+            visible_keys = {
+                f"{self.zoom}_{tx % num_tiles}_{ty}"
+                for tx in range(min_tx - 1, max_tx + 2)
+                for ty in range(min_ty - 1, max_ty + 2)
+            }
             for k in list(self._tile_pool.keys()):
                 if k not in visible_keys:
                     del self._tile_pool[k]
@@ -772,7 +786,7 @@ class SlippyMapCanvas(ft.Container):
             projected.append((p, wx, wy))
 
         if self.zoom < 14 and len(projected) > 18:
-            cell_size = 58.0
+            cell_size = 84.0
             grid: dict[tuple[int, int], list[tuple[Place, float, float]]] = {}
             for item in projected:
                 gx = int(item[1] // cell_size)
@@ -845,7 +859,7 @@ class SlippyMapCanvas(ft.Container):
             else:
                 controls.append(self._build_place_pin(item["place"], px, py))
             rendered_count += 1
-            if rendered_count >= 180:
+            if rendered_count >= 64:
                 break
 
         # 3. Numbered Itinerary Route Stop Badges (1..N)

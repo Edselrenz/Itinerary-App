@@ -16,7 +16,12 @@ from typing import Any, Callable, Optional
 import urllib.parse
 import flet as ft
 
-from desktop_client.components.dialogs import show_place_detail_dialog, show_toast
+from desktop_client.components.dialogs import (
+    close_overlay_dialog,
+    open_overlay_dialog,
+    show_place_detail_dialog,
+    show_toast,
+)
 from desktop_client.components.place_card import PlaceCard
 from desktop_client.components.slippy_map_canvas import RouteStopPin, SlippyMapCanvas
 from desktop_client.config.settings import CANONICAL_CATEGORIES, NUEVA_ECIJA_LGUS, ThemeColors
@@ -299,9 +304,14 @@ class PlacesView(ft.Container):
         if not self.is_follow_route_mode or self.show_nearby_pois_in_route:
             places_to_show = self.filtered_places
 
+        pw = int(self.safe_page.width or 1280) if self.safe_page else 1280
+        ph = int(self.safe_page.height or 840) if self.safe_page else 840
+        map_w = max(600, pw)
+        map_h = max(400, ph - 60)
+
         self.map_component = SlippyMapCanvas(
-            width=1366,
-            height=768,
+            width=map_w,
+            height=map_h,
             places=places_to_show,
             route_stops=route_stops,
             active_stop_index=self._active_route_stop_index,
@@ -514,9 +524,12 @@ class PlacesView(ft.Container):
             color=ft.Colors.WHITE,
         )
 
+        pw = float(self.safe_page.width) if (self.safe_page and self.safe_page.width) else 1220.0
+        pill_left = int(max(16.0, (pw - 160.0) / 2.0))
+
         self._toggle_pill_btn = ft.Container(
             bottom=18,
-            left=530,
+            left=pill_left,
             content=ft.Container(
                 content=ft.Row(
                     controls=[
@@ -535,6 +548,19 @@ class PlacesView(ft.Container):
             ),
         )
         return self._toggle_pill_btn
+
+    def on_resize(self, width: float, height: float) -> None:
+        """Dynamically resizes SlippyMapCanvas and centers bottom pill on window resize (BUG-04)."""
+        map_w = max(600, int(width))
+        map_h = max(400, int(height - 60))
+        if hasattr(self, "map_component") and self.map_component is not None:
+            self.map_component.resize_canvas(map_w, map_h)
+        if hasattr(self, "_toggle_pill_btn") and self._toggle_pill_btn is not None:
+            self._toggle_pill_btn.left = max(16.0, (width - 160.0) / 2.0)
+            try:
+                self._toggle_pill_btn.update()
+            except Exception:
+                pass
 
     @property
     def _route_mode(self) -> bool:
@@ -1184,9 +1210,7 @@ class PlacesView(ft.Container):
         _rebuild_tier_pills()
 
         def _close_dlg(_=None):
-            dlg.open = False
-            if self.safe_page:
-                self.safe_page.update()
+            close_overlay_dialog(self.safe_page, dlg)
 
         def _do_reset(_):
             modal_selected_cats.clear()
@@ -1257,6 +1281,4 @@ class PlacesView(ft.Container):
                 ),
             ],
         )
-        self.safe_page.overlay.append(dlg)
-        dlg.open = True
-        self.safe_page.update()
+        open_overlay_dialog(self.safe_page, dlg)

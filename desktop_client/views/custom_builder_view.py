@@ -425,6 +425,7 @@ class CustomBuilderView(ft.Container):
         return ft.Column(controls=[top_row, view_tabs], spacing=0)
 
     def _build_content(self) -> None:
+        self.bgcolor = self.settings.palette.bg_main
         header = self._build_header_bar()
         if self.active_view == "form":
             body = self._build_form_view()
@@ -438,6 +439,11 @@ class CustomBuilderView(ft.Container):
             spacing=0,
             expand=True,
         )
+
+    def on_resize(self, width: float, height: float) -> None:
+        """Dynamically recomputes card width on window resize (BUG-04)."""
+        self._build_content()
+        self._safe_update()
 
     # =========================================================================
     # VIEW 0: QUESTIONNAIRE FORM ('form' — UC-C02)
@@ -546,10 +552,14 @@ class CustomBuilderView(ft.Container):
             on_click=lambda _: self._start_building(),
         )
 
+        pw = float(self.safe_page.width) if (self.safe_page and self.safe_page.width) else 1280.0
+        card_w = min(640.0, max(320.0, pw - 48.0))
+        palette = self.settings.palette
+
         form_card = ft.Container(
-            width=640,
-            bgcolor=ThemeColors.SURFACE_LIGHT,
-            border=ft.Border.all(1, ThemeColors.BORDER_LIGHT),
+            width=card_w,
+            bgcolor=palette.surface_card,
+            border=ft.Border.all(1, palette.border_main),
             border_radius=18,
             padding=24,
             content=ft.Column(
@@ -558,9 +568,9 @@ class CustomBuilderView(ft.Container):
                     ft.Container(height=8),
                     title_input,
                     dest_picker,
-                    ft.Column(controls=[ft.Text("Travel Dates", size=12, weight=ft.FontWeight.BOLD), date_btn, date_helper], spacing=4),
+                    ft.Column(controls=[ft.Text("Travel Dates", size=12, weight=ft.FontWeight.BOLD, color=palette.text_primary), date_btn, date_helper], spacing=4),
                     ft.Column(controls=[budget_input, ft.Row(controls=budget_chips, spacing=8)], spacing=6),
-                    ft.Column(controls=[ft.Text("Preferences (optional)", size=12, weight=ft.FontWeight.BOLD), ft.Row(controls=pref_chips, wrap=True, spacing=6)], spacing=6),
+                    ft.Column(controls=[ft.Text("Preferences (optional)", size=12, weight=ft.FontWeight.BOLD, color=palette.text_primary), ft.Row(controls=pref_chips, wrap=True, spacing=6)], spacing=6),
                     ft.Container(height=6),
                     start_btn,
                 ],
@@ -569,10 +579,16 @@ class CustomBuilderView(ft.Container):
         )
 
         return ft.Column(
-            controls=[form_card],
+            controls=[
+                ft.Row(
+                    alignment=ft.MainAxisAlignment.CENTER,
+                    controls=[form_card],
+                )
+            ],
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             scroll=ft.ScrollMode.AUTO,
             expand=True,
+            width=float("inf"),
         )
 
     def _start_building(self) -> None:
