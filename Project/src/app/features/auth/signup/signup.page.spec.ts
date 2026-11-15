@@ -86,7 +86,7 @@ describe('SignupPage', () => {
     expect(component.signupForm.get('username')?.value).toBe('juan_delacruz');
   });
 
-  it('should preserve middleInitial in first_name and send explicit username on submit (UI-21)', () => {
+  it('should preserve middleInitial in registration payload and send explicit username on submit (UI-21)', () => {
     component.signupForm.setValue({
       firstName: 'Juan',
       middleInitial: 'M',
@@ -100,7 +100,8 @@ describe('SignupPage', () => {
     component.onSubmit();
 
     expect(mockAuthService.register).toHaveBeenCalledWith({
-      first_name: 'Juan M.',
+      first_name: 'Juan',
+      middle_initial: 'M',
       last_name: 'Dela Cruz',
       username: 'juan_custom',
       email: 'juan@example.ph',

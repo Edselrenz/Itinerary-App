@@ -501,7 +501,7 @@ class ItineraryService:
         )
 
     async def list_itineraries(self) -> list[Itinerary]:
-        """Lists itineraries: cloud itineraries if logged in, plus local guest itineraries."""
+        """Lists itineraries: cloud itineraries if logged in, falling back to guest only when unauthenticated or offline."""
         results: list[Itinerary] = []
 
         if self.session_manager.is_authenticated:
@@ -512,10 +512,11 @@ class ItineraryService:
                         itin = Itinerary.from_dict(item)
                         itin.is_guest = False
                         results.append(itin)
+                    return results
             except Exception:
-                pass
+                logger.warning("Cloud itineraries unreachable; falling back to local guest storage.")
 
-        # Always include guest itineraries
+        # Include guest itineraries when unauthenticated or offline
         guest_items = self.guest_storage.list_itineraries()
         results.extend(guest_items)
 
@@ -557,25 +558,58 @@ class ItineraryService:
         days: list[ItineraryDay] = []
         for d in payload.days:
             day_id = str(uuid.uuid4())
-            raw_items = d.get("items") or []
+            if isinstance(d, dict):
+                raw_items = d.get("items") or []
+                day_num = d.get("day_number", len(days) + 1)
+                t_date = d.get("travel_date") or d.get("date") or payload.start_date
+                d_title = d.get("title") or d.get("theme")
+            else:
+                raw_items = getattr(d, "items", []) or []
+                day_num = getattr(d, "day_number", len(days) + 1)
+                t_date = getattr(d, "travel_date", getattr(d, "date", payload.start_date))
+                d_title = getattr(d, "title", getattr(d, "theme", None))
+
             items = []
             for item_idx, itm in enumerate(raw_items, 1):
                 item_id = str(uuid.uuid4())
-                place_obj = Place.from_dict(itm["place"]) if itm.get("place") else None
+                if isinstance(itm, dict):
+                    place_dict = itm.get("place") or itm.get("place_payload")
+                    place_obj = Place.from_dict(place_dict) if place_dict else None
+                    pid = itm.get("place_id") or (place_obj.id if place_obj else None)
+                    c_title = itm.get("custom_title") or (place_obj.name if place_obj else None)
+                    c_lat = itm.get("custom_lat") or (place_obj.latitude if place_obj else None)
+                    c_lng = itm.get("custom_lng") or (place_obj.longitude if place_obj else None)
+                    p_time = itm.get("planned_time") or itm.get("start_time")
+                    dur = itm.get("duration_minutes", 90)
+                    notes = itm.get("notes")
+                    c_min = itm.get("estimated_cost_min") or itm.get("estimated_cost")
+                    c_max = itm.get("estimated_cost_max") or itm.get("estimated_cost")
+                else:
+                    place_obj = getattr(itm, "place", None)
+                    pid = getattr(itm, "place_id", None) or (place_obj.id if place_obj else None)
+                    c_title = getattr(itm, "custom_title", None) or (place_obj.name if place_obj else None)
+                    c_lat = getattr(itm, "custom_lat", None) or (place_obj.latitude if place_obj else None)
+                    c_lng = getattr(itm, "custom_lng", None) or (place_obj.longitude if place_obj else None)
+                    p_time = getattr(itm, "planned_time", getattr(itm, "start_time", None))
+                    dur = getattr(itm, "duration_minutes", 90)
+                    notes = getattr(itm, "notes", None)
+                    c_min = getattr(itm, "estimated_cost_min", getattr(itm, "estimated_cost", None))
+                    c_max = getattr(itm, "estimated_cost_max", getattr(itm, "estimated_cost", None))
+
                 items.append(
                     ItineraryItem(
                         id=item_id,
                         day_id=day_id,
-                        place_id=itm.get("place_id"),
-                        custom_title=itm.get("custom_title"),
-                        custom_lat=itm.get("custom_lat"),
-                        custom_lng=itm.get("custom_lng"),
+                        place_id=pid,
+                        custom_title=c_title,
+                        custom_lat=c_lat,
+                        custom_lng=c_lng,
                         sort_order=item_idx,
-                        planned_time=itm.get("planned_time"),
-                        duration_minutes=itm.get("duration_minutes", 90),
-                        notes=itm.get("notes"),
-                        estimated_cost_min=itm.get("estimated_cost_min"),
-                        estimated_cost_max=itm.get("estimated_cost_max"),
+                        planned_time=p_time,
+                        duration_minutes=dur,
+                        notes=notes,
+                        estimated_cost_min=c_min,
+                        estimated_cost_max=c_max,
                         place=place_obj,
                     )
                 )
@@ -583,9 +617,9 @@ class ItineraryService:
                 ItineraryDay(
                     id=day_id,
                     itinerary_id=itin_id,
-                    day_number=d.get("day_number", len(days) + 1),
-                    travel_date=d.get("travel_date", payload.start_date),
-                    title=d.get("title"),
+                    day_number=day_num,
+                    travel_date=t_date,
+                    title=d_title,
                     items=items,
                 )
             )

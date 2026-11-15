@@ -168,12 +168,13 @@ export class SignupPage {
     const emailStr = (val.email || '').trim();
     const username = (val.username || '').trim().toLowerCase();
     const mid = (val.middleInitial || '').trim().replace(/\.+$/, '');
-    const firstName = mid ? `${val.firstName!.trim()} ${mid}.` : val.firstName!.trim();
+    const firstName = val.firstName!.trim();
     const lastName = (val.lastName || '').trim();
 
     this.authService
       .register({
         first_name: firstName,
+        middle_initial: mid || null,
         last_name: lastName,
         username,
         email: emailStr,

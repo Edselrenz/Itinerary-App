@@ -46,9 +46,11 @@ class CustomBuilderView(ft.Container):
         pre_added_place: Optional[Place] = None,
         existing_itinerary: Optional[Itinerary] = None,
         is_draft_from_wizard: bool = False,
+        on_back: Optional[Callable[[], None]] = None,
     ):
         super().__init__()
         self.on_navigate = on_navigate
+        self.on_back = on_back
         self.place_service = get_place_service()
         self.itinerary_service = get_itinerary_service()
         self.settings = get_settings()
@@ -148,13 +150,19 @@ class CustomBuilderView(ft.Container):
             self._safe_update()
             return True
         elif self.active_view == "timeline":
-            if self.total_stops_count == 0:
+            if self.existing_itinerary is None:
                 self.active_view = "form"
                 self._build_content()
                 self._safe_update()
                 return True
             self._navigate("/home")
             return True
+        elif self.active_view == "form":
+            if self.on_back:
+                self.on_back()
+            else:
+                self._navigate("/home")
+            return False
 
         return False
 
@@ -681,15 +689,18 @@ class CustomBuilderView(ft.Container):
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
         )
 
-        search_field = ft.TextField(
-            hint_text="Search attractions, restaurants, resorts...",
-            prefix_icon=ft.Icons.SEARCH,
-            value=self.browse_search,
-            border_radius=10,
-            dense=True,
-            expand=True,
-            on_change=lambda e: self._on_browse_search_live(e.control.value),
-        )
+        if not hasattr(self, "_browse_search_field") or self._browse_search_field is None:
+            self._browse_search_field = ft.TextField(
+                hint_text="Search attractions, restaurants, resorts...",
+                prefix_icon=ft.Icons.SEARCH,
+                value=self.browse_search,
+                border_radius=10,
+                dense=True,
+                expand=True,
+                on_change=lambda e: self._on_browse_search_live(e.control.value),
+            )
+        else:
+            self._browse_search_field.value = self.browse_search
 
         # Category Filter Pills with "Other" (UC-C05)
         cats = [("all", "All")]
@@ -727,6 +738,7 @@ class CustomBuilderView(ft.Container):
 
         cards_grid = self._build_browse_cards_grid()
         self._browse_results_col = cards_grid
+        self._browse_results_container = ft.Container(content=cards_grid, expand=True)
 
         bottom_bar = ft.Container(
             content=ft.Row(
@@ -753,11 +765,11 @@ class CustomBuilderView(ft.Container):
                 ft.Container(height=6),
                 target_day_bar,
                 ft.Container(height=8),
-                search_field,
+                self._browse_search_field,
                 ft.Container(height=4),
                 ft.Row(controls=cat_chips, spacing=6, scroll=ft.ScrollMode.AUTO),
                 ft.Container(height=10),
-                cards_grid,
+                self._browse_results_container,
                 bottom_bar,
             ],
             spacing=0,
@@ -908,8 +920,15 @@ class CustomBuilderView(ft.Container):
 
     def _on_browse_search_live(self, val: str) -> None:
         self.browse_search = val
-        self._build_content()
-        self._safe_update()
+        if hasattr(self, "_browse_results_container") and self._browse_results_container:
+            self._browse_results_container.content = self._build_browse_cards_grid()
+            try:
+                self._browse_results_container.update()
+            except Exception:
+                self._safe_update()
+        else:
+            self._build_content()
+            self._safe_update()
 
     def _on_browse_cat_change(self, cat: str) -> None:
         self.browse_category = cat
@@ -1430,8 +1449,8 @@ class CustomBuilderView(ft.Container):
             self.safe_page.update()
 
     # UC-C12: 2-Tab Place Picker & Off-Grid Venue Modal with Duplicate Guard & Collapsible Coordinates
-    def _open_custom_venue_dialog(self) -> None:
-        active_tab = ["browse"]  # 'browse' | 'offgrid'
+    def _open_custom_venue_dialog(self, initial_tab: str = "offgrid") -> None:
+        active_tab = [initial_tab]  # 'browse' | 'offgrid'
         dlg_holder: list[Optional[ft.AlertDialog]] = [None]
         active_day = self.days[self.active_day_index]
 
@@ -1542,12 +1561,15 @@ class CustomBuilderView(ft.Container):
 
         tab_body = ft.Container()
 
+        add_btn = ft.FilledButton("+ Add to Day", on_click=lambda _: _save_offgrid(None), visible=(initial_tab == "offgrid"))
+
         def _switch_tab(t_name: str):
             active_tab[0] = t_name
             t1_btn.bgcolor = ThemeColors.PRIMARY_BLUE if t_name == "browse" else ThemeColors.SURFACE_LIGHT
             t1_btn.content.color = ft.Colors.WHITE if t_name == "browse" else ThemeColors.TEXT_MAIN_LIGHT
             t2_btn.bgcolor = ThemeColors.PRIMARY_BLUE if t_name == "offgrid" else ThemeColors.SURFACE_LIGHT
             t2_btn.content.color = ft.Colors.WHITE if t_name == "offgrid" else ThemeColors.TEXT_MAIN_LIGHT
+            add_btn.visible = (t_name == "offgrid")
 
             if t_name == "browse":
                 _refresh_browse_list()
@@ -1652,7 +1674,7 @@ class CustomBuilderView(ft.Container):
             self._build_content()
             self._safe_update()
 
-        _switch_tab("browse")
+        _switch_tab(initial_tab)
 
         dlg = ft.AlertDialog(
             title=ft.Row(
@@ -1676,7 +1698,7 @@ class CustomBuilderView(ft.Container):
             ),
             actions=[
                 ft.TextButton("Cancel", on_click=_close_main),
-                ft.FilledButton("+ Add to Day", on_click=lambda _: _save_offgrid(None) if active_tab[0] == "offgrid" else None),
+                add_btn,
             ],
         )
         dlg_holder[0] = dlg
@@ -1791,6 +1813,7 @@ class CustomBuilderView(ft.Container):
         self.daily_budget = val
         field_ctrl.value = str(int(val))
         self.is_dirty = True
+        self._build_content()
         self._safe_update()
 
     def _on_budget_change(self, val: str) -> None:

@@ -14,6 +14,7 @@ import flet as ft
 
 from desktop_client.config.settings import ThemeColors
 from desktop_client.core.connectivity_service import ConnectivityService, get_connectivity_service
+from desktop_client.components.dialogs import show_toast
 
 
 class OfflineHostBanner(ft.Container):
@@ -202,33 +203,13 @@ class OfflineHostBanner(ft.Container):
                     self.visible = False
                     self.height = 0
                     if p:
-                        p.snack_bar = ft.SnackBar(
-                            content=ft.Row(
-                                controls=[
-                                    ft.Icon(ft.Icons.CHECK_CIRCLE, color=ft.Colors.WHITE, size=18),
-                                    ft.Text("Cloud connection restored!", color=ft.Colors.WHITE),
-                                ],
-                                spacing=8,
-                            ),
-                            bgcolor=ThemeColors.SUCCESS,
-                            open=True,
-                        )
+                        show_toast(p, "Cloud connection restored!", bgcolor=ThemeColors.SUCCESS)
                 else:
                     self.visible = True
                     self.height = 52
                     self._title_text.value = "You are offline"
                     if p:
-                        p.snack_bar = ft.SnackBar(
-                            content=ft.Row(
-                                controls=[
-                                    ft.Icon(ft.Icons.WARNING_AMBER, color=ft.Colors.WHITE, size=18),
-                                    ft.Text("Backend server still unreachable. Operating in offline mode.", color=ft.Colors.WHITE),
-                                ],
-                                spacing=8,
-                            ),
-                            bgcolor="#d97706",
-                            open=True,
-                        )
+                        show_toast(p, "Backend server still unreachable. Operating in offline mode.", bgcolor="#d97706")
                 if p:
                     p.update()
             finally:

@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import Callable, Optional
 import flet as ft
 
+from desktop_client.components.dialogs import close_overlay_dialog, open_overlay_dialog
 from desktop_client.config.settings import NUEVA_ECIJA_LGUS, ThemeColors
 from desktop_client.core.offline_data import ALL_32_LGUS_METADATA
 
@@ -72,21 +73,24 @@ class DestinationPicker(ft.Container):
             pass
 
     def _build_content(self) -> None:
-        self._text_field = ft.TextField(
-            value=self._search_text,
-            hint_text="Choose a town, city, or landmark",
-            hint_style=ft.TextStyle(size=13, color=ThemeColors.TEXT_MUTED_LIGHT),
-            prefix_icon=ft.Icons.LOCATION_ON,
-            border_radius=10,
-            border_color="#cbd5e1",
-            focused_border_color=ThemeColors.PRIMARY_BLUE,
-            filled=True,
-            bgcolor=ft.Colors.WHITE,
-            dense=True,
-            content_padding=ft.Padding.symmetric(horizontal=12, vertical=10),
-            on_change=lambda e: self._on_input_change(e.control.value),
-            on_focus=lambda _: self._open_suggestions(),
-        )
+        if not hasattr(self, "_text_field") or self._text_field is None:
+            self._text_field = ft.TextField(
+                value=self._search_text,
+                hint_text="Choose a town, city, or landmark",
+                hint_style=ft.TextStyle(size=13, color=ThemeColors.TEXT_MUTED_LIGHT),
+                prefix_icon=ft.Icons.LOCATION_ON,
+                border_radius=10,
+                border_color="#cbd5e1",
+                focused_border_color=ThemeColors.PRIMARY_BLUE,
+                filled=True,
+                bgcolor=ft.Colors.WHITE,
+                dense=True,
+                content_padding=ft.Padding.symmetric(horizontal=12, vertical=10),
+                on_change=lambda e: self._on_input_change(e.control.value),
+                on_focus=lambda _: self._open_suggestions(),
+            )
+        else:
+            self._text_field.value = self._search_text
 
         clear_btn = ft.IconButton(
             icon=ft.Icons.CLOSE_ROUNDED,
@@ -179,6 +183,21 @@ class DestinationPicker(ft.Container):
     def _build_suggestions_list(self) -> ft.Control:
         q = (self._search_text or "").strip().lower()
         items: list[ft.Control] = []
+
+        # 0. Header with Dismiss
+        items.append(
+            ft.Row(
+                controls=[
+                    ft.Text("SUGGESTED DESTINATIONS", size=10, weight=ft.FontWeight.BOLD, color=ThemeColors.TEXT_MUTED_LIGHT),
+                    ft.TextButton(
+                        content=ft.Text("Close ✕", size=11, weight=ft.FontWeight.W_600, color=ThemeColors.PRIMARY_BLUE),
+                        on_click=lambda _: self._close_suggestions(),
+                        style=ft.ButtonStyle(padding=ft.Padding.symmetric(horizontal=4, vertical=2)),
+                    ),
+                ],
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            )
+        )
 
         # 1. Province Option
         if not q or "nueva ecija" in q or "all" in q:
@@ -292,19 +311,33 @@ class DestinationPicker(ft.Container):
 
     def _open_suggestions(self) -> None:
         self._is_dropdown_open = True
-        self._build_content()
-        self._safe_update()
+        if hasattr(self, "_suggestion_panel"):
+            self._suggestion_panel.content = self._build_suggestions_list()
+            self._suggestion_panel.visible = True
+            self._safe_update()
+        else:
+            self._build_content()
+            self._safe_update()
 
     def _close_suggestions(self) -> None:
         self._is_dropdown_open = False
-        self._build_content()
-        self._safe_update()
+        if hasattr(self, "_suggestion_panel"):
+            self._suggestion_panel.visible = False
+            self._safe_update()
+        else:
+            self._build_content()
+            self._safe_update()
 
     def _on_input_change(self, val: str) -> None:
         self._search_text = val
         self._is_dropdown_open = True
-        self._build_content()
-        self._safe_update()
+        if hasattr(self, "_suggestion_panel"):
+            self._suggestion_panel.content = self._build_suggestions_list()
+            self._suggestion_panel.visible = True
+            self._safe_update()
+        else:
+            self._build_content()
+            self._safe_update()
 
     def _clear_input(self) -> None:
         self._search_text = ""
@@ -445,9 +478,11 @@ class DestinationPicker(ft.Container):
                 pass
             render_lgus()
 
+        def close_only(_=None):
+            close_overlay_dialog(self.page, dlg)
+
         def pick_and_close(name: str):
-            dlg.open = False
-            self.page.update()
+            close_overlay_dialog(self.page, dlg)
             self._handle_select(name)
 
         tab_buttons = []
@@ -472,7 +507,7 @@ class DestinationPicker(ft.Container):
             title=ft.Row(
                 controls=[
                     ft.Text("32 Towns Regional Explorer", size=18, weight=ft.FontWeight.W_800),
-                    ft.IconButton(icon=ft.Icons.CLOSE, on_click=lambda _: pick_and_close(self.selected_destination)),
+                    ft.IconButton(icon=ft.Icons.CLOSE, on_click=close_only),
                 ],
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
             ),
@@ -490,6 +525,4 @@ class DestinationPicker(ft.Container):
             ),
         )
 
-        self.page.overlay.append(dlg)
-        dlg.open = True
-        self.page.update()
+        open_overlay_dialog(self.page, dlg)

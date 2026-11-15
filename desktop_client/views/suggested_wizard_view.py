@@ -603,8 +603,9 @@ class SuggestedWizardView(ft.Container):
 
         async def _run():
             try:
+                from desktop_client.models.itinerary import SuggestedItineraryRequest
                 auto_title = f"Suggested {self.destination_val} Trip"
-                itinerary = await self.itinerary_service.generate_suggested_itinerary(
+                req = SuggestedItineraryRequest(
                     destination=self.destination_val,
                     start_date=self.start_date_val,
                     end_date=self.end_date_val,
@@ -615,6 +616,7 @@ class SuggestedWizardView(ft.Container):
                     min_rating=self.min_rating_val,
                     anchor_place_id=self.anchor_place_id,
                 )
+                itinerary = await self.itinerary_service.generate_suggested_itinerary(req)
                 if itinerary:
                     itinerary.title = auto_title
                     self.generated_itinerary = itinerary
@@ -1297,10 +1299,45 @@ class SuggestedWizardView(ft.Container):
 
         async def _run():
             try:
-                saved = await self.itinerary_service.create_itinerary(self.generated_itinerary)
+                from desktop_client.models.itinerary import ItineraryCreatePayload
+                days_payload = []
+                for d in self.generated_itinerary.days:
+                    items_payload = []
+                    for idx, item in enumerate(d.items):
+                        items_payload.append({
+                            "place_id": item.place_id or (item.place.id if item.place else None),
+                            "day_number": d.day_number,
+                            "order_index": idx,
+                            "start_time": item.start_time,
+                            "duration_minutes": item.duration_minutes,
+                            "notes": item.notes,
+                            "estimated_cost": item.estimated_cost,
+                            "travel_time_from_prev_mins": item.travel_time_from_prev_mins,
+                            "travel_mode": item.travel_mode or self.travel_mode_val,
+                            "place_payload": item.place.to_dict() if item.place else None,
+                        })
+                    days_payload.append({
+                        "day_number": d.day_number,
+                        "date": d.date,
+                        "theme": d.theme,
+                        "items": items_payload,
+                    })
+
+                payload = ItineraryCreatePayload(
+                    title=self.generated_itinerary.title,
+                    description=self.generated_itinerary.description,
+                    destination=self.generated_itinerary.destination or self.destination_val,
+                    start_date=self.generated_itinerary.start_date or self.start_date_val,
+                    end_date=self.generated_itinerary.end_date or self.end_date_val,
+                    total_budget=self.generated_itinerary.total_budget,
+                    travel_mode=self.generated_itinerary.travel_mode or self.travel_mode_val,
+                    is_suggested=True,
+                    days=days_payload,
+                )
+                saved = await self.itinerary_service.create_itinerary(payload)
                 self.itinerary_service.clear_active_draft_itinerary()
                 if self.safe_page:
-                    show_toast(self.safe_page, f"Suggested itinerary saved!")
+                    show_toast(self.safe_page, "Itinerary saved to your trips!", bgcolor=ThemeColors.SUCCESS)
                 if self.on_navigate:
                     self.on_navigate(f"/trips/{saved.id}", saved)
             except Exception as e:

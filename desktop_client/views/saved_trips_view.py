@@ -164,17 +164,20 @@ class SavedTripsView(ft.Container):
 
         # Search & Segment Filter Header (only shown when savedItineraries.length > 2, matching history.page.html:8)
         if len(self.itineraries) > 2:
-            self.search_field = ft.TextField(
-                hint_text="Search saved trips or municipalities...",
-                hint_style=ft.TextStyle(size=12, color=ThemeColors.TEXT_FAINT_LIGHT),
-                prefix_icon=ft.Icons.SEARCH_ROUNDED,
-                value=self.search_term,
-                border_radius=12,
-                border_color=ThemeColors.BORDER_LIGHT,
-                focused_border_color=ThemeColors.PRIMARY_BLUE,
-                dense=True,
-                on_change=lambda e: self._on_search_change(e.control.value),
-            )
+            if not hasattr(self, "search_field") or self.search_field is None:
+                self.search_field = ft.TextField(
+                    hint_text="Search saved trips or municipalities...",
+                    hint_style=ft.TextStyle(size=12, color=ThemeColors.TEXT_FAINT_LIGHT),
+                    prefix_icon=ft.Icons.SEARCH_ROUNDED,
+                    value=self.search_term,
+                    border_radius=12,
+                    border_color=ThemeColors.BORDER_LIGHT,
+                    focused_border_color=ThemeColors.PRIMARY_BLUE,
+                    dense=True,
+                    on_change=lambda e: self._on_search_change(e.control.value),
+                )
+            else:
+                self.search_field.value = self.search_term
             segments = [
                 ("all", f"All ({len(self.itineraries)})"),
                 ("upcoming", "Upcoming"),
@@ -204,40 +207,8 @@ class SavedTripsView(ft.Container):
         )
         body_controls.extend([headline_block, ft.Container(height=14)])
 
-        filtered_trips = self._get_filtered_trips()
-        if filtered_trips:
-            cards = [self._create_trip_card(it) for it in filtered_trips]
-            grid = ft.ResponsiveRow(
-                controls=[ft.Container(content=c, col={"sm": 12, "md": 6, "lg": 4}) for c in cards],
-                spacing=16,
-                run_spacing=16,
-            )
-            body_controls.append(grid)
-        else:
-            body_controls.append(
-                ft.Container(
-                    padding=40,
-                    alignment=ft.Alignment(0, 0),
-                    content=ft.Column(
-                        controls=[
-                            ft.Icon(ft.Icons.FILTER_ALT_OUTLINED, size=36, color=ThemeColors.PRIMARY_BLUE),
-                            ft.Text("No Matching Itineraries", size=16, weight=ft.FontWeight.BOLD),
-                            ft.Text(
-                                f'No saved trips found for "{self.search_term or self.active_segment}". Try clearing your search or switching filter tabs.',
-                                size=12,
-                                color=ThemeColors.TEXT_MUTED_LIGHT,
-                            ),
-                            ft.FilledButton(
-                                content=f"Show All Trips ({len(self.itineraries)})",
-                                style=ft.ButtonStyle(bgcolor=ThemeColors.PRIMARY_BLUE, color=ft.Colors.WHITE),
-                                on_click=lambda _: self._reset_filters(),
-                            ),
-                        ],
-                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                        spacing=8,
-                    ),
-                )
-            )
+        self._grid_container = ft.Container(content=self._build_trips_grid())
+        body_controls.append(self._grid_container)
 
         scroll_area = ft.Container(
             expand=True,
@@ -377,6 +348,38 @@ class SavedTripsView(ft.Container):
         except Exception:
             pass
 
+    def _build_trips_grid(self) -> ft.Control:
+        filtered_trips = self._get_filtered_trips()
+        if filtered_trips:
+            cards = [self._create_trip_card(it) for it in filtered_trips]
+            return ft.ResponsiveRow(
+                controls=[ft.Container(content=c, col={"sm": 12, "md": 6, "lg": 4}) for c in cards],
+                spacing=16,
+                run_spacing=16,
+            )
+        return ft.Container(
+            padding=40,
+            alignment=ft.Alignment(0, 0),
+            content=ft.Column(
+                controls=[
+                    ft.Icon(ft.Icons.FILTER_ALT_OUTLINED, size=36, color=ThemeColors.PRIMARY_BLUE),
+                    ft.Text("No Matching Itineraries", size=16, weight=ft.FontWeight.BOLD),
+                    ft.Text(
+                        f'No saved trips found for "{self.search_term or self.active_segment}". Try clearing your search or switching filter tabs.',
+                        size=12,
+                        color=ThemeColors.TEXT_MUTED_LIGHT,
+                    ),
+                    ft.FilledButton(
+                        content=f"Show All Trips ({len(self.itineraries)})",
+                        style=ft.ButtonStyle(bgcolor=ThemeColors.PRIMARY_BLUE, color=ft.Colors.WHITE),
+                        on_click=lambda _: self._reset_filters(),
+                    ),
+                ],
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                spacing=8,
+            ),
+        )
+
     def _on_segment_select(self, seg_key: str) -> None:
         self.active_segment = seg_key
         self._build_content()
@@ -384,6 +387,13 @@ class SavedTripsView(ft.Container):
 
     def _on_search_change(self, query: str) -> None:
         self.search_term = query
+        if hasattr(self, "_grid_container") and self._grid_container:
+            self._grid_container.content = self._build_trips_grid()
+            try:
+                self._grid_container.update()
+                return
+            except Exception:
+                pass
         self._build_content()
         self._safe_update()
 

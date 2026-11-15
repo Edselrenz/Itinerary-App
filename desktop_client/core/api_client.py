@@ -160,20 +160,29 @@ class ApiClient:
                     get_connectivity_service().set_host_offline(False)
             except Exception:
                 pass
-        except httpx.ConnectError as err:
+        except (httpx.ConnectError, httpx.TimeoutException) as err:
             try:
                 from desktop_client.core.connectivity_service import get_connectivity_service
-                get_connectivity_service().set_host_offline(True, force=True)
+                cs = get_connectivity_service()
+                worker_url = cs.CLOUDFLARE_WORKER_API_URL.rstrip("/")
+                if self.base_url.rstrip("/") != worker_url and not retried:
+                    logger.info("Localhost unreachable; failing over ApiClient to Cloudflare Worker proxy...")
+                    self.set_base_url(worker_url)
+                    return await self.request(
+                        method=method,
+                        endpoint=endpoint,
+                        params=params,
+                        json_data=json_data,
+                        headers=headers,
+                        timeout=timeout,
+                        retried=True,
+                    )
+                cs.set_host_offline(True, force=True)
+            except NetworkError:
+                raise
             except Exception:
                 pass
             raise NetworkError(f"Cannot connect to server at {self.base_url}. Please check if backend is running.") from err
-        except httpx.TimeoutException as err:
-            try:
-                from desktop_client.core.connectivity_service import get_connectivity_service
-                get_connectivity_service().report_gateway_error()
-            except Exception:
-                pass
-            raise NetworkError(f"Request to {endpoint} timed out after {req_timeout}s.") from err
         except httpx.RequestError as err:
             try:
                 from desktop_client.core.connectivity_service import get_connectivity_service

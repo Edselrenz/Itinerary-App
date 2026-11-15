@@ -12,6 +12,7 @@ from desktop_client.components.dialogs import (
     show_edit_stop_dialog,
     show_export_dialog,
     show_place_detail_dialog,
+    show_toast,
 )
 from desktop_client.components.itinerary_route_map import ItineraryRouteMap
 from desktop_client.components.stop_card import StopCard
@@ -20,6 +21,7 @@ from desktop_client.core.commute_guide import get_leg_commute_info
 from desktop_client.models.itinerary import Itinerary, ItineraryDay, ItineraryItem
 from desktop_client.models.place import Place
 from desktop_client.services.itinerary_service import get_itinerary_service
+from desktop_client.services.place_service import get_place_service
 
 
 class TripDetailView(ft.Container):
@@ -38,7 +40,10 @@ class TripDetailView(ft.Container):
         self.on_back = on_back
         self.on_navigate = on_navigate
         self.itinerary_service = get_itinerary_service()
+        self.place_service = get_place_service()
         self.active_day_index = 0
+        self.view_mode = "detail"  # "detail" or "nearby"
+        self.nearby_category = "restaurant"  # "restaurant", "hospital_clinic", "convenience_store"
 
         # In-Place Edit State
         self.is_edit_mode = False
@@ -60,21 +65,31 @@ class TripDetailView(ft.Container):
     def _build_content(self) -> None:
         if self.is_edit_mode:
             self.content = self._build_edit_mode()
+        elif self.view_mode == "nearby":
+            self.content = self._build_nearby_view()
         else:
             self.content = self._build_view_mode()
 
     def _build_view_mode(self) -> ft.Control:
         itin = self.itinerary
 
-        # Top navigation / Back bar
-        back_btn = ft.TextButton(
-            content="← Back to Saved Trips",
+        # Top navigation / Back bar (Matches Web itinerary-detail.page.html)
+        back_btn = ft.IconButton(
             icon=ft.Icons.ARROW_BACK,
+            icon_size=20,
+            tooltip="Back to previous screen",
             on_click=lambda _: self.on_back() if self.on_back else None,
+        )
+        title_text = ft.Text(itin.title, size=18, weight=ft.FontWeight.BOLD, color=ThemeColors.TEXT_BLACK)
+
+        share_btn = ft.IconButton(
+            icon=ft.Icons.SHARE_OUTLINED,
+            tooltip="Share or Export Trip",
+            on_click=lambda _: self._open_export(),
         )
 
         edit_btn = ft.FilledButton(
-            content="✏️ Edit Itinerary",
+            content="Edit",
             style=ft.ButtonStyle(
                 bgcolor=ThemeColors.PRIMARY_BLUE,
                 color=ft.Colors.WHITE,
@@ -83,31 +98,15 @@ class TripDetailView(ft.Container):
             on_click=lambda _: self._enter_edit_mode(),
         )
 
-        full_builder_btn = ft.OutlinedButton(
-            content="🛠️ Open in Full Builder",
-            icon=ft.Icons.BUILD,
-            on_click=lambda _: self._open_in_builder(),
-        )
-
-        export_btn = ft.OutlinedButton(
-            content="Export Dossier",
-            icon=ft.Icons.DOWNLOAD,
-            on_click=lambda _: self._open_export(),
-        )
-
         top_nav = ft.Row(
             controls=[
-                back_btn,
-                ft.Row(controls=[edit_btn, full_builder_btn, export_btn], spacing=8),
+                ft.Row(controls=[back_btn, title_text], spacing=6),
+                ft.Row(controls=[share_btn, edit_btn], spacing=8),
             ],
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
         )
 
-        # Overview Card with Dark Navy Gradient matching Figma Action Cards
-        source_badge = "Local Guest Storage" if itin.is_guest else "Cloud Account"
-        badge_bg = ThemeColors.AMBER_LIGHT if itin.is_guest else ThemeColors.SUCCESS_BG
-        badge_col = ThemeColors.WARM_GOLD if itin.is_guest else ThemeColors.SUCCESS
-
+        # Overview Card: Clean White Card matching Web trip-details-card
         plan_badge_label = "Suggested Plan" if itin.type == "suggested" else "Custom Plan"
         plan_badge_bg = ThemeColors.SUGGESTED_BADGE_BG if itin.type == "suggested" else ThemeColors.CUSTOM_BADGE_BG
         plan_badge_col = ThemeColors.SUGGESTED_BADGE_TEXT if itin.type == "suggested" else ThemeColors.CUSTOM_BADGE_TEXT
@@ -115,51 +114,53 @@ class TripDetailView(ft.Container):
         overview_card = ft.Container(
             content=ft.Column(
                 controls=[
+                    ft.Text("Trip Details", size=16, weight=ft.FontWeight.BOLD, color=ThemeColors.TEXT_BLACK),
                     ft.Row(
                         controls=[
-                            ft.Text(itin.title, size=22, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
-                            ft.Row(
-                                controls=[
-                                    ft.Container(
-                                        content=ft.Text(plan_badge_label, size=10, weight=ft.FontWeight.BOLD, color=plan_badge_col),
-                                        bgcolor=plan_badge_bg,
-                                        border_radius=6,
-                                        padding=ft.Padding.symmetric(horizontal=8, vertical=3),
-                                    ),
-                                    ft.Container(
-                                        content=ft.Text(source_badge, size=10, weight=ft.FontWeight.W_600, color=badge_col),
-                                        bgcolor=badge_bg,
-                                        border_radius=6,
-                                        padding=ft.Padding.symmetric(horizontal=8, vertical=3),
-                                    ),
-                                ],
-                                spacing=6,
+                            ft.Container(
+                                content=ft.Text(plan_badge_label, size=10, weight=ft.FontWeight.BOLD, color=plan_badge_col),
+                                bgcolor=plan_badge_bg,
+                                border_radius=6,
+                                padding=ft.Padding.symmetric(horizontal=8, vertical=3),
                             ),
+                            ft.Text(f"₱{itin.daily_budget:,.0f}/day", size=13, weight=ft.FontWeight.W_600, color=ThemeColors.TEXT_MUTED_LIGHT),
                         ],
                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     ),
-                    ft.Text(
-                        f"Destination: {itin.destination} • {itin.date_range_display} • {len(itin.days)} Days • {itin.total_stops} Total Stops",
-                        size=13,
-                        color=ThemeColors.PRIMARY_LIGHT,
+                    ft.Row(
+                        controls=[
+                            ft.Icon(ft.Icons.LOCATION_ON, size=16, color=ThemeColors.PRIMARY_BLUE),
+                            ft.Text(itin.destination, size=14, weight=ft.FontWeight.W_600, color=ThemeColors.TEXT_BLACK),
+                        ],
+                        spacing=6,
                     ),
-                    ft.Text(
-                        f"Total Estimated Cost: ₱{itin.total_estimated_cost:,.2f} (~₱{itin.daily_budget:,.2f} / day target budget)",
-                        size=12,
-                        weight=ft.FontWeight.W_600,
-                        color=ThemeColors.CUSTOM_CARD_BORDER,
+                    ft.Row(
+                        controls=[
+                            ft.Icon(ft.Icons.CALENDAR_TODAY, size=14, color=ThemeColors.TEXT_MUTED_LIGHT),
+                            ft.Text(itin.date_range_display, size=12, color=ThemeColors.TEXT_MUTED_LIGHT),
+                        ],
+                        spacing=6,
+                    ),
+                    ft.Container(
+                        content=ft.Text(
+                            f"{len(itin.days)} Days & {max(0, len(itin.days) - 1)} Nights • {itin.total_stops} Total Stops",
+                            size=11,
+                            weight=ft.FontWeight.W_600,
+                            color=ThemeColors.PRIMARY_BLUE,
+                        ),
+                        bgcolor=ThemeColors.PRIMARY_LIGHT,
+                        border_radius=6,
+                        padding=ft.Padding.symmetric(horizontal=8, vertical=4),
                     ),
                 ],
-                spacing=4,
+                spacing=8,
             ),
-            gradient=ft.LinearGradient(
-                begin=ft.Alignment(0, -1),
-                end=ft.Alignment(0, 1),
-                colors=[ThemeColors.NAVY_GRADIENT_START, ThemeColors.NAVY_GRADIENT_END],
-            ),
+            bgcolor=ft.Colors.WHITE,
+            border=ft.Border.all(1.2, ThemeColors.BORDER_LIGHT),
             border_radius=16,
-            padding=20,
+            padding=18,
             margin=ft.Margin.only(bottom=10),
+            shadow=ft.BoxShadow(blur_radius=10, color=ft.Colors.with_opacity(0.06, "#000000")),
         )
 
         # Verified Estimated Costs Badge
@@ -290,25 +291,13 @@ class TripDetailView(ft.Container):
                     StopCard(
                         item=item,
                         editable=False,
-                        on_click=lambda itm: show_place_detail_dialog(self.safe_page, itm.place, on_navigate=self.on_navigate) if (itm.place and self.safe_page) else None,
+                        on_click=lambda itm: show_place_detail_dialog(
+                            self.safe_page,
+                            itm.place,
+                            on_navigate=self.on_navigate,
+                            show_add_actions=False,
+                        ) if (itm.place and self.safe_page) else None,
                     )
-                )
-
-            # Route Metrics Banner
-            hrs = total_day_mins // 60
-            rem_mins = total_day_mins % 60
-            time_display = f"{hrs}h {rem_mins}m" if hrs > 0 else f"{rem_mins} mins"
-
-            map_link_btn = ft.Container()
-            if gmaps_url:
-                map_link_btn = ft.FilledButton(
-                    content="🗺️ Open Route in Google Maps",
-                    url=gmaps_url,
-                    style=ft.ButtonStyle(
-                        bgcolor=ThemeColors.PRIMARY_BLUE,
-                        color=ft.Colors.WHITE,
-                        shape=ft.RoundedRectangleBorder(radius=8),
-                    ),
                 )
 
             route_banner = ItineraryRouteMap(
@@ -326,21 +315,104 @@ class TripDetailView(ft.Container):
                 )
             )
 
+        # Active Day Header Actions: In-App Nav and Google Maps
+        in_app_nav_btn = ft.FilledButton(
+            content=ft.Row(
+                controls=[
+                    ft.Icon(ft.Icons.NEAR_ME, size=14, color=ft.Colors.WHITE),
+                    ft.Text("In-App Nav", size=11, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
+                ],
+                spacing=4,
+            ),
+            style=ft.ButtonStyle(bgcolor=ThemeColors.PRIMARY_BLUE, shape=ft.RoundedRectangleBorder(radius=8)),
+            on_click=lambda _: self._launch_in_app_nav(active_day),
+        )
+
+        gmaps_btn = ft.OutlinedButton(
+            content=ft.Row(
+                controls=[
+                    ft.Icon(ft.Icons.OPEN_IN_NEW, size=14, color=ThemeColors.PRIMARY_BLUE),
+                    ft.Text("Google Maps", size=11, weight=ft.FontWeight.BOLD, color=ThemeColors.PRIMARY_BLUE),
+                ],
+                spacing=4,
+            ),
+            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
+            url=gmaps_url,
+        )
+
         day_header = ft.Row(
             controls=[
-                ft.Text(
-                    f"{active_day.display_title if active_day else 'Day'} — {active_day.travel_date if active_day else ''}",
-                    size=16,
-                    weight=ft.FontWeight.BOLD,
+                ft.Column(
+                    controls=[
+                        ft.Text(f"Day {active_day.day_number if active_day else 1}", size=18, weight=ft.FontWeight.BOLD),
+                        ft.Text(f"{active_day.travel_date if active_day else ''}", size=11, color=ThemeColors.TEXT_MUTED_LIGHT),
+                    ],
+                    spacing=2,
                 ),
-                ft.Text(
-                    f"Day Estimated Cost: ~₱{active_day.total_day_cost:,.2f}" if active_day else "",
-                    size=12,
-                    weight=ft.FontWeight.W_600,
-                    color=ThemeColors.EMERALD_PRIMARY,
-                ),
+                ft.Row(controls=[in_app_nav_btn, gmaps_btn], spacing=8),
             ],
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+        )
+
+        # Explore Nearby Places Quick-Add Banner
+        nearby_banner = ft.Container(
+            content=ft.Row(
+                controls=[
+                    ft.Container(
+                        content=ft.Icon(ft.Icons.STOREFRONT_OUTLINED, size=20, color=ThemeColors.PRIMARY_BLUE),
+                        bgcolor=ThemeColors.PRIMARY_LIGHT,
+                        border_radius=8,
+                        padding=8,
+                    ),
+                    ft.Column(
+                        controls=[
+                            ft.Text("Explore Nearby Places", size=13, weight=ft.FontWeight.BOLD, color=ThemeColors.TEXT_BLACK),
+                            ft.Text("Add local dining, clinics, or convenience stores", size=11, color=ThemeColors.TEXT_MUTED_LIGHT),
+                        ],
+                        spacing=1,
+                        expand=True,
+                    ),
+                    ft.Icon(ft.Icons.ARROW_FORWARD_IOS, size=14, color=ThemeColors.TEXT_MUTED_LIGHT),
+                ],
+                spacing=12,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            ),
+            bgcolor=ThemeColors.SURFACE_LIGHT,
+            border=ft.Border.all(1.2, ThemeColors.BORDER_LIGHT),
+            border_radius=12,
+            padding=ft.Padding.symmetric(horizontal=14, vertical=12),
+            margin=ft.Margin.only(top=10, bottom=10),
+            ink=True,
+            on_click=lambda _: self._open_nearby_view(),
+        )
+
+        # Estimated activity expenses footer card
+        total_activity_expenses = sum(
+            float(itm.estimated_cost or 0.0)
+            for d in itin.days
+            for itm in d.items
+        )
+        expenses_text = f"₱{total_activity_expenses:,.2f}" if total_activity_expenses > 0 else "Flexible / Unpriced"
+
+        expenses_card = ft.Container(
+            content=ft.Column(
+                controls=[
+                    ft.Row(
+                        controls=[
+                            ft.Text("Estimated activity expenses", size=13, weight=ft.FontWeight.BOLD),
+                            ft.Text(expenses_text, size=14, weight=ft.FontWeight.BOLD, color=ThemeColors.PRIMARY_BLUE),
+                        ],
+                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    ),
+                    ft.Text("Verified fees from listed destinations. Estimates are editable.", size=11, color=ThemeColors.TEXT_MUTED_LIGHT),
+                ],
+                spacing=4,
+            ),
+            bgcolor=ThemeColors.SURFACE_LIGHT,
+            border=ft.Border.all(1, ThemeColors.BORDER_LIGHT),
+            border_radius=12,
+            padding=14,
+            margin=ft.Margin.only(bottom=16),
         )
 
         return ft.Column(
@@ -356,6 +428,8 @@ class TripDetailView(ft.Container):
                 day_header,
                 ft.Container(height=8),
                 ft.Column(controls=timeline_items, spacing=6),
+                nearby_banner,
+                expenses_card,
             ],
             scroll=ft.ScrollMode.AUTO,
             spacing=0,
@@ -369,6 +443,160 @@ class TripDetailView(ft.Container):
     def _open_in_builder(self) -> None:
         if self.on_navigate:
             self.on_navigate("/builder", trip_data=self.itinerary)
+
+    def _launch_in_app_nav(self, day: Optional[ItineraryDay]) -> None:
+        if self.on_navigate and self.itinerary:
+            day_num = day.day_number if day else 1
+            self.on_navigate(f"/map?itineraryId={self.itinerary.id}&day={day_num}&followRoute=true")
+
+    def _open_nearby_view(self) -> None:
+        self.view_mode = "nearby"
+        self._build_content()
+        self._safe_update()
+
+    def _close_nearby_view(self) -> None:
+        self.view_mode = "detail"
+        self._build_content()
+        self._safe_update()
+
+    def _set_nearby_category(self, cat: str) -> None:
+        self.nearby_category = cat
+        self._build_content()
+        self._safe_update()
+
+    def _add_nearby_to_active_day(self, place: Place) -> None:
+        active_day = self.itinerary.days[self.active_day_index] if self.itinerary.days else None
+        if not active_day:
+            return
+        new_stop = ItineraryItem(
+            place_id=place.id,
+            place=place,
+            day_number=active_day.day_number,
+            order_index=len(active_day.items),
+            duration_minutes=60,
+            travel_mode=self.itinerary.travel_mode or "driving",
+        )
+        active_day.items.append(new_stop)
+        self.itinerary.total_stops = sum(len(d.items) for d in self.itinerary.days)
+        self.is_dirty = True
+        if self.safe_page:
+            show_toast(self.safe_page, f"Added {place.name} to Day {active_day.day_number}!", bgcolor=ThemeColors.SUCCESS)
+        self._close_nearby_view()
+
+    def _build_nearby_view(self) -> ft.Control:
+        active_day = self.itinerary.days[self.active_day_index] if self.itinerary.days else None
+        day_loc = active_day.display_title if active_day else self.itinerary.destination
+
+        back_nav = ft.Row(
+            controls=[
+                ft.TextButton(
+                    content=ft.Row(
+                        controls=[
+                            ft.Icon(ft.Icons.ARROW_BACK, size=16, color=ThemeColors.PRIMARY_BLUE),
+                            ft.Text("Back to Itinerary", size=13, weight=ft.FontWeight.BOLD, color=ThemeColors.PRIMARY_BLUE),
+                        ],
+                        spacing=4,
+                    ),
+                    on_click=lambda _: self._close_nearby_view(),
+                ),
+                ft.Text(f"Nearby Places in {day_loc}", size=16, weight=ft.FontWeight.BOLD),
+            ],
+            spacing=12,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        )
+
+        categories = [
+            ("restaurant", "Restaurants"),
+            ("hospital_clinic", "Hospitals & Clinics"),
+            ("convenience_store", "Convenience Stores"),
+        ]
+
+        cat_chips = []
+        for c_key, c_label in categories:
+            is_act = (self.nearby_category == c_key)
+            cat_chips.append(
+                ft.Container(
+                    content=ft.Text(
+                        c_label,
+                        size=12,
+                        weight=ft.FontWeight.BOLD if is_act else ft.FontWeight.NORMAL,
+                        color=ft.Colors.WHITE if is_act else ThemeColors.TEXT_MAIN_LIGHT,
+                    ),
+                    bgcolor=ThemeColors.PRIMARY_BLUE if is_act else ThemeColors.SURFACE_LIGHT,
+                    border=ft.Border.all(1, ThemeColors.PRIMARY_BLUE if is_act else ThemeColors.BORDER_LIGHT),
+                    border_radius=12,
+                    padding=ft.Padding.symmetric(horizontal=14, vertical=6),
+                    ink=True,
+                    on_click=lambda _, k=c_key: self._set_nearby_category(k),
+                )
+            )
+
+        tabs_row = ft.Row(controls=cat_chips, spacing=8)
+
+        # Places in nearby category
+        all_loaded = self.place_service.get_loaded_places()
+        matching = [p for p in all_loaded if p.category == self.nearby_category]
+        if not matching:
+            matching = [p for p in all_loaded if self.nearby_category in (p.category or "").lower()][:10]
+
+        place_cards = []
+        for p in matching[:15]:
+            place_cards.append(
+                ft.Container(
+                    content=ft.Row(
+                        controls=[
+                            ft.Column(
+                                controls=[
+                                    ft.Text(p.name, size=13, weight=ft.FontWeight.BOLD),
+                                    ft.Text(f"{p.municipality_name or 'Nueva Ecija'} • {p.opening_hours or 'Open Daily'}", size=11, color=ThemeColors.TEXT_MUTED_LIGHT),
+                                ],
+                                spacing=2,
+                                expand=True,
+                            ),
+                            ft.IconButton(
+                                icon=ft.Icons.NEAR_ME_OUTLINED,
+                                icon_size=18,
+                                icon_color=ThemeColors.PRIMARY_BLUE,
+                                tooltip="View in Google Maps",
+                                url=p.directions_url or f"https://www.google.com/maps/search/?api=1&query={p.latitude},{p.longitude}",
+                            ),
+                            ft.IconButton(
+                                icon=ft.Icons.ADD_CIRCLE_OUTLINE,
+                                icon_size=20,
+                                icon_color=ThemeColors.PRIMARY_BLUE,
+                                tooltip=f"Add to Day {active_day.day_number if active_day else 1}",
+                                on_click=lambda _, pl=p: self._add_nearby_to_active_day(pl),
+                            ),
+                        ],
+                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                    ),
+                    bgcolor=ft.Colors.WHITE,
+                    border=ft.Border.all(1, ThemeColors.BORDER_LIGHT),
+                    border_radius=12,
+                    padding=12,
+                )
+            )
+
+        if not place_cards:
+            place_cards.append(
+                ft.Container(
+                    content=ft.Text("No nearby venues found in this category.", size=12, color=ThemeColors.TEXT_MUTED_LIGHT),
+                    padding=20,
+                )
+            )
+
+        return ft.Column(
+            controls=[
+                back_nav,
+                ft.Container(height=8),
+                tabs_row,
+                ft.Container(height=12),
+                ft.Column(controls=place_cards, spacing=8),
+            ],
+            scroll=ft.ScrollMode.AUTO,
+            spacing=0,
+        )
 
     def _build_edit_mode(self) -> ft.Control:
         itin = self.itinerary

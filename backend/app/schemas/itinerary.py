@@ -120,9 +120,21 @@ class ItineraryItemCreate(ItineraryItemBase):
                     except (ValueError, TypeError):
                         pass
 
-        # Coerce place_id if string
+        # Coerce place_id if string and preserve non-UUID id in place_payload
         if "place_id" in out:
-            out["place_id"] = _safe_parse_uuid(out["place_id"])
+            raw_pid = out["place_id"]
+            if raw_pid is not None and raw_pid != "":
+                parsed_u = _safe_parse_uuid(raw_pid)
+                if parsed_u is None:
+                    # Non-UUID string (e.g. 'dest-minalungao' or 'osm-node-123'):
+                    # preserve inside place_payload so backend can resolve/create it
+                    payload = dict(out.get("place_payload") or {})
+                    if not payload.get("id"):
+                        payload["id"] = str(raw_pid)
+                    out["place_payload"] = payload
+                out["place_id"] = parsed_u
+            else:
+                out["place_id"] = None
 
         return out
 

@@ -80,6 +80,7 @@ def main(page: ft.Page) -> None:
 
     current_route = "/welcome"
     selected_trip: Optional[Itinerary] = None
+    previous_route: str = "/saved"
     cached_views: dict[str, ft.Control] = {}
 
     # App Shell Structure
@@ -135,7 +136,7 @@ def main(page: ft.Page) -> None:
         preserve_profile_subview: Optional[str] = None,
     ) -> None:
         """Central navigation dispatcher managing route state and shell chrome."""
-        nonlocal current_route, selected_trip
+        nonlocal current_route, selected_trip, previous_route
 
         # Guard against Place passed positionally as 2nd argument (BUG-NEW-03)
         if isinstance(trip_data, Place):
@@ -145,6 +146,9 @@ def main(page: ft.Page) -> None:
         parsed_url = urllib.parse.urlparse(route)
         base_route = parsed_url.path
         query_str = parsed_url.query
+
+        if base_route.startswith("/trips/") and not current_route.startswith("/trips/"):
+            previous_route = "/home" if current_route in ("/home", "/dashboard") else "/saved"
 
         # Explicitly update or clear selected_trip to prevent stale draft leaks (BUG-NEW-02)
         if trip_data is not None:
@@ -275,13 +279,19 @@ def main(page: ft.Page) -> None:
                 # Trip detail view embeds its own back bar
                 workflow_header.visible = False
                 trip_id = base_route.split("/trips/")[1].strip()
-                trip_obj = selected_trip
+                trip_obj = (
+                    selected_trip
+                    if (selected_trip and str(getattr(selected_trip, "id", "")) == str(trip_id))
+                    else None
+                )
                 if not trip_obj:
                     trip_obj = itinerary_service.get_itinerary_or_draft(trip_id)
                 if trip_obj:
+                    selected_trip = trip_obj
+                    back_target = previous_route if previous_route in ("/home", "/dashboard", "/saved") else "/saved"
                     content_area.content = TripDetailView(
                         itinerary=trip_obj,
-                        on_back=lambda: navigate_to("/saved"),
+                        on_back=lambda bt=back_target: navigate_to(bt),
                         on_navigate=navigate_to,
                     )
                 else:
@@ -315,7 +325,7 @@ def main(page: ft.Page) -> None:
                 on_navigate=navigate_to,
                 on_toggle_theme=toggle_theme,
             )
-            if preserve_profile_subview in ("profile", "edit", "settings"):
+            if preserve_profile_subview in ("profile", "edit", "settings", "favorites", "help", "about"):
                 prof_view._subview = preserve_profile_subview
                 prof_view._rebuild()
             content_area.content = prof_view

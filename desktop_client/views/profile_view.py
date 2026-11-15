@@ -66,6 +66,7 @@ class ProfileView(ft.Container):
         # Favorites Subview State
         self._fav_search_query: str = ""
         self._fav_selected_cat: str = "ALL"
+        self._open_faq_index: Optional[int] = 0
 
         self._build_content()
 
@@ -755,6 +756,21 @@ class ProfileView(ft.Container):
             expand=True,
         )
 
+    def _on_fav_search_change(self, val: str) -> None:
+        self._fav_search_query = val
+        self._build_content()
+        self._safe_update()
+
+    def _set_fav_category(self, cat: str) -> None:
+        self._fav_selected_cat = cat
+        self._build_content()
+        self._safe_update()
+
+    def _toggle_faq(self, idx: int) -> None:
+        self._open_faq_index = None if self._open_faq_index == idx else idx
+        self._build_content()
+        self._safe_update()
+
     # =========================================================================
     # VIEW 4: FAVORITES IN-PAGE SUBVIEW
     # =========================================================================
@@ -787,9 +803,60 @@ class ProfileView(ft.Container):
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
         )
 
+        fav_search_field = ft.TextField(
+            hint_text="Search saved places...",
+            prefix_icon=ft.Icons.SEARCH,
+            value=self._fav_search_query,
+            dense=True,
+            border_radius=10,
+            on_change=lambda e: self._on_fav_search_change(e.control.value),
+        )
+
+        categories = [
+            ("ALL", "All Places"),
+            ("nature_park", "Nature & Parks"),
+            ("museum_cultural", "Culture & Heritage"),
+            ("restaurant", "Cafes & Dining"),
+            ("resort_swimming", "Resorts & Stays"),
+            ("farm", "Farm & Agri-Tourism"),
+        ]
+        cat_chips = []
+        for c_key, c_label in categories:
+            is_sel = (self._fav_selected_cat == c_key)
+            cat_chips.append(
+                ft.Container(
+                    content=ft.Text(
+                        c_label,
+                        size=11,
+                        weight=ft.FontWeight.BOLD if is_sel else ft.FontWeight.NORMAL,
+                        color=ft.Colors.WHITE if is_sel else ThemeColors.TEXT_MAIN_LIGHT,
+                    ),
+                    bgcolor=ThemeColors.PRIMARY_BLUE if is_sel else ThemeColors.SURFACE_LIGHT,
+                    border=ft.Border.all(1, ThemeColors.PRIMARY_BLUE if is_sel else ThemeColors.BORDER_LIGHT),
+                    border_radius=12,
+                    padding=ft.Padding.symmetric(horizontal=12, vertical=6),
+                    ink=True,
+                    on_click=lambda _, k=c_key: self._set_fav_category(k),
+                )
+            )
+        category_scroller = ft.Row(controls=cat_chips, spacing=6, scroll=ft.ScrollMode.AUTO)
+
         cards: list[ft.Control] = []
         if filtered:
             for place in filtered:
+                dir_url = place.directions_url or f"https://www.google.com/maps/search/?api=1&query={place.latitude},{place.longitude}"
+                directions_btn = ft.OutlinedButton(
+                    content=ft.Row(
+                        controls=[
+                            ft.Icon(ft.Icons.DIRECTIONS, size=14, color=ThemeColors.PRIMARY_BLUE),
+                            ft.Text("Directions", size=11, weight=ft.FontWeight.W_600, color=ThemeColors.PRIMARY_BLUE),
+                        ],
+                        spacing=4,
+                    ),
+                    style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
+                    url=dir_url,
+                )
+
                 cards.append(
                     ft.Container(
                         bgcolor=ThemeColors.SURFACE_LIGHT,
@@ -815,19 +882,20 @@ class ProfileView(ft.Container):
                                     spacing=2,
                                     expand=True,
                                 ),
+                                directions_btn,
+                                ft.FilledButton(
+                                    content="View Details",
+                                    style=ft.ButtonStyle(bgcolor=ThemeColors.PRIMARY_BLUE, color=ft.Colors.WHITE),
+                                    on_click=lambda _, pl=place: show_place_detail_dialog(self.safe_page, pl, on_navigate=self.on_navigate) if self.safe_page else None,
+                                ),
                                 ft.IconButton(
                                     icon=ft.Icons.FAVORITE,
                                     icon_color=ft.Colors.RED_500,
                                     tooltip="Remove from favorites",
                                     on_click=lambda _, pl=place: self._remove_fav(pl),
                                 ),
-                                ft.FilledButton(
-                                    content="View Details",
-                                    style=ft.ButtonStyle(bgcolor=ThemeColors.PRIMARY_BLUE, color=ft.Colors.WHITE),
-                                    on_click=lambda _, pl=place: show_place_detail_dialog(self.safe_page, pl, on_navigate=self.on_navigate) if self.safe_page else None,
-                                ),
                             ],
-                            spacing=12,
+                            spacing=8,
                         ),
                     )
                 )
@@ -857,7 +925,16 @@ class ProfileView(ft.Container):
             controls=[
                 ft.Container(
                     width=560,
-                    content=ft.Column(controls=[header_row, ft.Container(height=12), *cards], spacing=10),
+                    content=ft.Column(
+                        controls=[
+                            header_row,
+                            fav_search_field,
+                            category_scroller,
+                            ft.Container(height=4),
+                            *cards,
+                        ],
+                        spacing=10,
+                    ),
                 )
             ],
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -876,24 +953,64 @@ class ProfileView(ft.Container):
             ],
             spacing=8,
         )
+
+        faqs = [
+            (
+                "How does the app generate suggested itineraries?",
+                "Our pacing engine analyzes 2,673 provincial points of interest, your selected pacing, daily budget, and starting destination to calculate optimal daily road routes via Open Source Routing Machine (OSRM).",
+            ),
+            (
+                "Can I use the app offline in remote areas?",
+                "Yes! All created itineraries, destination notes, and visited map areas are cached locally so you can travel through the Sierra Madre mountains with confidence.",
+            ),
+            (
+                "What are the emergency provincial hotlines?",
+                "PDRRMO Nueva Ecija: (044) 940 3388\nPNP Nueva Ecija: 117 / (044) 463 0565\nTourism Office: tourism@nuevaecija.gov.ph",
+            ),
+        ]
+
+        faq_controls = []
+        for idx, (q, a) in enumerate(faqs):
+            is_open = (self._open_faq_index == idx)
+            faq_controls.append(
+                ft.Container(
+                    content=ft.Column(
+                        controls=[
+                            ft.Row(
+                                controls=[
+                                    ft.Text(q, size=13, weight=ft.FontWeight.BOLD, expand=True),
+                                    ft.Icon(
+                                        ft.Icons.KEYBOARD_ARROW_UP if is_open else ft.Icons.KEYBOARD_ARROW_DOWN,
+                                        size=18,
+                                        color=ThemeColors.PRIMARY_BLUE,
+                                    ),
+                                ],
+                                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                            ),
+                            ft.Container(
+                                content=ft.Text(a, size=12, color=ThemeColors.TEXT_MUTED_LIGHT),
+                                visible=is_open,
+                                padding=ft.Padding.only(top=6),
+                            ),
+                        ],
+                        spacing=2,
+                    ),
+                    bgcolor=ThemeColors.SURFACE_LIGHT,
+                    border=ft.Border.all(1, ThemeColors.BORDER_LIGHT),
+                    border_radius=12,
+                    padding=14,
+                    ink=True,
+                    on_click=lambda _, i=idx: self._toggle_faq(i),
+                )
+            )
+
         card = ft.Container(
             width=560,
-            bgcolor=ThemeColors.SURFACE_LIGHT,
-            border=ft.Border.all(1, ThemeColors.BORDER_LIGHT),
-            border_radius=20,
-            padding=22,
             content=ft.Column(
-                spacing=12,
+                spacing=10,
                 controls=[
                     ft.Text("Frequently Asked Questions", size=16, weight=ft.FontWeight.W_800),
-                    ft.Text("How does the app generate suggested itineraries?", size=14, weight=ft.FontWeight.BOLD),
-                    ft.Text("Our pacing engine analyzes 2,673 provincial points of interest, your selected pacing, daily budget, and starting destination to calculate optimal daily road routes via Open Source Routing Machine (OSRM).", size=12, color=ThemeColors.TEXT_MUTED_LIGHT),
-                    ft.Divider(color="#f1f5f9", height=1),
-                    ft.Text("Can I use the app offline in remote areas?", size=14, weight=ft.FontWeight.BOLD),
-                    ft.Text("Yes! All created itineraries, destination notes, and visited map areas are cached locally so you can travel through the Sierra Madre mountains with confidence.", size=12, color=ThemeColors.TEXT_MUTED_LIGHT),
-                    ft.Divider(color="#f1f5f9", height=1),
-                    ft.Text("What are the emergency provincial hotlines?", size=14, weight=ft.FontWeight.BOLD),
-                    ft.Text("PDRRMO Nueva Ecija: (044) 940 3388\nPNP Nueva Ecija: 117 / (044) 463 0565\nTourism Office: tourism@nuevaecija.gov.ph", size=12, color=ThemeColors.TEXT_MUTED_LIGHT),
+                    *faq_controls,
                 ],
             ),
         )

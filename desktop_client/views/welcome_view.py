@@ -76,27 +76,6 @@ class WelcomeView(ft.Container):
             self._build_standard_welcome_content(brand_row, palette)
 
     def _build_standard_welcome_content(self, brand_row: ft.Row, palette: ThemePalette) -> None:
-        # Hero Illustration: Skyscrapers in organic blob frame
-        skyscraper_asset = self.settings.get_asset_path("logout_skyscrapers_blob.png")
-        blob_frame = ft.Container(
-            content=ft.Image(
-                src=skyscraper_asset,
-                width=240,
-                height=130,
-                fit=ft.BoxFit.CONTAIN,
-                error_content=ft.Container(
-                    width=220,
-                    height=120,
-                    bgcolor=ThemeColors.PRIMARY_LIGHT,
-                    border_radius=30,
-                    alignment=ft.Alignment(0, 0),
-                    content=ft.Icon(ft.Icons.LOCATION_CITY, size=48, color=ThemeColors.PRIMARY_BLUE),
-                ),
-            ),
-            alignment=ft.Alignment(0, 0),
-            margin=ft.Margin.only(top=4, bottom=8),
-        )
-
         hero_headline = ft.Text(
             "Your next adventure\nis waiting.",
             size=30,
@@ -189,7 +168,6 @@ class WelcomeView(ft.Container):
             content=ft.Column(
                 controls=[
                     brand_row,
-                    blob_frame,
                     hero_headline,
                     hero_subtitle,
                     ft.Container(height=16),

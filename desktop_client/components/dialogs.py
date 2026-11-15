@@ -40,15 +40,34 @@ def dismiss_dialog(page: ft.Page, dialog: Optional[ft.AlertDialog] = None) -> No
             pass
 
 
+def open_overlay_dialog(page: Optional[ft.Page], dialog: ft.AlertDialog) -> None:
+    if not page:
+        return
+    present_dialog(page, dialog)
+
+
+def close_overlay_dialog(page: Optional[ft.Page], dialog: Optional[ft.AlertDialog] = None) -> None:
+    if not page:
+        return
+    dismiss_dialog(page, dialog)
+
+
 _present_dialog = present_dialog
 _dismiss_dialog = dismiss_dialog
 
 
-def show_toast(page: Optional[ft.Page], message: str, is_error: bool = False) -> None:
+def show_toast(
+    page: Optional[ft.Page],
+    message: str,
+    is_error: bool = False,
+    bgcolor: Optional[str] = None,
+    text_color: str = "#FFFFFF",
+    duration: int = 2800,
+) -> None:
     """Display a non-blocking toast notification compatible with Flet 1.1.2."""
     if page is None:
         return
-    bg = "#DC2626" if is_error else "#0F172A"
+    bg = bgcolor or ("#DC2626" if is_error else "#0F172A")
     snack = ft.SnackBar(
         content=ft.Row(
             spacing=10,
@@ -56,23 +75,27 @@ def show_toast(page: Optional[ft.Page], message: str, is_error: bool = False) ->
             controls=[
                 ft.Icon(
                     ft.Icons.ERROR_OUTLINE_ROUNDED if is_error else ft.Icons.CHECK_CIRCLE_ROUNDED,
-                    color="#FFFFFF",
+                    color=text_color,
                     size=18,
                 ),
-                ft.Text(message, size=13, weight=ft.FontWeight.W_600, color="#FFFFFF"),
+                ft.Text(message, size=13, weight=ft.FontWeight.W_600, color=text_color),
             ],
         ),
         bgcolor=bg,
-        duration=2800,
+        duration=duration,
         behavior=ft.SnackBarBehavior.FLOATING,
         margin=ft.Margin.all(16),
     )
     try:
-        page.overlay.append(snack)
-        snack.open = True
-        page.update()
+        page.show_dialog(snack)
     except Exception:
-        pass
+        try:
+            if snack not in page.overlay:
+                page.overlay.append(snack)
+            snack.open = True
+            page.update()
+        except Exception:
+            pass
 
 
 def show_place_detail_dialog(
@@ -81,6 +104,7 @@ def show_place_detail_dialog(
     on_add_to_day: Optional[Callable[[Place], None]] = None,
     on_navigate: Optional[Callable[..., None]] = None,
     on_add_to_trip: Optional[Callable[[Place], None]] = None,
+    show_add_actions: bool = True,
 ) -> None:
     """Displays comprehensive place modal with editorial summary, honest pricing,
     operating hours, commute guide, favorites toggle, and action CTAs.
@@ -291,10 +315,84 @@ def show_place_detail_dialog(
         )
         commute_section.append(commute_box)
 
+    # Provenance Badge & Rating Row
+    meta_badges: list[ft.Control] = []
+    prov_text = "🛡️ Google Verified POI" if (getattr(place, "google_place_id", None) or place.rating) else "Verified Destination"
+    meta_badges.append(
+        ft.Container(
+            content=ft.Row(
+                controls=[
+                    ft.Icon(ft.Icons.VERIFIED, size=13, color=ThemeColors.PRIMARY_BLUE),
+                    ft.Text(prov_text, size=11, weight=ft.FontWeight.BOLD, color=ThemeColors.PRIMARY_BLUE),
+                ],
+                spacing=4,
+            ),
+            bgcolor=ThemeColors.PRIMARY_LIGHT,
+            border_radius=6,
+            padding=ft.Padding.symmetric(horizontal=8, vertical=3),
+        )
+    )
+
+    if place.rating:
+        meta_badges.append(
+            ft.Row(
+                controls=[
+                    ft.Icon(ft.Icons.STAR_ROUNDED, size=16, color="#f59e0b"),
+                    ft.Text(f"{place.rating:.1f}", size=12, weight=ft.FontWeight.BOLD, color=ThemeColors.TEXT_BLACK),
+                    ft.Text(f"({place.user_rating_count or 0:,} reviews)", size=11, color=ThemeColors.TEXT_MUTED_LIGHT),
+                ],
+                spacing=4,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            )
+        )
+
+    provenance_row = ft.Row(controls=meta_badges, spacing=8, vertical_alignment=ft.CrossAxisAlignment.CENTER)
+
+    # Tags Wrap
+    tags_section: list[ft.Control] = []
+    if place.tags:
+        tag_chips = [
+            ft.Container(
+                content=ft.Text(f"#{t}", size=10, weight=ft.FontWeight.W_600, color=ThemeColors.PRIMARY_BLUE),
+                bgcolor=ThemeColors.PRIMARY_LIGHT,
+                border_radius=8,
+                padding=ft.Padding.symmetric(horizontal=8, vertical=3),
+            )
+            for t in place.tags[:6]
+        ]
+        tags_section.append(ft.Row(controls=tag_chips, spacing=6, wrap=True))
+
+    # Photo Gallery Strip
+    photo_gallery_section: list[ft.Control] = []
+    if place.photos and len(place.photos) > 1:
+        thumbs = []
+        for p in place.photos[:5]:
+            p_url = p.get("url") or p.get("photo_url") or p.get("name")
+            if p_url:
+                thumbs.append(
+                    ft.Container(
+                        content=ft.Image(src=p_url, width=72, height=52, fit=ft.BoxFit.COVER, border_radius=8),
+                        border_radius=8,
+                        border=ft.Border.all(1, ThemeColors.BORDER_LIGHT),
+                    )
+                )
+        if thumbs:
+            photo_gallery_section.append(
+                ft.Column(
+                    controls=[
+                        ft.Text("Photo Gallery", size=12, weight=ft.FontWeight.BOLD),
+                        ft.Row(controls=thumbs, spacing=6, scroll=ft.ScrollMode.AUTO),
+                    ],
+                    spacing=4,
+                )
+            )
+
     content_column = ft.Column(
         controls=[
             hero_stack,
             ft.Container(height=4),
+            provenance_row,
+            ft.Container(height=2),
             ft.Row(
                 controls=[
                     ft.Text(place.name, size=18, weight=ft.FontWeight.BOLD, expand=True),
@@ -307,8 +405,10 @@ def show_place_detail_dialog(
                 ],
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
             ),
+            *tags_section,
             ft.Divider(height=1, color=ThemeColors.BORDER_LIGHT),
             ft.Column(controls=info_rows, spacing=6),
+            *photo_gallery_section,
             ft.Divider(height=1, color=ThemeColors.BORDER_LIGHT),
             ft.Text("About this Destination", size=13, weight=ft.FontWeight.BOLD),
             ft.Text(description_text, size=12, color=ThemeColors.TEXT_MUTED_LIGHT),
@@ -320,31 +420,31 @@ def show_place_detail_dialog(
     )
 
     actions: list[ft.Control] = []
-    if on_navigate:
+    if show_add_actions:
+        if on_navigate:
+            actions.append(
+                ft.FilledButton(
+                    content="✨ Start Trip Here",
+                    style=ft.ButtonStyle(
+                        bgcolor=ThemeColors.PRIMARY_BLUE,
+                        color=ft.Colors.WHITE,
+                        shape=ft.RoundedRectangleBorder(radius=10),
+                    ),
+                    on_click=handle_start_trip,
+                )
+            )
         actions.append(
             ft.FilledButton(
-                content="✨ Start Trip Here",
+                content="+ Add to Trip",
+                icon=ft.Icons.ADD,
                 style=ft.ButtonStyle(
-                    bgcolor=ThemeColors.PRIMARY_BLUE,
+                    bgcolor=ThemeColors.AZURE_DEEP,
                     color=ft.Colors.WHITE,
                     shape=ft.RoundedRectangleBorder(radius=10),
                 ),
-                on_click=handle_start_trip,
+                on_click=handle_add,
             )
         )
-
-    actions.append(
-        ft.FilledButton(
-            content="+ Add to Trip",
-            icon=ft.Icons.ADD,
-            style=ft.ButtonStyle(
-                bgcolor=ThemeColors.AZURE_DEEP,
-                color=ft.Colors.WHITE,
-                shape=ft.RoundedRectangleBorder(radius=10),
-            ),
-            on_click=handle_add,
-        )
-    )
 
     if place.directions_url:
         actions.append(
@@ -611,10 +711,28 @@ def show_export_dialog(page: ft.Page, itinerary: Itinerary) -> None:
         status_label.visible = True
         page.update()
 
+    def copy_text_summary(_):
+        summary = export_to_text(itinerary)
+        try:
+            page.set_clipboard(summary)
+        except Exception:
+            pass
+        status_label.value = "Itinerary summary copied to clipboard!"
+        status_label.visible = True
+        show_toast(page, "Itinerary summary copied to clipboard!", bgcolor=ThemeColors.SUCCESS)
+        page.update()
+
     content_box = ft.Column(
         controls=[
             ft.Text("Export your travel itinerary to take offline or sync with your calendar:", size=12, color=ThemeColors.TEXT_MUTED_LIGHT),
             ft.Container(height=6),
+            ft.FilledButton(
+                content="📋 Copy Text Summary to Clipboard",
+                icon=ft.Icons.CONTENT_COPY,
+                style=ft.ButtonStyle(bgcolor=ThemeColors.PRIMARY_BLUE, color=ft.Colors.WHITE),
+                on_click=copy_text_summary,
+                width=float("inf"),
+            ),
             ft.FilledButton(
                 content="Export as iCalendar (.ics) for Google/Apple Calendar",
                 icon=ft.Icons.CALENDAR_MONTH,

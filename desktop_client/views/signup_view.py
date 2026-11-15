@@ -5,6 +5,7 @@ import re
 from typing import Callable, Optional
 import flet as ft
 
+from desktop_client.components.dialogs import close_overlay_dialog, open_overlay_dialog, show_toast
 from desktop_client.config.settings import ThemeColors, get_settings
 from desktop_client.core.api_client import ApiClientError
 from desktop_client.services.auth_service import get_auth_service
@@ -109,16 +110,14 @@ class SignupView(ft.Container):
             border_radius=12,
             border_color=ThemeColors.BORDER_LIGHT,
             focused_border_color=ThemeColors.PRIMARY_BLUE,
-            expand=True,
             dense=True,
             autofocus=True,
             on_change=_on_name_change,
         )
 
         self.mi_input = ft.TextField(
-            label="M.I.",
-            hint_text="C.",
-            width=70,
+            label="Middle Initial (if applicable)",
+            hint_text="e.g. C.",
             border_radius=12,
             border_color=ThemeColors.BORDER_LIGHT,
             focused_border_color=ThemeColors.PRIMARY_BLUE,
@@ -133,11 +132,6 @@ class SignupView(ft.Container):
             focused_border_color=ThemeColors.PRIMARY_BLUE,
             dense=True,
             on_change=_on_name_change,
-        )
-
-        name_row = ft.Row(
-            controls=[self.first_name_input, self.mi_input],
-            spacing=8,
         )
 
         self.username_input = ft.TextField(
@@ -242,6 +236,51 @@ class SignupView(ft.Container):
             spacing=4,
         )
 
+        # Centered "or" Divider
+        or_divider = ft.Row(
+            controls=[
+                ft.Container(height=1, bgcolor=ThemeColors.BORDER_LIGHT, expand=True),
+                ft.Text("or", size=12, color=ThemeColors.TEXT_MUTED_LIGHT),
+                ft.Container(height=1, bgcolor=ThemeColors.BORDER_LIGHT, expand=True),
+            ],
+            spacing=10,
+            alignment=ft.MainAxisAlignment.CENTER,
+        )
+
+        google_btn = ft.Container(
+            content=ft.Row(
+                controls=[
+                    ft.Image(src="assets/images/google_logo.png", width=18, height=18),
+                    ft.Text("Continue with Google", size=13, weight=ft.FontWeight.W_600, color=ThemeColors.TEXT_MAIN_LIGHT),
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
+                spacing=8,
+            ),
+            border=ft.Border.all(1.2, ThemeColors.BORDER_LIGHT),
+            border_radius=24,
+            height=44,
+            alignment=ft.Alignment(0, 0),
+            ink=True,
+            on_click=lambda _: self._show_social_notice("Google Sign-In"),
+        )
+
+        apple_btn = ft.Container(
+            content=ft.Row(
+                controls=[
+                    ft.Icon(ft.Icons.APPLE, size=20, color=ft.Colors.BLACK),
+                    ft.Text("Continue with Apple", size=13, weight=ft.FontWeight.W_600, color=ThemeColors.TEXT_MAIN_LIGHT),
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
+                spacing=8,
+            ),
+            border=ft.Border.all(1.2, ThemeColors.BORDER_LIGHT),
+            border_radius=24,
+            height=44,
+            alignment=ft.Alignment(0, 0),
+            ink=True,
+            on_click=lambda _: self._show_social_notice("Apple Sign-In"),
+        )
+
         card = ft.Container(
             content=ft.Column(
                 controls=[
@@ -251,7 +290,8 @@ class SignupView(ft.Container):
                     heading_group,
                     self.error_container,
                     ft.Container(height=2),
-                    name_row,
+                    self.first_name_input,
+                    self.mi_input,
                     self.last_name_input,
                     self.username_input,
                     self.email_input,
@@ -261,6 +301,10 @@ class SignupView(ft.Container):
                     self.submit_btn,
                     ft.Container(height=4),
                     footer_links,
+                    ft.Container(height=2),
+                    or_divider,
+                    google_btn,
+                    apple_btn,
                 ],
                 spacing=8,
                 width=420,
@@ -339,6 +383,9 @@ class SignupView(ft.Container):
         self._clear_error()
 
         async def _do_signup():
+            self.submit_btn.content = ft.ProgressRing(width=20, height=20, stroke_width=2.5, color=ft.Colors.WHITE)
+            self.submit_btn.disabled = True
+            self._safe_update()
             try:
                 await self.auth_service.register(
                     email=email,
@@ -357,6 +404,10 @@ class SignupView(ft.Container):
                 self._show_error(err.message or "Registration failed. Try another email or username.")
             except Exception as ex:
                 self._show_error(f"Error connecting to service: {str(ex)}")
+            finally:
+                self.submit_btn.content = ft.Text("Sign Up", size=15, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE)
+                self.submit_btn.disabled = False
+                self._safe_update()
 
         if self.safe_page:
             self.safe_page.run_task(_do_signup)
@@ -366,6 +417,10 @@ class SignupView(ft.Container):
                 loop.create_task(_do_signup())
             except RuntimeError:
                 asyncio.run(_do_signup())
+
+    def _show_social_notice(self, provider: str) -> None:
+        if self.safe_page:
+            show_toast(self.safe_page, f"{provider} is disabled in this pilot build.", bgcolor="#334155")
 
     @property
     def safe_page(self) -> Optional[ft.Page]:

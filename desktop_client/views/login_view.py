@@ -4,6 +4,7 @@ import asyncio
 from typing import Callable, Optional
 import flet as ft
 
+from desktop_client.components.dialogs import close_overlay_dialog, open_overlay_dialog, show_toast
 from desktop_client.config.settings import ThemeColors, get_settings
 from desktop_client.core.api_client import ApiClientError
 from desktop_client.services.auth_service import get_auth_service
@@ -151,6 +152,51 @@ class LoginView(ft.Container):
             on_click=lambda _: self._handle_login(),
         )
 
+        # Centered "or" Divider
+        or_divider = ft.Row(
+            controls=[
+                ft.Container(height=1, bgcolor=ThemeColors.BORDER_LIGHT, expand=True),
+                ft.Text("or", size=12, color=ThemeColors.TEXT_MUTED_LIGHT),
+                ft.Container(height=1, bgcolor=ThemeColors.BORDER_LIGHT, expand=True),
+            ],
+            spacing=10,
+            alignment=ft.MainAxisAlignment.CENTER,
+        )
+
+        google_btn = ft.Container(
+            content=ft.Row(
+                controls=[
+                    ft.Image(src="assets/images/google_logo.png", width=18, height=18),
+                    ft.Text("Continue with Google", size=13, weight=ft.FontWeight.W_600, color=ThemeColors.TEXT_MAIN_LIGHT),
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
+                spacing=8,
+            ),
+            border=ft.Border.all(1.2, ThemeColors.BORDER_LIGHT),
+            border_radius=24,
+            height=44,
+            alignment=ft.Alignment(0, 0),
+            ink=True,
+            on_click=lambda _: self._show_social_notice("Google Sign-In"),
+        )
+
+        apple_btn = ft.Container(
+            content=ft.Row(
+                controls=[
+                    ft.Icon(ft.Icons.APPLE, size=20, color=ft.Colors.BLACK),
+                    ft.Text("Continue with Apple", size=13, weight=ft.FontWeight.W_600, color=ThemeColors.TEXT_MAIN_LIGHT),
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
+                spacing=8,
+            ),
+            border=ft.Border.all(1.2, ThemeColors.BORDER_LIGHT),
+            border_radius=24,
+            height=44,
+            alignment=ft.Alignment(0, 0),
+            ink=True,
+            on_click=lambda _: self._show_social_notice("Apple Sign-In"),
+        )
+
         footer_links = ft.Row(
             controls=[
                 ft.Text("Don't have an account?", size=13, color=ThemeColors.TEXT_MUTED_LIGHT),
@@ -175,12 +221,16 @@ class LoginView(ft.Container):
                     self.email_input,
                     self.password_input,
                     options_row,
-                    ft.Container(height=6),
+                    ft.Container(height=4),
                     self.submit_btn,
-                    ft.Container(height=6),
+                    ft.Container(height=2),
+                    or_divider,
+                    google_btn,
+                    apple_btn,
+                    ft.Container(height=4),
                     footer_links,
                 ],
-                spacing=10,
+                spacing=8,
                 width=420,
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             ),
@@ -237,6 +287,9 @@ class LoginView(ft.Container):
         self._clear_error()
 
         async def _do_login():
+            self.submit_btn.content = ft.ProgressRing(width=20, height=20, stroke_width=2.5, color=ft.Colors.WHITE)
+            self.submit_btn.disabled = True
+            self._safe_update()
             try:
                 await self.auth_service.login(email, pwd, remember_me=self.remember_cb.value or False)
                 try:
@@ -248,6 +301,10 @@ class LoginView(ft.Container):
                 self._show_error(err.message or "Login failed. Check your credentials.")
             except Exception as ex:
                 self._show_error(f"Error connecting to service: {str(ex)}")
+            finally:
+                self.submit_btn.content = ft.Text("Log In", size=15, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE)
+                self.submit_btn.disabled = False
+                self._safe_update()
 
         if self.safe_page:
             self.safe_page.run_task(_do_login)
@@ -257,6 +314,10 @@ class LoginView(ft.Container):
                 loop.create_task(_do_login())
             except RuntimeError:
                 asyncio.run(_do_login())
+
+    def _show_social_notice(self, provider: str) -> None:
+        if self.safe_page:
+            show_toast(self.safe_page, f"{provider} is disabled in this pilot build.", bgcolor="#334155")
 
     @property
     def safe_page(self) -> Optional[ft.Page]:
@@ -281,8 +342,7 @@ class LoginView(ft.Container):
             dlg.update()
 
         def _close(_):
-            dlg.open = False
-            self.page.update()
+            close_overlay_dialog(self.page, dlg)
 
         dlg = ft.AlertDialog(
             title=ft.Row([ft.Icon(ft.Icons.LOCK_RESET, color=ThemeColors.PRIMARY_BLUE), ft.Text("Reset Password", size=18, weight=ft.FontWeight.BOLD)]),
@@ -305,10 +365,7 @@ class LoginView(ft.Container):
                 ),
             ],
         )
-        if self.page:
-            self.page.overlay.append(dlg)
-            dlg.open = True
-            self.page.update()
+        open_overlay_dialog(self.page, dlg)
 
     def _navigate(self, route: str) -> None:
         if self.on_navigate:

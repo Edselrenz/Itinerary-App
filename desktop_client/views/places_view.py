@@ -16,7 +16,7 @@ from typing import Any, Callable, Optional
 import urllib.parse
 import flet as ft
 
-from desktop_client.components.dialogs import show_place_detail_dialog
+from desktop_client.components.dialogs import show_place_detail_dialog, show_toast
 from desktop_client.components.place_card import PlaceCard
 from desktop_client.components.slippy_map_canvas import RouteStopPin, SlippyMapCanvas
 from desktop_client.config.settings import CANONICAL_CATEGORIES, NUEVA_ECIJA_LGUS, ThemeColors
@@ -79,6 +79,7 @@ class PlacesView(ft.Container):
 
         # Route / Follow-Route Mode State
         self.is_follow_route_mode = False
+        self._active_route_stop_index: Optional[int] = None
         self.show_nearby_pois_in_route = False
         self.active_day_number = 1
         self.route_itinerary: Optional[Itinerary] = None
@@ -302,6 +303,7 @@ class PlacesView(ft.Container):
             height=768,
             places=places_to_show,
             route_stops=route_stops,
+            active_stop_index=self._active_route_stop_index,
             on_place_click=self._handle_place_pin_click,
             on_stop_click=self._handle_stop_pin_click,
             border_radius=0,
@@ -782,16 +784,23 @@ class PlacesView(ft.Container):
             lat = (p.latitude if p and p.latitude else None) or itm.custom_lat
             lng = (p.longitude if p and p.longitude else None) or itm.custom_lng
 
+            is_active = (self._active_route_stop_index == idx)
+            card_border = (
+                ft.Border.all(2, ThemeColors.PRIMARY_BLUE)
+                if is_active
+                else ft.Border.all(1, ThemeColors.BORDER_LIGHT)
+            )
+
             cards.append(
                 ft.Container(
                     width=210,
                     bgcolor=ft.Colors.WHITE,
-                    border=ft.Border.all(1, ThemeColors.BORDER_LIGHT),
+                    border=card_border,
                     border_radius=12,
                     padding=ft.Padding.all(10),
                     shadow=ft.BoxShadow(blur_radius=6, color=ft.Colors.with_opacity(0.1, "#0f172a")),
                     ink=True,
-                    on_click=lambda _, lt=lat, lg=lng, pl=p: self._pan_to_stop(lt, lg, pl),
+                    on_click=lambda _, lt=lat, lg=lng, pl=p, i=idx: self._pan_to_stop(lt, lg, pl, i),
                     content=ft.Column(
                         controls=[
                             ft.Row(
@@ -880,12 +889,16 @@ class PlacesView(ft.Container):
             )
 
     def _handle_stop_pin_click(self, idx: int, stop: RouteStopPin) -> None:
+        self._active_route_stop_index = idx
+        if self.map_component:
+            self.map_component.set_route(self.map_component.route_stops, active_stop_index=idx)
         if stop.place and self.safe_page:
             show_place_detail_dialog(
                 self.safe_page,
                 stop.place,
                 on_navigate=self.on_navigate,
             )
+        self._safe_update()
 
     def _focus_place_and_open_dialog(self, place: Place) -> None:
         if place.latitude and place.longitude and self.map_component:
@@ -897,11 +910,16 @@ class PlacesView(ft.Container):
         if self.on_navigate:
             self.on_navigate("/builder", None, place)
 
-    def _pan_to_stop(self, lat: Optional[float], lng: Optional[float], place: Optional[Place]) -> None:
+    def _pan_to_stop(self, lat: Optional[float], lng: Optional[float], place: Optional[Place], stop_index: Optional[int] = None) -> None:
+        if stop_index is not None:
+            self._active_route_stop_index = stop_index
+            if self.map_component:
+                self.map_component.set_route(self.map_component.route_stops, active_stop_index=stop_index)
         if lat and lng and self.map_component:
             self.map_component.set_center_and_zoom(float(lat), float(lng), 15)
         if place and self.safe_page:
             self._handle_place_pin_click(place)
+        self._safe_update()
 
     def _on_search_change(self, val: str) -> None:
         self.search_query = val
@@ -963,21 +981,19 @@ class PlacesView(ft.Container):
 
                 if self.safe_page:
                     count = len(self.all_places)
-                    self.safe_page.snack_bar = ft.SnackBar(
-                        content=ft.Text(f"✨ Live OSM: {count:,} places indexed across Nueva Ecija"),
+                    show_toast(
+                        self.safe_page,
+                        f"✨ Live OSM: {count:,} places indexed across Nueva Ecija",
                         bgcolor=ThemeColors.PRIMARY_BLUE,
                         duration=3000,
                     )
-                    self.safe_page.snack_bar.open = True
-                    self.safe_page.update()
             except Exception:
                 if self.safe_page:
-                    self.safe_page.snack_bar = ft.SnackBar(
-                        content=ft.Text(f"Notice: Live refresh completed with {len(self.all_places):,} places cached"),
+                    show_toast(
+                        self.safe_page,
+                        f"Notice: Live refresh completed with {len(self.all_places):,} places cached",
                         duration=2500,
                     )
-                    self.safe_page.snack_bar.open = True
-                    self.safe_page.update()
             finally:
                 self.is_live_refreshing = False
                 self._safe_update()

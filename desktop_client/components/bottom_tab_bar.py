@@ -100,8 +100,11 @@ class BottomTabBar(ft.Container):
     def _handle_tab_click(self, tab: dict) -> None:
         active_key = self._get_active_tab_key()
         if tab["key"] == "map" and active_key == "map":
+            if "followRoute=true" in self.current_route or "itineraryId=" in self.current_route:
+                return
             if self.on_map_tap_when_active:
                 self.on_map_tap_when_active()
+            return
         if self.on_navigate:
             self.on_navigate(tab["target"])
 
