@@ -1362,7 +1362,7 @@ class SuggestedWizardView(ft.Container):
             self.itinerary_service.set_active_draft_itinerary(self.generated_itinerary)
             day_num = self.active_day_index + 1
             if self.on_navigate:
-                self.on_navigate(f"/map?itineraryId=draft&day={day_num}", self.generated_itinerary)
+                self.on_navigate(f"/map?followRoute=true&itineraryId=draft&day={day_num}&dayNumber={day_num}", self.generated_itinerary)
 
     def _reset_wizard(self) -> None:
         self.view_mode = "form"

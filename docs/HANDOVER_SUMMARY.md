@@ -1,10 +1,10 @@
 # Nueva Ecija Travel Itinerary — Master Handover & System Architecture Document
 
 **Application Name**: Nueva Ecija Travel Itinerary (*Trip mo, trip ko*)  
-**Version**: `0.56.0` (Production Windows Desktop + Web PWA + FastAPI Pilot)  
-**Date of Handover**: November 15, 2026  
-**Active Repository Branch**: `feature/flet-desktop-app`  
-**Current Milestone**: **Phase 59 — Desktop Map Fullscreen Auto-Adjust & Carto Watermark Remediation [COMPLETED & VERIFIED]**  
+**Version**: `0.57.0` (Production Windows Desktop + Web PWA + FastAPI Pilot)  
+**Date of Handover**: November 16, 2026  
+**Active Repository Branch**: `main`  
+**Current Milestone**: **Phase 60 — Map Web Parity & Complete UI/UX Remediation (`MAP-QA-01` to `MAP-QA-10`) [COMPLETED & VERIFIED]**  
 
 ---
 
@@ -15,16 +15,16 @@ This document serves as the master onboarding and handoff reference for engineer
 ### Comprehensive Test Suite Status (100% Green)
 | Test Suite | Framework / Tool | Test Cases | Execution Time | Pass Rate | Status |
 | :--- | :--- | :---: | :---: | :---: | :---: |
-| **Native Desktop Client** | Pytest (`desktop_client/tests/`) | **109 / 109** | 14.73s | **100%** | **PASS** |
+| **Native Desktop Client** | Pytest (`desktop_client/tests/`) | **113 / 113** | 16.08s | **100%** | **PASS** |
 | **Angular / Ionic Web App** | Vitest (`Project/src/`) | **348 / 348** | 20.79s | **100%** | **PASS** |
 | **FastAPI Backend** | Pytest (`backend/tests/`) | **21 / 21** | 11.94s | **100%** | **PASS** |
-| **Total Test Matrix** | Unified Test Suite | **478 / 478** | ~47s | **100%** | **ALL GREEN** |
+| **Total Test Matrix** | Unified Test Suite | **482 / 482** | ~48s | **100%** | **ALL GREEN** |
 
 ### Standalone Executable Distribution
 - **Binary Target**: [`dist/NuevaEcijaTravel/NuevaEcijaTravel.exe`](file:///c:/Users/Edward/Desktop/CaseStudy/dist/NuevaEcijaTravel/NuevaEcijaTravel.exe)
-- **File Size**: `16,035,439 bytes` (~15.29 MB binary, 397+ MB complete self-contained bundle with bundled Python runtime, Flet engine, and static assets).
-- **Compilation Tool**: PyInstaller 6.17.0 on Python 3.14 via [`scripts/build_standalone_exe.py`](file:///c:/Users/Edward/Desktop/CaseStudy/scripts/build_standalone_exe.py).
-- **Execution Verification**: Clean cold start, splash screen display with auto-dismiss and click-to-dismiss, interactive dashboard, functional map tab with smooth tile rendering, custom itinerary builder, and settings persistence.
+- **File Size**: `16,056,320 bytes` (~15.31 MB binary, 406+ MB complete self-contained bundle with bundled Python runtime, Flet engine, and static assets).
+- **Compilation Tool**: PyInstaller 6.22.3 on Python 3.14 via [`scripts/build_standalone_exe.py`](file:///c:/Users/Edward/Desktop/CaseStudy/scripts/build_standalone_exe.py).
+- **Execution Verification**: Clean cold start, splash screen display with auto-dismiss and click-to-dismiss, interactive dashboard, functional map tab with smooth tile rendering, teardrop pins matching Web colors, interactive hero cover card bottom sheet, custom itinerary builder, and settings persistence.
 
 ---
 

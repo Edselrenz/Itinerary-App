@@ -925,7 +925,7 @@ class TripDetailView(ft.Container):
     def _open_full_map(self) -> None:
         if self.on_navigate:
             day_num = self.itinerary.days[self.active_day_index].day_number if self.itinerary.days else 1
-            self.on_navigate(f"/map?itineraryId={self.itinerary.id}&day={day_num}", self.itinerary)
+            self.on_navigate(f"/map?followRoute=true&itineraryId={self.itinerary.id}&day={day_num}&dayNumber={day_num}", self.itinerary)
 
     def _save_changes(self) -> None:
         async def _do_save():

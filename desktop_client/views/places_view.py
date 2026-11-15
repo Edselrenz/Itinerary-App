@@ -24,8 +24,9 @@ from desktop_client.components.dialogs import (
 )
 from desktop_client.components.place_card import PlaceCard
 from desktop_client.components.slippy_map_canvas import RouteStopPin, SlippyMapCanvas
-from desktop_client.config.settings import CANONICAL_CATEGORIES, NUEVA_ECIJA_LGUS, ThemeColors
+from desktop_client.config.settings import CANONICAL_CATEGORIES, NUEVA_ECIJA_LGUS, ThemeColors, get_settings
 from desktop_client.core.commute_guide import get_commute_info_for_municipality, get_multi_stop_google_maps_url
+from desktop_client.core.polyline import decode_polyline
 from desktop_client.models.itinerary import Itinerary, ItineraryDay
 from desktop_client.models.place import Municipality, Place
 from desktop_client.services.favorites_service import get_favorites_service
@@ -49,6 +50,7 @@ CATEGORY_ICONS: dict[str, ft.IconData] = {
     "pharmacy": ft.Icons.MEDICATION_OUTLINED,
     "bank_atm": ft.Icons.CREDIT_CARD_OUTLINED,
     "fuel_station": ft.Icons.LOCAL_GAS_STATION_OUTLINED,
+    "public_facility": ft.Icons.FLAG_OUTLINED,
     "viewpoint": ft.Icons.VISIBILITY_OUTLINED,
 }
 
@@ -104,7 +106,7 @@ class PlacesView(ft.Container):
         self._check_and_init_route_mode()
 
         self.all_places: list[Place] = self.place_service.get_loaded_places()
-        self.filtered_places: list[Place] = list(self.all_places)
+        self._apply_filters()
 
         self.map_component: Optional[SlippyMapCanvas] = None
         self._build_content()
@@ -134,11 +136,19 @@ class PlacesView(ft.Container):
             try:
                 await self._async_bootstrap()
                 if self._pending_focus_latlng and self.map_component:
-                    self.map_component.set_center_and_zoom(
-                        self._pending_focus_latlng[0], self._pending_focus_latlng[1], 15
+                    self.map_component.fly_to(
+                        self._pending_focus_latlng[0], self._pending_focus_latlng[1], 15, animated=True
                     )
-                if self._pending_focus_place_id and self.map_component:
+                elif self._pending_focus_place_id and self.map_component:
                     self.map_component.set_selected_place_id(self._pending_focus_place_id, pan_to=True)
+                    for pl in self.all_places:
+                        if str(pl.id) == str(self._pending_focus_place_id):
+                            self._handle_place_pin_click(pl)
+                            break
+                elif (self.selected_municipality != "all" or self.search_query) and self.filtered_places and self.map_component:
+                    coords = [(p.latitude, p.longitude) for p in self.filtered_places if p.latitude and p.longitude]
+                    if coords:
+                        self.map_component.fit_bounds(coords, notify=True)
             except Exception:
                 pass
 
@@ -353,6 +363,7 @@ class PlacesView(ft.Container):
     def _build_content(self) -> None:
         # 1. Base Map Component
         route_stops: list[RouteStopPin] = []
+        route_polyline_points: Optional[list[tuple[float, float]]] = None
         if self.is_follow_route_mode and self.route_itinerary and self.route_itinerary.days:
             target_day: Optional[ItineraryDay] = None
             for d in self.route_itinerary.days:
@@ -363,6 +374,13 @@ class PlacesView(ft.Container):
                 target_day = self.route_itinerary.days[0]
                 self.active_day_number = target_day.day_number
 
+            if getattr(target_day, "day_overview_polyline", None):
+                try:
+                    route_polyline_points = decode_polyline(target_day.day_overview_polyline)
+                except Exception:
+                    route_polyline_points = None
+
+            pts_accum: list[tuple[float, float]] = []
             for idx, itm in enumerate(target_day.items):
                 p = itm.place
                 lat = (p.latitude if p and p.latitude else None) or itm.custom_lat
@@ -381,6 +399,18 @@ class PlacesView(ft.Container):
                             place=p,
                         )
                     )
+                poly = getattr(itm, "route_polyline_from_prev", None)
+                if poly and not route_polyline_points:
+                    try:
+                        dec = decode_polyline(poly)
+                        if pts_accum:
+                            pts_accum.extend(dec[1:])
+                        else:
+                            pts_accum.extend(dec)
+                    except Exception:
+                        pass
+            if not route_polyline_points and len(pts_accum) >= 2:
+                route_polyline_points = pts_accum
 
         places_to_show = []
         if not self.is_follow_route_mode or self.show_nearby_pois_in_route:
@@ -391,17 +421,28 @@ class PlacesView(ft.Container):
         map_w = max(600, pw)
         map_h = max(400, ph - 64)
 
+        is_dark = get_settings().is_dark_mode
+
         self.map_component = SlippyMapCanvas(
             width=map_w,
             height=map_h,
             places=places_to_show,
             route_stops=route_stops,
+            route_polyline_points=route_polyline_points,
             active_stop_index=self._active_route_stop_index,
             on_place_click=self._handle_place_pin_click,
             on_stop_click=self._handle_stop_pin_click,
             on_map_background_click=self._dismiss_poi_bottom_sheet,
+            dark_mode=is_dark,
             border_radius=0,
         )
+        if self.is_follow_route_mode and route_stops:
+            self.map_component.set_route(
+                route_stops,
+                polyline_points=route_polyline_points,
+                active_stop_index=self._active_route_stop_index,
+                auto_fit=True,
+            )
 
         map_wrapper = ft.Container(
             content=self.map_component,
@@ -739,6 +780,77 @@ class PlacesView(ft.Container):
         self._apply_filters()
         self._update_in_place(reset_viewport=False)
 
+    def _build_drawer_row(self, p: Place) -> ft.Control:
+        """Compact horizontal row matching Web .drawer-place-card."""
+        return ft.Container(
+            bgcolor="#f8fafc",
+            border=ft.Border.all(1, "#e2e8f0"),
+            border_radius=12,
+            padding=ft.Padding.all(8),
+            ink=True,
+            on_click=lambda _, pl=p: self._focus_place_and_open_dialog(pl),
+            content=ft.Row(
+                spacing=10,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                controls=[
+                    ft.Image(
+                        src=p.resolved_image_path,
+                        width=60,
+                        height=60,
+                        fit=ft.BoxFit.COVER,
+                        border_radius=8,
+                    ),
+                    ft.Column(
+                        spacing=2,
+                        tight=True,
+                        expand=True,
+                        controls=[
+                            ft.Row(
+                                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                                controls=[
+                                    ft.Text(
+                                        p.formatted_category.upper(),
+                                        size=10,
+                                        weight=ft.FontWeight.W_700,
+                                        color="#0084ff",
+                                    ),
+                                    ft.Text(
+                                        p.formatted_cost,
+                                        size=10,
+                                        weight=ft.FontWeight.W_700,
+                                        color="#059669",
+                                    ),
+                                ],
+                            ),
+                            ft.Text(
+                                p.name,
+                                size=13,
+                                weight=ft.FontWeight.W_700,
+                                color="#0f172a",
+                                max_lines=1,
+                                overflow=ft.TextOverflow.ELLIPSIS,
+                            ),
+                            ft.Row(
+                                spacing=3,
+                                tight=True,
+                                controls=[
+                                    ft.Icon(ft.Icons.LOCATION_ON_OUTLINED, size=12, color="#64748b"),
+                                    ft.Text(
+                                        p.municipality_name or "Nueva Ecija",
+                                        size=11,
+                                        color="#64748b",
+                                        max_lines=1,
+                                        overflow=ft.TextOverflow.ELLIPSIS,
+                                    ),
+                                ],
+                            ),
+                        ],
+                    ),
+                    ft.Icon(ft.Icons.NEAR_ME_OUTLINED, size=16, color="#94a3b8"),
+                ],
+            ),
+        )
+
     def _build_drawer_content(self) -> ft.Control:
         """Builds vertical scrollable list of destinations with empty-state reset (MAP-10)."""
         if not self.filtered_places:
@@ -769,15 +881,7 @@ class PlacesView(ft.Container):
 
         cards: list[ft.Control] = []
         for p in self.filtered_places[:80]:
-            cards.append(
-                ft.Container(
-                    content=PlaceCard(
-                        place=p,
-                        compact=True,
-                        on_click=lambda pl: self._focus_place_and_open_dialog(pl),
-                    ),
-                )
-            )
+            cards.append(self._build_drawer_row(p))
 
         track = ft.ListView(
             controls=cards,
@@ -1086,30 +1190,23 @@ class PlacesView(ft.Container):
             self._safe_update()
 
     def _start_trip_from_place(self, place: Any) -> None:
-        """Launch suggested wizard or custom builder starting from this place."""
+        """Launch Suggested Itinerary Wizard anchored at this place (1:1 Web startTripHere parity)."""
         p_obj = place if isinstance(place, Place) else Place.from_dict(place)
         if self.on_navigate:
-            self.on_navigate("/suggested", None, p_obj)
+            dest_q = urllib.parse.quote(p_obj.municipality_name or "Nueva Ecija")
+            pid_q = urllib.parse.quote(str(p_obj.id))
+            self.on_navigate(f"/suggested?destination={dest_q}&placeId={pid_q}", None, p_obj)
 
     def _build_poi_bottom_sheet(self, place: Any) -> ft.Control:
-        if isinstance(place, dict):
-            pid = str(place.get("id") or place.get("place_id") or "")
-            name = place.get("name") or "Destination"
-            mun = place.get("municipality") or place.get("municipality_name") or "Nueva Ecija"
-            cat = str(place.get("category") or "attraction")
-            lat = place.get("latitude") or place.get("lat")
-            lng = place.get("longitude") or place.get("lng")
-            c_min = place.get("estimated_cost_min", 0)
-            c_max = place.get("estimated_cost_max")
-        else:
-            pid = str(getattr(place, "id", "") or "")
-            name = getattr(place, "name", "Destination")
-            mun = getattr(place, "municipality_name", "Nueva Ecija")
-            cat = str(getattr(place, "category", "attraction"))
-            lat = getattr(place, "latitude", None)
-            lng = getattr(place, "longitude", None)
-            c_min = getattr(place, "estimated_cost_min", 0)
-            c_max = getattr(place, "estimated_cost_max", None)
+        """Build Web-identical <app-place-detail-sheet> interactive bottom sheet card."""
+        p_obj = place if isinstance(place, Place) else Place.from_dict(place)
+        pid = str(p_obj.id or "")
+        name = p_obj.name or "Destination"
+        mun = p_obj.municipality_name or "Nueva Ecija"
+        cat_label = p_obj.formatted_category
+        lat = p_obj.latitude
+        lng = p_obj.longitude
+        cost_str = p_obj.formatted_cost
 
         fav_svc = get_favorites_service()
         is_fav = fav_svc.is_favorite(pid) if pid else False
@@ -1117,63 +1214,172 @@ class PlacesView(ft.Container):
         def _toggle_fav(_):
             nonlocal is_fav
             if pid:
-                is_fav = fav_svc.toggle_favorite(pid)
+                # Pass Place object to FavoritesService.toggle_favorite (fixes MAP-QA-02)
+                is_fav = fav_svc.toggle_favorite(p_obj)
                 self._refresh_poi_bottom_sheet()
 
-        fav_btn = ft.IconButton(
-            icon=ft.Icons.FAVORITE if is_fav else ft.Icons.FAVORITE_BORDER,
-            icon_color="#ef4444" if is_fav else ThemeColors.TEXT_MUTED_LIGHT,
-            tooltip="Toggle Favorite",
+        # Hero Photo Banner with overlaid Favorite, Close, Category, and Open Now badges
+        img_src = p_obj.resolved_image_path
+        hero_img = ft.Image(
+            src=img_src,
+            width=560,
+            height=150,
+            fit=ft.BoxFit.COVER,
+            border_radius=ft.BorderRadius(top_left=14, top_right=14, bottom_left=0, bottom_right=0),
+        )
+
+        fav_overlay_btn = ft.Container(
+            top=10,
+            right=50,
+            width=34,
+            height=34,
+            border_radius=17,
+            bgcolor="#ffffff" if is_fav else ft.Colors.with_opacity(0.68, "#0f172a"),
+            alignment=ft.Alignment.CENTER,
+            ink=True,
+            tooltip="Remove from favorites" if is_fav else "Add to favorites",
             on_click=_toggle_fav,
-            style=ft.ButtonStyle(padding=4),
+            content=ft.Icon(
+                ft.Icons.FAVORITE if is_fav else ft.Icons.FAVORITE_BORDER,
+                size=18,
+                color="#ef4444" if is_fav else "#ffffff",
+            ),
         )
 
-        close_btn = ft.IconButton(
-            icon=ft.Icons.CLOSE_ROUNDED,
-            icon_size=18,
-            icon_color=ThemeColors.TEXT_MUTED_LIGHT,
-            tooltip="Close",
+        close_overlay_btn = ft.Container(
+            top=10,
+            right=10,
+            width=34,
+            height=34,
+            border_radius=17,
+            bgcolor=ft.Colors.with_opacity(0.68, "#0f172a"),
+            alignment=ft.Alignment.CENTER,
+            ink=True,
+            tooltip="Close details",
             on_click=lambda _: self._dismiss_poi_bottom_sheet(),
-            style=ft.ButtonStyle(padding=4),
+            content=ft.Icon(ft.Icons.CLOSE_ROUNDED, size=18, color="#ffffff"),
         )
 
-        p_obj = place if isinstance(place, Place) else Place.from_dict(place)
-        details_btn = ft.TextButton(
+        cat_overlay_badge = ft.Container(
+            bottom=10,
+            left=12,
+            bgcolor=ft.Colors.with_opacity(0.82, "#0f172a"),
+            border_radius=6,
+            padding=ft.Padding.symmetric(horizontal=10, vertical=4),
+            content=ft.Text(cat_label, size=10, weight=ft.FontWeight.W_700, color="#ffffff"),
+        )
+
+        open_overlay_badge = ft.Container(
+            bottom=10,
+            right=12,
+            bgcolor=ft.Colors.with_opacity(0.88, "#166534"),
+            border_radius=6,
+            padding=ft.Padding.symmetric(horizontal=9, vertical=4),
             content=ft.Row(
-                controls=[
-                    ft.Text("Full Details", size=12, weight=ft.FontWeight.W_600, color=ThemeColors.PRIMARY_BLUE),
-                    ft.Icon(ft.Icons.OPEN_IN_NEW_ROUNDED, size=14, color=ThemeColors.PRIMARY_BLUE),
-                ],
-                spacing=4,
+                spacing=5,
                 tight=True,
-            ),
-            on_click=lambda _: show_place_detail_dialog(
-                self.safe_page,
-                p_obj,
-                on_navigate=self.on_navigate,
-                on_add_to_day=lambda pl: self._prompt_add_place_to_trip(pl),
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                controls=[
+                    ft.Container(width=7, height=7, border_radius=4, bgcolor="#4ade80"),
+                    ft.Text("Open Now", size=10, weight=ft.FontWeight.W_700, color="#ffffff"),
+                ],
             ),
         )
 
-        # Cost formatting
-        if c_min == 0 and (c_max is None or c_max == 0):
-            cost_str = "Free Entry"
-        elif c_min and c_max:
-            cost_str = f"₱{int(c_min):,} - ₱{int(c_max):,}"
-        elif c_min:
-            cost_str = f"From ₱{int(c_min):,}"
-        else:
-            cost_str = "Check on arrival"
+        hero_banner = ft.Stack(
+            width=560,
+            height=150,
+            controls=[
+                hero_img,
+                fav_overlay_btn,
+                close_overlay_btn,
+                cat_overlay_badge,
+                open_overlay_badge,
+            ],
+        )
 
-        # Commute guide info
+        # Rating & Provenance Row
+        meta_chips: list[ft.Control] = []
+        if p_obj.rating:
+            meta_chips.append(
+                ft.Container(
+                    bgcolor="#fef3c7",
+                    border_radius=6,
+                    padding=ft.Padding.symmetric(horizontal=7, vertical=2),
+                    content=ft.Row(
+                        spacing=3,
+                        tight=True,
+                        controls=[
+                            ft.Icon(ft.Icons.STAR_ROUNDED, size=13, color="#f59e0b"),
+                            ft.Text(f"{p_obj.rating:.1f}", size=11, weight=ft.FontWeight.W_700, color="#b45309"),
+                        ],
+                    ),
+                )
+            )
+            if p_obj.user_rating_count:
+                meta_chips.append(
+                    ft.Text(f"({p_obj.user_rating_count:,} reviews)", size=11, color="#64748b")
+                )
+            if p_obj.rating >= 4.5:
+                meta_chips.append(
+                    ft.Container(
+                        bgcolor="#ecfdf5",
+                        border_radius=4,
+                        padding=ft.Padding.symmetric(horizontal=6, vertical=2),
+                        content=ft.Text("Top Rated", size=10, weight=ft.FontWeight.W_700, color="#059669"),
+                    )
+                )
+
+        prov_label = "Google Verified POI" if p_obj.rating else "Verified Destination"
+        meta_chips.append(
+            ft.Container(
+                bgcolor="#f1f5f9",
+                border_radius=6,
+                padding=ft.Padding.symmetric(horizontal=8, vertical=3),
+                content=ft.Row(
+                    spacing=4,
+                    tight=True,
+                    controls=[
+                        ft.Icon(ft.Icons.VERIFIED_USER_OUTLINED, size=12, color="#2563eb"),
+                        ft.Text(prov_label, size=10, weight=ft.FontWeight.W_600, color="#475569"),
+                    ],
+                ),
+            )
+        )
+
+        # Commute guide dataclass attributes (fixes MAP-QA-01 AttributeError)
         commute_info = get_commute_info_for_municipality(mun, name)
-        terminal_txt = commute_info.get("terminal") or "Cabanatuan Central Terminal"
-        fare_txt = commute_info.get("fare") or "₱20 - ₱50"
+        if isinstance(commute_info, dict):
+            transit_mode_txt = commute_info.get("transit_mode") or "By Bus / Local UV Express"
+            terminal_txt = commute_info.get("departure_hub") or commute_info.get("terminal") or "Cabanatuan Central Terminal"
+            dropoff_txt = commute_info.get("drop_off_point") or f"{mun} Town Proper"
+            travel_time_txt = commute_info.get("estimated_travel_time") or "45 mins – 1 hr"
+            fare_txt = commute_info.get("estimated_fare") or commute_info.get("fare") or "₱25 – ₱60"
+        else:
+            transit_mode_txt = getattr(commute_info, "transit_mode", "By Bus / Local UV Express")
+            terminal_txt = getattr(commute_info, "departure_hub", "Cabanatuan Central Terminal")
+            dropoff_txt = getattr(commute_info, "drop_off_point", f"{mun} Town Proper")
+            travel_time_txt = getattr(commute_info, "estimated_travel_time", "45 mins – 1 hr")
+            fare_txt = getattr(commute_info, "estimated_fare", "₱25 – ₱60")
 
-        # Directions button handler
+        desc_txt = p_obj.editorial_summary or p_obj.description or f"Explore {name} in {mun}, Nueva Ecija."
+        hours_txt = p_obj.opening_hours or "Open Daily • Standard Visiting Hours"
+
+        # External Google Maps Directions URL + in-map preview
+        gmaps_dir_url = (
+            p_obj.directions_url
+            if (p_obj.directions_url and p_obj.directions_url.strip())
+            else f"https://www.google.com/maps/dir/?api=1&destination={lat},{lng}"
+        )
+
         def _get_directions(_):
+            if self.safe_page:
+                try:
+                    self.safe_page.launch_url(gmaps_dir_url)
+                except Exception:
+                    pass
             if lat and lng and hasattr(self, "map_component") and self.map_component is not None:
-                start_coord = (15.4865, 120.9674)  # Cabanatuan Hub default
+                start_coord = (15.4865, 120.9674)
                 self.map_component.set_route(
                     [
                         {"latitude": start_coord[0], "longitude": start_coord[1], "name": "Start: Cabanatuan Hub"},
@@ -1182,135 +1388,194 @@ class PlacesView(ft.Container):
                     auto_fit=True,
                 )
                 if self.safe_page:
-                    show_toast(self.safe_page, f"Route preview to {name} mapped!")
+                    show_toast(self.safe_page, f"Opened Google Maps directions & mapped route to {name}!")
 
-        card = ft.Container(
-            bgcolor=ft.Colors.with_opacity(0.98, "#ffffff"),
+        return ft.Container(
+            bgcolor=ft.Colors.with_opacity(0.99, "#ffffff"),
             border=ft.Border.all(1, ThemeColors.BORDER_LIGHT),
             border_radius=16,
-            padding=ft.Padding.all(14),
-            width=540,
+            clip_behavior=ft.ClipBehavior.HARD_EDGE,
+            width=560,
             shadow=ft.BoxShadow(
-                blur_radius=16,
-                color=ft.Colors.with_opacity(0.18, "#0f172a"),
-                offset=ft.Offset(0, 4),
+                blur_radius=20,
+                color=ft.Colors.with_opacity(0.22, "#0f172a"),
+                offset=ft.Offset(0, 6),
             ),
             content=ft.Column(
-                spacing=8,
+                spacing=0,
                 tight=True,
                 controls=[
-                    # Header row: category badge, full details, favorite, close
-                    ft.Row(
-                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                        controls=[
-                            ft.Container(
-                                content=ft.Text(
-                                    cat.replace("_", " ").title(),
-                                    size=10,
-                                    weight=ft.FontWeight.W_700,
-                                    color="#0284c7",
-                                ),
-                                bgcolor="#e0f2fe",
-                                border_radius=6,
-                                padding=ft.Padding.symmetric(horizontal=8, vertical=3),
-                            ),
-                            ft.Row(
-                                spacing=2,
-                                tight=True,
-                                controls=[details_btn, fav_btn, close_btn],
-                            ),
-                        ],
-                    ),
-                    # Place Name & Location
-                    ft.Text(name, size=16, weight=ft.FontWeight.W_800, color=ThemeColors.TEXT_BLACK, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
-                    ft.Row(
-                        spacing=8,
-                        controls=[
-                            ft.Row(
-                                spacing=4,
-                                tight=True,
-                                controls=[
-                                    ft.Icon(ft.Icons.LOCATION_ON_OUTLINED, size=13, color=ThemeColors.TEXT_MUTED_LIGHT),
-                                    ft.Text(mun, size=11, color=ThemeColors.TEXT_MUTED_LIGHT),
-                                ],
-                            ),
-                            ft.Row(
-                                spacing=4,
-                                tight=True,
-                                controls=[
-                                    ft.Icon(ft.Icons.PAYMENTS_OUTLINED, size=13, color="#16a34a"),
-                                    ft.Text(cost_str, size=11, weight=ft.FontWeight.W_600, color="#16a34a"),
-                                ],
-                            ),
-                            ft.Container(
-                                content=ft.Text("🛡️ Verified POI", size=9, weight=ft.FontWeight.W_700, color="#2563eb"),
-                                bgcolor="#eff6ff",
-                                border_radius=4,
-                                padding=ft.Padding.symmetric(horizontal=5, vertical=2),
-                            ),
-                        ],
-                    ),
-                    # Commute strip
+                    hero_banner,
                     ft.Container(
-                        bgcolor="#f8fafc",
-                        border=ft.Border.all(1, "#e2e8f0"),
-                        border_radius=8,
-                        padding=ft.Padding.symmetric(horizontal=10, vertical=6),
-                        content=ft.Row(
-                            spacing=6,
+                        padding=ft.Padding.all(14),
+                        content=ft.Column(
+                            spacing=7,
+                            tight=True,
                             controls=[
-                                ft.Icon(ft.Icons.DIRECTIONS_BUS_OUTLINED, size=14, color="#0284c7"),
-                                ft.Text(f"Transit: {terminal_txt} • Est. fare: {fare_txt}", size=10, color="#334155", expand=True, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
+                                # Title + Full Details button
+                                ft.Row(
+                                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                                    controls=[
+                                        ft.Text(
+                                            name,
+                                            size=17,
+                                            weight=ft.FontWeight.W_800,
+                                            color=ThemeColors.TEXT_BLACK,
+                                            max_lines=1,
+                                            overflow=ft.TextOverflow.ELLIPSIS,
+                                            expand=True,
+                                        ),
+                                        ft.TextButton(
+                                            content=ft.Row(
+                                                spacing=4,
+                                                tight=True,
+                                                controls=[
+                                                    ft.Text("Full Details", size=11, weight=ft.FontWeight.W_700, color=ThemeColors.PRIMARY_BLUE),
+                                                    ft.Icon(ft.Icons.OPEN_IN_NEW_ROUNDED, size=13, color=ThemeColors.PRIMARY_BLUE),
+                                                ],
+                                            ),
+                                            on_click=lambda _: show_place_detail_dialog(
+                                                self.safe_page,
+                                                p_obj,
+                                                on_navigate=self.on_navigate,
+                                                on_add_to_day=lambda pl: self._prompt_add_place_to_trip(pl),
+                                            ),
+                                        ),
+                                    ],
+                                ),
+                                # Rating & Provenance chips
+                                ft.Row(spacing=6, wrap=True, vertical_alignment=ft.CrossAxisAlignment.CENTER, controls=meta_chips),
+                                # Municipality, Cost, and Operating Hours row
+                                ft.Row(
+                                    spacing=12,
+                                    wrap=True,
+                                    controls=[
+                                        ft.Row(
+                                            spacing=4,
+                                            tight=True,
+                                            controls=[
+                                                ft.Icon(ft.Icons.LOCATION_ON_OUTLINED, size=14, color="#2563eb"),
+                                                ft.Text(mun, size=12, weight=ft.FontWeight.W_600, color="#475569"),
+                                            ],
+                                        ),
+                                        ft.Row(
+                                            spacing=4,
+                                            tight=True,
+                                            controls=[
+                                                ft.Icon(ft.Icons.PAYMENTS_OUTLINED, size=14, color="#059669"),
+                                                ft.Text(cost_str, size=12, weight=ft.FontWeight.W_700, color="#047857"),
+                                            ],
+                                        ),
+                                        ft.Row(
+                                            spacing=4,
+                                            tight=True,
+                                            controls=[
+                                                ft.Icon(ft.Icons.ACCESS_TIME_ROUNDED, size=13, color="#2563eb"),
+                                                ft.Text(hours_txt, size=11, color="#475569", max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
+                                            ],
+                                        ),
+                                    ],
+                                ),
+                                # Description snippet
+                                ft.Text(desc_txt, size=12, color="#334155", max_lines=2, overflow=ft.TextOverflow.ELLIPSIS),
+                                # Green Local Commute Guide Box (matches Web .sheet-commute-box)
+                                ft.Container(
+                                    bgcolor="#f0fdf4",
+                                    border=ft.Border.all(1, "#bbf7d0"),
+                                    border_radius=10,
+                                    padding=ft.Padding.symmetric(horizontal=10, vertical=8),
+                                    content=ft.Column(
+                                        spacing=3,
+                                        tight=True,
+                                        controls=[
+                                            ft.Row(
+                                                spacing=5,
+                                                controls=[
+                                                    ft.Icon(ft.Icons.DIRECTIONS_BUS_OUTLINED, size=14, color="#16a34a"),
+                                                    ft.Text("How to get there?", size=11, weight=ft.FontWeight.W_700, color="#14532d"),
+                                                ],
+                                            ),
+                                            ft.Row(
+                                                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                                                controls=[
+                                                    ft.Text("Transit & Hub:", size=10, color="#475569"),
+                                                    ft.Text(f"{transit_mode_txt} • {terminal_txt}", size=10, weight=ft.FontWeight.W_600, color="#0f172a"),
+                                                ],
+                                            ),
+                                            ft.Row(
+                                                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                                                controls=[
+                                                    ft.Text("Drop-off / Est. Fare:", size=10, color="#475569"),
+                                                    ft.Text(f"{dropoff_txt} • {travel_time_txt} ({fare_txt})", size=10, weight=ft.FontWeight.W_700, color="#15803d"),
+                                                ],
+                                            ),
+                                        ],
+                                    ),
+                                ),
+                                # Primary & Secondary Action Buttons Row (matches Web .sheet-actions-stack)
+                                ft.Row(
+                                    spacing=8,
+                                    controls=[
+                                        ft.FilledButton(
+                                            expand=True,
+                                            content=ft.Row(
+                                                spacing=5,
+                                                alignment=ft.MainAxisAlignment.CENTER,
+                                                controls=[
+                                                    ft.Icon(ft.Icons.AUTO_AWESOME, size=14, color="#ffffff"),
+                                                    ft.Text("Start Trip Here", size=12, weight=ft.FontWeight.W_700, color="#ffffff"),
+                                                ],
+                                            ),
+                                            style=ft.ButtonStyle(
+                                                bgcolor="#0084ff",
+                                                padding=ft.Padding.symmetric(horizontal=12, vertical=10),
+                                                shape=ft.RoundedRectangleBorder(radius=10),
+                                            ),
+                                            on_click=lambda _: self._start_trip_from_place(p_obj),
+                                        ),
+                                        ft.OutlinedButton(
+                                            expand=True,
+                                            content=ft.Row(
+                                                spacing=5,
+                                                alignment=ft.MainAxisAlignment.CENTER,
+                                                controls=[
+                                                    ft.Icon(ft.Icons.ADD_ROUNDED, size=15, color="#0084ff"),
+                                                    ft.Text("Add to Trip", size=12, weight=ft.FontWeight.W_700, color="#0084ff"),
+                                                ],
+                                            ),
+                                            style=ft.ButtonStyle(
+                                                bgcolor="#eff6ff",
+                                                side=ft.BorderSide(1, "#bfdbfe"),
+                                                padding=ft.Padding.symmetric(horizontal=12, vertical=10),
+                                                shape=ft.RoundedRectangleBorder(radius=10),
+                                            ),
+                                            on_click=lambda _: self._prompt_add_place_to_trip(p_obj),
+                                        ),
+                                        ft.FilledButton(
+                                            content=ft.Row(
+                                                spacing=5,
+                                                tight=True,
+                                                controls=[
+                                                    ft.Icon(ft.Icons.NAVIGATION_OUTLINED, size=14, color="#ffffff"),
+                                                    ft.Text("Get Directions", size=12, weight=ft.FontWeight.W_700, color="#ffffff"),
+                                                ],
+                                            ),
+                                            style=ft.ButtonStyle(
+                                                bgcolor="#0f172a",
+                                                padding=ft.Padding.symmetric(horizontal=14, vertical=10),
+                                                shape=ft.RoundedRectangleBorder(radius=10),
+                                            ),
+                                            on_click=_get_directions,
+                                        ),
+                                    ],
+                                ),
                             ],
                         ),
-                    ),
-                    # Action buttons row
-                    ft.Row(
-                        spacing=8,
-                        controls=[
-                            ft.FilledButton(
-                                content=ft.Row(
-                                    spacing=4,
-                                    tight=True,
-                                    controls=[
-                                        ft.Icon(ft.Icons.AUTO_AWESOME, size=14, color=ft.Colors.WHITE),
-                                        ft.Text("Start Trip Here", size=11, weight=ft.FontWeight.W_700, color=ft.Colors.WHITE),
-                                    ],
-                                ),
-                                style=ft.ButtonStyle(bgcolor=ThemeColors.PRIMARY_BLUE, padding=ft.Padding.symmetric(horizontal=12, vertical=6)),
-                                on_click=lambda _: self._start_trip_from_place(place),
-                            ),
-                            ft.OutlinedButton(
-                                content=ft.Row(
-                                    spacing=4,
-                                    tight=True,
-                                    controls=[
-                                        ft.Icon(ft.Icons.ADD_ROUNDED, size=14, color=ThemeColors.PRIMARY_BLUE),
-                                        ft.Text("Add to Trip", size=11, weight=ft.FontWeight.W_700, color=ThemeColors.PRIMARY_BLUE),
-                                    ],
-                                ),
-                                style=ft.ButtonStyle(padding=ft.Padding.symmetric(horizontal=12, vertical=6)),
-                                on_click=lambda _: self._prompt_add_place_to_trip(p_obj),
-                            ),
-                            ft.TextButton(
-                                content=ft.Row(
-                                    spacing=4,
-                                    tight=True,
-                                    controls=[
-                                        ft.Icon(ft.Icons.DIRECTIONS, size=14, color="#0284c7"),
-                                        ft.Text("Get Directions", size=11, weight=ft.FontWeight.W_600, color="#0284c7"),
-                                    ],
-                                ),
-                                style=ft.ButtonStyle(padding=ft.Padding.symmetric(horizontal=8, vertical=6)),
-                                on_click=_get_directions,
-                            ),
-                        ],
                     ),
                 ],
             ),
         )
-        return card
 
     def _handle_stop_pin_click(self, idx: int, stop: RouteStopPin) -> None:
         self._active_route_stop_index = idx
@@ -1325,8 +1590,16 @@ class PlacesView(ft.Container):
         self._safe_update()
 
     def _focus_place_and_open_dialog(self, place: Place) -> None:
+        """Match Web selectPlaceFromDrawer: close drawer, fly to place, and open bottom sheet."""
+        self.is_drawer_open = False
+        if hasattr(self, "_drawer_container") and self._drawer_container is not None:
+            self._drawer_container.visible = False
+        if hasattr(self, "_drawer_pill_label") and self._drawer_pill_label is not None:
+            self._drawer_pill_label.value = f"List View ({len(self.filtered_places)})"
+        if hasattr(self, "_drawer_pill_icon") and self._drawer_pill_icon is not None:
+            self._drawer_pill_icon.name = ft.Icons.LIST_ROUNDED
         if place.latitude and place.longitude and self.map_component:
-            self.map_component.set_center_and_zoom(place.latitude, place.longitude, 15)
+            self.map_component.fly_to(place.latitude, place.longitude, 15, animated=True)
         self._handle_place_pin_click(place)
 
     def _prompt_add_place_to_trip(self, place: Place) -> None:
@@ -1442,15 +1715,18 @@ class PlacesView(ft.Container):
             self.safe_page.run_task(_do)
 
     def _locate_user(self) -> None:
-        """Simulates GPS location lock onto Cabanatuan hub."""
+        """Locks GPS indicator onto Cabanatuan hub and smoothly flies camera to Z15."""
         if self.map_component:
+            self.map_component.user_location = (15.4865, 120.9674)
             self.map_component._user_location = (15.4865, 120.9674)
-            self.map_component.set_center_and_zoom(15.4865, 120.9674, 14)
+            self.map_component.fly_to(15.4865, 120.9674, 15, animated=True)
+            if self.safe_page:
+                show_toast(self.safe_page, "📍 GPS Locked: Cabanatuan City Central Hub")
 
     def _recenter_province(self) -> None:
-        """Recenters to geographic center of Nueva Ecija."""
+        """Smoothly flies back to geographic center of Nueva Ecija (15.58, 121.00, Z10)."""
         if self.map_component:
-            self.map_component.set_center_and_zoom(15.58, 121.00, 10)
+            self.map_component.fly_to(15.58, 121.00, 10, animated=True)
 
     def _switch_route_day(self, day_num: int) -> None:
         self.active_day_number = day_num

@@ -1740,7 +1740,7 @@ class CustomBuilderView(ft.Container):
         self.itinerary_service.set_active_draft_itinerary(draft_itin)
         day_num = self.active_day_index + 1
         if self.on_navigate:
-            self.on_navigate(f"/map?itineraryId=draft&day={day_num}&source=builder", draft_itin)
+            self.on_navigate(f"/map?followRoute=true&itineraryId=draft&day={day_num}&dayNumber={day_num}&source=builder", draft_itin)
 
     def _save_custom_itinerary(self) -> None:
         if self.total_stops_count == 0:

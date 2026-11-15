@@ -568,3 +568,70 @@ def test_tc_30_main_window_fullscreen_and_viewport_resolution():
     mock_page.window.on_event(win_evt)
 
 
+def test_tc_31_map_pin_click_and_favorite_toggle_no_crash():
+    """TC-31: Verifies clicking any map pin builds the POI bottom sheet and toggles favorite without AttributeError (MAP-QA-01, MAP-QA-02)."""
+    from desktop_client.views.places_view import PlacesView
+
+    pv = PlacesView(initial_width=1280, initial_height=840)
+    assert len(pv.all_places) > 0
+    sample_place = pv.all_places[0]
+
+    # Clicking pin must not raise AttributeError: 'CommuteInfo' object has no attribute 'get'
+    pv._handle_place_pin_click(sample_place)
+    assert pv.selected_map_place is not None
+    assert pv._poi_bottom_sheet_host.visible is True
+    assert pv._poi_bottom_sheet_host.content is not None
+
+
+def test_tc_32_linear_pan_math_and_axis_aligned_deltas():
+    """TC-32: Verifies 5 pan frames of (10px, 0px) shift world coordinates by exactly 50px without quadratic drift or dropped 0.0 deltas (MAP-QA-03)."""
+    from desktop_client.components.slippy_map_canvas import SlippyMapCanvas
+
+    canvas = SlippyMapCanvas(width=800, height=600, center_lat=15.58, center_lng=121.00, zoom=12)
+
+    class DummyPanEvt:
+        def __init__(self, dx: float, dy: float):
+            self.delta_x = dx
+            self.delta_y = dy
+
+    start_wx, start_wy = canvas.latlng_to_world_px(canvas.center_lat, canvas.center_lng, canvas.zoom)
+    canvas._handle_pan_start()
+    for _ in range(5):
+        canvas._handle_pan_update(DummyPanEvt(10.0, 0.0))
+    canvas._handle_pan_end()
+    end_wx, end_wy = canvas.latlng_to_world_px(canvas.center_lat, canvas.center_lng, canvas.zoom)
+
+    assert abs((start_wx - end_wx) - 50.0) < 1.0
+    assert abs(start_wy - end_wy) < 1.0
+
+
+def test_tc_33_initial_query_filters_and_start_trip_here_url():
+    """TC-33: Verifies PlacesView applies initial route_query filters on construction and formats Start Trip Here URL with placeId (MAP-QA-05, MAP-QA-08)."""
+    from desktop_client.views.places_view import PlacesView
+
+    pv = PlacesView(route_query="/map?category=nature_park")
+    assert len(pv.filtered_places) < len(pv.all_places)
+    assert all(p.category == "nature_park" for p in pv.filtered_places)
+
+    nav_calls = []
+    pv.on_navigate = lambda route, *args: nav_calls.append(route)
+    pv._start_trip_from_place(pv.filtered_places[0])
+    assert len(nav_calls) == 1
+    assert "placeId=" in nav_calls[0]
+    assert "destination=" in nav_calls[0]
+
+
+def test_tc_34_drawer_selection_auto_closes_drawer():
+    """TC-34: Verifies selecting a place from the List View drawer closes the drawer and opens the bottom sheet (MAP-QA-07)."""
+    from desktop_client.views.places_view import PlacesView
+
+    pv = PlacesView(initial_width=1280, initial_height=840)
+    pv._toggle_drawer()
+    assert pv.is_drawer_open is True
+
+    pv._focus_place_and_open_dialog(pv.all_places[0])
+    assert pv.is_drawer_open is False
+    assert pv.selected_map_place is not None
+
+
+

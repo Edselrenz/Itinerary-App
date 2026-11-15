@@ -1701,6 +1701,43 @@ px cap sync android): **Exit code 0 (6 plugins synchronized)**.
   - [x] Verified full desktop pytest suite: **109/109 tests passing (100% green)** in 14.73s.
   - [x] Recompiled release standalone executable: `dist/NuevaEcijaTravel/NuevaEcijaTravel.exe`.
 
+---
+
+## Phase 60: Map Web Parity & Complete UI/UX Remediation (`MAP-QA-01` to `MAP-QA-10`)
+- [x] **Eliminate POI Bottom Sheet Commute Guide Crash (`MAP-QA-01`)**:
+  - [x] `get_commute_info_for_municipality()` returns a `CommuteInfo` dataclass instance; replaced all dictionary `.get()` invocations with safe attribute getters (`getattr` and `isinstance(commute_info, dict)` checks).
+- [x] **Eliminate Favorite Toggle Crash in Map View (`MAP-QA-02`)**:
+  - [x] Corrected `PlacesView._build_poi_bottom_sheet._toggle_fav` contract: passing the `Place` model instance `p_obj` instead of the string ID `pid` to `FavoritesService.toggle_favorite(p_obj)`.
+- [x] **Eliminate Quadratic Panning Drift & Dropped 0.0 Deltas (`MAP-QA-03`)**:
+  - [x] Hardened `_extract_pan_delta(e)` with explicit `is None` checks so pure horizontal/vertical pan movements with `0.0` deltas are preserved and not dropped.
+  - [x] Added `_drag_origin_lat` and `_drag_origin_lng` to `SlippyMapCanvas` to compute clamped world coordinate translations linearly relative to drag origin rather than compounding frame-by-frame.
+  - [x] Seamless 220px mid-drag rebase keeps the pan layer within tile buffers without jumpiness.
+- [x] **Align Category Pin Colors & Teardrop Pin Shape (`MAP-QA-04`)**:
+  - [x] Replaced `CATEGORY_MARKER_STYLES` with the exact 16 Web category colors from `Project/src/global.scss:4732–4744` (tourist_attraction `#0084ff`, nature_park `#16a34a`, church_religious `#7c3aed`, museum_cultural `#b45309`, etc.).
+  - [x] Replaced circular place markers with Web-identical 30×30 teardrop pins (`border-radius: 50% 50% 50% 0`, rotated `-45deg`, anchored at bottom tip `(sx, sy)`).
+- [x] **Web-Identical `<app-place-detail-sheet>` In-Map Bottom Sheet (`MAP-QA-05`)**:
+  - [x] Rebuilt `_build_poi_bottom_sheet` with 150px hero cover photo, circular favorite & close overlay buttons, category & "Open Now" badges, star rating with review counts, verified badge, green local commute guide box, "Start Trip Here" button passing `destination` and `placeId`, and Google Maps external launcher.
+- [x] **OSRM Route Polyline Decoding & Floating Stop Tooltips (`MAP-QA-06`)**:
+  - [x] Decoded `day_overview_polyline` / accumulated `route_polyline_from_prev` in Follow-Route mode and invoked `map_component.set_route(..., auto_fit=True)`.
+  - [x] Added floating dark `.route-stop-tooltip` stop name pills above numbered badges in `_build_route_stop_marker`.
+- [x] **List View Drawer Compact Rows & Auto-Close on Selection (`MAP-QA-07`)**:
+  - [x] Created `_build_drawer_row` with 60×60 photo thumbnail, category, cost, destination title, municipality, and navigation icon.
+  - [x] Updated `_focus_place_and_open_dialog` to close the drawer, animate `fly_to` to coordinates at Zoom 15, and open the bottom sheet.
+- [x] **Initial Route Query Filters Application & Destination Auto-Focus (`MAP-QA-08`)**:
+  - [x] In `PlacesView.__init__()`: added `self._apply_filters()` immediately upon loading places so query parameters are applied on mount.
+  - [x] In `PlacesView.did_mount()`: added destination auto-focus via `map_component.fit_bounds` when a municipality or search query is set.
+- [x] **Public Facility Category Support & Smooth GPS Locate (`MAP-QA-09`)**:
+  - [x] Added `"public_facility": ft.Icons.FLAG_OUTLINED` to `CATEGORY_ICONS`.
+  - [x] Updated `_locate_user` with animated `fly_to(15.4865, 120.9674, 15)` and locked toast notification.
+- [x] **Dark Mode Theme Sync (`MAP-QA-10`)**:
+  - [x] Passed `dark_mode=get_settings().is_dark_mode` to `SlippyMapCanvas` in `PlacesView._build_content()`.
+- [x] **Route Deep-Link Query Normalization**:
+  - [x] Standardized route URLs across `trip_detail_view.py`, `suggested_wizard_view.py`, and `custom_builder_view.py` to include `followRoute=true` and `dayNumber={day_num}`.
+- [x] **Automated Regression Suite Expansion & Standalone Build**:
+  - [x] Added `TC-31`, `TC-32`, `TC-33`, and `TC-34` to `desktop_client/tests/test_cycle2_regressions.py`.
+  - [x] Achieved **113/113 tests passing (100% green)** in 16.08s.
+  - [x] Recompiled standalone Windows distribution: [`dist/NuevaEcijaTravel/NuevaEcijaTravel.exe`](file:///c:/Users/Edward/Desktop/CaseStudy/dist/NuevaEcijaTravel/NuevaEcijaTravel.exe).
+
 
 
 

@@ -95,15 +95,20 @@ def _extract_scroll_delta_y(e: Any) -> float:
 
 
 def _extract_pan_delta(e: Any) -> Tuple[float, float]:
-    """Extract (dx, dy) pan delta from diverse Flet pan update event formats."""
+    """Extract (dx, dy) pan delta from diverse Flet pan update event formats without dropping 0.0 values."""
     # 1. local_delta or delta object with .x and .y
     for attr in ("local_delta", "delta"):
         obj = getattr(e, attr, None)
         if obj is not None and hasattr(obj, "x") and hasattr(obj, "y"):
-            return float(obj.x), float(obj.y)
-    # 2. Direct dx, dy attributes
-    dx = getattr(e, "delta_x", None) or getattr(e, "dx", None)
-    dy = getattr(e, "delta_y", None) or getattr(e, "dy", None)
+            if obj.x is not None and obj.y is not None:
+                return float(obj.x), float(obj.y)
+    # 2. Direct delta_x/delta_y or dx/dy attributes (use explicit is None check so 0.0 is preserved)
+    dx = getattr(e, "delta_x", None)
+    if dx is None:
+        dx = getattr(e, "dx", None)
+    dy = getattr(e, "delta_y", None)
+    if dy is None:
+        dy = getattr(e, "dy", None)
     if dx is not None and dy is not None:
         return float(dx), float(dy)
     # 3. JSON data payload
@@ -112,7 +117,9 @@ def _extract_pan_delta(e: Any) -> Tuple[float, float]:
         try:
             d = json.loads(data_str)
             if isinstance(d, dict):
-                return float(d.get("dx", 0.0)), float(d.get("dy", 0.0))
+                raw_x = d.get("dx") if d.get("dx") is not None else d.get("x", 0.0)
+                raw_y = d.get("dy") if d.get("dy") is not None else d.get("y", 0.0)
+                return float(raw_x), float(raw_y)
         except Exception:
             pass
     return 0.0, 0.0
@@ -300,21 +307,35 @@ class RouteStopPin:
 
 
 CATEGORY_MARKER_STYLES: Dict[str, Tuple[str, str]] = {
-    "nature": ("#16a34a", "PARK"),
-    "attraction": ("#2563eb", "ATTRACTIONS"),
-    "museum": ("#7c3aed", "MUSEUM"),
-    "church": ("#d97706", "CHURCH"),
-    "resort": ("#0891b2", "POOL"),
+    "tourist_attraction": ("#0084ff", "AUTO_AWESOME"),
+    "nature_park": ("#16a34a", "PARK"),
+    "resort_swimming": ("#0891b2", "POOL"),
+    "hotel_accommodation": ("#0284c7", "HOTEL"),
     "restaurant": ("#ea580c", "RESTAURANT"),
-    "cafe": ("#92400e", "LOCAL_CAFE"),
-    "hotel": ("#4f46e5", "HOTEL"),
-    "market": ("#db2777", "STOREFRONT"),
+    "cafe": ("#d97706", "LOCAL_CAFE"),
+    "church_religious": ("#7c3aed", "CHURCH"),
+    "museum_cultural": ("#b45309", "MUSEUM"),
+    "shopping_market": ("#e11d48", "SHOPPING_CART"),
+    "transport_terminal": ("#0284c7", "DIRECTIONS_BUS"),
+    "convenience_store": ("#6366f1", "STOREFRONT"),
+    "hospital_clinic": ("#dc2626", "LOCAL_HOSPITAL"),
+    "pharmacy": ("#dc2626", "LOCAL_PHARMACY"),
+    "bank_atm": ("#059669", "ACCOUNT_BALANCE"),
+    "fuel_station": ("#475569", "LOCAL_GAS_STATION"),
+    "public_facility": ("#475569", "FLAG"),
+    # Fallback short keys
+    "nature": ("#16a34a", "PARK"),
+    "attraction": ("#0084ff", "ATTRACTIONS"),
+    "museum": ("#b45309", "MUSEUM"),
+    "church": ("#7c3aed", "CHURCH"),
+    "resort": ("#0891b2", "POOL"),
+    "hotel": ("#0284c7", "HOTEL"),
+    "market": ("#e11d48", "STOREFRONT"),
     "transport": ("#0284c7", "DIRECTIONS_BUS"),
     "hospital": ("#dc2626", "LOCAL_HOSPITAL"),
-    "pharmacy": ("#059669", "LOCAL_PHARMACY"),
-    "bank": ("#0d9488", "ACCOUNT_BALANCE"),
-    "fuel": ("#ca8a04", "LOCAL_GAS_STATION"),
-    "convenience": ("#6366f1", "LOCAL_CONVENIENCE_STORE"),
+    "bank": ("#059669", "ACCOUNT_BALANCE"),
+    "fuel": ("#475569", "LOCAL_GAS_STATION"),
+    "convenience": ("#6366f1", "STOREFRONT"),
     "public": ("#475569", "LOCATION_CITY"),
 }
 
@@ -486,6 +507,8 @@ class SlippyMapCanvas(ft.Container):
         # Drag state & 60 FPS throttling
         self._drag_dx: float = 0.0
         self._drag_dy: float = 0.0
+        self._drag_origin_lat: float = self.center_lat
+        self._drag_origin_lng: float = self.center_lng
         self._last_pan_ui_ts: float = 0.0
         self._last_scroll_zoom: float = 0.0
         self._active_tile_images: Dict[str, ft.Image] = {}
@@ -980,27 +1003,38 @@ class SlippyMapCanvas(ft.Container):
             self._fly_generation += 1
         self._drag_dx = 0.0
         self._drag_dy = 0.0
+        self._drag_origin_lat = self.center_lat
+        self._drag_origin_lng = self.center_lng
         self._gesture_surface.mouse_cursor = ft.MouseCursor.GRABBING
 
     def _handle_pan_update(self, e: Any) -> None:
         pdx, pdy = _extract_pan_delta(e)
+        if pdx == 0.0 and pdy == 0.0:
+            return
+
+        # Ensure drag origin is initialized even if _handle_pan_update is called directly in tests
+        if self._drag_dx == 0.0 and self._drag_dy == 0.0:
+            self._drag_origin_lat = self.center_lat
+            self._drag_origin_lng = self.center_lng
+
         raw_dx = self._drag_dx + pdx
         raw_dy = self._drag_dy + pdy
 
-        # Clamp prospective center DURING drag so the map never overshoots and snaps back
-        cx, cy = self.latlng_to_world_px(self.center_lat, self.center_lng, self.zoom)
-        prospective_lat, prospective_lng = self.world_px_to_latlng(cx - raw_dx, cy - raw_dy, self.zoom)
+        # Compute clamped center relative to immutable _drag_origin_lat/lng (prevents quadratic drift)
+        origin_wx, origin_wy = self.latlng_to_world_px(self._drag_origin_lat, self._drag_origin_lng, self.zoom)
+        prospective_lat, prospective_lng = self.world_px_to_latlng(origin_wx - raw_dx, origin_wy - raw_dy, self.zoom)
         clamped_lat, clamped_lng = self._clamp_center(prospective_lat, prospective_lng)
         clamped_wx, clamped_wy = self.latlng_to_world_px(clamped_lat, clamped_lng, self.zoom)
 
-        self.center_lat = clamped_lat
-        self.center_lng = clamped_lng
-
-        self._drag_dx = cx - clamped_wx
-        self._drag_dy = cy - clamped_wy
+        self._drag_dx = origin_wx - clamped_wx
+        self._drag_dy = origin_wy - clamped_wy
 
         # Seamless mid-drag rebase when pan exceeds 220px (well inside our 2-tile / 512px buffer)
         if abs(self._drag_dx) >= 220 or abs(self._drag_dy) >= 220:
+            self.center_lat = clamped_lat
+            self.center_lng = clamped_lng
+            self._drag_origin_lat = clamped_lat
+            self._drag_origin_lng = clamped_lng
             self._drag_dx = 0.0
             self._drag_dy = 0.0
             self._pan_layer.left = 0
@@ -1016,7 +1050,7 @@ class SlippyMapCanvas(ft.Container):
             return
         self._last_pan_ui_ts = now
 
-        # Update lightweight layer containers
+        # Translate lightweight layer containers 1:1 with cursor
         self._pan_layer.left = round(self._drag_dx, 1)
         self._pan_layer.top = round(self._drag_dy, 1)
         self._marker_stack.left = round(self._drag_dx, 1)
@@ -1039,9 +1073,11 @@ class SlippyMapCanvas(ft.Container):
             self._marker_stack.top = 0
             return
 
-        cx, cy = self.latlng_to_world_px(self.center_lat, self.center_lng, self.zoom)
-        new_lat, new_lng = self.world_px_to_latlng(cx - self._drag_dx, cy - self._drag_dy, self.zoom)
+        origin_wx, origin_wy = self.latlng_to_world_px(self._drag_origin_lat, self._drag_origin_lng, self.zoom)
+        new_lat, new_lng = self.world_px_to_latlng(origin_wx - self._drag_dx, origin_wy - self._drag_dy, self.zoom)
         self.center_lat, self.center_lng = self._clamp_center(new_lat, new_lng)
+        self._drag_origin_lat = self.center_lat
+        self._drag_origin_lng = self.center_lng
         self._drag_dx = 0.0
         self._drag_dy = 0.0
         self._pan_layer.left = 0
@@ -1355,50 +1391,65 @@ class SlippyMapCanvas(ft.Container):
 
     def _build_single_place_marker(self, place: Any, sx: float, sy: float) -> ft.Control:
         if isinstance(place, dict):
-            cat_raw = str(place.get("category") or "attraction").lower()
+            cat_raw = str(place.get("category") or "tourist_attraction").lower()
             pid = str(place.get("id") or place.get("place_id") or "")
             name = place.get("name") or "Destination"
             mun = place.get("municipality") or place.get("municipality_name") or "Nueva Ecija"
+            is_featured = bool(place.get("is_featured", False))
         else:
-            cat_raw = str(getattr(place, "category", "attraction")).lower()
+            cat_raw = str(getattr(place, "category", "tourist_attraction")).lower()
             pid = str(getattr(place, "id", "") or "")
             name = getattr(place, "name", "Destination")
             mun = getattr(place, "municipality_name", "Nueva Ecija")
+            is_featured = bool(getattr(place, "is_featured", False))
 
-        bg_color, icon_name = "#2563eb", "PLACE"
-        for key, (col, icn) in CATEGORY_MARKER_STYLES.items():
-            if key in cat_raw:
-                bg_color, icon_name = col, icn
-                break
+        bg_color, icon_name = CATEGORY_MARKER_STYLES.get(cat_raw, ("#0084ff", "PLACE"))
+        if bg_color == "#0084ff" and icon_name == "PLACE":
+            for key, (col, icn) in CATEGORY_MARKER_STYLES.items():
+                if key in cat_raw:
+                    bg_color, icon_name = col, icn
+                    break
 
         is_selected = bool(self.selected_place_id and pid == str(self.selected_place_id))
-        size = 36 if is_selected else 28
+        size = 34 if is_selected else (30 if is_featured else 26)
 
         def _click_place(_: ft.ControlEvent, p: Any = place, p_id: str = pid) -> None:
             self.selected_place_id = p_id
             if self.on_place_click:
                 self.on_place_click(p)
 
+        # Teardrop pin matching Web .custom-map-pin (border-radius: 50% 50% 50% 0, rotated -45deg, tip at sx, sy)
+        r_half = size / 2.0
         return ft.Container(
-            left=sx - (size / 2.0),
-            top=sy - (size / 2.0),
+            left=sx - r_half,
+            top=sy - size,  # Bottom-tip anchored at exact coordinate (sx, sy) like iconAnchor: [15, 30]
             width=size,
             height=size,
-            border_radius=size / 2.0,
-            bgcolor="#1d4ed8" if is_selected else bg_color,
-            border=ft.Border.all(3 if is_selected else 2, "#ffffff"),
+            border_radius=ft.BorderRadius(
+                top_left=r_half,
+                top_right=r_half,
+                bottom_right=r_half,
+                bottom_left=3,
+            ),
+            rotate=ft.Rotate(angle=-math.pi / 4.0),
+            bgcolor="#0066cc" if is_selected else bg_color,
+            border=ft.Border.all(2.5 if is_selected else 2.0, "#ffffff"),
             alignment=ft.Alignment.CENTER,
             shadow=ft.BoxShadow(
-                blur_radius=10 if is_selected else 6,
-                color=ft.Colors.with_opacity(0.38 if is_selected else 0.25, "#0f172a"),
-                offset=ft.Offset(0, 2),
+                blur_radius=12 if (is_selected or is_featured) else 8,
+                color=ft.Colors.with_opacity(0.42 if is_selected else 0.32, bg_color if is_featured else "#0f172a"),
+                offset=ft.Offset(0, 3),
             ),
             on_click=_click_place,
             tooltip=f"{name} ({mun})",
-            content=ft.Icon(
-                getattr(ft.Icons, icon_name, ft.Icons.PLACE),
-                size=17 if is_selected else 14,
-                color="#ffffff",
+            content=ft.Container(
+                rotate=ft.Rotate(angle=math.pi / 4.0),
+                alignment=ft.Alignment.CENTER,
+                content=ft.Icon(
+                    getattr(ft.Icons, icon_name, ft.Icons.PLACE),
+                    size=15 if is_selected else 12,
+                    color="#ffffff",
+                ),
             ),
         )
 
@@ -1411,7 +1462,8 @@ class SlippyMapCanvas(ft.Container):
             stop_idx = getattr(stop, "index", stop_num - 1)
 
         is_active = (self.active_stop_index == stop_idx) or (self._active_stop_index == stop_idx)
-        bg = "#f97316" if is_active else "#1d4ed8"
+        bg = "#f59e0b" if is_active else "#2563eb"
+        badge_size = 34 if is_active else 28
 
         def _click_stop(_: ft.ControlEvent, s: Any = stop) -> None:
             if self.on_stop_click:
@@ -1426,27 +1478,55 @@ class SlippyMapCanvas(ft.Container):
             elif self.on_place_click:
                 self.on_place_click(s)
 
+        short_label = name if len(str(name)) <= 24 else f"{str(name)[:22]}…"
         return ft.Container(
-            left=sx - 16,
-            top=sy - 16,
-            width=32,
-            height=32,
-            border_radius=16,
-            bgcolor=bg,
-            border=ft.Border.all(2.5, "#ffffff"),
-            alignment=ft.Alignment.CENTER,
-            shadow=ft.BoxShadow(
-                blur_radius=8,
-                color=ft.Colors.with_opacity(0.32, "#0f172a"),
-                offset=ft.Offset(0, 2),
-            ),
+            left=sx - 75,
+            top=sy - (badge_size / 2.0) - 24,
+            width=150,
+            height=badge_size + 26,
+            alignment=ft.Alignment.TOP_CENTER,
             on_click=_click_stop,
             tooltip=f"Stop {stop_num}: {name}",
-            content=ft.Text(
-                str(stop_num),
-                size=12,
-                weight=ft.FontWeight.W_800,
-                color="#ffffff",
+            content=ft.Column(
+                spacing=2,
+                tight=True,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                controls=[
+                    # Floating dark stop title pill matching Web .route-stop-tooltip
+                    ft.Container(
+                        bgcolor=ft.Colors.with_opacity(0.88, "#0f172a"),
+                        border_radius=4,
+                        padding=ft.Padding.symmetric(horizontal=6, vertical=2),
+                        content=ft.Text(
+                            short_label,
+                            size=10,
+                            weight=ft.FontWeight.W_600,
+                            color="#ffffff",
+                            max_lines=1,
+                            overflow=ft.TextOverflow.ELLIPSIS,
+                        ),
+                    ),
+                    # Numbered circular badge matching Web .route-stop-badge
+                    ft.Container(
+                        width=badge_size,
+                        height=badge_size,
+                        border_radius=badge_size / 2.0,
+                        bgcolor=bg,
+                        border=ft.Border.all(2.5, "#ffffff"),
+                        alignment=ft.Alignment.CENTER,
+                        shadow=ft.BoxShadow(
+                            blur_radius=10 if is_active else 6,
+                            color=ft.Colors.with_opacity(0.45 if is_active else 0.30, "#f59e0b" if is_active else "#0f172a"),
+                            offset=ft.Offset(0, 2),
+                        ),
+                        content=ft.Text(
+                            str(stop_num),
+                            size=13 if is_active else 12,
+                            weight=ft.FontWeight.W_800,
+                            color="#ffffff",
+                        ),
+                    ),
+                ],
             ),
         )
 

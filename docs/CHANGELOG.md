@@ -5,6 +5,42 @@ All notable changes to the Nueva Ecija Travel Itinerary project are documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.57.0] - 2026-11-16
+### Fixed & Completed (Phase 60 - Map Web Parity & Complete UI/UX Remediation)
+- **Eliminated POI Bottom Sheet Commute Guide Crash (`MAP-QA-01`)**:
+  - Replaced dictionary `.get()` calls on `CommuteInfo` with `getattr(commute_info, ...)` and dictionary fallback checks, completely resolving `AttributeError: 'CommuteInfo' object has no attribute 'get'`.
+- **Eliminated Favorite Toggle Crash in Map View (`MAP-QA-02`)**:
+  - Fixed parameter contract in `PlacesView._build_poi_bottom_sheet._toggle_fav`: passing `p_obj` (`Place`) instead of string ID `pid` to `FavoritesService.toggle_favorite(place)`.
+- **Eliminated Quadratic Panning Drift & Dropped 0.0 Deltas (`MAP-QA-03`)**:
+  - Updated `_extract_pan_delta` with explicit `is None` checks so pure horizontal/vertical movements with `0.0` axis deltas are preserved.
+  - Added `_drag_origin_lat/lng` tracking in `SlippyMapCanvas` to accumulate pan translations linearly relative to drag origin without compounding frame-by-frame coordinate errors.
+  - Added seamless 220px mid-drag rebase.
+- **Web-Identical 30×30 Teardrop Pins & 16 Category Colors (`MAP-QA-04`)**:
+  - Replaced `CATEGORY_MARKER_STYLES` with the exact 16 Web category colors from `Project/src/global.scss:4732–4744` (tourist_attraction `#0084ff`, nature_park `#16a34a`, church_religious `#7c3aed`, museum_cultural `#b45309`, etc.).
+  - Upgraded place markers to 30×30 teardrop pins (`border-radius: 50% 50% 50% 0`, rotated `-45deg`, anchored at bottom tip `(sx, sy)`).
+- **Web-Identical `<app-place-detail-sheet>` In-Map Bottom Sheet (`MAP-QA-05`)**:
+  - Rebuilt bottom sheet with 150px hero cover photo, overlaid favorite/close buttons, category/open badges, star ratings, review count, verified badge, green local commute box, "Start Trip Here" button passing `destination` and `placeId`, and Google Maps directions launcher.
+- **OSRM Route Polyline Decoding & Floating Stop Tooltips (`MAP-QA-06`)**:
+  - Decoded `day_overview_polyline` and `route_polyline_from_prev` in Follow-Route mode and invoked `map_component.set_route(..., auto_fit=True)`.
+  - Added floating dark `.route-stop-tooltip` stop name pills above numbered badges in `_build_route_stop_marker`.
+- **List View Drawer Compact Rows & Auto-Close on Selection (`MAP-QA-07`)**:
+  - Created `_build_drawer_row` with 60×60 photo thumbnail, category, cost, destination title, municipality, and navigation arrow.
+  - Updated `_focus_place_and_open_dialog` to close the drawer, animate `fly_to(place.latitude, place.longitude, 15)`, and open the bottom sheet.
+- **Initial Route Query Filters Application & Destination Auto-Focus (`MAP-QA-08`)**:
+  - Added `self._apply_filters()` in `PlacesView.__init__()` immediately after loading places.
+  - In `did_mount()`: added destination auto-focus via `map_component.fit_bounds` when a municipality or search query is set.
+- **Public Facility Category Support & Smooth GPS Locate (`MAP-QA-09`)**:
+  - Added `"public_facility": ft.Icons.FLAG_OUTLINED` to `CATEGORY_ICONS`.
+  - Updated `_locate_user` with animated `fly_to(15.4865, 120.9674, 15)` and GPS locked toast.
+- **Dark Mode Theme Sync (`MAP-QA-10`)**:
+  - Passed `dark_mode=get_settings().is_dark_mode` to `SlippyMapCanvas` in `PlacesView._build_content()`.
+- **Route Deep-Link Query Normalization**:
+  - Standardized route deep-links across `trip_detail_view.py`, `suggested_wizard_view.py`, and `custom_builder_view.py` (`followRoute=true&dayNumber={day_num}`).
+- **Automated Regression Suite Expansion & Standalone Build**:
+  - Added `TC-31` through `TC-34` to `desktop_client/tests/test_cycle2_regressions.py`.
+  - Achieved **113/113 tests passing (100% green)**.
+  - Recompiled release standalone executable: `dist/NuevaEcijaTravel/NuevaEcijaTravel.exe`.
+
 ## [0.56.0] - 2026-11-15
 ### Fixed & Completed (Phase 59 - Map Fullscreen Auto-Adjust & Carto Watermark Remediation)
 - **Native OS Window Event Listener & Viewport Resolution (`MAP-FIX-01`)**:

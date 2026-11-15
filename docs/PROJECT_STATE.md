@@ -7,20 +7,26 @@ This document serves as the primary handoff reference for developers and coding 
 ## 1. Project Status Overview
 
 - **Application Name**: Nueva Ecija Travel Itinerary (MVP, GIS Upgrade & Native Desktop Client)
-- **Current Development Phase**: **Phase 59 — Desktop Map Fullscreen Auto-Adjust & Carto Watermark Elimination (`MAP-FIX-01` to `MAP-FIX-05`) [COMPLETED & VERIFIED]**
-- **Active Git Branch**: `feature/flet-desktop-app`
+- **Current Development Phase**: **Phase 60 — Map Web Parity & Complete UI/UX Remediation (`MAP-QA-01` to `MAP-QA-10`) [COMPLETED & VERIFIED]**
+- **Active Git Branch**: `main`
 - **Active Database Infrastructure**: **PostgreSQL 16 in Docker** (`ne_postgres` on port 5432) and local SQLite (`nueva_ecija_travel.db`) fully synchronized with all 21 user accounts, 2,673 places, 12 municipalities, and 10 itineraries.
 - **Last Verified Working State**:
-  - **Phase 59 Remediation & Parity Acceptance**: 100% verified across all suites:
-    - **Desktop Client Test Suite**: 109/109 passed in 14.73s (`100% PASS`), covering `test_auth_service.py`, `test_itinerary_service.py`, `test_place_service.py`, `test_cycle2_regressions.py` (`TC-19` through `TC-30`), and all UI consistency/storage suites.
-    - **Standalone Windows Distribution**: Recompiled executable `dist/NuevaEcijaTravel/NuevaEcijaTravel.exe` verified healthy and tested.
+  - **Phase 60 Remediation & Parity Acceptance**: 100% verified across all suites:
+    - **Desktop Client Test Suite**: 113/113 passed in 16.08s (`100% PASS`), covering `test_cycle2_regressions.py` (`TC-31` through `TC-34`), `test_auth_service.py`, `test_itinerary_service.py`, `test_place_service.py`, and all UI consistency/storage suites.
+    - **Standalone Windows Distribution**: Recompiled standalone executable `dist/NuevaEcijaTravel/NuevaEcijaTravel.exe` verified healthy and tested.
   - **Live Service Daemons**: Pilot backend (`127.0.0.1:8000`), ngrok public tunnel, and Cloudflare Worker proxy (`ne-itinerary-api.edselrenz0.workers.dev`) active and verified.
-- **Phase 59 Completed Scope & Defect Remediation**:
-  1. `MAP-FIX-01`: Hooked `page.window.on_event` for native OS window events (`MAXIMIZE`, `UNMAXIMIZE`, `RESTORE`, `RESIZED`, `RESIZE`, `ENTER_FULL_SCREEN`, `LEAVE_FULL_SCREEN`). Implemented `_get_viewport_dimensions(e)` checking `PageResizeEvent` -> `page.width/height` -> `window.width/height` -> settings default, preventing Python from pinning the viewport to 1280x840.
-  2. `MAP-FIX-02`: Wrapped `main_column` inside `main_container` with `left=0, top=0, right=0, bottom=0, expand=True` inside `root_stack`. Added `left=0, top=0, right=0, bottom=0` to `map_wrapper` in `PlacesView`, guaranteeing 100% full bleed stretch across any maximized display.
-  3. `MAP-FIX-03`: Replaced dead 404 HOT tile mirror with verified active `https://{sub}.tile.openstreetmap.de/{zoom}/{x}/{y}.png`. Confirmed Carto CDN is 100% excluded from candidate URLs.
-  4. `MAP-FIX-04`: Hardened `_is_valid_osm_png()` to reject Carto watermark range `2040 <= len(data) <= 2060` and signatures `CartoDB`, `cartocdn`. In `resize_canvas()`, added `self.page.update()` for immediate repainting.
-  5. `MAP-FIX-05`: Added `test_tc_29_carto_watermark_signatures_and_ranges_rejected` and `test_tc_30_main_window_fullscreen_and_viewport_resolution`. All 109 tests passing.
+- **Phase 60 Completed Scope & Defect Remediation**:
+  1. `MAP-QA-01`: Replaced dictionary `.get()` calls on `CommuteInfo` dataclass with safe `getattr` getters, resolving bottom sheet crash.
+  2. `MAP-QA-02`: Passed `Place` instance `p_obj` instead of string ID to `FavoritesService.toggle_favorite(place)`, resolving favorite toggle crash.
+  3. `MAP-QA-03`: Preserved `0.0` deltas in `_extract_pan_delta` and implemented linear pan mathematics relative to `_drag_origin_lat/lng` with seamless 220px rebase, eliminating quadratic drift.
+  4. `MAP-QA-04`: Aligned 16 category marker colors with Web global SCSS and upgraded place markers to 30×30 teardrop pins (`border-radius: 50% 50% 50% 0`, rotated `-45deg`, anchored at bottom tip `(sx, sy)`).
+  5. `MAP-QA-05`: Rebuilt `_build_poi_bottom_sheet` into full `<app-place-detail-sheet>` with 150px hero cover photo, overlay badges, star ratings, commute box, "Start Trip Here" (`placeId`), and Google Maps external launcher.
+  6. `MAP-QA-06`: Decoded OSRM route polylines in Follow-Route mode (`map_component.set_route(..., auto_fit=True)`) and added floating dark `.route-stop-tooltip` stop name pills.
+  7. `MAP-QA-07`: Upgraded List View drawer items to compact horizontal rows (`_build_drawer_row`) and auto-closed drawer on card selection.
+  8. `MAP-QA-08`: Applied query filters on initial load (`self._apply_filters()`) and auto-focused destination bounds on mount (`fit_bounds`).
+  9. `MAP-QA-09`: Added `"public_facility"` icon to `CATEGORY_ICONS` and animated `fly_to` on GPS locate.
+  10. `MAP-QA-10`: Passed `dark_mode` to `SlippyMapCanvas` in `PlacesView`.
+  11. Standardized route deep-link query parameters across `trip_detail_view.py`, `suggested_wizard_view.py`, and `custom_builder_view.py`.
 - **Current Blockers**: **None**.
 
 ---
