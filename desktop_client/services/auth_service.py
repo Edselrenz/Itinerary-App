@@ -208,6 +208,23 @@ class AuthService:
             user_id = str(data.get("id", ""))
             extra = self._load_profile_extra(user_id)
             user = User.from_dict(data, extra=extra)
+
+            from desktop_client.config.settings import is_placeholder_avatar
+            previous_user = self.session_manager.current_user
+            if (
+                previous_user
+                and not is_placeholder_avatar(previous_user.avatar_url)
+                and is_placeholder_avatar(user.avatar_url)
+            ):
+                user.avatar_url = previous_user.avatar_url
+                try:
+                    await self.api_client.patch(
+                        "auth/me",
+                        json_data={"avatar_url": previous_user.avatar_url},
+                    )
+                except Exception:
+                    pass
+
             # Persist fresh profile metadata to local cache
             db_profile_extra = {
                 "middle_initial": user.middle_initial,
@@ -229,6 +246,10 @@ class AuthService:
                 self.session_manager.update_user(current)
                 return current
             raise
+
+    async def fetch_current_user(self) -> User:
+        """Alias for get_profile() with custom avatar push protection."""
+        return await self.get_profile()
 
     async def update_profile(self, payload: UserUpdatePayload) -> User:
         """Updates user profile attributes across FastAPI PATCH /api/v1/auth/me and local profile_extra."""

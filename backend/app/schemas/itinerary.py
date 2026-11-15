@@ -7,16 +7,27 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 from app.schemas.place import PlaceOut
 
 
+def _safe_parse_uuid(val: Any) -> uuid.UUID | None:
+    if val is None or val == "":
+        return None
+    if isinstance(val, uuid.UUID):
+        return val
+    try:
+        return uuid.UUID(str(val).strip())
+    except (ValueError, TypeError, AttributeError):
+        return None
+
+
 class ItineraryItemBase(BaseModel):
     """Common properties for a scheduled itinerary stop."""
 
     place_id: uuid.UUID | None = None
-    custom_title: str | None = Field(None, max_length=200)
+    custom_title: str | None = Field(None, max_length=255)
     custom_lat: float | None = Field(None, ge=-90.0, le=90.0)
     custom_lng: float | None = Field(None, ge=-180.0, le=180.0)
-    sort_order: int = Field(1, ge=1)
+    sort_order: int = Field(1, ge=0)
     planned_time: time | None = None
-    duration_minutes: int = Field(90, ge=5, le=1440)
+    duration_minutes: int = Field(90, ge=0, le=1440)
     notes: str | None = None
     estimated_cost_min: float | None = Field(None, ge=0.0)
     estimated_cost_max: float | None = Field(None, ge=0.0)
@@ -27,6 +38,11 @@ class ItineraryItemBase(BaseModel):
     travel_distance_meters: int | None = None
     travel_duration_seconds: int | None = None
     route_polyline_from_prev: str | None = None
+
+    @field_validator("place_id", mode="before")
+    @classmethod
+    def coerce_place_id(cls, v: Any) -> uuid.UUID | None:
+        return _safe_parse_uuid(v)
 
     @field_validator("planned_time", mode="before")
     @classmethod
@@ -54,6 +70,62 @@ class ItineraryItemCreate(ItineraryItemBase):
 
     place_payload: dict | None = None
 
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_web_and_desktop_payload(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        out = dict(data)
+        # Normalize order_index to sort_order if provided
+        if "order_index" in out and "sort_order" not in out:
+            out["sort_order"] = out.pop("order_index")
+
+        place_obj = out.get("place_payload") or out.get("place")
+        if isinstance(place_obj, dict):
+            out["place_payload"] = place_obj
+            if not out.get("custom_title") and place_obj.get("name"):
+                out["custom_title"] = str(place_obj["name"])[:255]
+            if out.get("custom_lat") is None and place_obj.get("lat") is not None:
+                try:
+                    out["custom_lat"] = float(place_obj["lat"])
+                except (ValueError, TypeError):
+                    pass
+            if out.get("custom_lat") is None and place_obj.get("latitude") is not None:
+                try:
+                    out["custom_lat"] = float(place_obj["latitude"])
+                except (ValueError, TypeError):
+                    pass
+            if out.get("custom_lng") is None and place_obj.get("lng") is not None:
+                try:
+                    out["custom_lng"] = float(place_obj["lng"])
+                except (ValueError, TypeError):
+                    pass
+            if out.get("custom_lng") is None and place_obj.get("longitude") is not None:
+                try:
+                    out["custom_lng"] = float(place_obj["longitude"])
+                except (ValueError, TypeError):
+                    pass
+            if out.get("estimated_cost_min") is None:
+                c_min = place_obj.get("estimated_cost_min") or place_obj.get("estimatedCostMin") or place_obj.get("estimated_cost")
+                if c_min is not None:
+                    try:
+                        out["estimated_cost_min"] = float(c_min)
+                    except (ValueError, TypeError):
+                        pass
+            if out.get("estimated_cost_max") is None:
+                c_max = place_obj.get("estimated_cost_max") or place_obj.get("estimatedCostMax") or place_obj.get("estimated_cost")
+                if c_max is not None:
+                    try:
+                        out["estimated_cost_max"] = float(c_max)
+                    except (ValueError, TypeError):
+                        pass
+
+        # Coerce place_id if string
+        if "place_id" in out:
+            out["place_id"] = _safe_parse_uuid(out["place_id"])
+
+        return out
+
     @model_validator(mode="after")
     def validate_place_or_custom(self) -> "ItineraryItemCreate":
         if (
@@ -74,12 +146,13 @@ class ItineraryItemCreate(ItineraryItemBase):
 class ItineraryItemUpdate(BaseModel):
     """Payload to partially update an itinerary stop."""
 
-    custom_title: str | None = Field(None, max_length=200)
+    place_id: uuid.UUID | None = None
+    custom_title: str | None = Field(None, max_length=255)
     custom_lat: float | None = Field(None, ge=-90.0, le=90.0)
     custom_lng: float | None = Field(None, ge=-180.0, le=180.0)
-    sort_order: int | None = Field(None, ge=1)
+    sort_order: int | None = Field(None, ge=0)
     planned_time: time | None = None
-    duration_minutes: int | None = Field(None, ge=5, le=1440)
+    duration_minutes: int | None = Field(None, ge=0, le=1440)
     notes: str | None = None
     estimated_cost_min: float | None = Field(None, ge=0.0)
     estimated_cost_max: float | None = Field(None, ge=0.0)
@@ -87,6 +160,12 @@ class ItineraryItemUpdate(BaseModel):
     travel_distance_meters: int | None = None
     travel_duration_seconds: int | None = None
     route_polyline_from_prev: str | None = None
+    place_payload: dict | None = None
+
+    @field_validator("place_id", mode="before")
+    @classmethod
+    def coerce_place_id(cls, v: Any) -> uuid.UUID | None:
+        return _safe_parse_uuid(v)
 
     @field_validator("planned_time", mode="before")
     @classmethod
@@ -220,13 +299,19 @@ class SuggestedItineraryRequest(BaseModel):
     min_rating: float | None = None
     pacing: str = "moderate"
     include_live_places: bool = False
+    anchor_place_id: uuid.UUID | None = None
+    anchor_place_payload: dict | None = None
+
+    @field_validator("anchor_place_id", mode="before")
+    @classmethod
+    def coerce_anchor_id(cls, v: Any) -> uuid.UUID | None:
+        return _safe_parse_uuid(v)
 
     @model_validator(mode="after")
     def validate_dates(self) -> "SuggestedItineraryRequest":
         if self.end_date < self.start_date:
             raise ValueError("end_date cannot be earlier than start_date.")
         return self
-
 
 
 class ItineraryReorderItem(BaseModel):
@@ -283,5 +368,3 @@ class RouteComputeResponse(BaseModel):
     total_duration_seconds: int
     legs: list[RouteLegOut] = []
     source: str = "google_routes"  # "google_routes" | "osrm" | "haversine_direct"
-
-

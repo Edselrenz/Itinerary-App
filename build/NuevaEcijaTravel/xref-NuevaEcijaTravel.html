@@ -4235,6 +4235,7 @@ imported by:
  &#8226;   <a href="#cryptography.x509.name">cryptography.x509.name</a>
  &#8226;   <a href="#cryptography.x509.oid">cryptography.x509.oid</a>
  &#8226;   <a href="#cryptography.x509.verification">cryptography.x509.verification</a>
+ &#8226;   <a href="#desktop_client.components.destination_picker">desktop_client.components.destination_picker</a>
  &#8226;   <a href="#desktop_client.components.itinerary_route_map">desktop_client.components.itinerary_route_map</a>
  &#8226;   <a href="#desktop_client.components.offline_banner">desktop_client.components.offline_banner</a>
  &#8226;   <a href="#desktop_client.components.slippy_map_canvas">desktop_client.components.slippy_map_canvas</a>
@@ -4245,6 +4246,9 @@ imported by:
  &#8226;   <a href="#desktop_client.services.auth_service">desktop_client.services.auth_service</a>
  &#8226;   <a href="#desktop_client.views.custom_builder_view">desktop_client.views.custom_builder_view</a>
  &#8226;   <a href="#desktop_client.views.places_view">desktop_client.views.places_view</a>
+ &#8226;   <a href="#desktop_client.views.profile_view">desktop_client.views.profile_view</a>
+ &#8226;   <a href="#desktop_client.views.saved_trips_view">desktop_client.views.saved_trips_view</a>
+ &#8226;   <a href="#desktop_client.views.suggested_wizard_view">desktop_client.views.suggested_wizard_view</a>
  &#8226;   <a href="#doctest">doctest</a>
  &#8226;   <a href="#flet.components.component">flet.components.component</a>
  &#8226;   <a href="#flet.components.hooks.use_callback">flet.components.hooks.use_callback</a>
@@ -9166,6 +9170,7 @@ imported by:
     <a href="#PIL.ImageFont">PIL.ImageFont</a>
  &#8226;   <a href="#cryptography.fernet">cryptography.fernet</a>
  &#8226;   <a href="#cryptography.hazmat.primitives.serialization.ssh">cryptography.hazmat.primitives.serialization.ssh</a>
+ &#8226;   <a href="#desktop_client.config.settings">desktop_client.config.settings</a>
  &#8226;   <a href="#desktop_client.views.profile_view">desktop_client.views.profile_view</a>
  &#8226;   <a href="#dns.asyncquery">dns.asyncquery</a>
  &#8226;   <a href="#dns.query">dns.query</a>
@@ -13817,8 +13822,7 @@ imports:
   </div>
   <div class="import">
 imported by:
-    <a href="#desktop_client.views.custom_builder_view">desktop_client.views.custom_builder_view</a>
- &#8226;   <a href="#desktop_client.views.suggested_wizard_view">desktop_client.views.suggested_wizard_view</a>
+    <a href="#desktop_client.components.dialogs">desktop_client.components.dialogs</a>
 
   </div>
 
@@ -13829,7 +13833,8 @@ imported by:
   <a target="code" href="///C:/Users/Edward/Desktop/CaseStudy/desktop_client/components/destination_picker.py" type="text/plain"><tt>desktop_client.components.destination_picker</tt></a>
 <span class="moduletype">SourceModule</span>  <div class="import">
 imports:
-    <a href="#desktop_client.components">desktop_client.components</a>
+    <a href="#__future__">__future__</a>
+ &#8226;   <a href="#desktop_client.components">desktop_client.components</a>
  &#8226;   <a href="#desktop_client.config.settings">desktop_client.config.settings</a>
  &#8226;   <a href="#desktop_client.core.offline_data">desktop_client.core.offline_data</a>
  &#8226;   <a href="#flet">flet</a>
@@ -13852,6 +13857,7 @@ imported by:
 imports:
     <a href="#datetime">datetime</a>
  &#8226;   <a href="#desktop_client.components">desktop_client.components</a>
+ &#8226;   <a href="#desktop_client.components.date_range_dialog">desktop_client.components.date_range_dialog</a>
  &#8226;   <a href="#desktop_client.config.settings">desktop_client.config.settings</a>
  &#8226;   <a href="#desktop_client.core.commute_guide">desktop_client.core.commute_guide</a>
  &#8226;   <a href="#desktop_client.core.export">desktop_client.core.export</a>
@@ -13965,9 +13971,8 @@ imports:
  &#8226;   <a href="#flet">flet</a>
  &#8226;   <a href="#flet.canvas">flet.canvas</a>
  &#8226;   <a href="#httpx">httpx</a>
+ &#8226;   <a href="#json">json</a>
  &#8226;   <a href="#math">math</a>
- &#8226;   <a href="#os">os</a>
- &#8226;   <a href="#pathlib">pathlib</a>
  &#8226;   <a href="#time">time</a>
  &#8226;   <a href="#typing">typing</a>
  &#8226;   <a href="#urllib.request">urllib.request</a>
@@ -14021,7 +14026,6 @@ imports:
 imported by:
     <a href="#desktop_client.components">desktop_client.components</a>
  &#8226;   <a href="#desktop_client.views.custom_builder_view">desktop_client.views.custom_builder_view</a>
- &#8226;   <a href="#desktop_client.views.suggested_wizard_view">desktop_client.views.suggested_wizard_view</a>
  &#8226;   <a href="#desktop_client.views.trip_detail_view">desktop_client.views.trip_detail_view</a>
 
   </div>
@@ -14071,11 +14075,14 @@ imported by:
   <a target="code" href="///C:/Users/Edward/Desktop/CaseStudy/desktop_client/config/settings.py" type="text/plain"><tt>desktop_client.config.settings</tt></a>
 <span class="moduletype">SourceModule</span>  <div class="import">
 imports:
-    <a href="#dataclasses">dataclasses</a>
+    <a href="#base64">base64</a>
+ &#8226;   <a href="#dataclasses">dataclasses</a>
  &#8226;   <a href="#desktop_client.config">desktop_client.config</a>
  &#8226;   <a href="#dotenv">dotenv</a>
+ &#8226;   <a href="#hashlib">hashlib</a>
  &#8226;   <a href="#os">os</a>
  &#8226;   <a href="#pathlib">pathlib</a>
+ &#8226;   <a href="#re">re</a>
  &#8226;   <a href="#sys">sys</a>
 
   </div>
@@ -14099,6 +14106,7 @@ imported by:
  &#8226;   <a href="#desktop_client.core.session">desktop_client.core.session</a>
  &#8226;   <a href="#desktop_client.core.storage">desktop_client.core.storage</a>
  &#8226;   <a href="#desktop_client.models.place">desktop_client.models.place</a>
+ &#8226;   <a href="#desktop_client.models.user">desktop_client.models.user</a>
  &#8226;   <a href="#desktop_client.services.auth_service">desktop_client.services.auth_service</a>
  &#8226;   <a href="#desktop_client.services.favorites_service">desktop_client.services.favorites_service</a>
  &#8226;   <a href="#desktop_client.services.itinerary_service">desktop_client.services.itinerary_service</a>
@@ -14171,7 +14179,6 @@ imported by:
  &#8226;   <a href="#desktop_client.services.place_service">desktop_client.services.place_service</a>
  &#8226;   <a href="#desktop_client.views.login_view">desktop_client.views.login_view</a>
  &#8226;   <a href="#desktop_client.views.signup_view">desktop_client.views.signup_view</a>
- &#8226;   <a href="#desktop_client.views.suggested_wizard_view">desktop_client.views.suggested_wizard_view</a>
  &#8226;   <a href="#main.py">main.py</a>
 
   </div>
@@ -14197,7 +14204,6 @@ imported by:
  &#8226;   <a href="#desktop_client.components.itinerary_route_map">desktop_client.components.itinerary_route_map</a>
  &#8226;   <a href="#desktop_client.views.custom_builder_view">desktop_client.views.custom_builder_view</a>
  &#8226;   <a href="#desktop_client.views.places_view">desktop_client.views.places_view</a>
- &#8226;   <a href="#desktop_client.views.suggested_wizard_view">desktop_client.views.suggested_wizard_view</a>
  &#8226;   <a href="#desktop_client.views.trip_detail_view">desktop_client.views.trip_detail_view</a>
 
   </div>
@@ -14329,7 +14335,6 @@ imported by:
  &#8226;   <a href="#desktop_client.views.dashboard_view">desktop_client.views.dashboard_view</a>
  &#8226;   <a href="#desktop_client.views.guest_view">desktop_client.views.guest_view</a>
  &#8226;   <a href="#desktop_client.views.profile_view">desktop_client.views.profile_view</a>
- &#8226;   <a href="#desktop_client.views.suggested_wizard_view">desktop_client.views.suggested_wizard_view</a>
  &#8226;   <a href="#desktop_client.views.welcome_view">desktop_client.views.welcome_view</a>
  &#8226;   <a href="#main.py">main.py</a>
 
@@ -14462,6 +14467,7 @@ imported by:
 imports:
     <a href="#__future__">__future__</a>
  &#8226;   <a href="#dataclasses">dataclasses</a>
+ &#8226;   <a href="#desktop_client.config.settings">desktop_client.config.settings</a>
  &#8226;   <a href="#desktop_client.models">desktop_client.models</a>
  &#8226;   <a href="#typing">typing</a>
 
@@ -14667,7 +14673,6 @@ imports:
     <a href="#__future__">__future__</a>
  &#8226;   <a href="#asyncio">asyncio</a>
  &#8226;   <a href="#datetime">datetime</a>
- &#8226;   <a href="#desktop_client.components.date_range_dialog">desktop_client.components.date_range_dialog</a>
  &#8226;   <a href="#desktop_client.components.destination_picker">desktop_client.components.destination_picker</a>
  &#8226;   <a href="#desktop_client.components.dialogs">desktop_client.components.dialogs</a>
  &#8226;   <a href="#desktop_client.components.itinerary_route_map">desktop_client.components.itinerary_route_map</a>
@@ -14804,7 +14809,8 @@ imported by:
   <a target="code" href="///C:/Users/Edward/Desktop/CaseStudy/desktop_client/views/profile_view.py" type="text/plain"><tt>desktop_client.views.profile_view</tt></a>
 <span class="moduletype">SourceModule</span>  <div class="import">
 imports:
-    <a href="#asyncio">asyncio</a>
+    <a href="#__future__">__future__</a>
+ &#8226;   <a href="#asyncio">asyncio</a>
  &#8226;   <a href="#base64">base64</a>
  &#8226;   <a href="#desktop_client.components.dialogs">desktop_client.components.dialogs</a>
  &#8226;   <a href="#desktop_client.config.settings">desktop_client.config.settings</a>
@@ -14837,7 +14843,8 @@ imported by:
   <a target="code" href="///C:/Users/Edward/Desktop/CaseStudy/desktop_client/views/saved_trips_view.py" type="text/plain"><tt>desktop_client.views.saved_trips_view</tt></a>
 <span class="moduletype">SourceModule</span>  <div class="import">
 imports:
-    <a href="#asyncio">asyncio</a>
+    <a href="#__future__">__future__</a>
+ &#8226;   <a href="#asyncio">asyncio</a>
  &#8226;   <a href="#datetime">datetime</a>
  &#8226;   <a href="#desktop_client.components.dialogs">desktop_client.components.dialogs</a>
  &#8226;   <a href="#desktop_client.config.settings">desktop_client.config.settings</a>
@@ -14886,18 +14893,14 @@ imported by:
   <a target="code" href="///C:/Users/Edward/Desktop/CaseStudy/desktop_client/views/suggested_wizard_view.py" type="text/plain"><tt>desktop_client.views.suggested_wizard_view</tt></a>
 <span class="moduletype">SourceModule</span>  <div class="import">
 imports:
-    <a href="#asyncio">asyncio</a>
+    <a href="#__future__">__future__</a>
+ &#8226;   <a href="#asyncio">asyncio</a>
  &#8226;   <a href="#datetime">datetime</a>
- &#8226;   <a href="#desktop_client.components.date_range_dialog">desktop_client.components.date_range_dialog</a>
  &#8226;   <a href="#desktop_client.components.destination_picker">desktop_client.components.destination_picker</a>
  &#8226;   <a href="#desktop_client.components.dialogs">desktop_client.components.dialogs</a>
  &#8226;   <a href="#desktop_client.components.itinerary_route_map">desktop_client.components.itinerary_route_map</a>
- &#8226;   <a href="#desktop_client.components.stop_card">desktop_client.components.stop_card</a>
  &#8226;   <a href="#desktop_client.config.settings">desktop_client.config.settings</a>
- &#8226;   <a href="#desktop_client.core.api_client">desktop_client.core.api_client</a>
- &#8226;   <a href="#desktop_client.core.commute_guide">desktop_client.core.commute_guide</a>
  &#8226;   <a href="#desktop_client.core.polyline">desktop_client.core.polyline</a>
- &#8226;   <a href="#desktop_client.core.session">desktop_client.core.session</a>
  &#8226;   <a href="#desktop_client.models.itinerary">desktop_client.models.itinerary</a>
  &#8226;   <a href="#desktop_client.models.place">desktop_client.models.place</a>
  &#8226;   <a href="#desktop_client.services.itinerary_service">desktop_client.services.itinerary_service</a>
@@ -33585,6 +33588,7 @@ imports:
   <div class="import">
 imported by:
     <a href="#cryptography.x509.extensions">cryptography.x509.extensions</a>
+ &#8226;   <a href="#desktop_client.config.settings">desktop_client.config.settings</a>
  &#8226;   <a href="#dns.entropy">dns.entropy</a>
  &#8226;   <a href="#dns.tsig">dns.tsig</a>
  &#8226;   <a href="#dns.zonetypes">dns.zonetypes</a>
@@ -37089,6 +37093,7 @@ imports:
   <div class="import">
 imported by:
     <a href="#charset_normalizer.models">charset_normalizer.models</a>
+ &#8226;   <a href="#desktop_client.components.slippy_map_canvas">desktop_client.components.slippy_map_canvas</a>
  &#8226;   <a href="#desktop_client.core.connectivity_service">desktop_client.core.connectivity_service</a>
  &#8226;   <a href="#desktop_client.core.export">desktop_client.core.export</a>
  &#8226;   <a href="#desktop_client.core.offline_data">desktop_client.core.offline_data</a>
@@ -48956,7 +48961,6 @@ imported by:
  &#8226;   <a href="#ctypes._aix">ctypes._aix</a>
  &#8226;   <a href="#ctypes.macholib.dyld">ctypes.macholib.dyld</a>
  &#8226;   <a href="#ctypes.util">ctypes.util</a>
- &#8226;   <a href="#desktop_client.components.slippy_map_canvas">desktop_client.components.slippy_map_canvas</a>
  &#8226;   <a href="#desktop_client.config.settings">desktop_client.config.settings</a>
  &#8226;   <a href="#desktop_client.core.connectivity_service">desktop_client.core.connectivity_service</a>
  &#8226;   <a href="#desktop_client.views.guest_view">desktop_client.views.guest_view</a>
@@ -49672,7 +49676,6 @@ imported by:
  &#8226;   <a href="#anyio._core._fileio">anyio._core._fileio</a>
  &#8226;   <a href="#click._termui_impl">click._termui_impl</a>
  &#8226;   <a href="#desktop_client.components.dialogs">desktop_client.components.dialogs</a>
- &#8226;   <a href="#desktop_client.components.slippy_map_canvas">desktop_client.components.slippy_map_canvas</a>
  &#8226;   <a href="#desktop_client.components.splash_overlay">desktop_client.components.splash_overlay</a>
  &#8226;   <a href="#desktop_client.config.settings">desktop_client.config.settings</a>
  &#8226;   <a href="#desktop_client.core.connectivity_service">desktop_client.core.connectivity_service</a>
@@ -62265,6 +62268,7 @@ imported by:
  &#8226;   <a href="#ctypes.macholib.framework">ctypes.macholib.framework</a>
  &#8226;   <a href="#ctypes.util">ctypes.util</a>
  &#8226;   <a href="#dataclasses">dataclasses</a>
+ &#8226;   <a href="#desktop_client.config.settings">desktop_client.config.settings</a>
  &#8226;   <a href="#desktop_client.core.commute_guide">desktop_client.core.commute_guide</a>
  &#8226;   <a href="#desktop_client.models.itinerary">desktop_client.models.itinerary</a>
  &#8226;   <a href="#desktop_client.views.signup_view">desktop_client.views.signup_view</a>

@@ -172,6 +172,13 @@ class Settings:
     storage_dir: Path = field(init=False)
     assets_dir: Path = field(init=False)
 
+    @property
+    def project_root(self) -> Path:
+        """Returns the repository root directory (parent of desktop_client or base_dir)."""
+        if self.base_dir.name.lower() == "desktop_client":
+            return self.base_dir.parent
+        return self.base_dir
+
     def __post_init__(self) -> None:
         object.__setattr__(self, "storage_dir", self.base_dir / "storage")
         object.__setattr__(self, "assets_dir", self.base_dir / "assets")
@@ -359,4 +366,97 @@ def resolve_place_image(place_name: str, image_url: str | None = None) -> str | 
 
     default_img = settings.get_asset_path("images/minalungao.png")
     return default_img if os.path.isfile(default_img) else None
+
+
+import base64
+import hashlib
+import re
+
+
+def is_placeholder_avatar(url: Optional[str]) -> bool:
+    """Return True if the avatar URL is empty or points to a generic placeholder."""
+    if not url or not str(url).strip():
+        return True
+    s = str(url).strip().lower()
+    return (
+        "placeholder" in s
+        or "default-traveler" in s
+        or "default_avatar" in s
+        or s.endswith("/default.png")
+        or s.endswith("/avatar.png")
+    )
+
+
+def resolve_avatar_path(avatar_url: Optional[str]) -> Optional[str]:
+    """
+    Resolve an avatar URL (HTTP/HTTPS, base64 data URI, or local path) into a
+    source string that Flet 1.1.2 `ft.Image(src=...)` can render reliably on Desktop & Mobile.
+    Decodes `data:image/...;base64,...` into `assets/avatars_cache/avatar_<sha1>.<ext>`
+    and returns the relative asset path `"avatars_cache/avatar_<sha1>.<ext>"`.
+    """
+    if is_placeholder_avatar(avatar_url):
+        return None
+
+    raw = str(avatar_url).strip()
+    if raw.startswith("data:image/"):
+        try:
+            header, b64_data = raw.split(",", 1)
+            ext = "png"
+            m = re.search(r"data:image/([a-zA-Z0-9+]+)", header)
+            if m:
+                fmt = m.group(1).lower()
+                if fmt in ("jpeg", "jpg"):
+                    ext = "jpg"
+                elif fmt == "webp":
+                    ext = "webp"
+                elif fmt == "gif":
+                    ext = "gif"
+            img_bytes = base64.b64decode(b64_data)
+            digest = hashlib.sha1(img_bytes).hexdigest()[:20]
+            st = get_settings()
+            avatars_dir = st.assets_dir / "avatars_cache"
+            avatars_dir.mkdir(parents=True, exist_ok=True)
+            out_file = avatars_dir / f"avatar_{digest}.{ext}"
+            if not out_file.exists():
+                out_file.write_bytes(img_bytes)
+            return f"avatars_cache/avatar_{digest}.{ext}"
+        except Exception:
+            return None
+
+    if raw.startswith(("http://", "https://")):
+        return raw
+
+    cleaned = raw.lstrip("/")
+    if cleaned.startswith("assets/"):
+        cleaned = cleaned[len("assets/"):]
+    st = get_settings()
+    if (st.assets_dir / cleaned).exists():
+        return cleaned
+    return None
+
+
+class ResponsiveLayout:
+    """Dynamic responsive metrics for compiling Flet to Desktop (Windows/macOS/Linux) and Mobile (Android/iOS)."""
+
+    @staticmethod
+    def get_metrics(page_width: Optional[float], page_height: Optional[float] = None) -> dict:
+        w = float(page_width or 1280.0)
+        h = float(page_height or 840.0)
+        is_mobile = w < 600
+        is_tablet = 600 <= w < 1024
+        is_desktop = w >= 1024
+        return {
+            "width": w,
+            "height": h,
+            "is_mobile": is_mobile,
+            "is_tablet": is_tablet,
+            "is_desktop": is_desktop,
+            "horizontal_padding": 14 if is_mobile else (24 if is_tablet else 32),
+            "narrow_max_width": w - 24 if is_mobile else 560,
+            "wizard_max_width": w - 24 if is_mobile else 680,
+            "builder_max_width": w - 24 if is_mobile else 980,
+            "dashboard_max_width": w - 24 if is_mobile else 1160,
+            "grid_columns": 1 if is_mobile else (2 if is_tablet else 3),
+        }
+
 

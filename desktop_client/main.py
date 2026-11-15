@@ -103,27 +103,59 @@ def main(page: ft.Page) -> None:
 
     offline_banner = OfflineHostBanner()
 
-    def toggle_theme() -> None:
-        """Toggles between Light and Dark theme modes across the entire shell."""
-        if page.theme_mode == ft.ThemeMode.LIGHT:
-            page.theme_mode = ft.ThemeMode.DARK
-            page.bgcolor = ThemeColors.BG_DARK
+    def toggle_theme(is_dark: Optional[bool] = None) -> None:
+        """Toggles between Light and Dark theme modes across the entire shell, preserving Settings subview."""
+        saved_subview = getattr(content_area.content, "_subview", None) if content_area else None
+        if is_dark is None:
+            new_is_dark = page.theme_mode == ft.ThemeMode.LIGHT
         else:
-            page.theme_mode = ft.ThemeMode.LIGHT
-            page.bgcolor = ThemeColors.BG_LIGHT
+            new_is_dark = is_dark
 
-        bottom_tab_bar._build_content()
+        settings.set_dark_mode(new_is_dark)
+        palette = settings.palette
+        page.theme_mode = ft.ThemeMode.DARK if new_is_dark else ft.ThemeMode.LIGHT
+        page.bgcolor = palette.bg_primary
+        if content_area:
+            content_area.bgcolor = palette.bg_primary
+
+        bottom_tab_bar.refresh_theme()
         workflow_header._build_content()
-        navigate_to(current_route, selected_trip, force=True)
+        navigate_to(
+            current_route,
+            trip_data=selected_trip,
+            force=True,
+            preserve_profile_subview=saved_subview,
+        )
 
     def navigate_to(
         route: str,
-        trip_data: Optional[Itinerary] = None,
+        trip_data: Optional[Any] = None,
         pre_added_place: Optional[Place] = None,
         force: bool = False,
+        preserve_profile_subview: Optional[str] = None,
     ) -> None:
         """Central navigation dispatcher managing route state and shell chrome."""
         nonlocal current_route, selected_trip
+
+        # Guard against Place passed positionally as 2nd argument (BUG-NEW-03)
+        if isinstance(trip_data, Place):
+            pre_added_place = trip_data
+            trip_data = None
+
+        parsed_url = urllib.parse.urlparse(route)
+        base_route = parsed_url.path
+        query_str = parsed_url.query
+
+        # Explicitly update or clear selected_trip to prevent stale draft leaks (BUG-NEW-02)
+        if trip_data is not None:
+            selected_trip = trip_data
+        elif (
+            base_route not in ("/map", "/places", "/trips", "/trip-detail")
+            and not base_route.startswith("/trips/")
+            and "restore=draft" not in query_str
+            and "itineraryId=" not in query_str
+        ):
+            selected_trip = None
 
         # Pending Changes Guard: check if active view has unsaved modifications
         if (
@@ -279,10 +311,14 @@ def main(page: ft.Page) -> None:
                 on_select_trip=lambda it: navigate_to(f"/trips/{it.id}", it),
             )
         elif base_route == "/profile":
-            content_area.content = ProfileView(
+            prof_view = ProfileView(
                 on_navigate=navigate_to,
                 on_toggle_theme=toggle_theme,
             )
+            if preserve_profile_subview in ("profile", "edit", "settings"):
+                prof_view._subview = preserve_profile_subview
+                prof_view._rebuild()
+            content_area.content = prof_view
         else:
             content_area.content = DashboardView(on_navigate=navigate_to)
 
@@ -340,6 +376,13 @@ def main(page: ft.Page) -> None:
     # Launch Cold-Start Splash Timer (2.8s auto-dismiss)
     splash_overlay.start_timer(2.8)
 
+    def _on_page_resize(e):
+        palette = settings.palette
+        page.bgcolor = palette.bg_primary
+        page.update()
+
+    page.on_resized = _on_page_resize
+
     # Background Host Health Loop (queries every 15s)
     async def check_backend_loop():
         while True:
@@ -350,6 +393,19 @@ def main(page: ft.Page) -> None:
             await asyncio.sleep(15)
 
     page.run_task(check_backend_loop)
+
+    # Initial cloud sync for authenticated sessions
+    if session_manager.is_authenticated:
+        async def _initial_sync():
+            try:
+                await auth_service.fetch_current_user()
+            except Exception:
+                pass
+            try:
+                await itinerary_service.sync_guest_itineraries_to_cloud()
+            except Exception:
+                pass
+        page.run_task(_initial_sync)
 
     # Initial Route Resolution
     if session_manager.is_authenticated or session_manager.is_guest:

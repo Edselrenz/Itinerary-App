@@ -50,7 +50,6 @@ import { GuestMigrationService } from '../../../core/services/guest-migration.se
 export class LoginPage {
   public showPassword = false;
   public isLoading = false;
-  public isDemoLoading = false;
   public errorMessage: string | null = null;
   public isForgotModalOpen = false;
   public recoveryEmail = '';
@@ -182,7 +181,7 @@ export class LoginPage {
           this.isLoading = false;
           if (err.status === 0 || err.status === 502 || err.status === 504) {
             this.errorMessage =
-              'Authentication server is currently unreachable. You can continue planning trips as a Guest or explore using the Demo Persona below.';
+              'Authentication server is currently unreachable. You can continue planning trips as a Guest.';
           } else {
             this.errorMessage =
               err.error?.detail ||
@@ -191,38 +190,6 @@ export class LoginPage {
           this.updateUI();
         },
       });
-  }
-
-  public onDemoLogin(): void {
-    this.isLoading = true;
-    this.isDemoLoading = true;
-    this.errorMessage = null;
-    this.updateUI();
-    this.authService.loginDemo().subscribe({
-      next: async () => {
-        try {
-          await this.guestMigrationService.migrateGuestData(true);
-        } catch {
-          // Migration is best-effort and non-blocking
-        }
-        this.isLoading = false;
-        this.isDemoLoading = false;
-        this.updateUI();
-        const toast = await this.toastController.create({
-          message: 'Signed in as Demo Traveler (Pattranite Persona)',
-          duration: 2000,
-          position: 'top',
-          color: 'primary',
-        });
-        await toast.present();
-        this.router.navigate(['/tabs/home']);
-      },
-      error: () => {
-        this.isLoading = false;
-        this.isDemoLoading = false;
-        this.updateUI();
-      },
-    });
   }
 
   public async onGoogleLogin(): Promise<void> {

@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -58,6 +58,7 @@ export class HistoryPage implements OnInit, OnDestroy {
   public searchTerm = '';
   public activeSegment: HistoryFilterSegment = 'all';
 
+  private cdr = inject(ChangeDetectorRef);
   private subscriptions = new Subscription();
 
   constructor(
@@ -88,8 +89,21 @@ export class HistoryPage implements OnInit, OnDestroy {
     this.subscriptions.add(
       this.itineraryService.itineraries$.subscribe((items) => {
         this.savedItineraries = items || [];
+        this.cdr.markForCheck();
       })
     );
+  }
+
+  public ionViewWillEnter(): void {
+    this.itineraryService.refreshItineraries().subscribe({
+      next: (items) => {
+        this.savedItineraries = items || [];
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.cdr.markForCheck();
+      }
+    });
   }
 
   public ngOnDestroy(): void {
@@ -128,15 +142,18 @@ export class HistoryPage implements OnInit, OnDestroy {
 
   public setSegment(seg: HistoryFilterSegment): void {
     this.activeSegment = seg;
+    this.cdr.markForCheck();
   }
 
   public clearSearch(): void {
     this.searchTerm = '';
+    this.cdr.markForCheck();
   }
 
   public resetFilters(): void {
     this.searchTerm = '';
     this.activeSegment = 'all';
+    this.cdr.markForCheck();
   }
 
   public getDaysNightsLabel(itinerary: Itinerary): string {
@@ -168,6 +185,7 @@ export class HistoryPage implements OnInit, OnDestroy {
           handler: () => {
             this.itineraryService.deleteItinerary(itinerary.id).subscribe({
               next: async () => {
+                this.cdr.markForCheck();
                 const toast = await this.toastController.create({
                   message: `Itinerary "${itinerary.title}" deleted.`,
                   duration: 2500,
@@ -177,6 +195,7 @@ export class HistoryPage implements OnInit, OnDestroy {
                 await toast.present();
               },
               error: async () => {
+                this.cdr.markForCheck();
                 const toast = await this.toastController.create({
                   message: 'Failed to delete itinerary.',
                   duration: 3000,

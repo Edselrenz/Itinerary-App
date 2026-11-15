@@ -63,6 +63,44 @@ with open(tunnel_file, "w", encoding="utf-8") as f:
     f.write(f"CLOUDFLARE_URL={cf_url}\n")
     f.write(f"NGROK_URL=https://anybody-cube-surprise.ngrok-free.dev\n")
 
+import urllib.request
+import json
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(project_root, ".env"))
+except Exception:
+    pass
+
+raw_worker_url = os.environ.get("WORKER_SYNC_URL", "https://ne-itinerary-api.edselrenz0.workers.dev")
+WORKER_SYNC_URL = raw_worker_url if raw_worker_url.endswith("/__sync_tunnel") else f"{raw_worker_url.rstrip('/')}/__sync_tunnel"
+ADMIN_SYNC_KEY = os.environ.get("WORKER_SYNC_KEY", os.environ.get("ADMIN_SYNC_KEY", "goodluckforgettingmyeyes"))
+
+
+def sync_worker_tunnels(cf: str | None, ng: str | None) -> None:
+    payload = json.dumps({
+        "cfUrl": cf or "",
+        "ngrokUrl": ng or "https://anybody-cube-surprise.ngrok-free.dev",
+    }).encode("utf-8")
+    req = urllib.request.Request(
+        WORKER_SYNC_URL,
+        data=payload,
+        headers={
+            "Content-Type": "application/json",
+            "X-Admin-Sync-Key": ADMIN_SYNC_KEY,
+            "User-Agent": "NE-Tunnel-Daemon/3.0",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            print(f"[Daemon] Synced tunnels to Cloudflare Worker (HTTP {resp.status})", flush=True)
+    except Exception as exc:
+        print(f"[Daemon] Warning: Worker sync failed: {exc}", flush=True)
+
+
+sync_worker_tunnels(cf_url, "https://anybody-cube-surprise.ngrok-free.dev")
+
 print("=" * 60, flush=True)
 print(f"BACKEND: http://127.0.0.1:8000", flush=True)
 print(f"PERMANENT NGROK: https://anybody-cube-surprise.ngrok-free.dev", flush=True)

@@ -39,7 +39,7 @@ def _resolve_tile_source(
     y: int,
     on_tile_cached: Optional[Callable[[str, str], None]] = None,
 ) -> str:
-    """Returns local path to bundled/cached OSM tile or CartoDB Voyager / ESRI fallback while caching in background."""
+    """Returns local path to bundled/cached OSM tile or ESRI / OSM fallback without watermark tiles."""
     tile_key = f"{zoom}_{x}_{y}"
     cached_src = _TILE_PATH_CACHE.get(tile_key)
     if cached_src:
@@ -47,50 +47,58 @@ def _resolve_tile_source(
 
     settings = get_settings()
 
-    # 1. Bundled assets (Zooms 8-11 pre-downloaded in desktop_client/assets/tiles)
+    # 1. Bundled assets (Zooms 10-14 pre-downloaded in desktop_client/assets/tiles)
     direct_cand = settings.assets_dir / "tiles" / f"{zoom}_{x}_{y}.png"
-    if direct_cand.is_file():
+    if direct_cand.is_file() and direct_cand.stat().st_size > 250:
         cand_str = str(direct_cand)
         _TILE_PATH_CACHE[tile_key] = cand_str
         return cand_str
 
-    # 2. Local disk cache
-    cache_dir = settings.storage_dir / "tile_cache"
+    # 2. Local disk cache inside assets_dir for seamless Flet asset hosting
+    cache_dir = settings.assets_dir / "tiles_cache"
     cache_dir.mkdir(parents=True, exist_ok=True)
     cache_file = cache_dir / f"{zoom}_{x}_{y}.png"
-    if cache_file.is_file() and cache_file.stat().st_size > 500:
+    if cache_file.is_file() and cache_file.stat().st_size > 250:
         c_str = str(cache_file)
         _TILE_PATH_CACHE[tile_key] = c_str
         return c_str
 
-    # 3. Schedule background download into local disk cache for future sessions
+    # 3. Schedule background download from ESRI World Street Map or OSM fallback
     if tile_key not in _QUEUED_TILES:
         _QUEUED_TILES.add(tile_key)
 
         def _fetch():
-            url = f"https://basemaps.cartocdn.com/rastertiles/voyager/{zoom}/{x}/{y}.png"
-            req = urllib.request.Request(
-                url,
-                headers={"User-Agent": "NuevaEcijaTravel/1.0 (+https://edselrenz.github.io/Itinerary-App)"},
-            )
-            try:
-                with urllib.request.urlopen(req, timeout=5) as resp:
-                    if resp.status == 200:
-                        data = resp.read()
-                        if len(data) > 500:
-                            with open(cache_file, "wb") as f:
-                                f.write(data)
-                            c_path = str(cache_file)
-                            _TILE_PATH_CACHE[tile_key] = c_path
-            except Exception:
-                pass
-            finally:
-                _QUEUED_TILES.discard(tile_key)
+            urls = [
+                f"https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{zoom}/{y}/{x}",
+                f"https://tile.openstreetmap.org/{zoom}/{x}/{y}.png",
+            ]
+            for url in urls:
+                req = urllib.request.Request(
+                    url,
+                    headers={
+                        "User-Agent": "TripMoTripKo-NuevaEcija/3.0 (Educational Travel App)",
+                        "Accept": "image/png,image/*;q=0.8",
+                    },
+                )
+                try:
+                    with urllib.request.urlopen(req, timeout=5) as resp:
+                        if resp.status == 200:
+                            data = resp.read()
+                            if len(data) > 250 and (data[:4] == b"\x89PNG" or data[:3] == b"\xff\xd8\xff"):
+                                tmp = cache_file.with_suffix(".tmp")
+                                tmp.write_bytes(data)
+                                tmp.replace(cache_file)
+                                c_path = str(cache_file)
+                                _TILE_PATH_CACHE[tile_key] = c_path
+                                break
+                except Exception:
+                    continue
+            _QUEUED_TILES.discard(tile_key)
 
         _TILE_EXECUTOR.submit(_fetch)
 
-    # 4. Immediate high-speed CDN tile URL (never blocked by Flutter HttpClient)
-    return f"https://basemaps.cartocdn.com/rastertiles/voyager/{zoom}/{x}/{y}.png"
+    # 4. Return ESRI World Street Map direct URL while background caching finishes
+    return f"https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{zoom}/{y}/{x}"
 
 
 # Category Pin Palette matching Project/src/app/tabs/map/map.page.scss (.pin-cat-*)
@@ -275,7 +283,7 @@ class SlippyMapCanvas(ft.Container):
 
         self.center_lat = max(NUEVA_ECIJA_MIN_LAT, min(NUEVA_ECIJA_MAX_LAT, float(center_lat)))
         self.center_lng = max(NUEVA_ECIJA_MIN_LNG, min(NUEVA_ECIJA_MAX_LNG, float(center_lng)))
-        self.zoom = max(8, min(18, int(zoom)))
+        self.zoom = max(10, min(18, int(zoom)))
 
         if route_coords and not route_stops:
             route_stops = [
@@ -304,7 +312,22 @@ class SlippyMapCanvas(ft.Container):
 
         self._tile_stack = ft.Stack(width=self._map_w, height=self._map_h)
         self._vector_canvas = cv.Canvas(width=self._map_w, height=self._map_h, shapes=[])
-        self._marker_stack = ft.Stack(width=self._map_w, height=self._map_h)
+        self._marker_stack = ft.Stack(left=0, top=0, width=self._map_w, height=self._map_h)
+        self._drag_dx: float = 0.0
+        self._drag_dy: float = 0.0
+
+        self._pan_layer = ft.Container(
+            left=0,
+            top=0,
+            width=self._map_w,
+            height=self._map_h,
+            content=ft.Stack(
+                controls=[
+                    self._tile_stack,
+                    self._vector_canvas,
+                ]
+            ),
+        )
 
         # Attribution & Zoom Controls (bottom-right)
         self._zoom_label = ft.Text(f"Z{self.zoom}", size=10, weight=ft.FontWeight.W_700, color="#334155")
@@ -384,8 +407,7 @@ class SlippyMapCanvas(ft.Container):
             width=self._map_w,
             height=self._map_h,
             controls=[
-                self._tile_stack,
-                self._vector_canvas,
+                self._pan_layer,
                 gesture_surface,
                 self._marker_stack,
                 controls_overlay,
@@ -485,7 +507,7 @@ class SlippyMapCanvas(ft.Container):
     def set_center_and_zoom(self, lat: float, lng: float, zoom: Optional[int] = None) -> None:
         self.center_lat, self.center_lng = self._clamp_center(lat, lng)
         if zoom is not None:
-            new_z = max(8, min(18, int(zoom)))
+            new_z = max(10, min(18, int(zoom)))
             if new_z != self.zoom:
                 self.zoom = new_z
                 self._tile_pool.clear()
@@ -497,7 +519,7 @@ class SlippyMapCanvas(ft.Container):
         self.set_center_and_zoom(15.58, 121.00, 10)
 
     def set_zoom(self, new_zoom: int) -> None:
-        clamped = max(8, min(18, int(new_zoom)))
+        clamped = max(10, min(18, int(new_zoom)))
         if clamped != self.zoom:
             self.zoom = clamped
             self._tile_pool.clear()
@@ -553,24 +575,62 @@ class SlippyMapCanvas(ft.Container):
 
     def _handle_pan_start(self, e: Any) -> None:
         self._is_panning = True
+        self._drag_dx = 0.0
+        self._drag_dy = 0.0
 
     def _handle_pan_update(self, e: Any) -> None:
         dx, dy = _extract_pan_delta(e)
         if dx == 0.0 and dy == 0.0:
             return
+
+        self._drag_dx += dx
+        self._drag_dy += dy
+
+        # Fast-path O(1) GPU container translation within 1-tile overscan ring (zero DOM rebuilds!)
+        if abs(self._drag_dx) < 220 and abs(self._drag_dy) < 220 and hasattr(self, "_pan_layer"):
+            self._pan_layer.left = self._drag_dx
+            self._pan_layer.top = self._drag_dy
+            if hasattr(self, "_marker_stack"):
+                self._marker_stack.left = self._drag_dx
+                self._marker_stack.top = self._drag_dy
+            if self.page is not None:
+                try:
+                    self._pan_layer.update()
+                    if hasattr(self, "_marker_stack"):
+                        self._marker_stack.update()
+                except Exception:
+                    pass
+            return
+
+        # Commit shift when crossing overscan boundary
         cx, cy = latlon_to_world_px(self.center_lat, self.center_lng, self.zoom)
-        new_lat, new_lng = world_px_to_latlon(cx - dx, cy - dy, self.zoom)
+        new_lat, new_lng = world_px_to_latlon(cx - self._drag_dx, cy - self._drag_dy, self.zoom)
         self.center_lat, self.center_lng = self._clamp_center(new_lat, new_lng)
-
-        now = time.monotonic()
-        if now - self._last_pan_redraw >= 0.032:
-            self._last_pan_redraw = now
-            self._is_panning = True
-            self.redraw()
-
-    def _handle_pan_end(self, e: Any) -> None:
-        self._is_panning = False
+        self._drag_dx = 0.0
+        self._drag_dy = 0.0
+        if hasattr(self, "_pan_layer"):
+            self._pan_layer.left = 0
+            self._pan_layer.top = 0
+        if hasattr(self, "_marker_stack"):
+            self._marker_stack.left = 0
+            self._marker_stack.top = 0
         self.redraw()
+
+    def _handle_pan_end(self, e: Any = None) -> None:
+        self._is_panning = False
+        if self._drag_dx != 0.0 or self._drag_dy != 0.0:
+            cx, cy = latlon_to_world_px(self.center_lat, self.center_lng, self.zoom)
+            new_lat, new_lng = world_px_to_latlon(cx - self._drag_dx, cy - self._drag_dy, self.zoom)
+            self.center_lat, self.center_lng = self._clamp_center(new_lat, new_lng)
+            self._drag_dx = 0.0
+            self._drag_dy = 0.0
+            if hasattr(self, "_pan_layer"):
+                self._pan_layer.left = 0
+                self._pan_layer.top = 0
+            if hasattr(self, "_marker_stack"):
+                self._marker_stack.left = 0
+                self._marker_stack.top = 0
+            self.redraw()
 
     def _handle_scroll(self, e: Any) -> None:
         now = time.monotonic()

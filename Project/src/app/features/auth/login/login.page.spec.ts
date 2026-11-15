@@ -153,15 +153,6 @@ describe('LoginPage', () => {
     );
   });
 
-  it('should authenticate demo account when onDemoLogin is clicked (Finding 1)', async () => {
-    expect(component.isDemoLoading).toBe(false);
-    component.onDemoLogin();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(mockAuthService.loginDemo).toHaveBeenCalled();
-    expect(mockRouter.navigate).toHaveBeenCalledWith(['/tabs/home']);
-    expect(component.isDemoLoading).toBe(false);
-  });
-
   it('should display error message on login failure with reactive change detection (FIX-01C)', () => {
     mockAuthService.login.mockReturnValueOnce(
       throwError(() => ({ status: 401, error: { detail: 'Incorrect email or password' } }))

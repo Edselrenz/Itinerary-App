@@ -188,6 +188,17 @@ if (-not $NoTunnel) {
         }
     }
 
+    if ($cfUrl -or $ngrokUrl) {
+        $scratchDir = Join-Path $ProjectRoot "scratch"
+        if (-not (Test-Path $scratchDir)) { New-Item -ItemType Directory -Path $scratchDir -Force | Out-Null }
+        $tunnelFile = Join-Path $scratchDir "active_tunnel.txt"
+        $tunnelLines = @()
+        if ($cfUrl) { $tunnelLines += "CLOUDFLARE_URL=$cfUrl" }
+        if ($ngrokUrl) { $tunnelLines += "NGROK_URL=$ngrokUrl" }
+        Set-Content -Path $tunnelFile -Value ($tunnelLines -join "`n") -Encoding UTF8
+        Write-Host "  [OK] Saved active endpoints to scratch/active_tunnel.txt" -ForegroundColor Green
+    }
+
     # 3c. Automatically sync active tunnel endpoints to Cloudflare Worker Proxy (Option 2)
     $workerSyncUrl = $env:WORKER_SYNC_URL
     $workerSyncKey = $env:WORKER_SYNC_KEY

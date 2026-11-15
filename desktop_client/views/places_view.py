@@ -90,7 +90,11 @@ class PlacesView(ft.Container):
 
         self.map_component: Optional[SlippyMapCanvas] = None
         self._build_content()
-        self._async_bootstrap()
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(self._async_bootstrap())
+        except RuntimeError:
+            pass
 
     @property
     def safe_page(self) -> Optional[ft.Page]:
@@ -100,6 +104,10 @@ class PlacesView(ft.Container):
             return self.page
         except Exception:
             return None
+
+    def did_mount(self) -> None:
+        if self.safe_page is not None:
+            self.safe_page.run_task(self._async_bootstrap)
 
     def _check_and_init_route_mode(self) -> None:
         """Determines if /map was launched with an itinerary route parameter."""
@@ -127,22 +135,15 @@ class PlacesView(ft.Container):
             self.is_follow_route_mode = False
             self.route_itinerary = None
 
-    def _async_bootstrap(self) -> None:
-        async def _load():
-            try:
-                res = await self.place_service.get_places(page=1, page_size=250)
-                if res.items:
-                    self.place_service.merge_places_into_cache(res.items)
-                    self.all_places = self.place_service.get_loaded_places()
-                    self._apply_filters()
-                    self._update_in_place(reset_viewport=False)
-            except Exception:
-                pass
-
+    async def _async_bootstrap(self) -> None:
         try:
-            loop = asyncio.get_running_loop()
-            loop.create_task(_load())
-        except RuntimeError:
+            res = await self.place_service.get_places(page=1, page_size=250)
+            if res.items:
+                self.place_service.merge_places_into_cache(res.items)
+                self.all_places = self.place_service.get_loaded_places()
+                self._apply_filters()
+                self._update_in_place(reset_viewport=False)
+        except Exception:
             pass
 
     def _apply_filters(self) -> None:
@@ -570,9 +571,6 @@ class PlacesView(ft.Container):
         self._apply_filters()
         self._update_in_place(reset_viewport=False)
 
-    def _reset_all_filters(self) -> None:
-        self._reset_discovery_filters()
-
     def _build_drawer_content(self) -> ft.Control:
         """Builds vertical scrollable list of destinations with empty-state reset (MAP-10)."""
         if not self.filtered_places:
@@ -895,8 +893,9 @@ class PlacesView(ft.Container):
         self._handle_place_pin_click(place)
 
     def _prompt_add_place_to_trip(self, place: Place) -> None:
+        """Navigate to Custom Builder with this place pre-selected as a stop."""
         if self.on_navigate:
-            self.on_navigate("/builder", place)
+            self.on_navigate("/builder", None, place)
 
     def _pan_to_stop(self, lat: Optional[float], lng: Optional[float], place: Optional[Place]) -> None:
         if lat and lng and self.map_component:

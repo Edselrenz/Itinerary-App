@@ -496,85 +496,107 @@
 // 4. Log Out Confirmation Modal (Centered Floating Card with Blue Exit Door)
 // -----------------------------------------------------------------------------
 .figma-logout-modal {
-  --background: rgba(0, 0, 0, 0.45);
-  --backdrop-opacity: 0.45;
+  --background: transparent;
+  --backdrop-opacity: 0.55;
+  --width: 90%;
+  --max-width: 320px;
   --height: auto;
+  --border-radius: 28px;
+  --box-shadow: none;
+
+  &::part(content) {
+    border-radius: 28px;
+    background: transparent;
+    overflow: visible;
+    box-shadow: none;
+    margin: auto;
+  }
 }
 
 .logout-card-container {
   background: #ffffff;
   border-radius: 28px;
-  padding: 20px 24px 28px 24px;
+  padding: 22px 24px 26px 24px;
   text-align: center;
   max-width: 320px;
+  width: 100%;
   margin: auto;
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.22);
+  box-sizing: border-box;
 }
 
-.logout-triple-dots {
+.logout-top-accent {
   display: flex;
   justify-content: center;
-  gap: 4px;
-  margin-bottom: 18px;
+  align-items: center;
+  margin-bottom: 12px;
+}
 
-  span {
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background-color: #cbd5e1;
-  }
+.logout-sparkle-img {
+  width: 28px;
+  height: auto;
+  display: block;
 }
 
 .logout-icon-box {
   display: flex;
   justify-content: center;
-  margin-bottom: 8px;
+  align-items: center;
+  margin-bottom: 12px;
 }
 
-.logout-blue-door {
-  font-size: 52px;
-  color: var(--pf-blue);
-}
-
-.logout-door-svg {
-  width: 58px;
-  height: 58px;
+.logout-door-img {
+  width: 50px;
+  height: auto;
+  display: block;
 }
 
 .logout-heading {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 800;
   color: #0f172a;
-  margin: 10px 0 6px 0;
+  margin: 0 0 8px 0;
+  letter-spacing: -0.015em;
 }
 
 .logout-body-text {
   font-size: 13.5px;
-  color: #64748b;
+  color: #475569;
   line-height: 1.45;
-  margin: 0 0 24px 0;
+  margin: 0 0 22px 0;
+  font-weight: 400;
 }
 
 .logout-btns-stack {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .logout-action-blue-btn {
-  background: var(--pf-blue);
+  background: #0084ff;
   color: #ffffff;
   border: none;
-  border-radius: 16px;
-  padding: 14px 20px;
-  font-size: 15px;
-  font-weight: 600;
+  border-radius: 9999px;
+  height: 48px;
+  padding: 0 20px;
+  font-size: 15.5px;
+  font-weight: 700;
   width: 100%;
   cursor: pointer;
-  transition: background 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 132, 255, 0.22);
+  transition: background 0.15s ease, transform 0.1s ease;
+
+  &:hover {
+    background: #0073e6;
+  }
 
   &:active {
-    background: var(--pf-blue-hover);
+    transform: scale(0.98);
+    background: #0060bf;
   }
 }
 

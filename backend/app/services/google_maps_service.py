@@ -710,45 +710,79 @@ class GoogleMapsService:
     # Place Upsert Helper
     # ------------------------------------------------------------------------
 
-    def upsert_google_place_to_db(self, db: Session, place_data: dict) -> Place:
-        """Persists or links a Google Place into the local PostgreSQL/SQLite places database."""
-        google_place_id = (
-            place_data.get("google_place_id")
-            or place_data.get("source_record_id")
-            or place_data.get("id")
-        )
+    def upsert_google_place_to_db(self, db: Session, place_data: dict[str, Any]) -> Place:
+        """
+        Persist a live Google Places, OSM, or curated result into the local `places` table
+        so that itineraries and favorites can reference a permanent UUID foreign key.
+        """
+        raw_id = place_data.get("id")
+        parsed_uuid: uuid.UUID | None = None
+        if raw_id:
+            try:
+                parsed_uuid = uuid.UUID(str(raw_id))
+            except (ValueError, TypeError):
+                parsed_uuid = None
 
-        # 1. Match by google_place_id
-        if google_place_id:
-            stmt = select(Place).where(Place.google_place_id == str(google_place_id))
-            existing = db.scalar(stmt)
-            if existing:
+        if parsed_uuid is not None:
+            existing_by_id = db.get(Place, parsed_uuid)
+            if existing_by_id is not None:
+                # Update missing cost attributes if present
+                c_min = place_data.get("estimated_cost_min") or place_data.get("estimatedCostMin") or place_data.get("estimated_cost")
+                c_max = place_data.get("estimated_cost_max") or place_data.get("estimatedCostMax") or place_data.get("estimated_cost")
+                if c_min is not None and not existing_by_id.estimated_cost_min:
+                    existing_by_id.estimated_cost_min = float(c_min)
+                if c_max is not None and not existing_by_id.estimated_cost_max:
+                    existing_by_id.estimated_cost_max = float(c_max)
+                db.flush()
+                return existing_by_id
+
+        source_record_id = (
+            place_data.get("source_record_id")
+            or place_data.get("google_place_id")
+            or (str(raw_id) if raw_id else None)
+        )
+        source_name = str(place_data.get("source_name") or "google_places")
+        google_place_id = place_data.get("google_place_id") or (str(source_record_id) if source_name == "google_places" else None)
+
+        if source_record_id:
+            existing = db.scalar(
+                select(Place).where(Place.source_record_id == str(source_record_id))
+            )
+            if existing is not None:
+                if place_data.get("rating") is not None:
+                    existing.rating = float(place_data["rating"])
+                r_count = place_data.get("user_rating_count") or place_data.get("review_count")
+                if r_count is not None:
+                    existing.user_rating_count = int(r_count)
+                if place_data.get("image_url") and not existing.image_url:
+                    existing.image_url = place_data["image_url"]
+                c_min = place_data.get("estimated_cost_min") or place_data.get("estimatedCostMin") or place_data.get("estimated_cost")
+                c_max = place_data.get("estimated_cost_max") or place_data.get("estimatedCostMax") or place_data.get("estimated_cost")
+                if c_min is not None and not existing.estimated_cost_min:
+                    existing.estimated_cost_min = float(c_min)
+                if c_max is not None and not existing.estimated_cost_max:
+                    existing.estimated_cost_max = float(c_max)
+                db.flush()
                 return existing
 
-            # 2. Match by source_record_id & source_name
-            stmt_src = select(Place).where(
-                Place.source_name == "google_places",
-                Place.source_record_id == str(google_place_id),
+        name = str(place_data.get("name") or "Nueva Ecija Stop").strip()
+        lat = float(place_data.get("latitude") or place_data.get("lat") or 15.4865)
+        lng = float(place_data.get("longitude") or place_data.get("lng") or 120.9734)
+
+        existing_coords = db.scalar(
+            select(Place).where(
+                Place.name == name,
+                Place.latitude.between(lat - 0.002, lat + 0.002),
+                Place.longitude.between(lng - 0.002, lng + 0.002),
             )
-            existing_src = db.scalar(stmt_src)
-            if existing_src:
-                return existing_src
-
-        # 3. Match by name & approximate coordinates
-        lat = float(place_data.get("latitude", 0.0))
-        lng = float(place_data.get("longitude", 0.0))
-        name = place_data.get("name") or "Unnamed Place"
-
-        stmt_near = select(Place).where(
-            Place.name == name,
-            Place.latitude.between(lat - 0.001, lat + 0.001),
-            Place.longitude.between(lng - 0.001, lng + 0.001),
         )
-        existing_near = db.scalar(stmt_near)
-        if existing_near:
-            return existing_near
+        if existing_coords is not None:
+            if source_record_id and not existing_coords.source_record_id:
+                existing_coords.source_record_id = str(source_record_id)
+                db.flush()
+            return existing_coords
 
-        # 4. Resolve closest Municipality
+        # Resolve closest Municipality
         municipality_id = None
         all_municipalities = list(db.scalars(select(Municipality)).all())
         if all_municipalities and lat != 0.0 and lng != 0.0:
@@ -764,40 +798,43 @@ class GoogleMapsService:
                 place_data.get("google_types") or place_data.get("tags")
             )
 
-        new_place = Place(
-            id=uuid.uuid4(),
-            name=name,
-            category=category,
-            latitude=lat,
-            longitude=lng,
-            municipality_id=municipality_id,
-            address_text=place_data.get("address_text"),
-            description=place_data.get("description") or place_data.get("editorial_summary"),
-            phone=place_data.get("phone"),
-            website=place_data.get("website"),
-            opening_hours=place_data.get("opening_hours"),
-            cost_currency=place_data.get("cost_currency", "PHP"),
-            image_url=place_data.get("image_url"),
-            image_license=place_data.get("image_license", "Google Maps Platform"),
-            source_name="google_places",
-            source_record_id=str(google_place_id or uuid.uuid4()),
-            source_url=place_data.get("google_maps_uri") or place_data.get("directions_url"),
-            is_featured=False,
-            is_active=True,
-            tags=place_data.get("tags") or place_data.get("google_types") or [],
-            google_place_id=str(google_place_id) if google_place_id else None,
-            google_types=place_data.get("google_types") or [],
-            editorial_summary=place_data.get("editorial_summary"),
-            regular_opening_hours=place_data.get("regular_opening_hours"),
-            rating=place_data.get("rating"),
-            user_rating_count=place_data.get("user_rating_count"),
-            price_level=place_data.get("price_level"),
-            photos=place_data.get("photos") or [],
-            reviews=place_data.get("reviews") or [],
-            business_status=place_data.get("business_status"),
-            google_maps_uri=place_data.get("google_maps_uri") or place_data.get("directions_url"),
-            details_cached_at=datetime.now(timezone.utc),
-        )
+        c_min = place_data.get("estimated_cost_min") or place_data.get("estimatedCostMin") or place_data.get("estimated_cost")
+        c_max = place_data.get("estimated_cost_max") or place_data.get("estimatedCostMax") or place_data.get("estimated_cost")
+
+        place_kwargs: dict[str, Any] = {
+            "name": name[:200],
+            "category": str(category)[:64],
+            "description": place_data.get("description") or place_data.get("editorial_summary") or f"Verified venue in Nueva Ecija.",
+            "address_text": place_data.get("address_text") or place_data.get("address") or "Nueva Ecija",
+            "latitude": lat,
+            "longitude": lng,
+            "municipality_id": municipality_id,
+            "phone": place_data.get("phone") or place_data.get("contact_phone"),
+            "website": place_data.get("website"),
+            "opening_hours": place_data.get("opening_hours"),
+            "cost_currency": place_data.get("cost_currency", "PHP"),
+            "estimated_cost_min": float(c_min) if c_min is not None else None,
+            "estimated_cost_max": float(c_max) if c_max is not None else None,
+            "image_url": place_data.get("image_url") or place_data.get("imageUrl"),
+            "image_license": place_data.get("image_license", "Google Maps Platform"),
+            "source_name": source_name[:64],
+            "source_record_id": str(source_record_id or parsed_uuid or uuid.uuid4())[:128],
+            "source_url": place_data.get("google_maps_uri") or place_data.get("directions_url"),
+            "is_featured": bool(place_data.get("is_featured", False)),
+            "is_active": True,
+            "tags": list(place_data.get("tags") or place_data.get("google_types") or []),
+            "google_place_id": str(google_place_id) if google_place_id else None,
+            "google_types": list(place_data.get("google_types") or []),
+            "rating": float(place_data.get("rating") or 4.3),
+            "user_rating_count": int(place_data.get("user_rating_count") or place_data.get("review_count") or 10),
+            "price_level": int(place_data.get("price_level") or 2),
+        }
+        if parsed_uuid is not None:
+            place_kwargs["id"] = parsed_uuid
+        else:
+            place_kwargs["id"] = uuid.uuid4()
+
+        new_place = Place(**place_kwargs)
         db.add(new_place)
         db.flush()
         return new_place
@@ -1158,4 +1195,9 @@ class GoogleMapsService:
 
 # Global singleton instance
 google_maps_service = GoogleMapsService()
+
+
+def upsert_google_place_to_db(db: Session, place_data: dict[str, Any]) -> Place:
+    """Module-level convenience wrapper for place upsertion."""
+    return google_maps_service.upsert_google_place_to_db(db, place_data)
 

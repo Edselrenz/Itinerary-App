@@ -40,9 +40,44 @@ class ItineraryService:
 
     async def generate_suggested_itinerary(
         self,
-        request: SuggestedItineraryRequest,
+        request: Optional[SuggestedItineraryRequest] = None,
+        *,
+        destination: Optional[str] = None,
+        start_date: Optional[Any] = None,
+        end_date: Optional[Any] = None,
+        days_count: Optional[int] = None,
+        daily_budget: Optional[float] = None,
+        budget: Optional[float] = None,
+        preferences: Optional[list[str]] = None,
+        pacing: str = "moderate",
+        travel_mode: str = "DRIVE",
+        min_rating: float = 0.0,
+        anchor_place_id: Optional[str] = None,
+        anchor_place_payload: Optional[dict[str, Any]] = None,
+        title: Optional[str] = None,
+        save_immediately: bool = False,
+        **kwargs: Any,
     ) -> Itinerary:
         """Invokes the backend clustering algorithm to produce an optimized multi-day travel schedule, falling back offline."""
+        if request is None:
+            from datetime import date
+            s_date_str = start_date.strftime("%Y-%m-%d") if isinstance(start_date, (date, datetime)) else (str(start_date) if start_date else datetime.now().strftime("%Y-%m-%d"))
+            e_date_str = end_date.strftime("%Y-%m-%d") if isinstance(end_date, (date, datetime)) else (str(end_date) if end_date else s_date_str)
+            eff_budget = daily_budget if daily_budget is not None else (budget if budget is not None else 2500.0)
+            request = SuggestedItineraryRequest(
+                title=title or "Suggested Nueva Ecija Itinerary",
+                destination=destination or "Nueva Ecija",
+                start_date=s_date_str,
+                end_date=e_date_str,
+                daily_budget=float(eff_budget),
+                preferences=list(preferences or []),
+                pacing=pacing or "moderate",
+                travel_mode=travel_mode or "DRIVE",
+                save_immediately=save_immediately,
+                min_rating=min_rating if min_rating > 0 else None,
+                anchor_place_id=anchor_place_id,
+            )
+
         from desktop_client.core.connectivity_service import get_connectivity_service
         conn = get_connectivity_service()
 
@@ -75,6 +110,10 @@ class ItineraryService:
     def set_active_draft_itinerary(self, itinerary: Optional[Itinerary]) -> None:
         """Stores the active draft preview itinerary in memory."""
         self.active_draft_itinerary = itinerary
+
+    def clear_active_draft_itinerary(self) -> None:
+        """Clears the active draft preview itinerary."""
+        self.active_draft_itinerary = None
 
     def get_active_draft_itinerary(self) -> Optional[Itinerary]:
         """Returns the active draft preview itinerary if present."""
@@ -498,11 +537,17 @@ class ItineraryService:
 
         return None
 
-    async def create_itinerary(self, payload: ItineraryCreatePayload) -> Itinerary:
+    async def create_itinerary(self, payload: Any) -> Itinerary:
         """Creates a new itinerary in the cloud or in local guest storage on network failure."""
+        if isinstance(payload, Itinerary):
+            payload = payload.to_create_payload()
+        elif isinstance(payload, dict):
+            payload = ItineraryCreatePayload(**payload)
+
         if self.session_manager.is_authenticated:
             try:
-                data = await self.api_client.post("itineraries", json_data=payload.to_dict())
+                json_body = payload.to_dict() if hasattr(payload, "to_dict") else payload
+                data = await self.api_client.post("itineraries", json_data=json_body)
                 return Itinerary.from_dict(data)
             except Exception as err:
                 logger.info(f"Failed to create cloud itinerary ({err}), falling back to local guest storage")
@@ -567,9 +612,14 @@ class ItineraryService:
             return self.active_draft_itinerary
         return self.guest_storage.get_itinerary(itinerary_id)
 
-    async def update_itinerary(self, itinerary: Itinerary) -> Itinerary:
+    async def update_itinerary(self, itinerary: Any, maybe_itin: Optional[Itinerary] = None) -> Itinerary:
         """Saves changes to an itinerary, falling back to local storage on network failure."""
-        if itinerary.is_guest or not self.session_manager.is_authenticated:
+        if maybe_itin is not None:
+            itinerary = maybe_itin
+        if isinstance(itinerary, dict):
+            itinerary = Itinerary.from_dict(itinerary)
+
+        if getattr(itinerary, "is_guest", False) or not self.session_manager.is_authenticated:
             return self.guest_storage.save_itinerary(itinerary)
 
         # Update in cloud via PATCH
@@ -589,6 +639,22 @@ class ItineraryService:
         except Exception as err:
             logger.info(f"Failed to patch cloud itinerary ({err}), saving to local storage fallback")
             return self.guest_storage.save_itinerary(itinerary)
+
+    async def sync_guest_itineraries_to_cloud(self) -> int:
+        """Push any locally saved guest itineraries to PostgreSQL upon login."""
+        if not self.session_manager.is_authenticated:
+            return 0
+        local_trips = self.guest_storage.list_itineraries()
+        synced = 0
+        for trip in local_trips:
+            if getattr(trip, "is_guest", False) or str(trip.id).startswith(("guest-", "local-", "draft-")):
+                try:
+                    await self.create_itinerary(trip)
+                    self.guest_storage.delete_itinerary(str(trip.id))
+                    synced += 1
+                except Exception as err:
+                    logger.debug(f"Failed to sync guest trip {trip.id} to cloud: {err}")
+        return synced
 
     async def delete_itinerary(self, itinerary_id: str, is_guest: bool = False) -> bool:
         """Deletes an itinerary from cloud or local guest storage."""

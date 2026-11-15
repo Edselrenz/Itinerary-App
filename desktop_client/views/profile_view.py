@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Callable, Optional
 import flet as ft
 
-from desktop_client.components.dialogs import show_place_detail_dialog
+from desktop_client.components.dialogs import show_place_detail_dialog, show_toast
 from desktop_client.config.settings import ThemeColors, get_settings
 from desktop_client.core.connectivity_service import get_connectivity_service
 from desktop_client.core.session import get_session_manager
@@ -68,6 +68,18 @@ class ProfileView(ft.Container):
         self._fav_selected_cat: str = "ALL"
 
         self._build_content()
+
+    @property
+    def _subview(self) -> str:
+        return self.view_mode
+
+    @_subview.setter
+    def _subview(self, val: str) -> None:
+        self.view_mode = val
+
+    def _rebuild(self) -> None:
+        self._build_content()
+        self._safe_update()
 
     def handle_back(self) -> bool:
         """Allows back navigation from subviews ('edit', 'settings', 'favorites', 'help', 'about') back to 'profile'."""
@@ -526,12 +538,7 @@ class ProfileView(ft.Container):
                     self._build_content()
                     self._safe_update()
                     if self.safe_page:
-                        self.safe_page.snack_bar = ft.SnackBar(
-                            content=ft.Text("Profile updated successfully!", color=ft.Colors.WHITE),
-                            bgcolor=ThemeColors.SUCCESS,
-                            open=True,
-                        )
-                        self.safe_page.update()
+                        show_toast(self.safe_page, "Profile updated successfully!")
                 except Exception as err:
                     self._edit_error_msg = str(err)
                     self._build_content()
@@ -1013,11 +1020,7 @@ class ProfileView(ft.Container):
         def _do_clear(_):
             self._close_dialog(dlg)
             if self.safe_page:
-                self.safe_page.snack_bar = ft.SnackBar(
-                    content=ft.Text("Local cache cleared successfully."),
-                    open=True,
-                )
-                self.safe_page.update()
+                show_toast(self.safe_page, "Local cache cleared successfully.")
 
         dlg = ft.AlertDialog(
             title=ft.Text("Clear Cache & Offline Data", size=18, weight=ft.FontWeight.BOLD),
@@ -1043,41 +1046,91 @@ class ProfileView(ft.Container):
             self.session_manager.clear_session()
             self._navigate("/welcome?logout=1")
 
+        sparkle_path = self.settings.get_asset_path("logout_sparkle_accent.png")
+        door_path = self.settings.get_asset_path("logout_door_icon.png")
+
+        top_controls = []
+        if Path(sparkle_path).exists():
+            top_controls.append(
+                ft.Container(
+                    content=ft.Image(src=sparkle_path, width=28, height=13, fit=ft.BoxFit.CONTAIN),
+                    alignment=ft.Alignment(0, 0),
+                    margin=ft.Margin.only(bottom=4),
+                )
+            )
+        else:
+            top_controls.append(
+                ft.Row(
+                    [
+                        ft.Text("✦", size=13, color="#c084fc", weight=ft.FontWeight.BOLD),
+                        ft.Text("...", size=13, color="#c084fc", weight=ft.FontWeight.BOLD),
+                    ],
+                    alignment=ft.MainAxisAlignment.CENTER,
+                    spacing=2,
+                )
+            )
+
+        if Path(door_path).exists():
+            top_controls.append(
+                ft.Container(
+                    content=ft.Image(src=door_path, width=50, height=48, fit=ft.BoxFit.CONTAIN),
+                    alignment=ft.Alignment(0, 0),
+                    margin=ft.Margin.only(bottom=4),
+                )
+            )
+        else:
+            top_controls.append(
+                ft.Icon(ft.Icons.LOGOUT_ROUNDED, size=48, color=ThemeColors.PRIMARY_BLUE)
+            )
+
         dlg = ft.AlertDialog(
-            title=ft.Text("Log Out?", size=20, weight=ft.FontWeight.W_800, text_align=ft.TextAlign.CENTER),
-            content=ft.Column(
-                tight=True,
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                spacing=12,
-                controls=[
-                    ft.Icon(ft.Icons.LOGOUT_ROUNDED, size=44, color=ThemeColors.PRIMARY_BLUE),
-                    ft.Text(
-                        "You will be signed out of your account. You can always log back in anytime.",
-                        size=13,
-                        color=ThemeColors.TEXT_MUTED_LIGHT,
-                        text_align=ft.TextAlign.CENTER,
-                    ),
-                    ft.Container(
-                        width=260,
-                        height=42,
-                        bgcolor=ThemeColors.PRIMARY_BLUE,
-                        border_radius=20,
-                        alignment=ft.Alignment(0, 0),
-                        ink=True,
-                        on_click=_do_logout,
-                        content=ft.Text("Log Out", size=14, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
-                    ),
-                    ft.Container(
-                        width=260,
-                        height=42,
-                        bgcolor=ThemeColors.PRIMARY_BLUE,
-                        border_radius=20,
-                        alignment=ft.Alignment(0, 0),
-                        ink=True,
-                        on_click=lambda _: self._close_dialog(dlg),
-                        content=ft.Text("Cancel", size=14, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
-                    ),
-                ],
+            shape=ft.RoundedRectangleBorder(radius=28),
+            bgcolor=ft.Colors.WHITE,
+            content_padding=ft.Padding.only(left=24, right=24, top=20, bottom=24),
+            content=ft.Container(
+                width=280,
+                content=ft.Column(
+                    tight=True,
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=8,
+                    controls=[
+                        *top_controls,
+                        ft.Text(
+                            "Log Out?",
+                            size=22,
+                            weight=ft.FontWeight.W_800,
+                            color=ThemeColors.TEXT_PRIMARY_LIGHT,
+                            text_align=ft.TextAlign.CENTER,
+                        ),
+                        ft.Text(
+                            "You will be signed out of your account.\nYou can always log back in anytime.",
+                            size=13.5,
+                            color=ThemeColors.TEXT_MUTED_LIGHT,
+                            text_align=ft.TextAlign.CENTER,
+                        ),
+                        ft.Container(height=8),
+                        ft.Container(
+                            width=280,
+                            height=48,
+                            bgcolor=ThemeColors.PRIMARY_BLUE,
+                            border_radius=9999,
+                            alignment=ft.Alignment(0, 0),
+                            ink=True,
+                            on_click=_do_logout,
+                            content=ft.Text("Log Out", size=15, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
+                        ),
+                        ft.Container(
+                            width=280,
+                            height=48,
+                            bgcolor=ThemeColors.PRIMARY_BLUE,
+                            border_radius=9999,
+                            alignment=ft.Alignment(0, 0),
+                            ink=True,
+                            on_click=lambda _: self._close_dialog(dlg),
+                            content=ft.Text("Cancel", size=15, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
+                        ),
+                    ],
+                ),
             ),
         )
         self._show_dialog(dlg)

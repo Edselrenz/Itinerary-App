@@ -124,24 +124,6 @@
         </button>
       </div>
 
-      <!-- Explicit Demo Account Mode (Finding 1) -->
-      <div class="demo-login-group">
-        <button
-          type="button"
-          class="demo-pill-btn"
-          (click)="onDemoLogin()"
-          [disabled]="isLoading || isDemoLoading"
-        >
-          @if (isDemoLoading) {
-            <ion-spinner name="crescent" class="demo-spinner"></ion-spinner>
-            <span>Entering Demo Mode...</span>
-          } @else {
-            <ion-icon name="sparkles" class="demo-btn-icon"></ion-icon>
-            <span>Explore Demo Account (Pattranite Persona)</span>
-          }
-        </button>
-      </div>
-
       <!-- Footer: Don't have an account? Sign up -->
       <footer class="login-footer">
         <span class="footer-prompt">Don't have an account?</span>

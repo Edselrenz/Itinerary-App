@@ -239,7 +239,7 @@ class WelcomeView(ft.Container):
         )
 
         logout_subtitle = ft.Text(
-            "Your account has been signed out. Explore as guest\nor log in again to access your saved trips.",
+            "Your account has been signed out. Explore as guest\nor log in again to access your saved trips and preferences.",
             size=14,
             color=palette.text_muted,
             text_align=ft.TextAlign.CENTER,
@@ -248,7 +248,7 @@ class WelcomeView(ft.Container):
         guest_btn = ft.Container(
             content=ft.Text("Continue as Guest", size=15, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
             bgcolor=ThemeColors.PRIMARY_BLUE,
-            border_radius=24,
+            border_radius=9999,
             height=48,
             alignment=ft.Alignment(0, 0),
             ink=True,
@@ -258,7 +258,7 @@ class WelcomeView(ft.Container):
         login_btn = ft.Container(
             content=ft.Text("Log In", size=15, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
             bgcolor=ThemeColors.PRIMARY_BLUE,
-            border_radius=24,
+            border_radius=9999,
             height=48,
             alignment=ft.Alignment(0, 0),
             ink=True,

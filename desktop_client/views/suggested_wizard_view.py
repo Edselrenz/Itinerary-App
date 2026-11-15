@@ -20,7 +20,7 @@ import uuid
 import flet as ft
 
 from desktop_client.components.destination_picker import DestinationPicker
-from desktop_client.components.dialogs import show_date_range_dialog, show_place_detail_dialog
+from desktop_client.components.dialogs import show_date_range_dialog, show_place_detail_dialog, show_toast
 from desktop_client.components.itinerary_route_map import ItineraryRouteMap
 from desktop_client.config.settings import ThemeColors, get_settings
 from desktop_client.core.polyline import haversine_distance_meters
@@ -526,10 +526,15 @@ class SuggestedWizardView(ft.Container):
         )
 
         return ft.Column(
-            controls=[form_card],
-            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            controls=[
+                ft.Row(
+                    alignment=ft.MainAxisAlignment.CENTER,
+                    controls=[form_card],
+                )
+            ],
             scroll=ft.ScrollMode.AUTO,
             expand=True,
+            width=float("inf"),
         )
 
     def _toggle_preference(self, pref: str) -> None:
@@ -952,29 +957,43 @@ class SuggestedWizardView(ft.Container):
             spacing=12,
         )
 
+        result_card = ft.Container(
+            width=680,
+            content=ft.Column(
+                controls=[
+                    trip_card,
+                    ft.Container(height=10),
+                    verified_card,
+                    ft.Container(height=10),
+                    assumptions_box,
+                    ft.Container(height=12),
+                    capsule_bar,
+                    ft.Container(height=14),
+                    day_heading_block,
+                    ft.Container(height=8),
+                    route_map,
+                    ft.Container(height=12),
+                    ft.Column(controls=timeline_controls, spacing=6),
+                    ft.Container(height=12),
+                    nearby_trigger,
+                    ft.Container(height=12),
+                    bottom_actions,
+                    ft.Container(height=24),
+                ],
+                spacing=0,
+            ),
+        )
+
         return ft.Column(
             controls=[
-                trip_card,
-                ft.Container(height=10),
-                verified_card,
-                ft.Container(height=10),
-                assumptions_box,
-                ft.Container(height=12),
-                capsule_bar,
-                ft.Container(height=14),
-                day_heading_block,
-                ft.Container(height=8),
-                route_map,
-                ft.Container(height=12),
-                ft.Column(controls=timeline_controls, spacing=6),
-                ft.Container(height=12),
-                nearby_trigger,
-                ft.Container(height=12),
-                bottom_actions,
-                ft.Container(height=24),
+                ft.Row(
+                    alignment=ft.MainAxisAlignment.CENTER,
+                    controls=[result_card],
+                )
             ],
             scroll=ft.ScrollMode.AUTO,
             expand=True,
+            width=float("inf"),
         )
 
     def _build_figma_stop_card(self, item: ItineraryItem, idx: int) -> ft.Control:
@@ -1270,11 +1289,7 @@ class SuggestedWizardView(ft.Container):
         active_day.items.append(new_item)
 
         if self.safe_page:
-            self.safe_page.snack_bar = ft.SnackBar(
-                content=ft.Text(f"Added {place.name} to Day {active_day.day_number}!"),
-                open=True,
-            )
-            self.safe_page.update()
+            show_toast(self.safe_page, f"Added {place.name} to Day {active_day.day_number}!")
 
     def _save_generated_itinerary(self) -> None:
         if not self.generated_itinerary:
@@ -1285,19 +1300,12 @@ class SuggestedWizardView(ft.Container):
                 saved = await self.itinerary_service.create_itinerary(self.generated_itinerary)
                 self.itinerary_service.clear_active_draft_itinerary()
                 if self.safe_page:
-                    self.safe_page.snack_bar = ft.SnackBar(
-                        content=ft.Text(f"Saved '{saved.title}' successfully!"),
-                        open=True,
-                    )
-                    self.safe_page.update()
-                self._navigate(f"/trips/{saved.id}")
+                    show_toast(self.safe_page, f"Suggested itinerary saved!")
+                if self.on_navigate:
+                    self.on_navigate(f"/trips/{saved.id}", saved)
             except Exception as e:
                 if self.safe_page:
-                    self.safe_page.snack_bar = ft.SnackBar(
-                        content=ft.Text(f"Failed to save itinerary: {e}"),
-                        open=True,
-                    )
-                    self.safe_page.update()
+                    show_toast(self.safe_page, f"Failed to save itinerary: {e}", is_error=True)
 
         if self.safe_page:
             self.safe_page.run_task(_run)
@@ -1311,14 +1319,14 @@ class SuggestedWizardView(ft.Container):
         if self.generated_itinerary:
             self.itinerary_service.set_active_draft_itinerary(self.generated_itinerary)
             if self.on_navigate:
-                self.on_navigate("/builder?draft=true")
+                self.on_navigate("/builder?draft=true", self.generated_itinerary)
 
     def _open_full_map_draft(self) -> None:
         if self.generated_itinerary:
             self.itinerary_service.set_active_draft_itinerary(self.generated_itinerary)
             day_num = self.active_day_index + 1
             if self.on_navigate:
-                self.on_navigate(f"/map?itineraryId=draft&day={day_num}")
+                self.on_navigate(f"/map?itineraryId=draft&day={day_num}", self.generated_itinerary)
 
     def _reset_wizard(self) -> None:
         self.view_mode = "form"

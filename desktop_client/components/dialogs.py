@@ -44,6 +44,37 @@ _present_dialog = present_dialog
 _dismiss_dialog = dismiss_dialog
 
 
+def show_toast(page: Optional[ft.Page], message: str, is_error: bool = False) -> None:
+    """Display a non-blocking toast notification compatible with Flet 1.1.2."""
+    if page is None:
+        return
+    bg = "#DC2626" if is_error else "#0F172A"
+    snack = ft.SnackBar(
+        content=ft.Row(
+            spacing=10,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            controls=[
+                ft.Icon(
+                    ft.Icons.ERROR_OUTLINE_ROUNDED if is_error else ft.Icons.CHECK_CIRCLE_ROUNDED,
+                    color="#FFFFFF",
+                    size=18,
+                ),
+                ft.Text(message, size=13, weight=ft.FontWeight.W_600, color="#FFFFFF"),
+            ],
+        ),
+        bgcolor=bg,
+        duration=2800,
+        behavior=ft.SnackBarBehavior.FLOATING,
+        margin=ft.Margin.all(16),
+    )
+    try:
+        page.overlay.append(snack)
+        snack.open = True
+        page.update()
+    except Exception:
+        pass
+
+
 def show_place_detail_dialog(
     page: ft.Page,
     place: Place,

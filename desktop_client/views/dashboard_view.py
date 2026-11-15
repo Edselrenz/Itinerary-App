@@ -43,7 +43,18 @@ class DashboardView(ft.Container):
         self.search_query = ""
         self.unread_notifications = 1
 
+        loaded = self.place_service.get_loaded_places()
+        if loaded:
+            self.destinations = [p for p in loaded if getattr(p, "is_featured", False) or (getattr(p, "rating", 0) or 0) >= 4.5][:10]
+        try:
+            self.saved_itineraries = list(self.itinerary_service.guest_storage.list_itineraries())[:5]
+        except Exception:
+            self.saved_itineraries = []
+
         self._build_content()
+        self._load_data()
+
+    def did_mount(self) -> None:
         self._load_data()
 
     def _build_content(self) -> None:
@@ -620,11 +631,14 @@ class DashboardView(ft.Container):
             await asyncio.sleep(0.3)
             self._on_search_submit(val)
 
-        try:
-            loop = asyncio.get_running_loop()
-            self._debounce_task = loop.create_task(_debounced())
-        except RuntimeError:
-            pass
+        if self.safe_page:
+            self._debounce_task = self.safe_page.run_task(_debounced)
+        else:
+            try:
+                loop = asyncio.get_running_loop()
+                self._debounce_task = loop.create_task(_debounced())
+            except RuntimeError:
+                pass
 
     def _on_search_submit(self, val: str) -> None:
         query = val.strip()

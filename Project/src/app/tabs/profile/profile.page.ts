@@ -347,12 +347,44 @@ export class ProfilePage implements OnInit, OnDestroy {
     const dbBirthday = cu?.birthday;
     const dbGender = cu?.gender;
 
+    const localAvatar = storedExtra.avatar_url;
+    const isPlaceholder = (url?: string | null): boolean => {
+      if (!url) return true;
+      const lower = url.trim().toLowerCase();
+      return (
+        lower === '' ||
+        lower.includes('default_avatar_placeholder') ||
+        lower.includes('default-traveler') ||
+        lower.includes('placeholder')
+      );
+    };
+
+    const localHasCustom = !isPlaceholder(localAvatar);
+    const dbHasCustom = !isPlaceholder(dbAvatar);
+
+    let chosenAvatar = 'assets/images/default_avatar_placeholder.png';
+    if (dbHasCustom) {
+      chosenAvatar = dbAvatar;
+    } else if (localHasCustom) {
+      chosenAvatar = localAvatar;
+      if (this.currentUser && this.authService.isAuthenticated()) {
+        this.authService.updateProfile({ avatar_url: localAvatar }).subscribe({
+          next: () => {},
+          error: () => {}
+        });
+      }
+    } else if (dbAvatar) {
+      chosenAvatar = dbAvatar;
+    } else if (localAvatar) {
+      chosenAvatar = localAvatar;
+    }
+
     this.profileExtra = {
       middle_initial: dbMiddle || storedExtra.middle_initial || 'N/A',
       phone_number: dbPhone || storedExtra.phone_number || '+66 81 234 5678',
       birthday: dbBirthday || storedExtra.birthday || 'May 23, 2000',
       gender: dbGender || storedExtra.gender || 'Female',
-      avatar_url: dbAvatar || storedExtra.avatar_url || 'assets/images/default_avatar_placeholder.png',
+      avatar_url: chosenAvatar,
     };
 
     if (!this.profileExtra.avatar_url) {

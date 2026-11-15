@@ -33,10 +33,15 @@ class SavedTripsView(ft.Container):
         self.active_segment = "all"  # all, upcoming, past, suggested, custom
         self.search_term = ""
 
-        self.itineraries: list[Itinerary] = []
-        self.is_loading = True
+        try:
+            self.itineraries: list[Itinerary] = list(self.itinerary_service.guest_storage.list_itineraries())
+        except Exception:
+            self.itineraries = []
+        self.is_loading = False
 
         self._build_content()
+
+    def did_mount(self) -> None:
         self._load_trips()
 
     def _build_content(self) -> None:
@@ -424,13 +429,15 @@ class SavedTripsView(ft.Container):
                 pass
 
     async def _load_trips_async(self) -> None:
-        self.is_loading = True
-        self._build_content()
-        self._safe_update()
+        if not self.itineraries:
+            self.is_loading = True
+            self._build_content()
+            self._safe_update()
         try:
             self.itineraries = await self.itinerary_service.list_itineraries()
         except Exception:
-            self.itineraries = []
+            if not self.itineraries:
+                self.itineraries = []
         finally:
             self.is_loading = False
             self._build_content()

@@ -216,6 +216,9 @@ def resolve_or_upsert_item_place(
         existing = db.get(Place, place_id)
         if existing:
             return existing.id, existing.google_place_id or (str(google_place_id) if google_place_id else None)
+        elif item_payload.place_payload:
+            upserted = google_maps_service.upsert_google_place_to_db(db, item_payload.place_payload)
+            return upserted.id, upserted.google_place_id or (str(google_place_id) if google_place_id else None)
 
     # 2. Existing place by google_place_id
     if google_place_id:

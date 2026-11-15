@@ -20,7 +20,7 @@ import uuid
 import flet as ft
 
 from desktop_client.components.destination_picker import DestinationPicker
-from desktop_client.components.dialogs import show_date_range_dialog, show_place_detail_dialog
+from desktop_client.components.dialogs import show_date_range_dialog, show_place_detail_dialog, show_toast
 from desktop_client.components.itinerary_route_map import ItineraryRouteMap
 from desktop_client.components.stop_card import StopCard
 from desktop_client.config.settings import ThemeColors, get_settings
@@ -122,6 +122,15 @@ class CustomBuilderView(ft.Container):
         self.browse_category = "all"
 
         self._build_content()
+
+    def did_mount(self) -> None:
+        async def _load():
+            try:
+                await self.place_service.list_places()
+            except Exception:
+                pass
+        if self.safe_page is not None:
+            self.safe_page.run_task(_load)
 
     @property
     def total_stops_count(self) -> int:
@@ -1708,13 +1717,13 @@ class CustomBuilderView(ft.Container):
         )
         self.itinerary_service.set_active_draft_itinerary(draft_itin)
         day_num = self.active_day_index + 1
-        self._navigate(f"/map?itineraryId=draft&day={day_num}&source=builder")
+        if self.on_navigate:
+            self.on_navigate(f"/map?itineraryId=draft&day={day_num}&source=builder", draft_itin)
 
     def _save_custom_itinerary(self) -> None:
         if self.total_stops_count == 0:
             if self.safe_page:
-                self.safe_page.snack_bar = ft.SnackBar(ft.Text("Please add at least 1 stop before saving!"), open=True)
-                self.safe_page.update()
+                show_toast(self.safe_page, "Please add at least 1 stop before saving!", is_error=True)
             return
 
         self.is_saving = True
@@ -1749,11 +1758,13 @@ class CustomBuilderView(ft.Container):
 
                 self.is_dirty = False
                 self.itinerary_service.clear_active_draft_itinerary()
-                self._navigate(f"/trips/{saved.id}")
+                if self.safe_page:
+                    show_toast(self.safe_page, f"Saved '{saved.title}'!")
+                if self.on_navigate:
+                    self.on_navigate(f"/trips/{saved.id}", saved)
             except Exception as e:
                 if self.safe_page:
-                    self.safe_page.snack_bar = ft.SnackBar(ft.Text(f"Failed to save itinerary: {e}"), open=True)
-                    self.safe_page.update()
+                    show_toast(self.safe_page, f"Failed to save itinerary: {e}", is_error=True)
             finally:
                 self.is_saving = False
                 self._build_content()

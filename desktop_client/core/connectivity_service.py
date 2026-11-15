@@ -192,51 +192,99 @@ class ConnectivityService:
 
     CLOUDFLARE_WORKER_API_URL: str = "https://ne-itinerary-api.edselrenz0.workers.dev/api/v1"
 
+    def _get_candidate_urls(self) -> list[str]:
+        candidates: list[str] = []
+        if self._custom_api_url:
+            candidates.append(self._custom_api_url.rstrip("/"))
+
+        tunnel_files = [
+            Path(self.settings.project_root) / "scratch" / "active_tunnel.txt",
+            Path(self.settings.base_dir) / "scratch" / "active_tunnel.txt",
+            Path.cwd() / "scratch" / "active_tunnel.txt",
+            Path(self.settings.storage_dir) / "active_tunnel.txt",
+        ]
+        for tf in tunnel_files:
+            if tf.exists():
+                try:
+                    for raw_line in tf.read_text(encoding="utf-8").splitlines():
+                        line = raw_line.strip()
+                        if not line or line.startswith("#"):
+                            continue
+                        if "=" in line:
+                            _, val = line.split("=", 1)
+                            val = val.strip().rstrip("/")
+                        else:
+                            val = line.rstrip("/")
+                        if val.startswith(("http://", "https://")):
+                            api_url = val if val.endswith("/api/v1") else f"{val}/api/v1"
+                            if api_url not in candidates:
+                                candidates.append(api_url)
+                except Exception:
+                    pass
+                if len(candidates) > (1 if self._custom_api_url else 0):
+                    break
+
+        for fallback in [
+            self.CLOUDFLARE_WORKER_API_URL,
+            "https://anybody-cube-surprise.ngrok-free.dev/api/v1",
+            self.settings.api_base_url if self.settings.api_base_url and "127.0.0.1" not in self.settings.api_base_url and "localhost" not in self.settings.api_base_url else None,
+            "http://127.0.0.1:8000/api/v1",
+        ]:
+            if fallback:
+                clean = fallback.strip().rstrip("/")
+                if clean and clean not in candidates:
+                    candidates.append(clean)
+        return candidates
+
     async def check_host_health(self) -> bool:
         self._is_checking_health = True
         self._notify_listeners()
 
-        req_headers = {"ngrok-skip-browser-warning": "true", "Accept": "application/json"}
-        health_url = f"{self.active_api_base_url}/health"
-        try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
-                res = await client.get(health_url, headers=req_headers)
-                if res.status_code == 200:
-                    self._is_checking_health = False
-                    self.set_host_offline(False)
-                    return True
-        except Exception:
-            pass
+        req_headers = {
+            "ngrok-skip-browser-warning": "true",
+            "Accept": "application/json",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) NuevaEcijaTravel/1.0",
+        }
+        candidates = self._get_candidate_urls()
 
-        # If default localhost is down and no custom URL is set, try Cloudflare Worker proxy
-        if not self._custom_api_url and "127.0.0.1" in self.settings.api_base_url:
-            try:
-                async with httpx.AsyncClient(timeout=5.0) as client:
-                    cf_res = await client.get(f"{self.CLOUDFLARE_WORKER_API_URL}/health", headers=req_headers)
-                    if cf_res.status_code == 200:
-                        self.settings.api_base_url = self.CLOUDFLARE_WORKER_API_URL
+        async with httpx.AsyncClient(timeout=4.0) as client:
+            for url in candidates:
+                health_url = f"{url}/health"
+                try:
+                    res = await client.get(health_url, headers=req_headers)
+                    if res.status_code == 200:
+                        self.settings.api_base_url = url
                         self._is_checking_health = False
                         self.set_host_offline(False)
                         return True
-            except Exception:
-                pass
+                except Exception:
+                    continue
 
         self._is_checking_health = False
         self.set_host_offline(True, force=True)
         return False
 
     def check_host_health_sync(self) -> bool:
-        health_url = f"{self.active_api_base_url}/health"
-        req_headers = {"ngrok-skip-browser-warning": "true", "Accept": "application/json"}
+        req_headers = {
+            "ngrok-skip-browser-warning": "true",
+            "Accept": "application/json",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) NuevaEcijaTravel/1.0",
+        }
+        candidates = self._get_candidate_urls()
         try:
             with httpx.Client(timeout=3.0) as client:
-                res = client.get(health_url, headers=req_headers)
-                if res.status_code == 200:
-                    self.set_host_offline(False)
-                    return True
-                else:
-                    self.set_host_offline(True, force=True)
-                    return False
+                for url in candidates:
+                    health_url = f"{url}/health"
+                    try:
+                        res = client.get(health_url, headers=req_headers)
+                        if res.status_code == 200:
+                            self.settings.api_base_url = url
+                            self.set_host_offline(False)
+                            return True
+                    except Exception:
+                        continue
+            self.set_host_offline(True, force=True)
+            return False
         except Exception:
             self.set_host_offline(True, force=True)
             return False

@@ -101,11 +101,17 @@ class User:
 
         db_avatar = data.get("avatar_url")
         ex_avatar = extra.get("avatar_url")
-        resolved_avatar = (
-            str(db_avatar).strip()
-            if (db_avatar and str(db_avatar).strip())
-            else (str(ex_avatar).strip() if (ex_avatar and str(ex_avatar).strip()) else "assets/images/pattranite_avatar.jpg")
-        )
+        from desktop_client.config.settings import is_placeholder_avatar
+        if db_avatar and not is_placeholder_avatar(str(db_avatar)):
+            resolved_avatar = str(db_avatar).strip()
+        elif ex_avatar and not is_placeholder_avatar(str(ex_avatar)):
+            resolved_avatar = str(ex_avatar).strip()
+        else:
+            resolved_avatar = (
+                str(db_avatar).strip()
+                if (db_avatar and str(db_avatar).strip())
+                else (str(ex_avatar).strip() if (ex_avatar and str(ex_avatar).strip()) else "assets/images/pattranite_avatar.jpg")
+            )
 
         return cls(
             id=str(data.get("id", "guest-local")),
