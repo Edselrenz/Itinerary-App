@@ -253,6 +253,13 @@ def main(page: ft.Page) -> None:
                 content_area.content = SignupView(on_navigate=navigate_to)
 
             page.update()
+        if content_area and content_area.content is not None:
+            active_ctrl = content_area.content
+            if hasattr(active_ctrl, "on_resize") and callable(active_ctrl.on_resize):
+                try:
+                    active_ctrl.on_resize(float(page.width or 1280), float(page.height or 840))
+                except Exception:
+                    pass
             return
 
         # 2. Workflow Views (Modal creation & detail with contextual header)
@@ -316,6 +323,13 @@ def main(page: ft.Page) -> None:
                     return
 
             page.update()
+        if content_area and content_area.content is not None:
+            active_ctrl = content_area.content
+            if hasattr(active_ctrl, "on_resize") and callable(active_ctrl.on_resize):
+                try:
+                    active_ctrl.on_resize(float(page.width or 1280), float(page.height or 840))
+                except Exception:
+                    pass
             return
 
         # 3. Primary 4-Tab Views (Home, Map, Saved, Profile)
@@ -331,6 +345,8 @@ def main(page: ft.Page) -> None:
                 on_navigate=navigate_to,
                 route_query=route,
                 active_trip=selected_trip if has_route_param else None,
+                initial_width=page.width,
+                initial_height=page.height,
             )
         elif base_route in ("/saved", "/trips"):
             content_area.content = SavedTripsView(
@@ -350,6 +366,13 @@ def main(page: ft.Page) -> None:
             content_area.content = DashboardView(on_navigate=navigate_to)
 
         page.update()
+        if content_area and content_area.content is not None:
+            active_ctrl = content_area.content
+            if hasattr(active_ctrl, "on_resize") and callable(active_ctrl.on_resize):
+                try:
+                    active_ctrl.on_resize(float(page.width or 1280), float(page.height or 840))
+                except Exception:
+                    pass
 
     # Session change listener - only reload view when authentication identity actually changes
     last_auth_identity = (
@@ -421,8 +444,12 @@ def main(page: ft.Page) -> None:
                         active_ctrl.update()
                     except Exception:
                         pass
-        page.update()
+        try:
+            page.update()
+        except Exception:
+            pass
 
+    page.on_resize = _on_page_resize
     page.on_resized = _on_page_resize
 
     # Background Host Health Loop (queries every 15s)

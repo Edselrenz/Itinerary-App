@@ -39,7 +39,7 @@ def _resolve_tile_source(
     y: int,
     on_tile_cached: Optional[Callable[[str, str], None]] = None,
 ) -> str:
-    """Returns local path to bundled/cached CartoDB Voyager/OSM tile or matching CDN URL."""
+    """Returns local path to bundled/cached OSM tile or matching CDN URL (no API key required)."""
     tile_key = f"{zoom}_{x}_{y}"
     cached_src = _TILE_PATH_CACHE.get(tile_key)
     if cached_src:
@@ -49,7 +49,7 @@ def _resolve_tile_source(
 
     # 1. Bundled assets (Zooms 10-14 pre-downloaded in desktop_client/assets/tiles)
     direct_cand = settings.assets_dir / "tiles" / f"{zoom}_{x}_{y}.png"
-    if direct_cand.is_file() and direct_cand.stat().st_size > 250:
+    if direct_cand.is_file() and direct_cand.stat().st_size > 2500:
         cand_str = str(direct_cand)
         _TILE_PATH_CACHE[tile_key] = cand_str
         return cand_str
@@ -58,21 +58,21 @@ def _resolve_tile_source(
     cache_dir = settings.assets_dir / "tiles_cache"
     cache_dir.mkdir(parents=True, exist_ok=True)
     cache_file = cache_dir / f"{zoom}_{x}_{y}.png"
-    if cache_file.is_file() and cache_file.stat().st_size > 250:
+    if cache_file.is_file() and cache_file.stat().st_size > 2500:
         c_str = str(cache_file)
         _TILE_PATH_CACHE[tile_key] = c_str
         return c_str
 
-    # 3. Schedule background download from CartoDB Voyager (matching bundled Nueva Ecija tiles & Web app!)
+    # 3. Schedule background download from OpenStreetMap (matching Web app Leaflet tile layer)
     sub = ("a", "b", "c")[(x + y) % 3]
-    voyager_url = f"https://{sub}.basemaps.cartocdn.com/rastertiles/voyager/{zoom}/{x}/{y}.png"
+    osm_url = f"https://{sub}.tile.openstreetmap.org/{zoom}/{x}/{y}.png"
 
     if tile_key not in _QUEUED_TILES:
         _QUEUED_TILES.add(tile_key)
 
         def _fetch():
             urls = [
-                voyager_url,
+                osm_url,
                 f"https://tile.openstreetmap.org/{zoom}/{x}/{y}.png",
             ]
             for url in urls:
@@ -87,7 +87,8 @@ def _resolve_tile_source(
                     with urllib.request.urlopen(req, timeout=5) as resp:
                         if resp.status == 200:
                             data = resp.read()
-                            if len(data) > 250 and (data[:4] == b"\x89PNG" or data[:3] == b"\xff\xd8\xff"):
+                            # Ensure genuine map tile (not watermarked/empty)
+                            if len(data) > 2500 and (data[:4] == b"\x89PNG" or data[:3] == b"\xff\xd8\xff"):
                                 tmp = cache_file.with_suffix(".tmp")
                                 tmp.write_bytes(data)
                                 tmp.replace(cache_file)
@@ -105,8 +106,8 @@ def _resolve_tile_source(
 
         _TILE_EXECUTOR.submit(_fetch)
 
-    # 4. Return CartoDB Voyager direct URL immediately so texture never changes outside Nueva Ecija
-    return voyager_url
+    # 4. Return OpenStreetMap CDN URL immediately (100% free, no API key required)
+    return osm_url
 
 
 # Category Pin Palette matching Project/src/app/tabs/map/map.page.scss (.pin-cat-*)
@@ -588,6 +589,15 @@ class SlippyMapCanvas(ft.Container):
             self._canvas_stack.width = self._map_w
             self._canvas_stack.height = self._map_h
         self.redraw()
+        try:
+            self.update()
+        except Exception:
+            pass
+        try:
+            if hasattr(self, "_canvas_stack"):
+                self._canvas_stack.update()
+        except Exception:
+            pass
 
     def _handle_pan_start(self, e: Any) -> None:
         self._is_panning = True
@@ -667,6 +677,8 @@ class SlippyMapCanvas(ft.Container):
         try:
             if self.page:
                 self.update()
+            elif hasattr(self, "_canvas_stack") and self._canvas_stack.page:
+                self._canvas_stack.update()
         except Exception:
             pass
 

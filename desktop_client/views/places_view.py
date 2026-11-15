@@ -60,11 +60,15 @@ class PlacesView(ft.Container):
         on_navigate: Optional[Callable[..., None]] = None,
         route_query: Optional[str] = None,
         active_trip: Optional[Itinerary] = None,
+        initial_width: Optional[float] = None,
+        initial_height: Optional[float] = None,
     ):
         super().__init__()
         self.on_navigate = on_navigate
         self.route_query = route_query or ""
         self.active_trip = active_trip
+        self.initial_width = initial_width
+        self.initial_height = initial_height
         self.place_service = get_place_service()
         self.itinerary_service = get_itinerary_service()
 
@@ -107,6 +111,14 @@ class PlacesView(ft.Container):
             return None
 
     def did_mount(self) -> None:
+        pw = getattr(self.safe_page, "width", None)
+        ph = getattr(self.safe_page, "height", None)
+        if pw and ph:
+            try:
+                self.on_resize(float(pw), float(ph))
+            except Exception:
+                pass
+
         async def _bootstrap():
             try:
                 await self._async_bootstrap()
@@ -304,10 +316,10 @@ class PlacesView(ft.Container):
         if not self.is_follow_route_mode or self.show_nearby_pois_in_route:
             places_to_show = self.filtered_places
 
-        pw = int(self.safe_page.width or 1280) if self.safe_page else 1280
-        ph = int(self.safe_page.height or 840) if self.safe_page else 840
+        pw = int(self.initial_width or (self.safe_page.width if (self.safe_page and self.safe_page.width) else 1220))
+        ph = int(self.initial_height or (self.safe_page.height if (self.safe_page and self.safe_page.height) else 840))
         map_w = max(600, pw)
-        map_h = max(400, ph - 60)
+        map_h = max(400, ph - 64)
 
         self.map_component = SlippyMapCanvas(
             width=map_w,
@@ -524,7 +536,7 @@ class PlacesView(ft.Container):
             color=ft.Colors.WHITE,
         )
 
-        pw = float(self.safe_page.width) if (self.safe_page and self.safe_page.width) else 1220.0
+        pw = float(self.initial_width) if self.initial_width else (float(self.safe_page.width) if (self.safe_page and self.safe_page.width) else 1220.0)
         pill_left = int(max(16.0, (pw - 160.0) / 2.0))
 
         self._toggle_pill_btn = ft.Container(
@@ -552,7 +564,7 @@ class PlacesView(ft.Container):
     def on_resize(self, width: float, height: float) -> None:
         """Dynamically resizes SlippyMapCanvas and centers bottom pill on window resize (BUG-04)."""
         map_w = max(600, int(width))
-        map_h = max(400, int(height - 60))
+        map_h = max(400, int(height - 64))
         if hasattr(self, "map_component") and self.map_component is not None:
             self.map_component.resize_canvas(map_w, map_h)
         if hasattr(self, "_toggle_pill_btn") and self._toggle_pill_btn is not None:
@@ -561,6 +573,10 @@ class PlacesView(ft.Container):
                 self._toggle_pill_btn.update()
             except Exception:
                 pass
+        try:
+            self.update()
+        except Exception:
+            pass
 
     @property
     def _route_mode(self) -> bool:
