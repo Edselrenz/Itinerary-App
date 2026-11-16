@@ -1761,6 +1761,25 @@ px cap sync android): **Exit code 0 (6 plugins synchronized)**.
   - [x] Maintained **100% green pass rate**: 113/113 desktop client tests and 21/21 backend tests passing.
   - [x] Recompiled release standalone executable: [`dist/NuevaEcijaTravel/NuevaEcijaTravel.exe`](file:///c:/Users/Edward/Desktop/CaseStudy/dist/NuevaEcijaTravel/NuevaEcijaTravel.exe).
 
+---
+
+## Phase 61.1: Release Pipeline Hardening & Code Review Remediation (`PKG-REV-01` to `PKG-REV-04`)
+- [x] **Frozen PyInstaller `_ASSETS_DIR` & Writable Tile Cache Fallback (`PKG-REV-01`)**:
+  - [x] In `desktop_client/components/slippy_map_canvas.py`: Bind `_ASSETS_DIR = get_settings().assets_dir`.
+  - [x] Implemented `_resolve_writable_tile_cache_dir()` with write-probe (`.write_probe`), falling back to `get_settings().storage_dir / "tiles_cache"` with absolute pathing when running inside read-only installations (`C:\Program Files\NuevaEcijaTravel`).
+- [x] **Standalone Builder Flet Engine Auto-Provisioning (`PKG-REV-02`)**:
+  - [x] In `scripts/build_standalone_exe.py`: Embedded `flet_desktop.ensure_client_cached()` fallback to automatically cache the Flet desktop runtime when building on a fresh machine where Flet has never been executed locally.
+- [x] **In-App Route Navigation Argument Normalization (`PKG-REV-03`)**:
+  - [x] In `desktop_client/views/trip_detail_view.py`: Updated `_launch_in_app_nav` to pass `self.itinerary` as the second argument and include `dayNumber={day_num}`, bringing 100% contract parity with `_open_full_map()`.
+- [x] **Map Drawer & POI Bottom Sheet Dark-Mode Parity (`PKG-REV-04`)**:
+  - [x] In `desktop_client/views/places_view.py`: Replaced hardcoded light colors (`#f8fafc`, `#ffffff`, `#0f172a`, `#e2e8f0`) in `_build_drawer_row` and `_build_poi_bottom_sheet` with dynamic tokens from `get_settings().palette`.
+  - [x] In `.gitignore`: Removed stray `for_updates` line at EOF and added `dist_apk/` and `dist_installer/` to build outputs.
+- [x] **Automated Regression Test Suite Expansion**:
+  - [x] In `desktop_client/tests/test_cycle2_regressions.py`: Added `test_tc_35_slippy_map_assets_dir_uses_settings_and_writable_cache` and `test_tc_36_trip_detail_in_app_nav_passes_itinerary_and_day_number`.
+  - [x] Verified full desktop pytest suite: **115/115 passed (100% green)** in 6.27s.
+  - [x] Verified full backend pytest suite: **21/21 passed (100% green)** in 13.66s.
+
+
 
 
 

@@ -70,6 +70,18 @@ def build():
         except Exception:
             pass
 
+    if not flet_cache or not (flet_cache / "flet.exe").is_file():
+        print("flet.exe not found in local cache; provisioning via flet_desktop.ensure_client_cached()...")
+        try:
+            import flet_desktop
+            cached_dir = Path(flet_desktop.ensure_client_cached())
+            if (cached_dir / "flet" / "flet.exe").is_file():
+                flet_cache = cached_dir / "flet"
+            elif (cached_dir / "flet.exe").is_file():
+                flet_cache = cached_dir
+        except Exception as exc:
+            print(f"Warning: flet_desktop.ensure_client_cached() failed: {exc}")
+
     print(f"Flet Runtime Source: {flet_cache}")
     if not flet_cache or not (flet_cache / "flet.exe").is_file():
         print(

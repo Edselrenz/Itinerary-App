@@ -467,7 +467,10 @@ class TripDetailView(ft.Container):
     def _launch_in_app_nav(self, day: Optional[ItineraryDay]) -> None:
         if self.on_navigate and self.itinerary:
             day_num = day.day_number if day else 1
-            self.on_navigate(f"/map?itineraryId={self.itinerary.id}&day={day_num}&followRoute=true")
+            self.on_navigate(
+                f"/map?followRoute=true&itineraryId={self.itinerary.id}&day={day_num}&dayNumber={day_num}",
+                self.itinerary,
+            )
 
     def _open_nearby_view(self) -> None:
         self.view_mode = "nearby"

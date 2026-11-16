@@ -5,6 +5,22 @@ All notable changes to the Nueva Ecija Travel Itinerary project are documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.58.1] - 2026-11-16
+### Fixed & Hardened (Phase 61 Production Review Remediation - `PKG-REV-01` to `PKG-REV-04`)
+- **Frozen PyInstaller `_ASSETS_DIR` & Writable Tile Cache Fallback (`PKG-REV-01`)**:
+  - `desktop_client/components/slippy_map_canvas.py`: Replaced hardcoded `Path(__file__).resolve().parent.parent / "assets"` with `_ASSETS_DIR = get_settings().assets_dir`.
+  - Implemented `_resolve_writable_tile_cache_dir()` with write-probe (`.write_probe`), falling back to `get_settings().storage_dir / "tiles_cache"` with absolute pathing when running inside read-only or elevated directories (`C:\Program Files\NuevaEcijaTravel`).
+- **Standalone Builder Flet Engine Auto-Provisioning (`PKG-REV-02`)**:
+  - `scripts/build_standalone_exe.py`: Embedded `flet_desktop.ensure_client_cached()` fallback to automatically cache the Flet desktop runtime when building on a fresh machine where Flet has never been executed locally.
+- **In-App Route Navigation Argument Normalization (`PKG-REV-03`)**:
+  - `desktop_client/views/trip_detail_view.py`: Updated `_launch_in_app_nav` to pass `self.itinerary` as the second argument and include `dayNumber={day_num}`, bringing 100% contract parity with `_open_full_map()`.
+- **Map Drawer & POI Bottom Sheet Dark-Mode Parity (`PKG-REV-04`)**:
+  - `desktop_client/views/places_view.py`: Replaced hardcoded light colors (`#f8fafc`, `#ffffff`, `#0f172a`, `#e2e8f0`) in `_build_drawer_row` and `_build_poi_bottom_sheet` with dynamic tokens from `get_settings().palette`.
+  - `.gitignore`: Removed stray `for_updates` line at EOF and added `dist_apk/` and `dist_installer/` to build outputs.
+- **Automated Regression Suite Expansion**:
+  - `desktop_client/tests/test_cycle2_regressions.py`: Added `test_tc_35_slippy_map_assets_dir_uses_settings_and_writable_cache` and `test_tc_36_trip_detail_in_app_nav_passes_itinerary_and_day_number`.
+  - Full desktop regression suite: **115/115 passed (100% green)**; backend suite: **21/21 passed (100% green)**.
+
 ## [0.58.0] - 2026-11-16
 ### Added & Hardened (Phase 61 - Multi-Platform Packaging, Android APK & Inno Setup Release Pipeline)
 - **Capacitor Native Platform Hardening**:

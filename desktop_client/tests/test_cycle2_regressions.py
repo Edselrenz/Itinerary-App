@@ -634,4 +634,41 @@ def test_tc_34_drawer_selection_auto_closes_drawer():
     assert pv.selected_map_place is not None
 
 
+def test_tc_35_slippy_map_assets_dir_uses_settings_and_writable_cache():
+    """TC-35: Verifies SlippyMapCanvas resolves _ASSETS_DIR via get_settings().assets_dir (PKG-REV-01)."""
+    from desktop_client.components import slippy_map_canvas
+    from desktop_client.config.settings import get_settings
+
+    assert slippy_map_canvas._ASSETS_DIR == get_settings().assets_dir
+    assert slippy_map_canvas._CACHE_TILES_DIR.exists()
+
+
+def test_tc_36_trip_detail_in_app_nav_passes_itinerary_and_day_number():
+    """TC-36: Verifies TripDetailView._launch_in_app_nav passes both route query and itinerary object (PKG-REV-03)."""
+    from desktop_client.models.itinerary import Itinerary, ItineraryDay
+    from desktop_client.views.trip_detail_view import TripDetailView
+
+    itin = Itinerary(
+        id="draft",
+        title="Gabaldon Nature Escape",
+        destination="Gabaldon",
+        start_date="2026-11-20",
+        end_date="2026-11-21",
+        days=[ItineraryDay(id="d1", itinerary_id="draft", day_number=2, travel_date="2026-11-20", items=[])],
+    )
+    captured = []
+    view = TripDetailView(
+        itinerary=itin,
+        on_back=lambda: None,
+        on_navigate=lambda route, trip=None, *args: captured.append((route, trip)),
+    )
+    view._launch_in_app_nav(itin.days[0])
+    assert len(captured) == 1
+    route_str, passed_trip = captured[0]
+    assert "followRoute=true" in route_str
+    assert "dayNumber=2" in route_str
+    assert passed_trip is itin
+
+
+
 

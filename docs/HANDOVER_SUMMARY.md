@@ -1,10 +1,10 @@
 # Nueva Ecija Travel Itinerary — Master Handover & System Architecture Document
 
 **Application Name**: Nueva Ecija Travel Itinerary (*Trip mo, trip ko*)  
-**Version**: `0.58.0` (Production Windows Desktop + Web PWA + Android APK + FastAPI Pilot)  
+**Version**: `0.58.1` (Production Windows Desktop + Web PWA + Android APK + FastAPI Pilot)  
 **Date of Handover**: November 16, 2026  
 **Active Repository Branch**: `main`  
-**Current Milestone**: **Phase 61 — Multi-Platform Packaging, Android APK & Inno Setup Release Pipeline [COMPLETED & VERIFIED]**  
+**Current Milestone**: **Phase 61.1 — Release Pipeline Hardening & Code Review Remediation (`PKG-REV-01` to `PKG-REV-04`) [COMPLETED & VERIFIED]**  
 
 ---
 
@@ -15,10 +15,10 @@ This document serves as the master onboarding and handoff reference for engineer
 ### Comprehensive Test Suite Status (100% Green)
 | Test Suite | Framework / Tool | Test Cases | Execution Time | Pass Rate | Status |
 | :--- | :--- | :---: | :---: | :---: | :---: |
-| **Native Desktop Client** | Pytest (`desktop_client/tests/`) | **113 / 113** | 7.86s | **100%** | **PASS** |
+| **Native Desktop Client** | Pytest (`desktop_client/tests/`) | **115 / 115** | 6.27s | **100%** | **PASS** |
 | **Angular / Ionic Web App** | Vitest (`Project/src/`) | **348 / 348** | 20.79s | **100%** | **PASS** |
-| **FastAPI Backend** | Pytest (`backend/tests/`) | **21 / 21** | 13.99s | **100%** | **PASS** |
-| **Total Test Matrix** | Unified Test Suite | **482 / 482** | ~43s | **100%** | **ALL GREEN** |
+| **FastAPI Backend** | Pytest (`backend/tests/`) | **21 / 21** | 13.66s | **100%** | **PASS** |
+| **Total Test Matrix** | Unified Test Suite | **484 / 484** | ~41s | **100%** | **ALL GREEN** |
 
 ### Multi-Platform Distribution & Packaging
 - **Standalone Desktop Executable**: [`dist/NuevaEcijaTravel/NuevaEcijaTravel.exe`](file:///c:/Users/Edward/Desktop/CaseStudy/dist/NuevaEcijaTravel/NuevaEcijaTravel.exe) (~15.3 MB binary, complete self-contained bundle with bundled Python runtime, Flet engine, `app_icon.ico`, and static assets).
@@ -360,6 +360,27 @@ Phase 61 provides production-grade release packaging and automated deployment in
    - `scripts/build_android_apk.ps1`: Local automation script for Ionic build, Capacitor sync, and Gradle APK compilation.
    - `scripts/build_desktop_installer.ps1`: Local automation script for packaging PyInstaller executable and compiling Inno Setup installer.
    - `scripts/build_standalone_exe.py`: Upgraded with `_ensure_ico_file()` generating `app_icon.ico` from `favicon.png`, PyInstaller `--icon` flag, hidden imports (`desktop_client.core.geo`, `desktop_client.components.date_range_dialog`, `dotenv`), and fallback `.env` generation.
+
+---
+
+## 12. Release Pipeline Hardening & Code Review Remediation (Phase 61.1)
+
+Phase 61.1 resolves all 4 findings from the post-Phase 61 architectural code review (`PKG-REV-01` to `PKG-REV-04`):
+
+1. **`PKG-REV-01` (SlippyMapCanvas Assets & Tile Cache Resolution)**:
+   - Replaced hardcoded `Path(__file__)` in `desktop_client/components/slippy_map_canvas.py` with `_ASSETS_DIR = get_settings().assets_dir`.
+   - Implemented `_resolve_writable_tile_cache_dir()` with write-probe (`.write_probe`), gracefully redirecting tile caching to `get_settings().storage_dir / "tiles_cache"` with absolute pathing if running in a read-only installation directory (`C:\Program Files\NuevaEcijaTravel`).
+2. **`PKG-REV-02` (Flet Runtime Client Auto-Provisioning)**:
+   - In `scripts/build_standalone_exe.py`: Embedded `flet_desktop.ensure_client_cached()` fallback to provision the Flet client on clean environments where the app has never run locally.
+3. **`PKG-REV-03` (TripDetailView Route Navigation Contract)**:
+   - In `desktop_client/views/trip_detail_view.py`: `_launch_in_app_nav` now passes `self.itinerary` as the second argument and includes `dayNumber={day_num}`, maintaining 100% contract parity with `_open_full_map()`.
+4. **`PKG-REV-04` (Theme Palette Dark-Mode Alignment & Gitignore Cleanup)**:
+   - In `desktop_client/views/places_view.py`: Replaced hardcoded `#f8fafc`, `#ffffff`, `#0f172a`, and `#e2e8f0` in `_build_drawer_row` and `_build_poi_bottom_sheet` with dynamic tokens from `get_settings().palette`.
+   - In `.gitignore`: Removed trailing `for_updates` line and added `dist_apk/` and `dist_installer/`.
+5. **Automated Regression Coverage (`TC-35` & `TC-36`)**:
+   - Added `test_tc_35_slippy_map_assets_dir_uses_settings_and_writable_cache` and `test_tc_36_trip_detail_in_app_nav_passes_itinerary_and_day_number` to `desktop_client/tests/test_cycle2_regressions.py`.
+   - Full desktop regression test suite: **115 / 115 passed (100% green)** in 6.27s.
+
 
 
 

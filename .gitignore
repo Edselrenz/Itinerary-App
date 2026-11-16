@@ -94,6 +94,8 @@ docker-compose.override.yml
 node_modules/
 www/
 dist/
+dist_apk/
+dist_installer/
 .angular/
 .angular/cache/
 out-tsc/
@@ -110,6 +112,7 @@ build_cache/
 *.tmp
 *.tmp.*
 *.log
+*.zip
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -145,5 +148,3 @@ UserInterfaceState.xcuserstate
 
 desktop_client/storage/tile_cache/
 Travel.fig
-
-for_updates

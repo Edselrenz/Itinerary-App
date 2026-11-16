@@ -47,10 +47,29 @@ _FAILED_TILES_COOLDOWN: Dict[str, float] = {}
 _TILE_LOCK = threading.Lock()
 _TILE_PATH_CACHE: Dict[str, str] = {}
 
-_ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
+_ASSETS_DIR = get_settings().assets_dir
 _BUNDLED_TILES_DIR = _ASSETS_DIR / "tiles"
-_CACHE_TILES_DIR = _ASSETS_DIR / "tiles_cache"
-_CACHE_TILES_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _resolve_writable_tile_cache_dir() -> Tuple[Path, bool]:
+    """Returns (cache_dir, is_inside_assets_dir) with automatic fallback to storage_dir when read-only."""
+    cand = _ASSETS_DIR / "tiles_cache"
+    try:
+        cand.mkdir(parents=True, exist_ok=True)
+        probe = cand / ".write_probe"
+        probe.write_text("ok", encoding="utf-8")
+        probe.unlink(missing_ok=True)
+        return cand, True
+    except Exception:
+        fallback = get_settings().storage_dir / "tiles_cache"
+        try:
+            fallback.mkdir(parents=True, exist_ok=True)
+        except Exception:
+            pass
+        return fallback, False
+
+
+_CACHE_TILES_DIR, _CACHE_IN_ASSETS = _resolve_writable_tile_cache_dir()
 
 # Known SHA/size signatures of OSM 403 block tiles or stale ESRI RGB tiles or Carto watermark
 _OSM_BLOCKED_SIGNATURES = (
@@ -217,7 +236,7 @@ def _resolve_tile_source(
     if cache_file.exists():
         try:
             if cache_file.stat().st_size >= 67:
-                return f"/tiles_cache/{tile_key}.png"
+                return f"/tiles_cache/{tile_key}.png" if _CACHE_IN_ASSETS else str(cache_file)
         except OSError:
             pass
 
@@ -272,7 +291,9 @@ def _resolve_tile_source(
                                     tmp_file = _CACHE_TILES_DIR / f"{tile_key}.tmp"
                                     tmp_file.write_bytes(data)
                                     tmp_file.replace(cache_file)
-                                    saved_asset_path = f"/tiles_cache/{tile_key}.png"
+                                    saved_asset_path = (
+                                        f"/tiles_cache/{tile_key}.png" if _CACHE_IN_ASSETS else str(cache_file)
+                                    )
                                     break
                     except Exception:
                         continue

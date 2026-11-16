@@ -7,22 +7,21 @@ This document serves as the primary handoff reference for developers and coding 
 ## 1. Project Status Overview
 
 - **Application Name**: Nueva Ecija Travel Itinerary (MVP, GIS Upgrade & Native Desktop Client)
-- **Current Development Phase**: **Phase 61 — Multi-Platform Packaging, Android APK & Inno Setup Release Pipeline [COMPLETED & VERIFIED]**
+- **Current Development Phase**: **Phase 61.1 — Release Pipeline Hardening & Code Review Remediation (`PKG-REV-01` to `PKG-REV-04`) [COMPLETED & VERIFIED]**
 - **Active Git Branch**: `main`
 - **Active Database Infrastructure**: **PostgreSQL 16 in Docker** (`ne_postgres` on port 5432) and local SQLite (`nueva_ecija_travel.db`) fully synchronized with all 21 user accounts, 2,673 places, 12 municipalities, and 10 itineraries.
 - **Last Verified Working State**:
-  - **Phase 61 Multi-Platform Packaging & Release Pipeline Acceptance**: 100% verified across all suites:
-    - **Desktop Client Test Suite**: 113/113 passed in 7.86s (`100% PASS`), covering `test_cycle2_regressions.py` (`TC-31` through `TC-34`), `test_auth_service.py`, `test_itinerary_service.py`, `test_place_service.py`, and all UI consistency/storage suites.
-    - **Backend Test Suite**: 21/21 passed in 13.99s (`100% PASS`), covering auth rate limiting, places, trips, and database migrations.
-    - **Standalone Windows Distribution**: Recompiled standalone executable `dist/NuevaEcijaTravel/NuevaEcijaTravel.exe` verified healthy with `.ico` icon and `%LOCALAPPDATA%` storage fallback.
+  - **Phase 61.1 Hardening & Code Review Acceptance**: 100% verified across all suites:
+    - **Desktop Client Test Suite**: 115/115 passed in 6.27s (`100% PASS`), covering `test_cycle2_regressions.py` (`TC-31` through `TC-36`), `test_auth_service.py`, `test_itinerary_service.py`, `test_place_service.py`, and all UI consistency/storage suites.
+    - **Backend Test Suite**: 21/21 passed in 13.66s (`100% PASS`), covering auth rate limiting, places, trips, and database migrations.
+    - **Standalone Windows Distribution**: Recompiled standalone executable `dist/NuevaEcijaTravel/NuevaEcijaTravel.exe` verified healthy with `.ico` icon, `_ASSETS_DIR` settings resolution, and `%LOCALAPPDATA%` storage fallback.
   - **Live Service Daemons**: Pilot backend (`127.0.0.1:8000`), ngrok public tunnel, and Cloudflare Worker proxy (`ne-itinerary-api.edselrenz0.workers.dev`) active and verified.
-- **Phase 61 Completed Scope**:
-  1. **Capacitor Service Worker Isolation**: Service worker disabled on native mobile platforms in `Project/src/main.ts` (`!isDevMode() && !Capacitor.isNativePlatform()`), eliminating cache conflicts and WebView hangs.
-  2. **Android Status Bar & Hardware Back Navigation**: Configured `StatusBar.setStyle({ style: Style.Light })`, `StatusBar.setBackgroundColor({ color: '#ffffff' })`, and `App.addListener('backButton')` in `Project/src/app/app.component.ts`.
-  3. **Release Keystore Configuration**: Added `signingConfigs.release` reading `keystore.properties` in `Project/android/app/build.gradle` with fallback to debug keystore.
-  4. **CORS Mobile Origins**: Added `http://localhost` and `https://localhost` to Cloudflare Worker `ALLOWED_ORIGINS` and FastAPI backend `cors_origins`.
-  5. **Desktop Storage Hardening**: Added write probe (`.write_probe`) on `storage/` in `desktop_client/config/settings.py` with automatic fallback to `%LOCALAPPDATA%\NuevaEcijaTravel\storage`.
-  6. **Automated Release Pipeline**: Created `.github/workflows/release-builds.yml` (building PyInstaller standalone, Inno Setup installer, and Android APKs), `installer/NuevaEcijaTravel.iss`, `scripts/build_android_apk.ps1`, `scripts/build_desktop_installer.ps1`, and upgraded `scripts/build_standalone_exe.py`.
+- **Phase 61.1 Completed Scope**:
+  1. `PKG-REV-01`: Replaced hardcoded `Path(__file__)` in `slippy_map_canvas.py` with `_ASSETS_DIR = get_settings().assets_dir` and added write-probe fallback to `storage_dir / "tiles_cache"` with absolute pathing.
+  2. `PKG-REV-02`: Embedded `flet_desktop.ensure_client_cached()` fallback inside `scripts/build_standalone_exe.py` for fresh environments.
+  3. `PKG-REV-03`: Normalized `_launch_in_app_nav` in `trip_detail_view.py` to pass `self.itinerary` and `dayNumber={day_num}`.
+  4. `PKG-REV-04`: Connected `palette = get_settings().palette` to `PlacesView._build_drawer_row` and `_build_poi_bottom_sheet` for Dark-Mode parity; cleaned `.gitignore`.
+  5. Regression Tests: Added `TC-35` and `TC-36` to `test_cycle2_regressions.py`.
 - **Current Blockers**: **None**.
 
 ---

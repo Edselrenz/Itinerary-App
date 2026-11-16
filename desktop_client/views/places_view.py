@@ -781,10 +781,11 @@ class PlacesView(ft.Container):
         self._update_in_place(reset_viewport=False)
 
     def _build_drawer_row(self, p: Place) -> ft.Control:
-        """Compact horizontal row matching Web .drawer-place-card."""
+        """Compact horizontal row matching Web .drawer-place-card with Dark Mode parity."""
+        palette = get_settings().palette
         return ft.Container(
-            bgcolor="#f8fafc",
-            border=ft.Border.all(1, "#e2e8f0"),
+            bgcolor=palette.surface_card_hover if palette.is_dark else "#f8fafc",
+            border=ft.Border.all(1, palette.border_main),
             border_radius=12,
             padding=ft.Padding.all(8),
             ink=True,
@@ -812,13 +813,13 @@ class PlacesView(ft.Container):
                                         p.formatted_category.upper(),
                                         size=10,
                                         weight=ft.FontWeight.W_700,
-                                        color="#0084ff",
+                                        color="#38bdf8" if palette.is_dark else "#0084ff",
                                     ),
                                     ft.Text(
                                         p.formatted_cost,
                                         size=10,
                                         weight=ft.FontWeight.W_700,
-                                        color="#059669",
+                                        color="#10b981" if palette.is_dark else "#059669",
                                     ),
                                 ],
                             ),
@@ -826,7 +827,7 @@ class PlacesView(ft.Container):
                                 p.name,
                                 size=13,
                                 weight=ft.FontWeight.W_700,
-                                color="#0f172a",
+                                color=palette.text_primary,
                                 max_lines=1,
                                 overflow=ft.TextOverflow.ELLIPSIS,
                             ),
@@ -834,11 +835,11 @@ class PlacesView(ft.Container):
                                 spacing=3,
                                 tight=True,
                                 controls=[
-                                    ft.Icon(ft.Icons.LOCATION_ON_OUTLINED, size=12, color="#64748b"),
+                                    ft.Icon(ft.Icons.LOCATION_ON_OUTLINED, size=12, color=palette.text_muted),
                                     ft.Text(
                                         p.municipality_name or "Nueva Ecija",
                                         size=11,
-                                        color="#64748b",
+                                        color=palette.text_muted,
                                         max_lines=1,
                                         overflow=ft.TextOverflow.ELLIPSIS,
                                     ),
@@ -846,7 +847,7 @@ class PlacesView(ft.Container):
                             ),
                         ],
                     ),
-                    ft.Icon(ft.Icons.NEAR_ME_OUTLINED, size=16, color="#94a3b8"),
+                    ft.Icon(ft.Icons.NEAR_ME_OUTLINED, size=16, color=palette.text_faint),
                 ],
             ),
         )
@@ -1390,15 +1391,16 @@ class PlacesView(ft.Container):
                 if self.safe_page:
                     show_toast(self.safe_page, f"Opened Google Maps directions & mapped route to {name}!")
 
+        palette = get_settings().palette
         return ft.Container(
-            bgcolor=ft.Colors.with_opacity(0.99, "#ffffff"),
-            border=ft.Border.all(1, ThemeColors.BORDER_LIGHT),
+            bgcolor=ft.Colors.with_opacity(0.99, palette.surface_card),
+            border=ft.Border.all(1, palette.border_main),
             border_radius=16,
             clip_behavior=ft.ClipBehavior.HARD_EDGE,
             width=560,
             shadow=ft.BoxShadow(
                 blur_radius=20,
-                color=ft.Colors.with_opacity(0.22, "#0f172a"),
+                color=ft.Colors.with_opacity(0.35 if palette.is_dark else 0.22, "#000000" if palette.is_dark else "#0f172a"),
                 offset=ft.Offset(0, 6),
             ),
             content=ft.Column(
@@ -1421,7 +1423,7 @@ class PlacesView(ft.Container):
                                             name,
                                             size=17,
                                             weight=ft.FontWeight.W_800,
-                                            color=ThemeColors.TEXT_BLACK,
+                                            color=palette.text_primary,
                                             max_lines=1,
                                             overflow=ft.TextOverflow.ELLIPSIS,
                                             expand=True,
@@ -1455,34 +1457,34 @@ class PlacesView(ft.Container):
                                             spacing=4,
                                             tight=True,
                                             controls=[
-                                                ft.Icon(ft.Icons.LOCATION_ON_OUTLINED, size=14, color="#2563eb"),
-                                                ft.Text(mun, size=12, weight=ft.FontWeight.W_600, color="#475569"),
+                                                ft.Icon(ft.Icons.LOCATION_ON_OUTLINED, size=14, color="#38bdf8" if palette.is_dark else "#2563eb"),
+                                                ft.Text(mun, size=12, weight=ft.FontWeight.W_600, color=palette.text_muted),
                                             ],
                                         ),
                                         ft.Row(
                                             spacing=4,
                                             tight=True,
                                             controls=[
-                                                ft.Icon(ft.Icons.PAYMENTS_OUTLINED, size=14, color="#059669"),
-                                                ft.Text(cost_str, size=12, weight=ft.FontWeight.W_700, color="#047857"),
+                                                ft.Icon(ft.Icons.PAYMENTS_OUTLINED, size=14, color="#10b981" if palette.is_dark else "#059669"),
+                                                ft.Text(cost_str, size=12, weight=ft.FontWeight.W_700, color="#34d399" if palette.is_dark else "#047857"),
                                             ],
                                         ),
                                         ft.Row(
                                             spacing=4,
                                             tight=True,
                                             controls=[
-                                                ft.Icon(ft.Icons.ACCESS_TIME_ROUNDED, size=13, color="#2563eb"),
-                                                ft.Text(hours_txt, size=11, color="#475569", max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
+                                                ft.Icon(ft.Icons.ACCESS_TIME_ROUNDED, size=13, color="#38bdf8" if palette.is_dark else "#2563eb"),
+                                                ft.Text(hours_txt, size=11, color=palette.text_muted, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
                                             ],
                                         ),
                                     ],
                                 ),
                                 # Description snippet
-                                ft.Text(desc_txt, size=12, color="#334155", max_lines=2, overflow=ft.TextOverflow.ELLIPSIS),
+                                ft.Text(desc_txt, size=12, color=palette.text_muted, max_lines=2, overflow=ft.TextOverflow.ELLIPSIS),
                                 # Green Local Commute Guide Box (matches Web .sheet-commute-box)
                                 ft.Container(
-                                    bgcolor="#f0fdf4",
-                                    border=ft.Border.all(1, "#bbf7d0"),
+                                    bgcolor="#064e3b" if palette.is_dark else "#f0fdf4",
+                                    border=ft.Border.all(1, "#166534" if palette.is_dark else "#bbf7d0"),
                                     border_radius=10,
                                     padding=ft.Padding.symmetric(horizontal=10, vertical=8),
                                     content=ft.Column(
@@ -1492,22 +1494,22 @@ class PlacesView(ft.Container):
                                             ft.Row(
                                                 spacing=5,
                                                 controls=[
-                                                    ft.Icon(ft.Icons.DIRECTIONS_BUS_OUTLINED, size=14, color="#16a34a"),
-                                                    ft.Text("How to get there?", size=11, weight=ft.FontWeight.W_700, color="#14532d"),
+                                                    ft.Icon(ft.Icons.DIRECTIONS_BUS_OUTLINED, size=14, color="#4ade80" if palette.is_dark else "#16a34a"),
+                                                    ft.Text("How to get there?", size=11, weight=ft.FontWeight.W_700, color="#86efac" if palette.is_dark else "#14532d"),
                                                 ],
                                             ),
                                             ft.Row(
                                                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                                                 controls=[
-                                                    ft.Text("Transit & Hub:", size=10, color="#475569"),
-                                                    ft.Text(f"{transit_mode_txt} • {terminal_txt}", size=10, weight=ft.FontWeight.W_600, color="#0f172a"),
+                                                    ft.Text("Transit & Hub:", size=10, color=palette.text_muted),
+                                                    ft.Text(f"{transit_mode_txt} • {terminal_txt}", size=10, weight=ft.FontWeight.W_600, color=palette.text_primary),
                                                 ],
                                             ),
                                             ft.Row(
                                                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                                                 controls=[
-                                                    ft.Text("Drop-off / Est. Fare:", size=10, color="#475569"),
-                                                    ft.Text(f"{dropoff_txt} • {travel_time_txt} ({fare_txt})", size=10, weight=ft.FontWeight.W_700, color="#15803d"),
+                                                    ft.Text("Drop-off / Est. Fare:", size=10, color=palette.text_muted),
+                                                    ft.Text(f"{dropoff_txt} • {travel_time_txt} ({fare_txt})", size=10, weight=ft.FontWeight.W_700, color="#4ade80" if palette.is_dark else "#15803d"),
                                                 ],
                                             ),
                                         ],
