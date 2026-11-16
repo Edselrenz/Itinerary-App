@@ -7,26 +7,22 @@ This document serves as the primary handoff reference for developers and coding 
 ## 1. Project Status Overview
 
 - **Application Name**: Nueva Ecija Travel Itinerary (MVP, GIS Upgrade & Native Desktop Client)
-- **Current Development Phase**: **Phase 60 — Map Web Parity & Complete UI/UX Remediation (`MAP-QA-01` to `MAP-QA-10`) [COMPLETED & VERIFIED]**
+- **Current Development Phase**: **Phase 61 — Multi-Platform Packaging, Android APK & Inno Setup Release Pipeline [COMPLETED & VERIFIED]**
 - **Active Git Branch**: `main`
 - **Active Database Infrastructure**: **PostgreSQL 16 in Docker** (`ne_postgres` on port 5432) and local SQLite (`nueva_ecija_travel.db`) fully synchronized with all 21 user accounts, 2,673 places, 12 municipalities, and 10 itineraries.
 - **Last Verified Working State**:
-  - **Phase 60 Remediation & Parity Acceptance**: 100% verified across all suites:
-    - **Desktop Client Test Suite**: 113/113 passed in 16.08s (`100% PASS`), covering `test_cycle2_regressions.py` (`TC-31` through `TC-34`), `test_auth_service.py`, `test_itinerary_service.py`, `test_place_service.py`, and all UI consistency/storage suites.
-    - **Standalone Windows Distribution**: Recompiled standalone executable `dist/NuevaEcijaTravel/NuevaEcijaTravel.exe` verified healthy and tested.
+  - **Phase 61 Multi-Platform Packaging & Release Pipeline Acceptance**: 100% verified across all suites:
+    - **Desktop Client Test Suite**: 113/113 passed in 7.86s (`100% PASS`), covering `test_cycle2_regressions.py` (`TC-31` through `TC-34`), `test_auth_service.py`, `test_itinerary_service.py`, `test_place_service.py`, and all UI consistency/storage suites.
+    - **Backend Test Suite**: 21/21 passed in 13.99s (`100% PASS`), covering auth rate limiting, places, trips, and database migrations.
+    - **Standalone Windows Distribution**: Recompiled standalone executable `dist/NuevaEcijaTravel/NuevaEcijaTravel.exe` verified healthy with `.ico` icon and `%LOCALAPPDATA%` storage fallback.
   - **Live Service Daemons**: Pilot backend (`127.0.0.1:8000`), ngrok public tunnel, and Cloudflare Worker proxy (`ne-itinerary-api.edselrenz0.workers.dev`) active and verified.
-- **Phase 60 Completed Scope & Defect Remediation**:
-  1. `MAP-QA-01`: Replaced dictionary `.get()` calls on `CommuteInfo` dataclass with safe `getattr` getters, resolving bottom sheet crash.
-  2. `MAP-QA-02`: Passed `Place` instance `p_obj` instead of string ID to `FavoritesService.toggle_favorite(place)`, resolving favorite toggle crash.
-  3. `MAP-QA-03`: Preserved `0.0` deltas in `_extract_pan_delta` and implemented linear pan mathematics relative to `_drag_origin_lat/lng` with seamless 220px rebase, eliminating quadratic drift.
-  4. `MAP-QA-04`: Aligned 16 category marker colors with Web global SCSS and upgraded place markers to 30×30 teardrop pins (`border-radius: 50% 50% 50% 0`, rotated `-45deg`, anchored at bottom tip `(sx, sy)`).
-  5. `MAP-QA-05`: Rebuilt `_build_poi_bottom_sheet` into full `<app-place-detail-sheet>` with 150px hero cover photo, overlay badges, star ratings, commute box, "Start Trip Here" (`placeId`), and Google Maps external launcher.
-  6. `MAP-QA-06`: Decoded OSRM route polylines in Follow-Route mode (`map_component.set_route(..., auto_fit=True)`) and added floating dark `.route-stop-tooltip` stop name pills.
-  7. `MAP-QA-07`: Upgraded List View drawer items to compact horizontal rows (`_build_drawer_row`) and auto-closed drawer on card selection.
-  8. `MAP-QA-08`: Applied query filters on initial load (`self._apply_filters()`) and auto-focused destination bounds on mount (`fit_bounds`).
-  9. `MAP-QA-09`: Added `"public_facility"` icon to `CATEGORY_ICONS` and animated `fly_to` on GPS locate.
-  10. `MAP-QA-10`: Passed `dark_mode` to `SlippyMapCanvas` in `PlacesView`.
-  11. Standardized route deep-link query parameters across `trip_detail_view.py`, `suggested_wizard_view.py`, and `custom_builder_view.py`.
+- **Phase 61 Completed Scope**:
+  1. **Capacitor Service Worker Isolation**: Service worker disabled on native mobile platforms in `Project/src/main.ts` (`!isDevMode() && !Capacitor.isNativePlatform()`), eliminating cache conflicts and WebView hangs.
+  2. **Android Status Bar & Hardware Back Navigation**: Configured `StatusBar.setStyle({ style: Style.Light })`, `StatusBar.setBackgroundColor({ color: '#ffffff' })`, and `App.addListener('backButton')` in `Project/src/app/app.component.ts`.
+  3. **Release Keystore Configuration**: Added `signingConfigs.release` reading `keystore.properties` in `Project/android/app/build.gradle` with fallback to debug keystore.
+  4. **CORS Mobile Origins**: Added `http://localhost` and `https://localhost` to Cloudflare Worker `ALLOWED_ORIGINS` and FastAPI backend `cors_origins`.
+  5. **Desktop Storage Hardening**: Added write probe (`.write_probe`) on `storage/` in `desktop_client/config/settings.py` with automatic fallback to `%LOCALAPPDATA%\NuevaEcijaTravel\storage`.
+  6. **Automated Release Pipeline**: Created `.github/workflows/release-builds.yml` (building PyInstaller standalone, Inno Setup installer, and Android APKs), `installer/NuevaEcijaTravel.iss`, `scripts/build_android_apk.ps1`, `scripts/build_desktop_installer.ps1`, and upgraded `scripts/build_standalone_exe.py`.
 - **Current Blockers**: **None**.
 
 ---

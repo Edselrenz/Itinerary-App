@@ -170,27 +170,27 @@ def test_auth_lifecycle():
 
 
 def test_auth_rate_limiting():
-    """Verifies that SlowAPI throttles rapid authentication attempts after 5 requests/minute."""
+    """Verifies that SlowAPI throttles rapid authentication attempts after 30 requests/minute."""
     from app.core.limiter import limiter
 
     limiter.reset()
     client = TestClient(app)
 
     responses = []
-    for i in range(6):
+    for i in range(31):
         res = client.post(
             "/api/v1/auth/login",
             json={"email": f"attacker_{i}@example.ph", "password": "InvalidPassword123!"},
         )
         responses.append(res)
 
-    # First 5 attempts return 401 (credentials check)
-    for res in responses[:5]:
+    # First 30 attempts return 401 (credentials check)
+    for res in responses[:30]:
         assert res.status_code == 401
 
-    # 6th attempt is throttled with 429 Too Many Requests
-    assert responses[5].status_code == 429
-    assert "Rate limit exceeded" in responses[5].text
+    # 31st attempt is throttled with 429 Too Many Requests
+    assert responses[30].status_code == 429
+    assert "Rate limit exceeded" in responses[30].text
 
 
 def test_cloudflare_tunnel_ip_resolution():
@@ -231,8 +231,8 @@ def test_auth_rate_limiting_isolated_by_cloudflare_ip():
     limiter.reset()
     client = TestClient(app)
 
-    # 5 attempts from User A behind Cloudflare
-    for i in range(5):
+    # 30 attempts from User A behind Cloudflare
+    for i in range(30):
         res = client.post(
             "/api/v1/auth/login",
             json={"email": f"usera_{i}@example.ph", "password": "WrongPassword!"},
@@ -240,7 +240,7 @@ def test_auth_rate_limiting_isolated_by_cloudflare_ip():
         )
         assert res.status_code == 401
 
-    # 6th attempt from User A is throttled (429)
+    # 31st attempt from User A is throttled (429)
     res_a_blocked = client.post(
         "/api/v1/auth/login",
         json={"email": "usera_blocked@example.ph", "password": "WrongPassword!"},

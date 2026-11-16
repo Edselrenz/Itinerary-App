@@ -7,6 +7,30 @@ import sys
 from pathlib import Path
 
 
+def _ensure_ico_file(desktop_dir: Path) -> Path | None:
+    """Ensures desktop_client/assets/icon/app_icon.ico exists by converting favicon.png if needed."""
+    ico_path = desktop_dir / "assets" / "icon" / "app_icon.ico"
+    if ico_path.is_file():
+        return ico_path
+    png_icon = desktop_dir / "assets" / "icon" / "favicon.png"
+    if not png_icon.is_file():
+        return None
+    try:
+        from PIL import Image
+
+        img = Image.open(png_icon).convert("RGBA")
+        img.save(
+            ico_path,
+            format="ICO",
+            sizes=[(256, 256), (128, 128), (64, 64), (48, 48), (32, 32), (16, 16)],
+        )
+        print(f"Generated Windows application icon: {ico_path}")
+        return ico_path
+    except Exception as exc:
+        print(f"Note: Could not convert favicon.png to .ico ({exc}); proceeding without custom .ico.")
+        return None
+
+
 def build():
     root_dir = Path(__file__).resolve().parent.parent
     desktop_dir = root_dir / "desktop_client"
@@ -38,7 +62,7 @@ def build():
             else:
                 flet_base = Path.home() / ".flet" / "client"
                 if flet_base.exists():
-                    for sub in flet_base.iterdir():
+                    for sub in sorted(flet_base.iterdir(), reverse=True):
                         cand = sub / "flet"
                         if (cand / "flet.exe").is_file():
                             flet_cache = cand
@@ -48,7 +72,10 @@ def build():
 
     print(f"Flet Runtime Source: {flet_cache}")
     if not flet_cache or not (flet_cache / "flet.exe").is_file():
-        print("ERROR: flet.exe not found in workspace cache or ~/.flet. Please ensure flet runtime is available.")
+        print(
+            "ERROR: flet.exe not found in workspace cache or ~/.flet. "
+            "Run `python desktop_client/main.py` once first so Flet caches the desktop engine."
+        )
         sys.exit(1)
 
     # Clean previous builds
@@ -57,8 +84,9 @@ def build():
     if build_dir.exists():
         shutil.rmtree(build_dir, ignore_errors=True)
 
-    # Assemble PyInstaller command
+    ico_file = _ensure_ico_file(desktop_dir)
     entrypoint = desktop_dir / "main.py"
+
     cmd = [
         sys.executable,
         "-m",
@@ -73,6 +101,11 @@ def build():
         str(dist_dir),
         "--workpath",
         str(build_dir),
+    ]
+    if ico_file and ico_file.is_file():
+        cmd.extend(["--icon", str(ico_file)])
+
+    cmd.extend([
         # Add source packages
         "--add-data",
         f"{desktop_dir / 'config'}{os.pathsep}desktop_client/config",
@@ -118,6 +151,8 @@ def build():
         "--hidden-import",
         "desktop_client.core.polyline",
         "--hidden-import",
+        "desktop_client.core.geo",
+        "--hidden-import",
         "desktop_client.core.commute_guide",
         "--hidden-import",
         "desktop_client.models",
@@ -141,6 +176,8 @@ def build():
         "desktop_client.components",
         "--hidden-import",
         "desktop_client.components.bottom_tab_bar",
+        "--hidden-import",
+        "desktop_client.components.date_range_dialog",
         "--hidden-import",
         "desktop_client.components.destination_picker",
         "--hidden-import",
@@ -199,8 +236,10 @@ def build():
         "repath",
         "--hidden-import",
         "oauthlib",
+        "--hidden-import",
+        "dotenv",
         str(entrypoint),
-    ]
+    ])
 
     print(f"\nExecuting PyInstaller: {' '.join(cmd[:10])} ...")
     res = subprocess.run(cmd, cwd=str(root_dir))
@@ -225,6 +264,7 @@ def build():
     # Ensure flet package data (icons.json, cupertino_icons.json) is present in _internal
     try:
         import flet
+
         flet_pkg_dir = Path(flet.__file__).parent
         if (flet_pkg_dir / "controls").exists() and internal_dir.exists():
             internal_controls = internal_dir / "flet" / "controls"
@@ -247,10 +287,19 @@ def build():
     exports_dir = storage_dir / "exports"
     exports_dir.mkdir(parents=True, exist_ok=True)
 
-    # Copy .env.example
+    # Copy .env.example or write default production .env pointing to the Cloudflare Worker gateway
     env_example = desktop_dir / ".env.example"
+    env_target = out_app_dir / ".env"
     if env_example.exists():
-        shutil.copy(env_example, out_app_dir / ".env")
+        shutil.copy(env_example, env_target)
+    elif not env_target.exists():
+        env_target.write_text(
+            "API_BASE_URL=https://ne-itinerary-api.edselrenz0.workers.dev/api/v1\n"
+            "DEBUG=False\n"
+            "API_TIMEOUT_SECONDS=15.0\n"
+            "ITINERARY_GEN_TIMEOUT_SECONDS=45.0\n",
+            encoding="utf-8",
+        )
 
     # Verify NuevaEcijaTravel.exe exists
     exe_file = out_app_dir / "NuevaEcijaTravel.exe"

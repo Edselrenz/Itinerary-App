@@ -201,9 +201,19 @@ class Settings:
         return self.base_dir
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "storage_dir", self.base_dir / "storage")
         object.__setattr__(self, "assets_dir", self.base_dir / "assets")
-        self.storage_dir.mkdir(parents=True, exist_ok=True)
+        candidate_storage = self.base_dir / "storage"
+        try:
+            candidate_storage.mkdir(parents=True, exist_ok=True)
+            probe = candidate_storage / ".write_probe"
+            probe.write_text("ok", encoding="utf-8")
+            probe.unlink(missing_ok=True)
+            resolved_storage = candidate_storage
+        except Exception:
+            appdata = Path(os.getenv("LOCALAPPDATA") or (Path.home() / "AppData" / "Local"))
+            resolved_storage = appdata / "NuevaEcijaTravel" / "storage"
+            resolved_storage.mkdir(parents=True, exist_ok=True)
+        object.__setattr__(self, "storage_dir", resolved_storage)
         try:
             import json
             prefs_file = self.storage_dir / "ui_prefs.json"

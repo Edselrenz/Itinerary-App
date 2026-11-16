@@ -1,30 +1,30 @@
 # Nueva Ecija Travel Itinerary — Master Handover & System Architecture Document
 
 **Application Name**: Nueva Ecija Travel Itinerary (*Trip mo, trip ko*)  
-**Version**: `0.57.0` (Production Windows Desktop + Web PWA + FastAPI Pilot)  
+**Version**: `0.58.0` (Production Windows Desktop + Web PWA + Android APK + FastAPI Pilot)  
 **Date of Handover**: November 16, 2026  
 **Active Repository Branch**: `main`  
-**Current Milestone**: **Phase 60 — Map Web Parity & Complete UI/UX Remediation (`MAP-QA-01` to `MAP-QA-10`) [COMPLETED & VERIFIED]**  
+**Current Milestone**: **Phase 61 — Multi-Platform Packaging, Android APK & Inno Setup Release Pipeline [COMPLETED & VERIFIED]**  
 
 ---
 
 ## 1. Executive Summary & Verification State
 
-This document serves as the master onboarding and handoff reference for engineering teams, QA leads, and autonomous coding agents. It provides a complete technical blueprint of the application across all three tiers: **Backend API**, **Web Application (Angular/Ionic)**, and **Native Windows Desktop Application (Python/Flet)**.
+This document serves as the master onboarding and handoff reference for engineering teams, QA leads, and autonomous coding agents. It provides a complete technical blueprint of the application across all tiers: **Backend API**, **Web Application (Angular/Ionic)**, **Android Mobile Application (Capacitor/Gradle)**, and **Native Windows Desktop Application (Python/Flet)**.
 
 ### Comprehensive Test Suite Status (100% Green)
 | Test Suite | Framework / Tool | Test Cases | Execution Time | Pass Rate | Status |
 | :--- | :--- | :---: | :---: | :---: | :---: |
-| **Native Desktop Client** | Pytest (`desktop_client/tests/`) | **113 / 113** | 16.08s | **100%** | **PASS** |
+| **Native Desktop Client** | Pytest (`desktop_client/tests/`) | **113 / 113** | 7.86s | **100%** | **PASS** |
 | **Angular / Ionic Web App** | Vitest (`Project/src/`) | **348 / 348** | 20.79s | **100%** | **PASS** |
-| **FastAPI Backend** | Pytest (`backend/tests/`) | **21 / 21** | 11.94s | **100%** | **PASS** |
-| **Total Test Matrix** | Unified Test Suite | **482 / 482** | ~48s | **100%** | **ALL GREEN** |
+| **FastAPI Backend** | Pytest (`backend/tests/`) | **21 / 21** | 13.99s | **100%** | **PASS** |
+| **Total Test Matrix** | Unified Test Suite | **482 / 482** | ~43s | **100%** | **ALL GREEN** |
 
-### Standalone Executable Distribution
-- **Binary Target**: [`dist/NuevaEcijaTravel/NuevaEcijaTravel.exe`](file:///c:/Users/Edward/Desktop/CaseStudy/dist/NuevaEcijaTravel/NuevaEcijaTravel.exe)
-- **File Size**: `16,056,320 bytes` (~15.31 MB binary, 406+ MB complete self-contained bundle with bundled Python runtime, Flet engine, and static assets).
-- **Compilation Tool**: PyInstaller 6.22.3 on Python 3.14 via [`scripts/build_standalone_exe.py`](file:///c:/Users/Edward/Desktop/CaseStudy/scripts/build_standalone_exe.py).
-- **Execution Verification**: Clean cold start, splash screen display with auto-dismiss and click-to-dismiss, interactive dashboard, functional map tab with smooth tile rendering, teardrop pins matching Web colors, interactive hero cover card bottom sheet, custom itinerary builder, and settings persistence.
+### Multi-Platform Distribution & Packaging
+- **Standalone Desktop Executable**: [`dist/NuevaEcijaTravel/NuevaEcijaTravel.exe`](file:///c:/Users/Edward/Desktop/CaseStudy/dist/NuevaEcijaTravel/NuevaEcijaTravel.exe) (~15.3 MB binary, complete self-contained bundle with bundled Python runtime, Flet engine, `app_icon.ico`, and static assets).
+- **Inno Setup Windows Installer**: `installer/NuevaEcijaTravel.iss` producing `NuevaEcijaTravel-Setup-x64.exe` with desktop icon, Start Menu shortcut, `%LOCALAPPDATA%` storage auto-fallback, and clean uninstaller.
+- **Android Mobile Package**: `Project/android/` compiling release & debug APKs (`app-release.apk` / `app-debug.apk`) with native status bar theming, back-button handling, and service worker isolation.
+- **Automated CI/CD Pipeline**: `.github/workflows/release-builds.yml` orchestrating cross-platform builds and GitHub releases upon tag pushes (`v*.*.*`) and manual dispatch.
 
 ---
 
@@ -338,5 +338,28 @@ Per [`desktop_web_parity_qa_and_implementation_plan (8).md`](file:///c:/Users/Ed
    - Fixed `_on_page_resize(e)` to extract dynamic logical pixels `getattr(e, "width", None) or page.window.width or page.width` and dispatches to active views.
    - Added `horizontal_alignment=ft.CrossAxisAlignment.STRETCH` on `main_column` and `width=float("inf")` on `content_area` and `PlacesView`.
    - Standalone Windows executable recompiled: [`dist/NuevaEcijaTravel/NuevaEcijaTravel.exe`](file:///c:/Users/Edward/Desktop/CaseStudy/dist/NuevaEcijaTravel/NuevaEcijaTravel.exe) (15.31 MB, 406.30 MB bundled distribution).
+
+---
+
+## 11. Multi-Platform Packaging, Android APK & Inno Setup Release Pipeline (Phase 61)
+
+Phase 61 provides production-grade release packaging and automated deployment infrastructure across all target platforms:
+
+1. **Android Capacitor Platform Hardening**:
+   - `Project/src/main.ts`: Isolated Angular Service Worker to web-only (`!isDevMode() && !Capacitor.isNativePlatform()`), eliminating Android WebView asset lockups and stale cache collisions.
+   - `Project/src/app/app.component.ts`: Configured native status bar styling (`StatusBar.setStyle({ style: Style.Light })`, `StatusBar.setBackgroundColor({ color: '#ffffff' })`) and Android hardware back-button listener via `App.addListener('backButton')`.
+   - `Project/android/app/build.gradle`: Configured `signingConfigs.release` reading `keystore.properties` with fallback to debug signing when local release keystore is absent.
+2. **Cross-Platform CORS Parity**:
+   - `cloudflare-worker/worker.js`: Added `http://localhost` and `https://localhost` to `ALLOWED_ORIGINS` to permit API calls from the Capacitor Android WebView.
+   - `backend/app/core/config.py`: Added `https://localhost` to `cors_origins` and updated `cors_origin_regex` to match `^(http|https)://(localhost|127\.0\.0\.1)(:\d+)?$`.
+3. **Desktop Storage Hardening for Inno Setup / Program Files**:
+   - `desktop_client/config/settings.py`: Implemented `.write_probe` test in `storage/`; if running in read-only or elevated directories (such as `C:\Program Files\NuevaEcijaTravel`), user data and tile caches automatically divert to `%LOCALAPPDATA%\NuevaEcijaTravel\storage`.
+4. **CI/CD Cloud & Local Packaging Pipeline**:
+   - `.github/workflows/release-builds.yml`: Cloud GitHub Actions workflow for building Windows PyInstaller standalone, Inno Setup installer (`NuevaEcijaTravel-Setup-x64.exe`), and Android release/debug APKs (`app-release.apk` / `app-debug.apk`) upon tag creation (`v*.*.*`) or manual workflow dispatch.
+   - `installer/NuevaEcijaTravel.iss`: Production Inno Setup 6 installer definition with desktop icon creation, Start Menu shortcuts, and uninstaller.
+   - `scripts/build_android_apk.ps1`: Local automation script for Ionic build, Capacitor sync, and Gradle APK compilation.
+   - `scripts/build_desktop_installer.ps1`: Local automation script for packaging PyInstaller executable and compiling Inno Setup installer.
+   - `scripts/build_standalone_exe.py`: Upgraded with `_ensure_ico_file()` generating `app_icon.ico` from `favicon.png`, PyInstaller `--icon` flag, hidden imports (`desktop_client.core.geo`, `desktop_client.components.date_range_dialog`, `dotenv`), and fallback `.env` generation.
+
 
 

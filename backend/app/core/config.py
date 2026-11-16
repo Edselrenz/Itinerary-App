@@ -27,13 +27,14 @@ class Settings(BaseSettings):
         "http://localhost:8000",
         "http://127.0.0.1:8000",
         "http://localhost",
+        "https://localhost",
         "http://127.0.0.1",
         "capacitor://localhost",
         "https://edselrenz.github.io",
         "https://ne-itinerary-api.edselrenz0.workers.dev",
     ]
     cors_origin_regex: str | None = (
-        r"^(https://.*\.workers\.dev|https://.*\.ngrok-free\.dev|https://.*\.trycloudflare\.com|https://edselrenz\.github\.io|http://localhost:\d+|http://127\.0\.0\.1:\d+)$"
+        r"^(https://.*\.workers\.dev|https://.*\.ngrok-free\.dev|https://.*\.trycloudflare\.com|https://edselrenz\.github\.io|https?://localhost(:\d+)?|http://127\.0\.0\.1(:\d+)?|capacitor://localhost)$"
     )
     google_oauth_client_id: str = ""
     enable_apple_auth: bool = False

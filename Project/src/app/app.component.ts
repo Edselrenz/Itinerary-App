@@ -1,7 +1,10 @@
-import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 import type { OnDestroy, OnInit } from '@angular/core';
 import { ChangeDetectorRef, Component, HostListener, inject } from '@angular/core';
-import { IonApp, IonIcon, IonRouterOutlet, IonSpinner, ToastController } from '@ionic/angular';
+import { App } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
+import { StatusBar, Style } from '@capacitor/status-bar';
+import { IonApp, IonIcon, IonRouterOutlet, IonSpinner, ModalController, ToastController } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { closeOutline, cloudOfflineOutline, refreshOutline } from 'ionicons/icons';
 
@@ -24,6 +27,8 @@ export class AppComponent implements OnInit, OnDestroy {
 
   public connectivityService = inject(ConnectivityService);
   private toastController = inject(ToastController);
+  private modalController = inject(ModalController, { optional: true });
+  private location = inject(Location);
   private cdr = inject(ChangeDetectorRef);
 
   constructor() {
@@ -43,6 +48,35 @@ export class AppComponent implements OnInit, OnDestroy {
       } else if (savedTheme === 'light') {
         document.body.classList.remove('dark');
       }
+    }
+
+    // Configure native status bar and Android hardware back-button navigation
+    if (Capacitor.isNativePlatform()) {
+      const isDark = typeof document !== 'undefined' && document.body.classList.contains('dark');
+      StatusBar.setStyle({ style: isDark ? Style.Dark : Style.Light }).catch(() => {});
+      StatusBar.setBackgroundColor({ color: isDark ? '#0b0f19' : '#0084ff' }).catch(() => {});
+
+      App.addListener('backButton', async ({ canGoBack }) => {
+        if (this.modalController) {
+          const topModal = await this.modalController.getTop();
+          if (topModal) {
+            await topModal.dismiss();
+            return;
+          }
+        }
+        const currentHash = typeof window !== 'undefined' ? window.location.hash || '' : '';
+        const isRootRoute =
+          currentHash === '' ||
+          currentHash === '#/' ||
+          currentHash.startsWith('#/welcome') ||
+          currentHash.startsWith('#/tabs/home');
+
+        if (canGoBack && !isRootRoute) {
+          this.location.back();
+        } else {
+          await App.exitApp();
+        }
+      });
     }
 
     // Proactively verify server connectivity on application launch

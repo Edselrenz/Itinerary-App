@@ -1738,6 +1738,30 @@ px cap sync android): **Exit code 0 (6 plugins synchronized)**.
   - [x] Achieved **113/113 tests passing (100% green)** in 16.08s.
   - [x] Recompiled standalone Windows distribution: [`dist/NuevaEcijaTravel/NuevaEcijaTravel.exe`](file:///c:/Users/Edward/Desktop/CaseStudy/dist/NuevaEcijaTravel/NuevaEcijaTravel.exe).
 
+---
+
+## Phase 61: Multi-Platform Packaging, Android APK & Inno Setup Release Pipeline
+- [x] **Android Capacitor Native Platform Hardening**:
+  - [x] `Project/src/main.ts`: Disable Angular service worker on native Capacitor platforms (`!isDevMode() && !Capacitor.isNativePlatform()`), avoiding WebView resource loading hangs and caching anomalies.
+  - [x] `Project/src/app/app.component.ts`: Add native status bar styling (`StatusBar.setStyle({ style: Style.Light })`, `StatusBar.setBackgroundColor({ color: '#ffffff' })`) and Android hardware back-button listener via `App.addListener('backButton', ...)`.
+  - [x] `Project/android/app/build.gradle`: Configure `signingConfigs.release` reading `keystore.properties` with graceful fallback to debug signing when release keystore is absent.
+- [x] **Cross-Platform CORS Parity**:
+  - [x] `cloudflare-worker/worker.js`: Add `http://localhost` and `https://localhost` to `ALLOWED_ORIGINS` to support requests originating from Capacitor Android WebView.
+  - [x] `backend/app/core/config.py`: Add `https://localhost` to `cors_origins` and regex pattern for Capacitor and localhost variations.
+- [x] **Desktop Client Storage Hardening for Program Files**:
+  - [x] `desktop_client/config/settings.py`: Implement write-probe check (`.write_probe`) on `./storage`; automatically fall back to `%LOCALAPPDATA%\NuevaEcijaTravel\storage` when installed in elevated directories like `C:\Program Files\NuevaEcijaTravel`.
+- [x] **Multi-Platform CI/CD Release Pipeline & Build Scripts**:
+  - [x] `.github/workflows/release-builds.yml`: Automated GitHub Actions pipeline building Windows PyInstaller executable, Inno Setup installer (`NuevaEcijaTravel-Setup-x64.exe`), and Android release/debug APKs (`app-release.apk` / `app-debug.apk`) on tag pushes (`v*.*.*`) and workflow dispatch.
+  - [x] `installer/NuevaEcijaTravel.iss`: Production Inno Setup 6 installer definition with desktop icon creation, Start Menu shortcuts, and uninstaller.
+  - [x] `scripts/build_android_apk.ps1`: Local PowerShell automation script for Ionic build, Capacitor sync, and Gradle APK compilation.
+  - [x] `scripts/build_desktop_installer.ps1`: Local PowerShell automation script for PyInstaller packaging and Inno Setup installer compilation.
+  - [x] `scripts/build_standalone_exe.py`: Upgraded with `_ensure_ico_file()` to generate `app_icon.ico` from `favicon.png`, PyInstaller `--icon` flag, hidden imports (`desktop_client.core.geo`, `desktop_client.components.date_range_dialog`, `dotenv`), and fallback `.env` generation.
+- [x] **Backend Test Suite Realignment & Verification**:
+  - [x] `backend/tests/test_auth.py`: Updated rate limiting test assertions to align with Phase 58 production rate limit threshold (30 requests/minute).
+  - [x] Maintained **100% green pass rate**: 113/113 desktop client tests and 21/21 backend tests passing.
+  - [x] Recompiled release standalone executable: [`dist/NuevaEcijaTravel/NuevaEcijaTravel.exe`](file:///c:/Users/Edward/Desktop/CaseStudy/dist/NuevaEcijaTravel/NuevaEcijaTravel.exe).
+
+
 
 
 

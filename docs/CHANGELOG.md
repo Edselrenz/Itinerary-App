@@ -5,6 +5,27 @@ All notable changes to the Nueva Ecija Travel Itinerary project are documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.58.0] - 2026-11-16
+### Added & Hardened (Phase 61 - Multi-Platform Packaging, Android APK & Inno Setup Release Pipeline)
+- **Capacitor Native Platform Hardening**:
+  - `Project/src/main.ts`: Disabled Angular service worker on native Capacitor platforms (`!isDevMode() && !Capacitor.isNativePlatform()`), eliminating cache conflicts and asset lockups on Android WebView.
+  - `Project/src/app/app.component.ts`: Added native mobile status bar theming (`StatusBar.setStyle({ style: Style.Light })`, `StatusBar.setBackgroundColor({ color: '#ffffff' })`) and Android hardware back-button listener via `App.addListener('backButton', ...)`.
+  - `Project/android/app/build.gradle`: Configured `signingConfigs.release` reading `keystore.properties` with fallback to debug signing when local keystores are absent.
+- **Cross-Platform CORS Parity**:
+  - `cloudflare-worker/worker.js`: Added `http://localhost` and `https://localhost` to `ALLOWED_ORIGINS` to accept API calls originating from Capacitor Android WebView.
+  - `backend/app/core/config.py`: Added `https://localhost` to `cors_origins` and updated `cors_origin_regex` to match `^(http|https)://(localhost|127\.0\.0\.1)(:\d+)?$`.
+- **Desktop Storage Security & Fallback for `Program Files`**:
+  - `desktop_client/config/settings.py`: Implemented `.write_probe` check on `storage/` directory; if running inside a read-only or elevated directory (e.g. `C:\Program Files\NuevaEcijaTravel`), the app automatically relocates user data and caches to `%LOCALAPPDATA%\NuevaEcijaTravel\storage`.
+- **Automated Multi-Platform CI/CD Release Pipeline**:
+  - `.github/workflows/release-builds.yml`: Added GitHub Actions workflow building Windows standalone PyInstaller binary, Inno Setup installer (`NuevaEcijaTravel-Setup-x64.exe`), and Android APKs (`app-release.apk` / `app-debug.apk`) triggered on tag pushes (`v*.*.*`) or manual dispatch.
+  - `installer/NuevaEcijaTravel.iss`: Production Inno Setup 6 installer script with desktop and Start Menu shortcuts, automatic architecture validation, and clean uninstaller.
+  - `scripts/build_android_apk.ps1`: Local PowerShell automation script for Ionic build, Capacitor sync, and Gradle APK compilation.
+  - `scripts/build_desktop_installer.ps1`: Local PowerShell automation script for packaging the PyInstaller executable and building the Inno Setup installer.
+  - `scripts/build_standalone_exe.py`: Upgraded with `_ensure_ico_file()` to generate multi-resolution `app_icon.ico` from `favicon.png`, PyInstaller `--icon` flag, hidden imports (`desktop_client.core.geo`, `desktop_client.components.date_range_dialog`, `dotenv`), and fallback `.env` generation.
+- **Backend Test Suite Realignment**:
+  - `backend/tests/test_auth.py`: Updated rate limiting tests to verify 30 requests/minute threshold established in Phase 58.
+  - Maintained **100% green pass rate**: 113/113 desktop client tests and 21/21 backend tests passing.
+
 ## [0.57.0] - 2026-11-16
 ### Fixed & Completed (Phase 60 - Map Web Parity & Complete UI/UX Remediation)
 - **Eliminated POI Bottom Sheet Commute Guide Crash (`MAP-QA-01`)**:
