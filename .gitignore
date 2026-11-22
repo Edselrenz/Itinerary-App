@@ -48,6 +48,7 @@ id_ed25519*
 **/android/captures/
 **/local.properties
 **/key.properties
+**/keystore.properties
 *.keystore
 *.jks
 ios/App/Pods/

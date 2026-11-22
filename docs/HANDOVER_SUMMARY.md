@@ -1,10 +1,10 @@
 # Nueva Ecija Travel Itinerary — Master Handover & System Architecture Document
 
 **Application Name**: Nueva Ecija Travel Itinerary (*Trip mo, trip ko*)  
-**Version**: `0.58.1` (Production Windows Desktop + Web PWA + Android APK + FastAPI Pilot)  
-**Date of Handover**: November 16, 2026  
+**Version**: `1.0.0` / `0.58.1` (Production Windows Desktop Installer + Portable Bundle + Web PWA + Android Signed APK + FastAPI Pilot)  
+**Date of Handover**: November 22, 2026  
 **Active Repository Branch**: `main`  
-**Current Milestone**: **Phase 61.1 — Release Pipeline Hardening & Code Review Remediation (`PKG-REV-01` to `PKG-REV-04`) [COMPLETED & VERIFIED]**  
+**Current Milestone**: **Phase 62 — Dual-Platform Release Packaging, Build Pipeline Alignment & Documentation Sync [COMPLETED & VERIFIED]**  
 
 ---
 
@@ -381,6 +381,22 @@ Phase 61.1 resolves all 4 findings from the post-Phase 61 architectural code rev
    - Added `test_tc_35_slippy_map_assets_dir_uses_settings_and_writable_cache` and `test_tc_36_trip_detail_in_app_nav_passes_itinerary_and_day_number` to `desktop_client/tests/test_cycle2_regressions.py`.
    - Full desktop regression test suite: **115 / 115 passed (100% green)** in 6.27s.
 
+---
 
+## 13. Dual-Platform Release Packaging & Database CLI Tooling (Phase 62)
 
+Phase 62 executes the full release packaging pipeline across Windows Desktop and Android Mobile, aligns build scripts, and adds interactive database inspection tooling:
+
+1. **Compiled Release Deliverables (Excluded from Git Tracking via `.gitignore`)**:
+   - **Windows Single-File Installer**: `dist_installer\NuevaEcijaTravel_Setup_v1.0.0.exe` (`161.10 MB` / `168,926,363` bytes, SHA-256: `892138704B07C9F175332ECECFE187EF80817D531E994E4BE5A9A33E233F7B72`).
+   - **Windows Portable Zero-Admin Archive**: `dist_installer\NuevaEcijaTravel_Portable_Installer_v1.0.0.zip` (`236.91 MB` / `248,413,381` bytes, SHA-256: `D865E6D7311DE80D2BCBE2DFB7F68094F70194180B2FBE3AE75DBEF14AAEA2E8`).
+   - **Android Debug APK**: `dist_apk\TripMoTripKo-debug.apk` (`30.88 MB` / `32,378,996` bytes, SHA-256: `C611658A662C68967B8174E1963C69AE74AA6D0945D3B4106AB7701DF03AB4EB`).
+   - **Android Signed Release APK**: `dist_apk\TripMoTripKo-release.apk` (`29.72 MB` / `31,162,864` bytes, SHA-256: `0C5CED791D824CD81DF294198481C9F99E9175DC1AA336123B5B1E32BE1E80C6`).
+2. **Build Pipeline & Gradle Wrapper Alignment**:
+   - [`Project/android/gradle/wrapper/gradle-wrapper.properties`](file:///c:/Users/Edward/Desktop/CaseStudy/Project/android/gradle/wrapper/gradle-wrapper.properties): Pinned `distributionUrl` to `gradle-8.13-bin.zip` for Android Gradle Plugin 8.13.0 compatibility.
+   - [`Project/android/gradle.properties`](file:///c:/Users/Edward/Desktop/CaseStudy/Project/android/gradle.properties): Added `android.builder.sdkDownload=true` for automated Android SDK component provisioning.
+   - [`scripts/build_android_apk.ps1`](file:///c:/Users/Edward/Desktop/CaseStudy/scripts/build_android_apk.ps1) & [`.github/workflows/release-builds.yml`](file:///c:/Users/Edward/Desktop/CaseStudy/.github/workflows/release-builds.yml): Updated Angular production build flag from `--service-worker=false` to `--no-service-worker`.
+   - [`scripts/build_desktop_installer.ps1`](file:///c:/Users/Edward/Desktop/CaseStudy/scripts/build_desktop_installer.ps1): Refactored `Install_And_Launch.bat` generation into `$InstallBatLines` array to prevent PowerShell string interpolation issues.
+3. **Interactive Database Query CLI ([`scripts/db_query.py`](file:///c:/Users/Edward/Desktop/CaseStudy/scripts/db_query.py))**:
+   - Supports one-shot SQL queries, `--tables` row count overview, and an interactive SQL prompt across both local SQLite (`nueva_ecija_travel.db`) and Docker PostgreSQL (`--postgres`).
 

@@ -57,8 +57,8 @@ try {
         if ($LASTEXITCODE -ne 0) { throw "npm ci failed." }
     }
 
-    Write-Host "`n[2/4] Building production Ionic Angular bundle (--service-worker=false)..." -ForegroundColor Yellow
-    npx ng build --configuration production --service-worker=false
+    Write-Host "`n[2/4] Building production Ionic Angular bundle (--no-service-worker)..." -ForegroundColor Yellow
+    npx ng build --configuration production --no-service-worker
     if ($LASTEXITCODE -ne 0) { throw "Angular production build failed." }
 
     Write-Host "`n[3/4] Syncing web assets and native plugins to Android (npx cap sync android)..." -ForegroundColor Yellow

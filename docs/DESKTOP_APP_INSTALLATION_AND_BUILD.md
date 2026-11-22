@@ -182,3 +182,27 @@ The standalone client starts in **under 1.5 seconds**, connects to the local or 
 | **Backend offline indicator on startup** | FastAPI backend server not running | Start backend via [start_server.bat](file:///C:/Users/Edward/Desktop/CaseStudy/start_server.bat) or run in offline guest mode. |
 | **`RuntimeError: Event loop is running`** | Calling `asyncio.run()` directly in UI | Wrap all async task dispatches in `run_async(coro, page)`. |
 | **Missing destination photos** | Offline places looking for HTTP URLs | Photos are resolved locally via `resolve_place_image()`. |
+
+---
+
+## 6. Automated Release Packaging (Inno Setup Installer & Portable Archive — Phase 62)
+
+To compile the full Windows desktop release suite (PyInstaller standalone bundle + Inno Setup single-file `.exe` installer + zero-admin portable `.zip` archive), run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\build_desktop_installer.ps1
+```
+
+### Generated Deliverables (`dist_installer/`)
+1. **Standard Windows Setup Wizard (`dist_installer\NuevaEcijaTravel_Setup_v1.0.0.exe`)**:
+   - **Size**: `161.10 MB` (`168,926,363` bytes, LZMA2/ultra64 compression)
+   - **SHA-256**: `892138704B07C9F175332ECECFE187EF80817D531E994E4BE5A9A33E233F7B72`
+   - **Features**: Installs to `C:\Program Files\NuevaEcijaTravel` (with automatic `%LOCALAPPDATA%\NuevaEcijaTravel\storage` write-probe fallback for user storage and map tile caching), creates Desktop and Start Menu shortcuts, and registers a clean Windows uninstaller.
+2. **Zero-Admin Portable Package (`dist_installer\NuevaEcijaTravel_Portable_Installer_v1.0.0.zip`)**:
+   - **Size**: `236.91 MB` (`248,413,381` bytes)
+   - **SHA-256**: `D865E6D7311DE80D2BCBE2DFB7F68094F70194180B2FBE3AE75DBEF14AAEA2E8`
+   - **Features**: Extractable to any folder or USB flash drive; includes `Install_And_Launch.bat` which copies the application into `%LOCALAPPDATA%\Programs\NuevaEcijaTravel`, creates Desktop and Start Menu shortcuts without administrator elevation, and launches the client.
+
+> [!IMPORTANT]
+> Both `dist/` and `dist_installer/` (as well as `*.exe` and `*.zip`) are listed in [`.gitignore`](file:///c:/Users/Edward/Desktop/CaseStudy/.gitignore) and must not be committed to the Git repository due to GitHub file size limits.
+

@@ -21,7 +21,7 @@ $OutDir  = Join-Path $RootDir "dist_installer"
 $IssFile = Join-Path $RootDir "installer\NuevaEcijaTravel.iss"
 
 Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host " Trip Mo, Trip Ko — Desktop Standalone & Installer Builder" -ForegroundColor Cyan
+Write-Host " Trip Mo, Trip Ko - Desktop Standalone and Installer Builder" -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
 
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
@@ -43,17 +43,18 @@ if (-not (Test-Path (Join-Path $DistDir "NuevaEcijaTravel.exe"))) {
 }
 
 # Embed one-click fallback installer batch file inside dist/NuevaEcijaTravel
-$InstallBat = @"
-@echo off
-title Installing Trip Mo, Trip Ko - Nueva Ecija Travel
-set "TARGET_DIR=%LOCALAPPDATA%\Programs\NuevaEcijaTravel"
-echo Unpacking Trip Mo, Trip Ko to "%TARGET_DIR%"...
-if not exist "%TARGET_DIR%" mkdir "%TARGET_DIR%"
-xcopy /E /I /Y "%~dp0*" "%TARGET_DIR%\" >nul
-powershell -NoProfile -Command "`$ws = New-Object -ComObject WScript.Shell; `$s = `$ws.CreateShortcut([Environment]::GetFolderPath('Desktop') + '\Trip Mo, Trip Ko.lnk'); `$s.TargetPath = '%TARGET_DIR%\NuevaEcijaTravel.exe'; `$s.WorkingDirectory = '%TARGET_DIR%'; `$s.IconLocation = '%TARGET_DIR%\NuevaEcijaTravel.exe,0'; `$s.Save()"
-echo Installation complete! Launching Trip Mo, Trip Ko...
-start "" "%TARGET_DIR%\NuevaEcijaTravel.exe"
-"@
+$InstallBatLines = @(
+    '@echo off',
+    'title Installing Trip Mo, Trip Ko - Nueva Ecija Travel',
+    'set "TARGET_DIR=%LOCALAPPDATA%\Programs\NuevaEcijaTravel"',
+    'echo Unpacking Trip Mo, Trip Ko to "%TARGET_DIR%"...',
+    'if not exist "%TARGET_DIR%" mkdir "%TARGET_DIR%"',
+    'xcopy /E /I /Y "%~dp0*" "%TARGET_DIR%\" >nul',
+    'powershell -NoProfile -Command "$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut([Environment]::GetFolderPath(''Desktop'') + ''\Trip Mo, Trip Ko.lnk''); $s.TargetPath = ''%TARGET_DIR%\NuevaEcijaTravel.exe''; $s.WorkingDirectory = ''%TARGET_DIR%''; $s.IconLocation = ''%TARGET_DIR%\NuevaEcijaTravel.exe,0''; $s.Save()"',
+    'echo Installation complete! Launching Trip Mo, Trip Ko...',
+    'start "" "%TARGET_DIR%\NuevaEcijaTravel.exe"'
+)
+$InstallBat = $InstallBatLines -join "`r`n"
 Set-Content -Path (Join-Path $DistDir "Install_And_Launch.bat") -Value $InstallBat -Encoding ASCII
 
 Write-Host "`n[3/3] Building single-file Windows Setup.exe via Inno Setup..." -ForegroundColor Yellow

@@ -656,8 +656,22 @@ The bottom navigation bar implements all 4 planned primary tabs (`/tabs/home`, `
   - Fixed `_on_page_resize` to pass dynamic logical pixels from `PageResizeEvent` and added `CrossAxisAlignment.STRETCH`.
   - Purged and permanently banned Carto watermark tiles (`API KEY REQUIRED`) from raster tile engine.
 
+#### Milestone 49 / Phases 58–60: Production Readiness, Fullscreen Viewport Resolution & Complete Map Web Parity (COMPLETED)
+- [x] **49.1: Production Security & Rate Limit Hardening (Phase 58)**:
+  - Raised auth rate limit threshold to 30 requests/minute, hardened CORS configurations across FastAPI and Cloudflare Worker, and verified 100% backend and desktop regression suites.
+- [x] **49.2: Native Window Maximize & Fullscreen Map Viewport Fill (Phase 59)**:
+  - Subscribed to native window state events (`page.window.on_event`) and `PageResizeEvent` logical dimensions so maximizing the desktop window dynamically expands the slippy map tile grid across the full viewport (`TC-29`, `TC-30`).
+- [x] **49.3: Map Web Parity & Complete UI/UX Remediation (`MAP-QA-01` to `MAP-QA-10`, Phase 60)**:
+  - Eliminated `CommuteInfo.get` and `FavoritesService.toggle_favorite` crashes, resolved quadratic panning drift with drag-origin linear delta math, aligned 16 category colors with 30×30 teardrop pins, rebuilt `<app-place-detail-sheet>` bottom sheet, decoded OSRM polylines with floating stop tooltips, and expanded desktop tests to 113/113 passing (`TC-31` to `TC-34`).
 
-
-
+#### Milestone 50 / Phases 61–62: Multi-Platform Release Packaging, Code Review Hardening & v1.0.0 Distribution (COMPLETED)
+- [x] **50.1: Capacitor Android Hardening, Program Files Storage Fallback & CI/CD Pipeline (Phase 61)**:
+  - Disabled Angular Service Worker on native Capacitor runs, added Android status bar and hardware back-button handlers, implemented `%LOCALAPPDATA%\NuevaEcijaTravel\storage` write-probe fallback for `Program Files` installations, and created `.github/workflows/release-builds.yml`, `installer/NuevaEcijaTravel.iss`, `scripts/build_android_apk.ps1`, and `scripts/build_desktop_installer.ps1`.
+- [x] **50.2: Post-Phase 61 Architectural Code Review Remediation (`PKG-REV-01` to `PKG-REV-04`, Phase 61.1)**:
+  - Bound `SlippyMapCanvas` `_ASSETS_DIR` to `get_settings().assets_dir` with writable tile cache fallback, added `flet_desktop.ensure_client_cached()` auto-provisioning in `scripts/build_standalone_exe.py`, normalized `_launch_in_app_nav` arguments in `trip_detail_view.py`, aligned map drawer/bottom-sheet dark mode tokens, and expanded desktop tests to 115/115 passing (`TC-35`, `TC-36`).
+- [x] **50.3: End-to-End Dual-Platform Deliverable Compilation & Tooling Alignment (Phase 62)**:
+  - Compiled `dist_installer/NuevaEcijaTravel_Setup_v1.0.0.exe` (161.10 MB) and `dist_installer/NuevaEcijaTravel_Portable_Installer_v1.0.0.zip` (236.91 MB).
+  - Aligned Gradle wrapper to 8.13 (`gradle-8.13-bin.zip`), updated Angular CLI build flag to `--no-service-worker`, and compiled `dist_apk/TripMoTripKo-debug.apk` (30.88 MB) and signed `dist_apk/TripMoTripKo-release.apk` (29.72 MB).
+  - Added `scripts/db_query.py` dual-engine SQLite/PostgreSQL query CLI, verified Phase 33 (`TASK-12` / `BUG-14`) completion, and ensured all compiled binaries and signing keys remain strictly excluded from Git tracking.
 
 

@@ -6,22 +6,21 @@ This document serves as the primary handoff reference for developers and coding 
 
 ## 1. Project Status Overview
 
-- **Application Name**: Nueva Ecija Travel Itinerary (MVP, GIS Upgrade & Native Desktop Client)
-- **Current Development Phase**: **Phase 61.1 — Release Pipeline Hardening & Code Review Remediation (`PKG-REV-01` to `PKG-REV-04`) [COMPLETED & VERIFIED]**
+- **Application Name**: Nueva Ecija Travel Itinerary (MVP, GIS Upgrade, Native Desktop Client & Capacitor Android App)
+- **Current Development Phase**: **Phase 62 — Dual-Platform Release Packaging, Distribution & Verification [COMPLETED & VERIFIED]**
 - **Active Git Branch**: `main`
 - **Active Database Infrastructure**: **PostgreSQL 16 in Docker** (`ne_postgres` on port 5432) and local SQLite (`nueva_ecija_travel.db`) fully synchronized with all 21 user accounts, 2,673 places, 12 municipalities, and 10 itineraries.
 - **Last Verified Working State**:
-  - **Phase 61.1 Hardening & Code Review Acceptance**: 100% verified across all suites:
-    - **Desktop Client Test Suite**: 115/115 passed in 6.27s (`100% PASS`), covering `test_cycle2_regressions.py` (`TC-31` through `TC-36`), `test_auth_service.py`, `test_itinerary_service.py`, `test_place_service.py`, and all UI consistency/storage suites.
-    - **Backend Test Suite**: 21/21 passed in 13.66s (`100% PASS`), covering auth rate limiting, places, trips, and database migrations.
-    - **Standalone Windows Distribution**: Recompiled standalone executable `dist/NuevaEcijaTravel/NuevaEcijaTravel.exe` verified healthy with `.ico` icon, `_ASSETS_DIR` settings resolution, and `%LOCALAPPDATA%` storage fallback.
+  - **Release Pipeline & Test Gate**: 100% verified across all suites:
+    - **Desktop Client Test Suite**: 115/115 passed in 8.46s (`100% PASS`), covering `test_cycle2_regressions.py` (`TC-31` through `TC-36`), `test_auth_service.py`, `test_itinerary_service.py`, `test_place_service.py`, and all UI consistency/storage suites.
+    - **Backend Test Suite**: 21/21 passed in 33.18s (`100% PASS`), covering auth rate limiting, places, trips, and database migrations.
+    - **Ionic Angular Production Bundle**: Compiled cleanly with `--no-service-worker` (0 errors) and synchronized with native Capacitor Android assets.
+  - **Verified Release Deliverables**:
+    - **Windows Setup Installer**: `dist_installer\NuevaEcijaTravel_Setup_v1.0.0.exe` (161.10 MB, SHA256: `892138704B07C9F175332ECECFE187EF80817D531E994E4BE5A9A33E233F7B72`).
+    - **Windows Portable Installer**: `dist_installer\NuevaEcijaTravel_Portable_Installer_v1.0.0.zip` (236.91 MB, SHA256: `D865E6D7311DE80D2BCBE2DFB7F68094F70194180B2FBE3AE75DBEF14AAEA2E8`).
+    - **Android Debug APK**: `dist_apk\TripMoTripKo-debug.apk` (30.88 MB, SHA256: `C611658A662C68967B8174E1963C69AE74AA6D0945D3B4106AB7701DF03AB4EB`).
+    - **Android Signed Release APK**: `dist_apk\TripMoTripKo-release.apk` (29.72 MB, SHA256: `0C5CED791D824CD81DF294198481C9F99E9175DC1AA336123B5B1E32BE1E80C6`).
   - **Live Service Daemons**: Pilot backend (`127.0.0.1:8000`), ngrok public tunnel, and Cloudflare Worker proxy (`ne-itinerary-api.edselrenz0.workers.dev`) active and verified.
-- **Phase 61.1 Completed Scope**:
-  1. `PKG-REV-01`: Replaced hardcoded `Path(__file__)` in `slippy_map_canvas.py` with `_ASSETS_DIR = get_settings().assets_dir` and added write-probe fallback to `storage_dir / "tiles_cache"` with absolute pathing.
-  2. `PKG-REV-02`: Embedded `flet_desktop.ensure_client_cached()` fallback inside `scripts/build_standalone_exe.py` for fresh environments.
-  3. `PKG-REV-03`: Normalized `_launch_in_app_nav` in `trip_detail_view.py` to pass `self.itinerary` and `dayNumber={day_num}`.
-  4. `PKG-REV-04`: Connected `palette = get_settings().palette` to `PlacesView._build_drawer_row` and `_build_poi_bottom_sheet` for Dark-Mode parity; cleaned `.gitignore`.
-  5. Regression Tests: Added `TC-35` and `TC-36` to `test_cycle2_regressions.py`.
 - **Current Blockers**: **None**.
 
 ---
@@ -313,19 +312,30 @@ An enterprise full-system QA audit report (`full_website_qa_audit_and_proposal.p
 
 ---
 
-## 10. Immediate Priorities & Next Recommended Opportunities
+## 10. Phase 33 Verification & Future Enhancement Roadmap
 
-1. **Phase 33 Immediate Priorities (TASK-12 / BUG-14)**:
-   - **SEO Metadata & Open Graph Tags**: Add `<title>Nueva Ecija Travel Itinerary | Trip mo, trip ko</title>`, meta description, mobile theme-color, and Open Graph tags (`og:title`, `og:description`, `og:image`, `og:url`, `og:type`) to `Project/src/index.html`.
-   - **Route Alias Redirect**: Add `{ path: 'saved', redirectTo: 'history', pathMatch: 'full' }` to `Project/src/app/tabs/tabs.routes.ts`.
-   - **Quality Gate Execution**: Run unit tests (293+ passing), Angular production build, and Capacitor Android sync.
-2. **Phase 33 Cloud Hosting Roadmap (TASK-07 / BUG-11)**:
-   - Cloud container deployment (e.g. Railway, Render, Fly.io) with managed PostgreSQL and SSL certificates, superseding local ngrok tunnel.
-3. **Native APK Production Signing**:
-   - Run `npx cap open android` to inspect the synchronized Android Studio project.
-   - Generate a signed release APK or Android App Bundle (AAB) using Java 17/21 and production keystore.
-4. **Offline MBTiles Vector Tiles**:
-   - Optional future enhancement to package a pre-rendered offline vector tile package (`.mbtiles`) of Central Luzon for 100% offline map panning without raster tile caching.
+1. **Phase 33 SEO Metadata & Route Alias Redirect (`TASK-12` / `BUG-14`) — COMPLETED & VERIFIED**:
+   - **SEO Metadata & Open Graph Tags**: Verified in `Project/src/index.html` (`<title>Nueva Ecija Travel Itinerary | Trip mo, trip ko</title>`, meta `description`, mobile `theme-color` `#0084ff`, Open Graph tags `og:title`, `og:description`, `og:image`, `og:url`, `og:type`, Twitter Card metadata, and pre-boot `ne_theme_mode` dark-mode hydration script).
+   - **Route Alias Redirect**: Verified in `Project/src/app/tabs/tabs.routes.ts` (`{ path: 'saved', redirectTo: 'history', pathMatch: 'full' }` and root `/saved` redirect) with automated unit test coverage in `Project/src/app/tabs/tabs.routes.spec.ts`.
+   - **Quality Gate Execution**: All 348/348 Web unit tests, 115/115 Desktop regression tests, and 21/21 Backend tests pass (100% green), with Angular production bundle and Capacitor Android sync verified.
+2. **Native APK Production Signing — COMPLETED & VERIFIED (Phase 62)**:
+   - Both `TripMoTripKo-debug.apk` (`30.88 MB`) and RSA-2048 signed `TripMoTripKo-release.apk` (`29.72 MB`) have been compiled, verified, and placed in `dist_apk/` (excluded from Git tracking).
+3. **Optional Future Cloud Container Hosting (`TASK-07` / `BUG-11`)**:
+   - Optional dedicated cloud container deployment (e.g., Railway, Render, Fly.io) with managed PostgreSQL and dedicated SSL certificates to complement the existing Cloudflare Worker + ngrok/local hybrid pilot architecture.
+4. **Optional Offline MBTiles Vector Tiles**:
+   - Optional future enhancement to package a pre-rendered offline vector tile bundle (`.mbtiles`) of Central Luzon for 100% cold-boot offline map panning prior to initial raster tile caching.
+
+---
+
+## 11. Verified Release Deliverables & Installation Matrix (Phase 62)
+
+| Platform | Deliverable Package | Size (MB) | Size (Bytes) | SHA-256 Checksum | Target Device & Installation Instructions |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Windows Desktop** | `dist_installer\NuevaEcijaTravel_Setup_v1.0.0.exe` | **161.10 MB** | 168,926,363 | `892138704B07C9F175332ECECFE187EF80817D531E994E4BE5A9A33E233F7B72` | **Standard PC**: Copy to any 64-bit Windows machine and double-click to run Inno Setup wizard. Automatically installs desktop & Start Menu shortcuts. |
+| **Windows Desktop** | `dist_installer\NuevaEcijaTravel_Portable_Installer_v1.0.0.zip` | **236.91 MB** | 248,413,381 | `D865E6D7311DE80D2BCBE2DFB7F68094F70194180B2FBE3AE75DBEF14AAEA2E8` | **Flash Drive / No-Admin PC**: Extract zip anywhere (e.g. USB flash drive) and double-click `Install_And_Launch.bat`. |
+| **Android Mobile** | `dist_apk\TripMoTripKo-debug.apk` | **30.88 MB** | 32,378,996 | `C611658A662C68967B8174E1963C69AE74AA6D0945D3B4106AB7701DF03AB4EB` | **Android Testing**: Transfer via USB or WhatsApp/Telegram/Drive, tap to install (enable "Install unknown apps"). |
+| **Android Mobile** | `dist_apk\TripMoTripKo-release.apk` | **29.72 MB** | 31,162,864 | `0C5CED791D824CD81DF294198481C9F99E9175DC1AA336123B5B1E32BE1E80C6` | **Production Android**: Signed with 2048-bit RSA release keystore (`nueva-ecija-travel-release.jks`). Ready for direct sideloading or internal distribution. |
+
 
 
 

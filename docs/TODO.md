@@ -1779,13 +1779,23 @@ px cap sync android): **Exit code 0 (6 plugins synchronized)**.
   - [x] Verified full desktop pytest suite: **115/115 passed (100% green)** in 6.27s.
   - [x] Verified full backend pytest suite: **21/21 passed (100% green)** in 13.66s.
 
+---
 
-
-
-
-
-
-
-
-
+## Phase 62: Dual-Platform Release Packaging, Build Pipeline Alignment & Documentation Sync (`v1.0.0`)
+- [x] **Windows Desktop Single-File Installer & Portable Archive Compilation**:
+  - [x] Compiled standalone PyInstaller distribution into `dist/NuevaEcijaTravel/` (`NuevaEcijaTravel.exe` 15.27 MB, 410 MB full runtime bundle).
+  - [x] Compiled Inno Setup 6 single-file Windows installer: `dist_installer/NuevaEcijaTravel_Setup_v1.0.0.exe` (`161.10 MB` / `168,926,363` bytes, SHA-256: `892138704B07C9F175332ECECFE187EF80817D531E994E4BE5A9A33E233F7B72`).
+  - [x] Packaged portable zero-admin archive: `dist_installer/NuevaEcijaTravel_Portable_Installer_v1.0.0.zip` (`236.91 MB` / `248,413,381` bytes, SHA-256: `D865E6D7311DE80D2BCBE2DFB7F68094F70194180B2FBE3AE75DBEF14AAEA2E8`).
+  - [x] Hardened `scripts/build_desktop_installer.ps1` by constructing `Install_And_Launch.bat` from an explicit line array (`$InstallBatLines`) to prevent PowerShell string interpolation regressions.
+- [x] **Android Capacitor APK Compilation & Gradle 8.13 Alignment**:
+  - [x] Aligned `Project/android/gradle/wrapper/gradle-wrapper.properties` to `gradle-8.13-bin.zip` for Android Gradle Plugin 8.13.0 compatibility.
+  - [x] Added `android.builder.sdkDownload=true` to `Project/android/gradle.properties`.
+  - [x] Updated Angular CLI flag from `--service-worker=false` to `--no-service-worker` in `scripts/build_android_apk.ps1` and `.github/workflows/release-builds.yml`.
+  - [x] Compiled `dist_apk/TripMoTripKo-debug.apk` (`30.88 MB` / `32,378,996` bytes, SHA-256: `C611658A662C68967B8174E1963C69AE74AA6D0945D3B4106AB7701DF03AB4EB`).
+  - [x] Compiled RSA-2048 signed `dist_apk/TripMoTripKo-release.apk` (`29.72 MB` / `31,162,864` bytes, SHA-256: `0C5CED791D824CD81DF294198481C9F99E9175DC1AA336123B5B1E32BE1E80C6`).
+- [x] **Interactive Dual-Engine Database Query Utility**:
+  - [x] Added `scripts/db_query.py` supporting interactive REPL and one-shot SQL queries across both local SQLite (`nueva_ecija_travel.db`) and Docker PostgreSQL (`--postgres`).
+- [x] **Phase 33 Verification & Continuous Documentation Synchronization**:
+  - [x] Verified Phase 33 (`TASK-12` / `BUG-14`) is already implemented and tested in `Project/src/index.html`, `Project/src/app/tabs/tabs.routes.ts`, and `Project/src/app/tabs/tabs.routes.spec.ts`.
+  - [x] Hardened `.gitignore` with `**/keystore.properties` and verified all large binaries (`dist/`, `dist_apk/`, `dist_installer/`, `*.apk`, `*.exe`, `*.zip`, `*.jks`) are excluded from Git tracking.
 

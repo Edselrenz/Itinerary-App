@@ -296,4 +296,25 @@ This tests database connectivity, municipality filtering, POI category queries, 
    - `website[:512]`
    - `opening_hours[:255]`
 
+---
+
+## 9. Interactive & CLI Database Query Utility (`scripts/db_query.py`)
+
+For rapid ad-hoc inspection of either the local SQLite database (`nueva_ecija_travel.db`) or the Docker PostgreSQL instance (`localhost:5432/ne_travel`), use [`scripts/db_query.py`](file:///c:/Users/Edward/Desktop/CaseStudy/scripts/db_query.py):
+
+```powershell
+# List all tables and row counts (SQLite default)
+python scripts/db_query.py --tables
+
+# Run a one-shot SQL query with formatted table output
+python scripts/db_query.py "SELECT name, category, municipality_name FROM places LIMIT 10"
+
+# Launch interactive SQL REPL mode (supports 'tables', 'schema <table>', and SQL statements)
+python scripts/db_query.py
+
+# Target the Docker PostgreSQL database instead of SQLite
+python scripts/db_query.py --postgres --tables
+```
+
+
 

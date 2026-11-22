@@ -5,6 +5,21 @@ All notable changes to the Nueva Ecija Travel Itinerary project are documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2026-11-22
+### Added, Verified & Packaged (Phase 62 — Dual-Platform Release Packaging, Build Pipeline Alignment & Documentation Audit)
+- **Windows Desktop Release Installers & Portable Packages (`scripts/build_desktop_installer.ps1`, `installer/NuevaEcijaTravel.iss`)**:
+  - Compiled production single-file Windows installer `dist_installer/NuevaEcijaTravel_Setup_v1.0.0.exe` (`161.10 MB` / `168,926,363` bytes, LZMA2/ultra64 compression, SHA-256: `892138704B07C9F175332ECECFE187EF80817D531E994E4BE5A9A33E233F7B72`).
+  - Packaged zero-admin portable archive `dist_installer/NuevaEcijaTravel_Portable_Installer_v1.0.0.zip` (`236.91 MB` / `248,413,381` bytes, SHA-256: `D865E6D7311DE80D2BCBE2DFB7F68094F70194180B2FBE3AE75DBEF14AAEA2E8`) with automated `Install_And_Launch.bat` launcher refactored into a line-array builder (`$InstallBatLines`) to avoid PowerShell variable interpolation issues.
+- **Android Capacitor Debug & Signed Release APKs (`scripts/build_android_apk.ps1`, `Project/android/`)**:
+  - Aligned `Project/android/gradle/wrapper/gradle-wrapper.properties` to `gradle-8.13-bin.zip` for Android Gradle Plugin 8.13.0 compatibility and enabled `android.builder.sdkDownload=true` in `Project/android/gradle.properties`.
+  - Updated Angular production CLI flag from `--service-worker=false` to `--no-service-worker` in `scripts/build_android_apk.ps1` and `.github/workflows/release-builds.yml`, and added unsigned release APK fallback discovery.
+  - Compiled `dist_apk/TripMoTripKo-debug.apk` (`30.88 MB` / `32,378,996` bytes, SHA-256: `C611658A662C68967B8174E1963C69AE74AA6D0945D3B4106AB7701DF03AB4EB`) and RSA-2048 signed `dist_apk/TripMoTripKo-release.apk` (`29.72 MB` / `31,162,864` bytes, SHA-256: `0C5CED791D824CD81DF294198481C9F99E9175DC1AA336123B5B1E32BE1E80C6`).
+- **Dual-Engine Interactive Database Query CLI (`scripts/db_query.py`)**:
+  - Added interactive and one-shot CLI query utility supporting both local SQLite (`nueva_ecija_travel.db`) and Docker PostgreSQL (`--postgres` / `localhost:5432/ne_travel`) with formatted tabular output, `--tables` row count summaries, and `--limit` controls.
+- **Repository Security & Phase 33 Audit Reconciliation**:
+  - Hardened `.gitignore` with `**/keystore.properties` alongside `dist/`, `dist_apk/`, `dist_installer/`, `*.apk`, `*.exe`, `*.zip`, and `*.jks` so compiled binaries and signing credentials are never committed to Git.
+  - Verified Phase 33 (`TASK-12` / `BUG-14`) implementation in `Project/src/index.html` (SEO metadata, mobile theme-color `#0084ff`, Open Graph & Twitter Card tags) and `Project/src/app/tabs/tabs.routes.ts` (`/tabs/saved` -> `history` redirect tested in `tabs.routes.spec.ts`), synchronizing `docs/PROJECT_STATE.md`.
+
 ## [0.58.1] - 2026-11-16
 ### Fixed & Hardened (Phase 61 Production Review Remediation - `PKG-REV-01` to `PKG-REV-04`)
 - **Frozen PyInstaller `_ASSETS_DIR` & Writable Tile Cache Fallback (`PKG-REV-01`)**:

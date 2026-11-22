@@ -47,7 +47,7 @@ jobs:
 
       - name: Build production Ionic Angular bundle (Service Worker disabled for native APK)
         working-directory: Project
-        run: npx ng build --configuration production --service-worker=false
+        run: npx ng build --configuration production --no-service-worker
 
       - name: Sync web assets and Capacitor plugins to Android
         working-directory: Project
