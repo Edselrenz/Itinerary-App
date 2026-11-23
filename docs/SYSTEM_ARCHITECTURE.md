@@ -8,7 +8,9 @@
 
 The system is a **decoupled, multi-client, offline-resilient full-stack application** organized across seven architectural subgraphs (`Mobile Client`, `Web Application`, `Desktop Client`, `Edge Gateway & Tunnel Daemon`, `Backend API`, `Persistence and Discovery`, and `External Mapping & Routing Services`).
 
-> **Interactive Diagram**: An interactive pan/zoom/inspectable SVG version of this exact diagram is available at [`system_discussion/trip_mo_trip_ko_full_stack_repository_architecture_diagram.html`](../system_discussion/trip_mo_trip_ko_full_stack_repository_architecture_diagram.html).
+> **PDF & Interactive Diagrams**:
+> - **High-Resolution PDF**: [`docs/Trip_Mo_Trip_Ko_System_Architecture_Diagram.pdf`](./Trip_Mo_Trip_Ko_System_Architecture_Diagram.pdf) (also in [`system_discussion/Trip_Mo_Trip_Ko_System_Architecture_Diagram.pdf`](../system_discussion/Trip_Mo_Trip_Ko_System_Architecture_Diagram.pdf))
+> - **Interactive SVG/HTML**: [`system_discussion/trip_mo_trip_ko_full_stack_repository_architecture_diagram.html`](../system_discussion/trip_mo_trip_ko_full_stack_repository_architecture_diagram.html)
 
 ```mermaid
 %%{init: {'flowchart': {'nodeSpacing': 10, 'rankSpacing': 18, 'diagramPadding': 4, 'padding': 10, 'wrappingWidth': 150, 'useMaxWidth': true}, 'themeVariables': {'fontSize': '18px'}}}%%

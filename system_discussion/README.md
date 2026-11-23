@@ -54,6 +54,7 @@ This documentation was produced through a complete source-code audit of the repo
 
 ## Visual Architecture & Workflow Diagrams Included Across Chapters
 
+- **Printable Full-Stack Repository Architecture Diagram (PDF)** → [`Trip_Mo_Trip_Ko_System_Architecture_Diagram.pdf`](./Trip_Mo_Trip_Ko_System_Architecture_Diagram.pdf)
 - **Interactive Full-Stack Repository Architecture Diagram (HTML/SVG Canvas)** → [`trip_mo_trip_ko_full_stack_repository_architecture_diagram.html`](./trip_mo_trip_ko_full_stack_repository_architecture_diagram.html)
 - **Multi-Tier System & Edge Tunnel Topology** → [02 — System Architecture (§1)](./02-System-Architecture.md)
 - **End-to-End Request & Failover Sequence** → [02 — System Architecture (§2.4)](./02-System-Architecture.md)
