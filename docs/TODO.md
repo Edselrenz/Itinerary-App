@@ -1784,8 +1784,8 @@ px cap sync android): **Exit code 0 (6 plugins synchronized)**.
 ## Phase 62: Dual-Platform Release Packaging, Build Pipeline Alignment & Documentation Sync (`v1.0.0`)
 - [x] **Windows Desktop Single-File Installer & Portable Archive Compilation**:
   - [x] Compiled standalone PyInstaller distribution into `dist/NuevaEcijaTravel/` (`NuevaEcijaTravel.exe` 15.27 MB, 410 MB full runtime bundle).
-  - [x] Compiled Inno Setup 6 single-file Windows installer: `dist_installer/NuevaEcijaTravel_Setup_v1.0.0.exe` (`161.10 MB` / `168,926,363` bytes, SHA-256: `892138704B07C9F175332ECECFE187EF80817D531E994E4BE5A9A33E233F7B72`).
-  - [x] Packaged portable zero-admin archive: `dist_installer/NuevaEcijaTravel_Portable_Installer_v1.0.0.zip` (`236.91 MB` / `248,413,381` bytes, SHA-256: `D865E6D7311DE80D2BCBE2DFB7F68094F70194180B2FBE3AE75DBEF14AAEA2E8`).
+  - [x] Compiled Inno Setup 6 single-file Windows installer: `dist_installer/NuevaEcijaTravel_Setup_v1.0.0.exe` (`156.58 MB` / `164,181,396` bytes, SHA-256: `3D08D6BAE3EB3926C0AFEA4FEB211D8BAF2FA9F36D1B0FA241F9EDE50CDFF410`).
+  - [x] Packaged portable zero-admin archive: `dist_installer/NuevaEcijaTravel_Portable_Installer_v1.0.0.zip` (`232.64 MB` / `243,942,337` bytes, SHA-256: `3ED786E2FB9F0EE6E65373C0DBD56C3EF9E8B3C819D6227E36068FE936917708`).
   - [x] Hardened `scripts/build_desktop_installer.ps1` by constructing `Install_And_Launch.bat` from an explicit line array (`$InstallBatLines`) to prevent PowerShell string interpolation regressions.
 - [x] **Android Capacitor APK Compilation & Gradle 8.13 Alignment**:
   - [x] Aligned `Project/android/gradle/wrapper/gradle-wrapper.properties` to `gradle-8.13-bin.zip` for Android Gradle Plugin 8.13.0 compatibility.
@@ -1798,4 +1798,11 @@ px cap sync android): **Exit code 0 (6 plugins synchronized)**.
 - [x] **Phase 33 Verification & Continuous Documentation Synchronization**:
   - [x] Verified Phase 33 (`TASK-12` / `BUG-14`) is already implemented and tested in `Project/src/index.html`, `Project/src/app/tabs/tabs.routes.ts`, and `Project/src/app/tabs/tabs.routes.spec.ts`.
   - [x] Hardened `.gitignore` with `**/keystore.properties` and verified all large binaries (`dist/`, `dist_apk/`, `dist_installer/`, `*.apk`, `*.exe`, `*.zip`, `*.jks`) are excluded from Git tracking.
+- [x] **Desktop UI Layout Remediation (`Edit Profile` Centering, `Off-Grid Custom Venue` Modal Overflow, `SplashOverlay` Full-Screen Alignment & Boxless `WelcomeView` / Auth Parity)**:
+  - [x] `desktop_client/views/welcome_view.py`, `desktop_client/views/guest_view.py`, `desktop_client/views/login_view.py`, & `desktop_client/views/signup_view.py`: Removed bordered/shadowed floating card boxes (`center_card`) to match Web App full-screen layout, anchored `welcome_hero_buildings.png` (`480×268`) flush at bottom of `WelcomeView`, styled `"Continue as Guest"` / `"Create an Account"` outline buttons with `1.5px solid #0084ff` border and `#0084ff` text, rotated airplane brand icon `45°`, and stretched Login/Signup inputs to full `400px` form width (`TC-40`).
+  - [x] `desktop_client/components/splash_overlay.py`: Fixed full-screen skyline cover (`left=0, top=0, right=0, bottom=0`, `width=float("inf"), height=float("inf"), fit=ft.BoxFit.COVER`), added Web-parity gradient scrim, centered `✈️ Trip mo, trip ko` brand header & tagline, and anchored the loading spinner & `"Click anywhere to enter"` pill at the bottom center (`TC-39`).
+  - [x] `desktop_client/views/profile_view.py`: Centered `Edit Profile` subview controls and bound all 7 form `TextField` inputs and `Save Changes` button to full `card_w` width (`TC-37`).
+  - [x] `desktop_client/views/custom_builder_view.py` & `desktop_client/components/dialogs.py`: Fixed horizontal overflow in `Add Destination / Venue` (`Off-Grid Venue`) and `Edit Scheduled Stop` modals using `width=500`/`480` on single-column fields and `expand=True` on paired `ft.Row` fields (`TC-38`).
+  - [x] Expanded desktop regression suite to **119/119 passing tests (100% green)**.
+
 

@@ -27,22 +27,24 @@ class LoginView(ft.Container):
 
     def _build_content(self) -> None:
         palette = self.settings.palette
-        self.bgcolor = palette.bg_main
+        self.bgcolor = palette.surface_card if not palette.is_dark else palette.bg_main
+        form_w = 400
 
-        # Top-left back button row
+        # Top-left back button row matching Web .top-nav-row
         back_btn = ft.Container(
             content=ft.Row(
                 controls=[
                     ft.IconButton(
                         icon=ft.Icons.ARROW_BACK,
-                        icon_size=20,
-                        icon_color=palette.text_primary,
+                        icon_size=24,
+                        icon_color=ThemeColors.PRIMARY_BLUE,
                         tooltip="Go back to welcome screen",
                         on_click=lambda _: self._navigate("/welcome"),
                     ),
                 ],
             ),
             alignment=ft.Alignment(-1, 0),
+            padding=ft.Padding.only(top=16, left=20),
         )
 
         # Centered Brand Header
@@ -50,43 +52,49 @@ class LoginView(ft.Container):
             controls=[
                 ft.Icon(
                     ft.Icons.AIRPLANEMODE_ACTIVE,
-                    size=26,
+                    size=30,
                     color=ThemeColors.PRIMARY_BLUE,
+                    rotate=ft.Rotate(angle=0.785398),
                 ),
                 ft.Text(
                     "Trip mo, trip ko",
-                    size=20,
-                    weight=ft.FontWeight.W_800,
-                    color=ThemeColors.PRIMARY_BLUE,
-                ),
-            ],
-            alignment=ft.MainAxisAlignment.CENTER,
-            spacing=8,
-        )
-
-        # Welcome Back Title & Subtitle (Left aligned)
-        heading_group = ft.Column(
-            controls=[
-                ft.Text(
-                    "Welcome back!",
-                    size=26,
+                    size=22,
                     weight=ft.FontWeight.W_800,
                     color=palette.text_primary,
                 ),
-                ft.Text(
-                    "Log in to continue your journey.",
-                    size=13,
-                    color=palette.text_muted,
-                ),
             ],
-            spacing=4,
-            horizontal_alignment=ft.CrossAxisAlignment.START,
+            alignment=ft.MainAxisAlignment.CENTER,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            spacing=10,
+        )
+
+        # Welcome Back Title & Subtitle (Left aligned inside form_w)
+        heading_group = ft.Container(
+            width=form_w,
+            content=ft.Column(
+                controls=[
+                    ft.Text(
+                        "Welcome back!",
+                        size=26,
+                        weight=ft.FontWeight.W_800,
+                        color=palette.text_primary,
+                    ),
+                    ft.Text(
+                        "Log in to continue your journey.",
+                        size=14,
+                        color=palette.text_muted,
+                    ),
+                ],
+                spacing=4,
+                horizontal_alignment=ft.CrossAxisAlignment.START,
+            ),
         )
 
         self.email_input = ft.TextField(
             label="Email Address",
             hint_text="traveler@example.com",
             prefix_icon=ft.Icons.MAIL_OUTLINE,
+            width=form_w,
             border_radius=12,
             border_color=palette.input_border,
             bgcolor=palette.input_bg,
@@ -101,6 +109,7 @@ class LoginView(ft.Container):
             password=True,
             can_reveal_password=True,
             prefix_icon=ft.Icons.KEY_OUTLINED,
+            width=form_w,
             border_radius=12,
             border_color=palette.input_border,
             bgcolor=palette.input_bg,
@@ -218,52 +227,47 @@ class LoginView(ft.Container):
             spacing=4,
         )
 
-        card = ft.Container(
+        login_body = ft.Container(
+            width=form_w,
             content=ft.Column(
                 controls=[
-                    back_btn,
                     brand_header,
-                    ft.Container(height=4),
+                    ft.Container(height=12),
                     heading_group,
                     self.error_container,
-                    ft.Container(height=2),
+                    ft.Container(height=4),
                     self.email_input,
                     self.password_input,
                     options_row,
                     ft.Container(height=4),
                     self.submit_btn,
-                    ft.Container(height=2),
+                    ft.Container(height=4),
                     or_divider,
                     google_btn,
                     apple_btn,
-                    ft.Container(height=4),
+                    ft.Container(height=6),
                     footer_links,
                 ],
-                spacing=8,
-                width=420,
+                spacing=10,
+                width=form_w,
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            ),
-            bgcolor=palette.surface_card,
-            border_radius=24,
-            border=ft.Border.all(1.2, palette.border_main),
-            padding=ft.Padding.symmetric(horizontal=36, vertical=28),
-            shadow=ft.BoxShadow(
-                spread_radius=1,
-                blur_radius=24,
-                color=ft.Colors.with_opacity(0.08, "#000000"),
-                offset=ft.Offset(0, 6),
             ),
         )
 
-        self.content = ft.ListView(
+        self.content = ft.Column(
             controls=[
+                back_btn,
                 ft.Container(
-                    content=card,
+                    content=login_body,
                     alignment=ft.Alignment(0, 0),
-                    padding=ft.Padding.symmetric(vertical=24),
-                )
+                    padding=ft.Padding.symmetric(vertical=12),
+                    width=float("inf"),
+                ),
             ],
+            scroll=ft.ScrollMode.AUTO,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             expand=True,
+            width=float("inf"),
         )
 
     def on_resize(self, width: float, height: float) -> None:

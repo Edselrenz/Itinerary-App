@@ -29,7 +29,7 @@ This document covers both client frontends implemented in the repository and ver
   - `SecureTokenStorageService` (`secure-token-storage.service.ts`): Uses `capacitor-secure-storage-plugin` on native Android and `localStorage`/`sessionStorage` on web, backed by synchronous memory cache for the interceptor.
   - `ConnectivityService` (`connectivity.service.ts`): Tracks `consecutiveErrors` (threshold `ERROR_THRESHOLD = 2` before showing offline banner), manual dismissal flag, custom API URL validation (`ne_custom_api_url` restricted to trusted hostnames), and `/api/v1/health` probing.
   - `PlaceService` (`place.service.ts`): Merges API places into an in-memory 2,673-POI OSM cache (`osmPlacesCache`), resolves curated local photography (`localImageMap`), and formats the 16 canonical categories.
-  - `ItineraryService` (`itinerary.service.ts`, 1,351 lines): Handles backend CRUD, active unsaved draft caching (`sessionStorage` key `ne_active_draft_itinerary`), guest storage fallback, and a full client-side offline clustering generator.
+  - `ItineraryService` (`itinerary.service.ts`, 1,352 lines): Handles backend CRUD, active unsaved draft caching (`sessionStorage` key `ne_active_draft_itinerary`), guest storage fallback, and a full client-side offline clustering generator.
   - `GuestStorageService` (`guest-storage.service.ts`): Wraps `@ionic/storage-angular` (`ne_guest_itineraries_v1`, `ne_is_guest_mode_v1`).
   - `GuestMigrationService` (`guest-migration.service.ts`): Sequentially POSTs local guest itineraries to `/api/v1/itineraries` after login/signup.
   - `FavoritesService` (`favorites.service.ts`): Persists favorites in `localStorage` (`ne_favorite_places_v1`), seeding 3 iconic Nueva Ecija venues on first visit.

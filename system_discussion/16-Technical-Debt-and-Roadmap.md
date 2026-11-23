@@ -11,6 +11,12 @@ Before reviewing remaining technical debt, the following issues from earlier rev
 - **[RESOLVED — `PKG-REV-02` / `TC-36`] Desktop In-App Navigation Parity**: `desktop_client/views/trip_detail_view.py` (`_launch_in_app_nav`) and `places_view.py` now launch turn-by-turn itinerary routes directly inside the in-app `SlippyMapCanvas` rather than opening an external browser tab.
 - **[RESOLVED — `PKG-REV-03` & PyInstaller Hot-Swap Staging]**: `scripts/build_standalone_exe.py` now calls `flet_desktop.ensure_client_cached()`, stages builds in `build_temp/dist_stage/NuevaEcijaTravel` (bundling `flet/controls/material/icons.json`, `cupertino_icons.json`, `certifi`, `tzdata`), and overlays `dist/NuevaEcijaTravel` with an NTFS `.old` rename fallback so running instances never trigger `FileNotFoundError: icons.json`.
 - **[RESOLVED — `PKG-REV-04` & `TC-37`–`TC-40`] Desktop-Web UI & Theme Parity**: Fixed dark-mode tokens in `places_view.py`, centered full-width `Edit Profile` inputs (`TC-37`), eliminated horizontal modal overflow in `Off-Grid Custom Venue` and `Edit Stop` dialogs (`TC-38`), fixed full-screen `SplashOverlay` (`Positioned.fill`, `TC-39`), and updated `WelcomeView` / `GuestView` / `LoginView` / `SignupView` to match the Web App's boxless layout with the seamless 3-tile mirrored cityscape `welcome_hero_buildings_wide.png` (`1848 × 336`, `TC-40`).
+- **[RESOLVED — Backend Hardening & Schema Drift Cleanup]**:
+  - Removed the startup sample PII backfill (`May 23, 2000`, `Female`, `+66 81 234 5678`, `pattranite_avatar.jpg`) from `ensure_user_profile_columns()` in `backend/app/core/database.py` (preserving real user profile `NULL` values while only ensuring `default_daily_budget` defaults to `3000.0`).
+  - Removed duplicate module headers/imports from `backend/app/core/database.py` and `backend/app/core/limiter.py`.
+  - Removed the non-existent `day.updated_at` assignment inside `compute_and_save_day_route()` in `backend/app/api/v1/itineraries.py`.
+  - Added strict regex validation (`^places/[A-Za-z0-9_-]+/photos/[A-Za-z0-9_-]+$`) on `/api/v1/places/photos/{photo_name:path}` in `backend/app/api/v1/places.py`.
+  - Added Alembic migration `0005_add_places_lat_lng_active_index.py` to synchronize `ix_places_lat_lng_active` across SQLite and PostgreSQL.
 
 ---
 
@@ -69,7 +75,7 @@ Before reviewing remaining technical debt, the following issues from earlier rev
 ### 8. Duplicate Code & Oversized Monolithic View/Service Files
 - **Current Condition**:
   - `backend/app/core/database.py` and `backend/app/core/limiter.py` contain duplicated module docstrings and duplicate imports at the top of the file.
-  - Several UI/service files exceed 1,000 lines: `places_view.py` (1,975 lines), `custom_builder_view.py` (1,845), `custom-builder.page.ts` (1,692), `slippy_map_canvas.py` (1,618), `map.page.ts` (1,563), `itinerary.service.ts` (1,351), `itinerary-detail.page.ts` (1,227).
+  - Several UI/service files exceed 1,000 lines: `places_view.py` (1,975 lines), `custom_builder_view.py` (1,869), `custom-builder.page.ts` (1,692), `slippy_map_canvas.py` (1,618), `map.page.ts` (1,563), `itinerary.service.ts` (1,352), `itinerary-detail.page.ts` (1,227).
 - **Recommended Solution**: Clean up duplicate headers in `database.py`/`limiter.py` and decompose large pages/views into focused sub-components (filter panel, day editor, budget calculator, route HUD).
 - **Expected Benefit**: Faster onboarding, easier unit testing, and fewer regression bugs.
 

@@ -670,5 +670,169 @@ def test_tc_36_trip_detail_in_app_nav_passes_itinerary_and_day_number():
     assert passed_trip is itin
 
 
+def test_tc_37_edit_profile_subview_centered_and_full_card_width_fields():
+    """TC-37: Verifies Edit Profile subview centers all form controls and stretches TextFields to full card_w."""
+    import flet as ft
+    from desktop_client.views.profile_view import ProfileView
+
+    pv = ProfileView()
+    pv.view_mode = "edit"
+    pv._build_content()
+
+    card_w = pv._get_card_width(narrow=True)
+    # Outer scroll wrapper centers inner container via MainAxisAlignment.CENTER
+    outer_col = pv.content
+    assert isinstance(outer_col, ft.Column)
+    assert outer_col.horizontal_alignment == ft.CrossAxisAlignment.CENTER
+    center_row = outer_col.controls[0]
+    assert isinstance(center_row, ft.Row)
+    assert center_row.alignment == ft.MainAxisAlignment.CENTER
+
+    inner_container = center_row.controls[0]
+    assert inner_container.width == card_w
+    form_col = inner_container.content
+    assert isinstance(form_col, ft.Column)
+    assert form_col.horizontal_alignment == ft.CrossAxisAlignment.CENTER
+
+    # Collect all TextField controls inside Edit Profile form
+    text_fields: list[ft.TextField] = []
+    for ctrl in form_col.controls:
+        if isinstance(ctrl, ft.Column):
+            for child in ctrl.controls:
+                if isinstance(child, ft.TextField):
+                    text_fields.append(child)
+
+    assert len(text_fields) == 7
+    for tf in text_fields:
+        assert tf.width == card_w
+
+
+def test_tc_38_custom_builder_offgrid_venue_and_edit_stop_dialogs_no_overflow():
+    """TC-38: Verifies Add Off-Grid Custom Venue and Edit Stop dialogs use full width for single fields and expand=True for paired Row fields."""
+    from unittest.mock import MagicMock
+    import flet as ft
+    from desktop_client.views.custom_builder_view import CustomBuilderView
+    from desktop_client.models.itinerary import ItineraryItem
+
+    cb = CustomBuilderView()
+    mock_page = MagicMock(spec=ft.Page)
+    mock_page.overlay = []
+    shown_dialogs: list[ft.AlertDialog] = []
+    mock_page.show_dialog = lambda d: shown_dialogs.append(d)
+    cb._test_page = mock_page
+
+    # 1. Open Off-Grid Custom Venue dialog
+    cb._open_custom_venue_dialog(initial_tab="offgrid")
+    assert len(shown_dialogs) == 1
+    dlg = shown_dialogs[-1]
+    dlg_container = dlg.content
+    assert dlg_container.width == 500
+    tab_body = dlg_container.content.controls[2]
+    offgrid_col = tab_body.content
+    assert isinstance(offgrid_col, ft.Column)
+    assert offgrid_col.width == 500
+
+    # Single-line fields must match dialog width (500)
+    name_tf = offgrid_col.controls[0]
+    muni_tf = offgrid_col.controls[1]
+    notes_tf = offgrid_col.controls[6]
+    assert isinstance(name_tf, ft.TextField) and name_tf.width == 500
+    assert isinstance(muni_tf, ft.TextField) and muni_tf.width == 500
+    assert isinstance(notes_tf, ft.TextField) and notes_tf.width == 500
+
+    # Paired Row fields (Min/Max Cost, Planned Time/Duration, Lat/Lng) must have expand=True
+    cost_row = offgrid_col.controls[2]
+    time_row = offgrid_col.controls[3]
+    coords_col = offgrid_col.controls[5]
+    coords_row = coords_col.controls[0]
+
+    for row in (cost_row, time_row, coords_row):
+        assert isinstance(row, ft.Row)
+        assert row.width == 500
+        for tf in row.controls:
+            assert isinstance(tf, ft.TextField)
+            assert tf.expand is True
+
+    # 2. Open Edit Scheduled Stop dialog
+    sample_item = ItineraryItem(id="item-1", day_id="day-1", custom_title="Sample Stop", sort_order=1)
+    cb.days[0].items.append(sample_item)
+    cb._open_edit_stop_dialog(sample_item)
+    assert len(shown_dialogs) == 2
+    edit_dlg = shown_dialogs[-1]
+    edit_container = edit_dlg.content
+    assert edit_container.width == 480
+    edit_col = edit_container.content
+    for ctrl in edit_col.controls:
+        if isinstance(ctrl, ft.Row):
+            assert ctrl.width == 480
+            for tf in ctrl.controls:
+                assert isinstance(tf, ft.TextField)
+                assert tf.expand is True
+
+
+def test_tc_39_splash_overlay_fullscreen_positioned_fill_and_web_branding():
+    """TC-39: Verifies SplashOverlay uses Positioned.fill (left/top/right/bottom=0) on container, background image, scrim, and centered Web branding."""
+    import flet as ft
+    from desktop_client.components.splash_overlay import SplashOverlay
+
+    splash = SplashOverlay()
+    assert splash.left == 0
+    assert splash.top == 0
+    assert splash.right == 0
+    assert splash.bottom == 0
+    assert isinstance(splash.content, ft.Stack)
+    assert len(splash.content.controls) == 3
+
+    bg_img, scrim, fg_layer = splash.content.controls
+    assert isinstance(bg_img, ft.Image)
+    assert bg_img.fit == ft.BoxFit.COVER
+    assert bg_img.width == float("inf")
+    assert bg_img.height == float("inf")
+    assert bg_img.left == 0 and bg_img.top == 0 and bg_img.right == 0 and bg_img.bottom == 0
+
+    assert isinstance(scrim, ft.Container)
+    assert scrim.left == 0 and scrim.top == 0 and scrim.right == 0 and scrim.bottom == 0
+    assert scrim.gradient is not None
+
+    assert isinstance(fg_layer, ft.Container)
+    assert fg_layer.left == 0 and fg_layer.top == 0 and fg_layer.right == 0 and fg_layer.bottom == 0
+    fg_col = fg_layer.content
+    assert isinstance(fg_col, ft.Column)
+    assert fg_col.alignment == ft.MainAxisAlignment.SPACE_BETWEEN
+    assert fg_col.horizontal_alignment == ft.CrossAxisAlignment.CENTER
+
+
+def test_tc_40_welcome_and_auth_views_boxless_web_parity_and_bottom_buildings():
+    """TC-40: Verifies WelcomeView renders without a bordered card box and spans the mirrored welcome_hero_buildings_wide.png across the full window width flush at bottom."""
+    import flet as ft
+    from desktop_client.views.welcome_view import WelcomeView
+
+    wv = WelcomeView()
+    assert wv.padding == 0
+    col = wv.content
+    assert isinstance(col, ft.Column)
+    assert col.alignment == ft.MainAxisAlignment.SPACE_BETWEEN
+    assert len(col.controls) == 2
+
+    top_container, bottom_buildings = col.controls
+    assert isinstance(top_container, ft.Container)
+    assert top_container.border is None
+    assert top_container.shadow is None
+
+    assert isinstance(bottom_buildings, ft.Container)
+    assert bottom_buildings.padding == 0
+    assert bottom_buildings.margin == 0
+    assert bottom_buildings.width == float("inf")
+    img = bottom_buildings.content
+    assert isinstance(img, ft.Image)
+    assert img.width == 1280.0
+    assert "welcome_hero_buildings" in str(img.src)
+
+    # Verify responsive resize stretches skyline across full maximized 1920x1080 width
+    wv.on_resize(1920.0, 1080.0)
+    resized_buildings = wv.content.controls[1]
+    resized_img = resized_buildings.content
+    assert resized_img.width == 1920.0
+    assert resized_img.height == round(1920.0 * (336.0 / 1848.0))
 
 

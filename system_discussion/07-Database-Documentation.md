@@ -9,12 +9,10 @@
 | **Driver & ORM** | SQLAlchemy `2.0+` with `psycopg[binary]>=3.2.0` (`postgresql+psycopg://...`) |
 | **Portable JSON Type** | `JsonType = JSON().with_variant(JSONB(), "postgresql")` (`backend/app/models/entities.py`) |
 | **Migration Tool** | Alembic `>=1.13.2` (`backend/alembic.ini`, `backend/alembic/env.py`) |
-| **Applied Migrations** | 4 revisions: `0001_initial_schema` → `0002_google_places_and_routing` → `0003_widen_phone_column` → `0004_add_user_profile_fields` |
+| **Applied Migrations** | 5 revisions: `0001_initial_schema` → `0002_google_places_and_routing` → `0003_widen_phone_column` → `0004_add_user_profile_fields` → `0005_add_places_lat_lng_active_index` |
 | **Total Schema Size** | **8 ORM tables, 109 columns** (`backend/app/models/entities.py`) |
 | **Startup Auto-Check** | `ensure_user_profile_columns(engine)` in `backend/app/core/database.py` verifies extended `users` columns exist on startup |
 | **Interactive Query CLI** | `scripts/db_query.py` (supports interactive REPL, one-shot SQL, `--tables`, `--limit`, and `--postgres` / SQLite auto-detection) |
-
-> **Verified ORM-vs-Alembic Drift**: `Place.__table_args__` in `backend/app/models/entities.py` declares a composite index `ix_places_lat_lng_active (latitude, longitude, is_active)`, which is created automatically on SQLite via `Base.metadata.create_all`, **but is not present in Alembic migrations `0001`–`0004`** for PostgreSQL.
 
 ---
 

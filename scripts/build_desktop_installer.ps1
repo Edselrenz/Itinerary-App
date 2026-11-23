@@ -42,6 +42,9 @@ if (-not (Test-Path (Join-Path $DistDir "NuevaEcijaTravel.exe"))) {
     throw "dist\NuevaEcijaTravel\NuevaEcijaTravel.exe not found. Ensure PyInstaller completed."
 }
 
+# Remove any temporary .old hot-swap files from dist/NuevaEcijaTravel before packaging
+Get-ChildItem -Path $DistDir -Recurse -Filter "*.old" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+
 # Embed one-click fallback installer batch file inside dist/NuevaEcijaTravel
 $InstallBatLines = @(
     '@echo off',
@@ -84,8 +87,9 @@ if ($IsccExe) {
     Write-Host "==========================================================" -ForegroundColor Green
 } else {
     Write-Warning "Inno Setup 6 (ISCC.exe) was not found. Install it via: winget install -e --id JRSoftware.InnoSetup"
-    $ZipOut = Join-Path $OutDir "NuevaEcijaTravel_Portable_Installer_v1.0.0.zip"
-    Write-Host "Creating fallback portable installer archive at: $ZipOut" -ForegroundColor Yellow
-    Compress-Archive -Path "$DistDir\*" -DestinationPath $ZipOut -Force
-    Write-Host "Created $ZipOut (contains Install_And_Launch.bat + full standalone build)." -ForegroundColor Green
 }
+
+$ZipOut = Join-Path $OutDir "NuevaEcijaTravel_Portable_Installer_v1.0.0.zip"
+Write-Host "Refreshing portable installer archive at: $ZipOut" -ForegroundColor Yellow
+python -c "import zipfile; from pathlib import Path; dist_dir = Path(r'$DistDir'); zip_out = Path(r'$ZipOut'); zf = zipfile.ZipFile(zip_out, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=6); [zf.write(p, p.relative_to(dist_dir)) for p in dist_dir.rglob('*') if p.is_file() and not p.name.endswith('.old')]; zf.close()"
+Write-Host "Created $ZipOut (contains Install_And_Launch.bat + full standalone build)." -ForegroundColor Green

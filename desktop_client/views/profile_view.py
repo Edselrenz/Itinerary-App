@@ -414,6 +414,8 @@ class ProfileView(ft.Container):
         uid = user.id if user else "traveler"
         raw_avatar = self._edit_avatar_data_url or (user.avatar_url if user else None)
         avatar_src = self.settings.resolve_avatar_path(raw_avatar, uid)
+        palette = self.settings.palette
+        card_w = self._get_card_width(narrow=True)
 
         header_row = ft.Row(
             controls=[
@@ -424,10 +426,11 @@ class ProfileView(ft.Container):
                     tooltip="Back to profile",
                     on_click=lambda _: self._close_subview(),
                 ),
-                ft.Text("Edit Profile", size=24, weight=ft.FontWeight.W_800, color=ThemeColors.TEXT_BLACK),
+                ft.Text("Edit Profile", size=24, weight=ft.FontWeight.W_800, color=palette.text_primary),
             ],
             spacing=8,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            width=card_w,
         )
 
         avatar_preview_img = ft.Image(
@@ -509,29 +512,33 @@ class ProfileView(ft.Container):
             spacing=10,
         )
 
-        # Helper to build each labeled field matching image_2d1741.png
+        # Helper to build each labeled field spanning the full centered card width
         def _labeled_field(label_text: str, initial_val: str, read_only: bool = False) -> tuple[ft.Control, ft.TextField]:
+            read_only_bg = "#1e293b" if palette.is_dark else "#f1f5f9"
             tf = ft.TextField(
                 value=initial_val,
                 read_only=read_only,
+                width=card_w,
                 border_radius=10,
-                border_color="#cbd5e1",
+                border_color=palette.input_border,
                 focused_border_color=ThemeColors.PRIMARY_BLUE,
-                bgcolor="#f1f5f9" if read_only else ft.Colors.WHITE,
+                bgcolor=read_only_bg if read_only else palette.input_bg,
                 filled=True,
                 dense=True,
                 text_style=ft.TextStyle(
                     size=14,
-                    color=ThemeColors.TEXT_FAINT_LIGHT if read_only else ThemeColors.TEXT_BLACK,
+                    color=palette.text_faint if read_only else palette.text_primary,
                 ),
                 content_padding=ft.Padding.symmetric(horizontal=14, vertical=12),
             )
             block = ft.Column(
                 controls=[
-                    ft.Text(label_text, size=12, weight=ft.FontWeight.W_700, color=ThemeColors.TEXT_BLACK),
+                    ft.Text(label_text, size=12, weight=ft.FontWeight.W_700, color=palette.text_primary),
                     tf,
                 ],
                 spacing=4,
+                width=card_w,
+                horizontal_alignment=ft.CrossAxisAlignment.START,
             )
             return block, tf
 
@@ -548,6 +555,7 @@ class ProfileView(ft.Container):
             bgcolor=ThemeColors.ERROR_BG,
             border_radius=8,
             padding=10,
+            width=card_w,
             content=ft.Text(self._edit_error_msg, size=12, color=ThemeColors.ERROR),
         )
 
@@ -597,20 +605,21 @@ class ProfileView(ft.Container):
             bgcolor=ThemeColors.PRIMARY_BLUE,
             border_radius=10,
             height=46,
+            width=card_w,
             alignment=ft.Alignment(0, 0),
             ink=True,
             on_click=_save_changes,
         )
 
-        card_w = self._get_card_width(narrow=True)
         return self._wrap_centered_scroll(
             ft.Container(
                 width=card_w,
+                alignment=ft.Alignment(0, -1),
                 content=ft.Column(
                     controls=[
                         header_row,
                         ft.Container(height=12),
-                        ft.Container(content=avatar_section, alignment=ft.Alignment(0, 0)),
+                        ft.Container(content=avatar_section, width=card_w, alignment=ft.Alignment(0, 0)),
                         ft.Container(height=14),
                         error_banner,
                         first_block,
@@ -625,6 +634,8 @@ class ProfileView(ft.Container):
                         ft.Container(height=24),
                     ],
                     spacing=10,
+                    width=card_w,
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
             )
         )
@@ -939,6 +950,7 @@ class ProfileView(ft.Container):
             hint_text="Search saved places...",
             prefix_icon=ft.Icons.SEARCH,
             value=self._fav_search_query,
+            width=card_w,
             dense=True,
             border_radius=10,
             bgcolor=palette.input_bg,

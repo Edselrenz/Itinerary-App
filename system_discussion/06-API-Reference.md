@@ -171,6 +171,7 @@ All backend REST endpoints are mounted under `/api/v1` (`settings.api_v1_prefix`
 - **Response (`200 OK`)**: `PlaceOut` enriched with `editorial_summary`, `regular_opening_hours`, `photos`, `reviews`, `business_status`. | **Errors**: `404 Not Found`.
 
 #### `GET /api/v1/places/photos/{photo_name:path}`
+- **Validation**: `photo_name` must match `^places/[A-Za-z0-9_-]+/photos/[A-Za-z0-9_-]+$` (returns `400 Bad Request` on invalid format).
 - **Response (`200 OK`)**: Binary image (`image/jpeg` with `Cache-Control: public, max-age=86400`), or 1×1 SVG fallback if `GOOGLE_MAPS_API_KEY` is unset or fetch fails.
 
 ---

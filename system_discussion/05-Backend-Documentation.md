@@ -12,7 +12,7 @@ When Uvicorn starts `app.main:app`:
    - Calls `resolve_db_url(settings.database_url)` to convert relative SQLite paths to `<repo_root>/nueva_ecija_travel.db` and inject `connect_timeout=2` on PostgreSQL URLs.
    - Creates the SQLAlchemy 2.0 `engine` (`pool_pre_ping=True`) and immediately executes a live test connection for non-SQLite URLs.
    - If PostgreSQL is unreachable, logs a warning and falls back to `sqlite:///<repo_root>/nueva_ecija_travel.db` (`check_same_thread=False`).
-   - Executes `ensure_user_profile_columns(engine)` at import time to add missing extended `users` columns (`middle_initial`, `phone_number`, `birthday`, `gender`, `avatar_url`, `default_daily_budget`) across both PostgreSQL and SQLite. *(See [16 — Technical Debt](./16-Technical-Debt-and-Roadmap.md) regarding the hardcoded default backfill values inside this function.)*
+   - Executes `ensure_user_profile_columns(engine)` at import time to add missing extended `users` columns (`middle_initial`, `phone_number`, `birthday`, `gender`, `avatar_url`, `default_daily_budget`) across both PostgreSQL and SQLite and ensures `default_daily_budget` defaults to `3000.0` when `NULL`.
 3. **FastAPI Instance**:
    - `title="Nueva Ecija Travel Itinerary API"`, `version="0.1.0"`.
    - OpenAPI Swagger (`/docs`) and ReDoc (`/redoc`) are **enabled only when `settings.app_env == "development"`** and set to `None` in production.

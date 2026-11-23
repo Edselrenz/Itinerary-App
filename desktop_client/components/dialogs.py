@@ -470,15 +470,16 @@ def show_custom_venue_dialog(
     on_save: Callable[[dict[str, Any]], None],
 ) -> None:
     """Modal allowing traveler to add an unlisted or off-grid venue with geofenced coordinate validation."""
-    title_field = ft.TextField(label="Venue Name *", hint_text="e.g. Hidden Farm Bistro, Sierra Madre Campsite", autofocus=True)
-    notes_field = ft.TextField(label="Activity / Notes", hint_text="Special instructions, what to bring...", multiline=True, min_lines=2)
-    time_field = ft.TextField(label="Planned Time", hint_text="e.g. 10:30 AM", width=180)
-    duration_field = ft.TextField(label="Duration (minutes)", value="90", width=180)
-    cost_field = ft.TextField(label="Estimated Cost (₱)", hint_text="e.g. 350", width=180)
+    dlg_width = 480
+    title_field = ft.TextField(label="Venue Name *", hint_text="e.g. Hidden Farm Bistro, Sierra Madre Campsite", autofocus=True, dense=True, width=dlg_width)
+    notes_field = ft.TextField(label="Activity / Notes", hint_text="Special instructions, what to bring...", multiline=True, min_lines=2, dense=True, width=dlg_width)
+    time_field = ft.TextField(label="Planned Time", hint_text="e.g. 10:30 AM", dense=True, expand=True)
+    duration_field = ft.TextField(label="Duration (minutes)", value="90", dense=True, expand=True)
+    cost_field = ft.TextField(label="Estimated Cost (₱)", hint_text="e.g. 350", dense=True, width=dlg_width)
 
     # Optional geofenced coordinates
-    lat_field = ft.TextField(label="Latitude (15.15 - 16.15)", hint_text="e.g. 15.632", width=180)
-    lng_field = ft.TextField(label="Longitude (120.70 - 121.40)", hint_text="e.g. 121.144", width=180)
+    lat_field = ft.TextField(label="Latitude (15.15 - 16.15)", hint_text="e.g. 15.632", dense=True, expand=True)
+    lng_field = ft.TextField(label="Longitude (120.70 - 121.40)", hint_text="e.g. 121.144", dense=True, expand=True)
 
     error_text = ft.Text("", color=ThemeColors.ERROR, size=11, visible=False)
 
@@ -561,21 +562,25 @@ def show_custom_venue_dialog(
             ],
             spacing=8,
         ),
-        content=ft.Column(
-            controls=[
-                ft.Text("Add a local scenic spot, meeting point, or off-grid restaurant not yet in the official POI registry.", size=12, color=ThemeColors.TEXT_MUTED_LIGHT),
-                title_field,
-                notes_field,
-                ft.Row(controls=[time_field, duration_field], spacing=12),
-                ft.Row(controls=[cost_field], spacing=12),
-                ft.Divider(height=1, color=ThemeColors.BORDER_LIGHT),
-                ft.Text("Optional Coordinates (Geofenced to Nueva Ecija)", size=11, weight=ft.FontWeight.W_600),
-                ft.Row(controls=[lat_field, lng_field], spacing=12),
-                error_text,
-            ],
-            spacing=10,
-            width=460,
-            tight=True,
+        content=ft.Container(
+            width=dlg_width,
+            content=ft.Column(
+                controls=[
+                    ft.Text("Add a local scenic spot, meeting point, or off-grid restaurant not yet in the official POI registry.", size=12, color=ThemeColors.TEXT_MUTED_LIGHT),
+                    title_field,
+                    notes_field,
+                    ft.Row(controls=[time_field, duration_field], spacing=10, width=dlg_width),
+                    cost_field,
+                    ft.Divider(height=1, color=ThemeColors.BORDER_LIGHT),
+                    ft.Text("Optional Coordinates (Geofenced to Nueva Ecija)", size=11, weight=ft.FontWeight.W_600),
+                    ft.Row(controls=[lat_field, lng_field], spacing=10, width=dlg_width),
+                    error_text,
+                ],
+                spacing=10,
+                width=dlg_width,
+                tight=True,
+                scroll=ft.ScrollMode.AUTO,
+            ),
         ),
         actions=[
             ft.TextButton(content="Cancel", on_click=close_dlg),
@@ -602,11 +607,12 @@ def show_edit_stop_dialog(
     current_day: int = 1,
 ) -> None:
     """Modal to edit stop notes, planned time, duration, and estimated cost."""
-    time_field = ft.TextField(label="Planned Time", value=item.planned_time or "", hint_text="e.g. 02:00 PM", width=180)
-    duration_field = ft.TextField(label="Duration (minutes)", value=str(item.duration_minutes or 90), width=180)
+    dlg_width = 440
+    time_field = ft.TextField(label="Planned Time", value=item.planned_time or "", hint_text="e.g. 02:00 PM", dense=True, expand=True)
+    duration_field = ft.TextField(label="Duration (minutes)", value=str(item.duration_minutes or 90), dense=True, expand=True)
     cost_val = str(item.estimated_cost_max) if item.estimated_cost_max is not None else ""
-    cost_field = ft.TextField(label="Estimated Cost (₱)", value=cost_val, hint_text="e.g. 500", width=180)
-    notes_field = ft.TextField(label="Traveler Notes", value=item.notes or "", multiline=True, min_lines=3)
+    cost_field = ft.TextField(label="Estimated Cost (₱)", value=cost_val, hint_text="e.g. 500", dense=True, width=dlg_width)
+    notes_field = ft.TextField(label="Traveler Notes", value=item.notes or "", multiline=True, min_lines=3, dense=True, width=dlg_width)
 
     day_dropdown = None
     if available_days and len(available_days) > 1:
@@ -614,7 +620,7 @@ def show_edit_stop_dialog(
             label="Move to Day",
             options=[ft.dropdown.Option(str(d), f"Day {d}") for d in available_days],
             value=str(current_day),
-            width=180,
+            width=dlg_width,
             dense=True,
         )
 

@@ -554,7 +554,10 @@ class CustomBuilderView(ft.Container):
 
         pw = float(self.safe_page.width) if (self.safe_page and self.safe_page.width) else 1280.0
         card_w = min(640.0, max(320.0, pw - 48.0))
+        inner_w = max(240.0, card_w - 48.0)
         palette = self.settings.palette
+        title_input.width = inner_w
+        budget_input.width = inner_w
 
         form_card = ft.Container(
             width=card_w,
@@ -1369,20 +1372,23 @@ class CustomBuilderView(ft.Container):
 
     def _open_edit_stop_dialog(self, item: ItineraryItem) -> None:
         """Edit stop modal with Move to Day dropdown reindexing both source and target days (UC-C10)."""
-        time_field = ft.TextField(label="Planned Time", value=item.planned_time or "09:00 AM", dense=True)
-        dur_field = ft.TextField(label="Duration (mins)", value=str(item.duration_minutes or 90), dense=True)
-        notes_field = ft.TextField(label="Personal Travel Notes", value=item.notes or "", dense=True, multiline=True)
+        dlg_width = 480
+        time_field = ft.TextField(label="Planned Time", value=item.planned_time or "09:00 AM", dense=True, expand=True)
+        dur_field = ft.TextField(label="Duration (mins)", value=str(item.duration_minutes or 90), dense=True, expand=True)
+        notes_field = ft.TextField(label="Personal Travel Notes", value=item.notes or "", dense=True, multiline=True, width=dlg_width)
         cost_min_field = ft.TextField(
             label="Est. Min Cost (₱)",
             value=str(int(item.estimated_cost_min)) if item.estimated_cost_min is not None else "",
             dense=True,
             prefix=ft.Text("₱ "),
+            expand=True,
         )
         cost_max_field = ft.TextField(
             label="Est. Max Cost (₱)",
             value=str(int(item.estimated_cost_max)) if item.estimated_cost_max is not None else "",
             dense=True,
             prefix=ft.Text("₱ "),
+            expand=True,
         )
 
         day_options = [ft.dropdown.Option(str(d.day_number), f"Day {d.day_number} — {d.travel_date} (Day {d.day_number})") for d in self.days]
@@ -1392,6 +1398,7 @@ class CustomBuilderView(ft.Container):
             options=day_options,
             value=str(source_day.day_number),
             dense=True,
+            width=dlg_width,
         )
 
         def _close_dlg(_=None):
@@ -1434,11 +1441,20 @@ class CustomBuilderView(ft.Container):
             self._safe_update()
 
         dlg = ft.AlertDialog(
-            title=ft.Text(f"Edit Scheduled Stop: {item.custom_title or (item.place.name if item.place else 'Stop')}"),
-            content=ft.Column(
-                controls=[day_dropdown, time_field, dur_field, ft.Row(controls=[cost_min_field, cost_max_field], spacing=8), notes_field],
-                tight=True,
-                spacing=8,
+            title=ft.Text(f"Edit Scheduled Stop: {item.custom_title or (item.place.name if item.place else 'Stop')}", size=16, weight=ft.FontWeight.BOLD),
+            content=ft.Container(
+                width=dlg_width,
+                content=ft.Column(
+                    controls=[
+                        day_dropdown,
+                        ft.Row(controls=[time_field, dur_field], spacing=10, width=dlg_width),
+                        ft.Row(controls=[cost_min_field, cost_max_field], spacing=10, width=dlg_width),
+                        notes_field,
+                    ],
+                    tight=True,
+                    spacing=10,
+                    scroll=ft.ScrollMode.AUTO,
+                ),
             ),
             actions=[
                 ft.TextButton("Cancel", on_click=_close_dlg),
@@ -1452,6 +1468,7 @@ class CustomBuilderView(ft.Container):
         active_tab = [initial_tab]  # 'browse' | 'offgrid'
         dlg_holder: list[Optional[ft.AlertDialog]] = [None]
         active_day = self.days[self.active_day_index]
+        dlg_width = 500
 
         def _update_dlg_content():
             if dlg_holder[0] is not None and getattr(dlg_holder[0], "content", None):
@@ -1461,8 +1478,8 @@ class CustomBuilderView(ft.Container):
                     pass
 
         # Tab 1: Browse Places with Duplicate Guard
-        b_search = ft.TextField(hint_text="Search destinations...", dense=True, prefix_icon=ft.Icons.SEARCH)
-        places_list_col = ft.Column(spacing=6, scroll=ft.ScrollMode.AUTO, height=260)
+        b_search = ft.TextField(hint_text="Search destinations...", dense=True, prefix_icon=ft.Icons.SEARCH, width=dlg_width)
+        places_list_col = ft.Column(spacing=6, scroll=ft.ScrollMode.AUTO, height=260, width=dlg_width)
 
         def _refresh_browse_list():
             q = (b_search.value or "").strip().lower()
@@ -1528,19 +1545,23 @@ class CustomBuilderView(ft.Container):
 
         b_search.on_change = lambda _: _refresh_browse_list()
 
-        # Tab 2: Off-Grid Custom Venue
-        name_field = ft.TextField(label="Place or Venue Name *", dense=True)
-        muni_field = ft.TextField(label="Municipality or Address", dense=True)
-        cost_min_field = ft.TextField(label="Est. Min Cost (₱)", prefix=ft.Text("₱ "), dense=True)
-        cost_max_field = ft.TextField(label="Est. Max Cost (₱)", prefix=ft.Text("₱ "), dense=True)
-        time_field = ft.TextField(label="Planned Time", value=self._calc_next_time(active_day), dense=True)
-        dur_field = ft.TextField(label="Duration (mins)", value="90", dense=True)
-        notes_field = ft.TextField(label="Personal Travel Notes", multiline=True, dense=True)
+        # Tab 2: Off-Grid Custom Venue (full-width single inputs + expand=True paired row inputs to prevent horizontal overflow)
+        name_field = ft.TextField(label="Place or Venue Name *", dense=True, width=dlg_width)
+        muni_field = ft.TextField(label="Municipality or Address", dense=True, width=dlg_width)
+        cost_min_field = ft.TextField(label="Est. Min Cost (₱)", prefix=ft.Text("₱ "), dense=True, expand=True)
+        cost_max_field = ft.TextField(label="Est. Max Cost (₱)", prefix=ft.Text("₱ "), dense=True, expand=True)
+        time_field = ft.TextField(label="Planned Time", value=self._calc_next_time(active_day), dense=True, expand=True)
+        dur_field = ft.TextField(label="Duration (mins)", value="90", dense=True, expand=True)
+        notes_field = ft.TextField(label="Personal Travel Notes", multiline=True, dense=True, width=dlg_width)
 
         coords_expanded = [False]
-        lat_field = ft.TextField(label="Latitude (15.15 - 16.15)", hint_text="15.58", dense=True)
-        lng_field = ft.TextField(label="Longitude (120.70 - 121.40)", hint_text="121.00", dense=True)
-        coords_col = ft.Column(controls=[ft.Row(controls=[lat_field, lng_field], spacing=8)], visible=False)
+        lat_field = ft.TextField(label="Latitude (15.15 - 16.15)", hint_text="15.58", dense=True, expand=True)
+        lng_field = ft.TextField(label="Longitude (120.70 - 121.40)", hint_text="121.00", dense=True, expand=True)
+        coords_col = ft.Column(
+            controls=[ft.Row(controls=[lat_field, lng_field], spacing=10, width=dlg_width)],
+            visible=False,
+            width=dlg_width,
+        )
 
         def _toggle_coords(_):
             coords_expanded[0] = not coords_expanded[0]
@@ -1564,7 +1585,7 @@ class CustomBuilderView(ft.Container):
         )
         err_text = ft.Text("", size=11, color=ThemeColors.ERROR, visible=False)
 
-        tab_body = ft.Container()
+        tab_body = ft.Container(width=dlg_width)
 
         add_btn = ft.FilledButton("+ Add to Day", on_click=lambda _: _save_offgrid(None), visible=(initial_tab == "offgrid"))
 
@@ -1578,20 +1599,23 @@ class CustomBuilderView(ft.Container):
 
             if t_name == "browse":
                 _refresh_browse_list()
-                tab_body.content = ft.Column(controls=[b_search, places_list_col], spacing=8)
+                tab_body.content = ft.Column(controls=[b_search, places_list_col], spacing=8, width=dlg_width, tight=True)
             else:
                 tab_body.content = ft.Column(
                     controls=[
                         name_field,
                         muni_field,
-                        ft.Row(controls=[cost_min_field, cost_max_field], spacing=8),
-                        ft.Row(controls=[time_field, dur_field], spacing=8),
+                        ft.Row(controls=[cost_min_field, cost_max_field], spacing=10, width=dlg_width),
+                        ft.Row(controls=[time_field, dur_field], spacing=10, width=dlg_width),
                         coords_toggle_btn,
                         coords_col,
                         notes_field,
                         err_text,
                     ],
-                    spacing=8,
+                    spacing=10,
+                    width=dlg_width,
+                    tight=True,
+                    scroll=ft.ScrollMode.AUTO,
                 )
             _update_dlg_content()
 

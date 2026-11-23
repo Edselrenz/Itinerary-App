@@ -32,7 +32,8 @@ Itinerary-App/
 │   │       ├── 0001_initial_nueva_ecija_schema.py   # 7 core tables
 │   │       ├── 0002_google_places_and_routing.py    # Google GIS fields + geospatial_cache table
 │   │       ├── 0003_widen_phone_column.py           # places.phone VARCHAR(64) -> VARCHAR(255)
-│   │       └── 0004_add_user_profile_fields.py      # Extended users profile columns
+│   │       ├── 0004_add_user_profile_fields.py      # Extended users profile columns
+│   │       └── 0005_add_places_lat_lng_active_index.py # Composite ix_places_lat_lng_active index
 │   ├── app/
 │   │   ├── main.py                       # FastAPI app init, SlowAPI, CORS, router mounts, /health
 │   │   ├── core/

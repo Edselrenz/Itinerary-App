@@ -90,11 +90,25 @@ def build():
         )
         sys.exit(1)
 
-    # Clean previous builds
-    if dist_dir.exists():
-        shutil.rmtree(dist_dir, ignore_errors=True)
+    # Terminate any running instances of NuevaEcijaTravel.exe or flet.exe holding file locks in dist/
+    if os.name == "nt":
+        for proc_name in ("NuevaEcijaTravel.exe", "flet.exe"):
+            try:
+                subprocess.run(
+                    ["taskkill", "/F", "/IM", proc_name],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    timeout=3,
+                )
+            except Exception:
+                pass
+
+    # Clean previous build_temp; stage PyInstaller output in build_temp/dist_stage first
+    # so dist/NuevaEcijaTravel is NEVER partially deleted if a running instance holds a lock
     if build_dir.exists():
         shutil.rmtree(build_dir, ignore_errors=True)
+    stage_dist_dir = build_dir / "dist_stage"
+    stage_dist_dir.mkdir(parents=True, exist_ok=True)
 
     ico_file = _ensure_ico_file(desktop_dir)
     entrypoint = desktop_dir / "main.py"
@@ -110,9 +124,9 @@ def build():
         "--noconfirm",
         "--clean",
         "--distpath",
-        str(dist_dir),
+        str(stage_dist_dir),
         "--workpath",
-        str(build_dir),
+        str(build_dir / "work"),
     ]
     if ico_file and ico_file.is_file():
         cmd.extend(["--icon", str(ico_file)])
@@ -259,16 +273,17 @@ def build():
         print(f"PyInstaller failed with code {res.returncode}")
         sys.exit(res.returncode)
 
+    staged_app_dir = stage_dist_dir / "NuevaEcijaTravel"
     out_app_dir = dist_dir / "NuevaEcijaTravel"
-    print(f"\nPyInstaller build completed: {out_app_dir}")
+    print(f"\nPyInstaller staging completed: {staged_app_dir}")
 
-    # Copy bundled Flet Flutter runtime directly into the distribution folder
-    target_flet_dir = out_app_dir / "flet"
+    # Copy bundled Flet Flutter runtime directly into the staged distribution folder
+    target_flet_dir = staged_app_dir / "flet"
     print(f"Bundling Flet Flutter engine from {flet_cache} -> {target_flet_dir} ...")
     shutil.copytree(flet_cache, target_flet_dir, dirs_exist_ok=True)
 
     # Copy also to _internal/flet if PyInstaller placed internals there
-    internal_dir = out_app_dir / "_internal"
+    internal_dir = staged_app_dir / "_internal"
     if internal_dir.exists():
         internal_flet = internal_dir / "flet"
         shutil.copytree(flet_cache, internal_flet, dirs_exist_ok=True)
@@ -286,22 +301,22 @@ def build():
     except Exception as e:
         print("Warning copying flet package data:", e)
 
-    # Copy desktop_client/assets into dist/NuevaEcijaTravel/assets so osm_places.json (2,673 POIs) & photos are always present
-    target_assets_dir = out_app_dir / "assets"
+    # Copy desktop_client/assets into staged_app_dir/assets so osm_places.json (2,673 POIs) & photos are always present
+    target_assets_dir = staged_app_dir / "assets"
     shutil.copytree(desktop_dir / "assets", target_assets_dir, dirs_exist_ok=True)
     if internal_dir.exists():
         shutil.copytree(desktop_dir / "assets", internal_dir / "assets", dirs_exist_ok=True)
     print("Successfully copied desktop_client/assets (2,673 OSM places + photos) to output distribution")
 
     # Create local storage directory
-    storage_dir = out_app_dir / "storage"
+    storage_dir = staged_app_dir / "storage"
     storage_dir.mkdir(parents=True, exist_ok=True)
     exports_dir = storage_dir / "exports"
     exports_dir.mkdir(parents=True, exist_ok=True)
 
     # Copy .env.example or write default production .env pointing to the Cloudflare Worker gateway
     env_example = desktop_dir / ".env.example"
-    env_target = out_app_dir / ".env"
+    env_target = staged_app_dir / ".env"
     if env_example.exists():
         shutil.copy(env_example, env_target)
     elif not env_target.exists():
@@ -312,6 +327,32 @@ def build():
             "ITINERARY_GEN_TIMEOUT_SECONDS=45.0\n",
             encoding="utf-8",
         )
+
+    # Sync complete staged build into dist/NuevaEcijaTravel (using NTFS .old rename fallback for any locked binary)
+    out_app_dir.mkdir(parents=True, exist_ok=True)
+    for old_file in out_app_dir.rglob("*.old"):
+        try:
+            old_file.unlink()
+        except Exception:
+            pass
+    for src_item in staged_app_dir.rglob("*"):
+        rel = src_item.relative_to(staged_app_dir)
+        dst_item = out_app_dir / rel
+        if src_item.is_dir():
+            dst_item.mkdir(parents=True, exist_ok=True)
+        elif src_item.is_file():
+            dst_item.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                shutil.copy2(src_item, dst_item)
+            except PermissionError:
+                old_dst = dst_item.with_suffix(dst_item.suffix + ".old")
+                try:
+                    if old_dst.exists():
+                        old_dst.unlink()
+                    dst_item.rename(old_dst)
+                    shutil.copy2(src_item, dst_item)
+                except Exception:
+                    pass
 
     # Verify NuevaEcijaTravel.exe exists
     exe_file = out_app_dir / "NuevaEcijaTravel.exe"

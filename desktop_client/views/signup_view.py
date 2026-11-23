@@ -29,22 +29,24 @@ class SignupView(ft.Container):
 
     def _build_content(self) -> None:
         palette = self.settings.palette
-        self.bgcolor = palette.bg_main
+        self.bgcolor = palette.surface_card if not palette.is_dark else palette.bg_main
+        form_w = 400
 
-        # Top-left back button
+        # Top-left back button matching Web .top-nav-row
         back_btn = ft.Container(
             content=ft.Row(
                 controls=[
                     ft.IconButton(
                         icon=ft.Icons.ARROW_BACK,
-                        icon_size=20,
-                        icon_color=palette.text_primary,
+                        icon_size=24,
+                        icon_color=ThemeColors.PRIMARY_BLUE,
                         tooltip="Go back to welcome screen",
                         on_click=lambda _: self._navigate("/welcome"),
                     ),
                 ],
             ),
             alignment=ft.Alignment(-1, 0),
+            padding=ft.Padding.only(top=16, left=20),
         )
 
         # Centered Brand Header
@@ -52,37 +54,42 @@ class SignupView(ft.Container):
             controls=[
                 ft.Icon(
                     ft.Icons.AIRPLANEMODE_ACTIVE,
-                    size=26,
+                    size=30,
                     color=ThemeColors.PRIMARY_BLUE,
+                    rotate=ft.Rotate(angle=0.785398),
                 ),
                 ft.Text(
                     "Trip mo, trip ko",
-                    size=20,
-                    weight=ft.FontWeight.W_800,
-                    color=ThemeColors.PRIMARY_BLUE,
-                ),
-            ],
-            alignment=ft.MainAxisAlignment.CENTER,
-            spacing=8,
-        )
-
-        # Create Your Account Title & Subtitle
-        heading_group = ft.Column(
-            controls=[
-                ft.Text(
-                    "Create your account",
-                    size=26,
+                    size=22,
                     weight=ft.FontWeight.W_800,
                     color=palette.text_primary,
                 ),
-                ft.Text(
-                    "Get started and plan your new adventure.",
-                    size=13,
-                    color=palette.text_muted,
-                ),
             ],
-            spacing=4,
-            horizontal_alignment=ft.CrossAxisAlignment.START,
+            alignment=ft.MainAxisAlignment.CENTER,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            spacing=10,
+        )
+
+        # Create Your Account Title & Subtitle
+        heading_group = ft.Container(
+            width=form_w,
+            content=ft.Column(
+                controls=[
+                    ft.Text(
+                        "Create your account",
+                        size=26,
+                        weight=ft.FontWeight.W_800,
+                        color=palette.text_primary,
+                    ),
+                    ft.Text(
+                        "Get started and plan your new adventure.",
+                        size=14,
+                        color=palette.text_muted,
+                    ),
+                ],
+                spacing=4,
+                horizontal_alignment=ft.CrossAxisAlignment.START,
+            ),
         )
 
         def _on_name_change(_):
@@ -110,6 +117,7 @@ class SignupView(ft.Container):
         self.first_name_input = ft.TextField(
             label="First Name",
             hint_text="e.g. Maria",
+            width=form_w,
             border_radius=12,
             border_color=ThemeColors.BORDER_LIGHT,
             focused_border_color=ThemeColors.PRIMARY_BLUE,
@@ -121,6 +129,7 @@ class SignupView(ft.Container):
         self.mi_input = ft.TextField(
             label="Middle Initial (if applicable)",
             hint_text="e.g. C.",
+            width=form_w,
             border_radius=12,
             border_color=ThemeColors.BORDER_LIGHT,
             focused_border_color=ThemeColors.PRIMARY_BLUE,
@@ -130,6 +139,7 @@ class SignupView(ft.Container):
         self.last_name_input = ft.TextField(
             label="Last Name",
             hint_text="e.g. Clara",
+            width=form_w,
             border_radius=12,
             border_color=ThemeColors.BORDER_LIGHT,
             focused_border_color=ThemeColors.PRIMARY_BLUE,
@@ -141,6 +151,7 @@ class SignupView(ft.Container):
             label="Username",
             hint_text="e.g. maria_clara",
             prefix_icon=ft.Icons.ALTERNATE_EMAIL,
+            width=form_w,
             border_radius=12,
             border_color=ThemeColors.BORDER_LIGHT,
             focused_border_color=ThemeColors.PRIMARY_BLUE,
@@ -152,6 +163,7 @@ class SignupView(ft.Container):
             label="Email Address",
             hint_text="traveler@example.com",
             prefix_icon=ft.Icons.MAIL_OUTLINE,
+            width=form_w,
             border_radius=12,
             border_color=ThemeColors.BORDER_LIGHT,
             focused_border_color=ThemeColors.PRIMARY_BLUE,
@@ -177,6 +189,7 @@ class SignupView(ft.Container):
             can_reveal_password=True,
             prefix_icon=ft.Icons.KEY_OUTLINED,
             helper="Minimum 8 characters (letters and numbers)",
+            width=form_w,
             border_radius=12,
             border_color=ThemeColors.BORDER_LIGHT,
             focused_border_color=ThemeColors.PRIMARY_BLUE,
@@ -189,6 +202,7 @@ class SignupView(ft.Container):
             password=True,
             can_reveal_password=True,
             prefix_icon=ft.Icons.LOCK_OUTLINE,
+            width=form_w,
             border_radius=12,
             border_color=ThemeColors.BORDER_LIGHT,
             focused_border_color=ThemeColors.PRIMARY_BLUE,
@@ -286,15 +300,15 @@ class SignupView(ft.Container):
             on_click=lambda _: self._show_social_notice("Apple Sign-In"),
         )
 
-        card = ft.Container(
+        signup_body = ft.Container(
+            width=form_w,
             content=ft.Column(
                 controls=[
-                    back_btn,
                     brand_header,
-                    ft.Container(height=2),
+                    ft.Container(height=8),
                     heading_group,
                     self.error_container,
-                    ft.Container(height=2),
+                    ft.Container(height=4),
                     self.first_name_input,
                     self.mi_input,
                     self.last_name_input,
@@ -311,31 +325,26 @@ class SignupView(ft.Container):
                     google_btn,
                     apple_btn,
                 ],
-                spacing=8,
-                width=420,
+                spacing=10,
+                width=form_w,
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            ),
-            bgcolor=palette.surface_card,
-            border_radius=24,
-            border=ft.Border.all(1.2, palette.border_main),
-            padding=ft.Padding.symmetric(horizontal=36, vertical=28),
-            shadow=ft.BoxShadow(
-                spread_radius=1,
-                blur_radius=24,
-                color=ft.Colors.with_opacity(0.08, "#000000"),
-                offset=ft.Offset(0, 6),
             ),
         )
 
-        self.content = ft.ListView(
+        self.content = ft.Column(
             controls=[
+                back_btn,
                 ft.Container(
-                    content=card,
+                    content=signup_body,
                     alignment=ft.Alignment(0, 0),
-                    padding=ft.Padding.symmetric(vertical=24),
-                )
+                    padding=ft.Padding.only(top=4, bottom=28),
+                    width=float("inf"),
+                ),
             ],
+            scroll=ft.ScrollMode.AUTO,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             expand=True,
+            width=float("inf"),
         )
 
     def on_resize(self, width: float, height: float) -> None:

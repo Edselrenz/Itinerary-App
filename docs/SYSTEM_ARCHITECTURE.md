@@ -1,134 +1,178 @@
-# System Architecture: Nueva Ecija Travel Itinerary
+# System Architecture: Trip Mo, Trip Ko — Nueva Ecija Travel Itinerary (`v1.0.0`)
+
+> **Verification Status**: Updated through **Phase 62 (`v1.0.0` Final Release Verification)** (`488` automated tests passing: `348` Web Vitest + `119` Desktop Pytest + `21` Backend Pytest). For the complete 17-part technical and layman-friendly documentation suite, see [`system_discussion/README.md`](../system_discussion/README.md).
+
+---
 
 ## 1. High-Level Component Topology
 
-The system is organized as a monorepo containing a standalone client, an asynchronous REST API backend, an offline data processing pipeline, and a relational database:
+The system is a **decoupled, multi-client, offline-resilient full-stack application** organized as a monorepo with four runtime tiers (`Project/`, `desktop_client/`, `cloudflare-worker/`, and `backend/`), an offline data & operational pipeline (`scripts/`), and a dual-engine relational database layer (PostgreSQL 16 with automatic 2-second fallback to local SQLite 3):
 
 ```text
-┌───────────────────────────────────────┐   ┌────────────────────────────────────────┐
-│     Ionic Angular Client (Project/)   │   │  Desktop Flet Client (desktop_client/) │
-│  ├── Welcome / Login / Signup / Guest │   │  ├── Single-Window Shell (4 Tabs)      │
-│  ├── Home Tab: Debounced Search       │   │  ├── Suggested Wizard (3-View Machine) │
-│  ├── Map Tab: Leaflet 16 Categories   │   │  ├── Custom Builder (Dual Pane)        │
-│  ├── Suggested & Custom Planners      │   │  ├── Rich Place Sheet & Commute Guide  │
-│  └── Storage: @ionic/storage-angular  │   │  └── Storage: Local JSON Engine        │
-└───────────────────┬───────────────────┘   └───────────────────┬────────────────────┘
-                    │ HTTPS REST / JSON                         │ HTTP REST / JSON
-                    └─────────────────────┬─────────────────────┘
-                                          ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│                        FastAPI Backend (backend/)                      │
-│  ├── /api/v1/health: Liveness and provincial scope check               │
-│  ├── /api/v1/auth: Argon2id hashing, JWT tokens, Google OAuth verify   │
-│  ├── /api/v1/places: Full-text & bounding-box search, category filters │
-│  ├── /api/v1/itineraries: BOLA-protected CRUD, stop reordering         │
-│  └── algorithms/itinerary_generator: Deterministic Haversine clustering│
-└───────────────────────────────────┬────────────────────────────────────┘
-                                    │ SQLAlchemy 2.0 ORM
-                                    ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│                    Relational Database (PostgreSQL / SQLite)           │
-│  ├── users & auth_identities (Accounts and linked Google OAuth)        │
-│  ├── municipalities & places (Provincial entities & 16 POI categories) │
-│  └── itineraries, itinerary_days, itinerary_items (Multi-day plans)    │
-└───────────────────────────────────▲────────────────────────────────────┘
-                                    │ Seed & Upsert Scripts
-┌───────────────────────────────────┴────────────────────────────────────┐
-│                    Offline Data Pipeline (scripts/)                    │
-│  ├── import_osm.py (Overpass JSON ingestion with NE bounding box check)│
-│  └── seed_featured_places.py (Curated Nueva Ecija featured destinations│
-└────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────┐   ┌──────────────────────────────────────────────────┐
+│  Ionic Angular 22 Web/PWA & Android APK     │   │  Python Flet 1.1.2+ Desktop Client               │
+│  (Project/ — Angular 22.2.3 + Capacitor 8.6)│   │  (desktop_client/ — PyInstaller + Inno Setup 6)  │
+│  ├── Full-Screen Splash + Boxless Welcome   │   │  ├── Full-Screen Splash (Positioned.fill, TC-39) │
+│  ├── Home, Map (Leaflet + Cluster), Saved   │   │  ├── Boxless Welcome + Mirrored Skyline (TC-40)  │
+│  ├── Profile, Suggested Wizard, Builder     │   │  ├── SlippyMapCanvas + Offline Tiles (TC-35/36)  │
+│  ├── NGSW Service Worker + 2,673 OSM POIs   │   │  ├── Suggested Wizard, Custom Builder, Detail    │
+│  └── Storage: IndexedDB / Android Keystore  │   │  └── Storage: %LOCALAPPDATA% .write_probe JSON   │
+└──────────────────────┬──────────────────────┘   └────────────────────────┬─────────────────────────┘
+                       │ HTTPS REST / JSON                                 │ HTTPS / Local HTTP JSON
+                       └─────────────────────────┬─────────────────────────┘
+                                                 ▼
+┌────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                    Cloudflare Worker Edge Reverse Proxy (cloudflare-worker/worker.js)              │
+│  ├── Fixed HTTPS Gateway (https://ne-itinerary-api.edselrenz0.workers.dev/api/v1)                  │
+│  ├── Cloudflare KV (TUNNEL_KV): Dynamic ACTIVE_TUNNELS registry (/ __sync_tunnel + /__status)      │
+│  ├── Multi-Tunnel Failover: Primary Cloudflare Quick Tunnel (*.trycloudflare.com) -> ngrok         │
+│  └── 24-Hour KV Edge Cache (EDGE_CACHE_*): Serves GET /places* & POST */compute-day-route offline  │
+└────────────────────────────────────────────────┬───────────────────────────────────────────────────┘
+                                                 │ Encrypted Outbound Tunnel (cloudflared / ngrok)
+                                                 ▼
+┌────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                           FastAPI REST Backend (backend/ — Uvicorn :8000)                          │
+│  ├── Middleware: SlowAPI Rate Limiter (120/m global, 30/m auth, 10/m refresh) + CORSMiddleware     │
+│  ├── /api/v1/health: Liveness & Nueva Ecija province scope check                                   │
+│  ├── /api/v1/auth (7 routes): Argon2id (pwdlib), HS256 JWT (30m/7d), Google OAuth2 verify          │
+│  ├── /api/v1/municipalities & /places (6 routes): 16 categories, BBox search, Google photo proxy   │
+│  ├── /api/v1/itineraries (13 routes): Strict BOLA CRUD, stop reorder, stateless & saved routing    │
+│  └── algorithms/itinerary_generator.py: Haversine BBox + Bayesian score + Hours gate + 2-Opt TSP   │
+└────────────────────────────────────────────────┬───────────────────────────────────────────────────┘
+                                                 │ SQLAlchemy 2.0 ORM (Portable JsonType)
+                                                 ▼
+┌────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                Relational Database Layer (PostgreSQL 16 Primary / SQLite 3 Fallback)               │
+│  ├── 8 Tables (109 Columns): users, auth_identities, municipalities, places, itineraries,          │
+│  │                           itinerary_days, itinerary_items, geospatial_cache                     │
+│  ├── Alembic Migrations: 0001_initial -> 0002_google_gis -> 0003_phone -> 0004_profile -> 0005_idx  │
+│  └── Automatic Failover: Probes PostgreSQL (:5432, connect_timeout=2s) -> nueva_ecija_travel.db    │
+└────────────────────────────────────────────────▲───────────────────────────────────────────────────┘
+                                                 │ ETL, Seeding, Backup & Query CLI Scripts
+┌────────────────────────────────────────────────┴───────────────────────────────────────────────────┐
+│                          Data, Operations & Packaging Pipeline (scripts/)                          │
+│  ├── fetch_osm_places.py -> import_osm.py (2,656 OSM POIs) + seed_featured_places.py (18 featured) │
+│  ├── export_osm_to_client_asset.py -> 2,673 active POIs exported to Web & Desktop osm_places.json  │
+│  ├── db_query.py (Dual-engine SQLite/PostgreSQL CLI REPL) & db_backup_restore.py (pg_dump/SQLite)  │
+│  └── build_standalone_exe.py (Staged PyInstaller), build_desktop_installer.ps1, build_android_apk  │
+└────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## 2. Component Responsibilities
 
-### 2.1 Hybrid Mobile Client (`Project/`)
-- **Technology**: Ionic 9, Angular 22, Capacitor 8, SCSS.
-- **Role**: Renders the complete mobile application UI aligned with Figma design specifications (`Travel Itinerary App.fig`).
-- **Data Boundary**: The client **never** communicates directly with PostgreSQL or third-party mapping geocoders. All dynamic data is fetched from the FastAPI backend via `HttpClient`.
-- **Offline / Laptop-Down Resilience**: Intercepts HTTP 0, 502, and 504 errors via `authInterceptor` to alert users that the host laptop may be asleep while allowing local guest itineraries to remain operational.
+### 2.1 Web / PWA & Hybrid Mobile Client (`Project/`)
+- **Technology**: Angular `22.2.3` (zoneless standalone via `provideZonelessChangeDetection()`), Ionic Angular `^9.0.0`, Capacitor `8.6.0` (`ph.nuevaecijatravel.app`), Leaflet `1.9.4` + `leaflet.markercluster 1.5.3`, RxJS `~7.8.0`, Vitest `~5.0.5` (`348` unit tests across `32` specs).
+- **Routing & Bootstrap (`Project/src/main.ts`)**: Hash location routing (`withHashLocation()`) with `404.html` and `.nojekyll` for GitHub Pages SPA compatibility; global `Object.defineProperty(window, 'L', ...)` property guard preserving `MarkerClusterGroup`; conditional Angular Service Worker (`ngsw-config.json`) enabled on production web builds and disabled (`--no-service-worker`) on native Android Capacitor WebView builds.
+- **Data & Network Boundary**:
+  - Primary dynamic data and itinerary persistence flow through the FastAPI backend via `HttpClient` and `authInterceptor` (`Authorization: Bearer <token>`, `ngrok-skip-browser-warning: true`, and an RxJS `BehaviorSubject` refresh queue that serializes concurrent HTTP `401` token refreshes).
+  - For map resilience and zero-cost routing, the client also queries **OpenStreetMap Overpass API** mirrors (`OsmOverpassService`) for live viewport discovery, **public OSRM** (`router.project-osrm.org`) in `ItineraryRouteMapComponent` when backend polylines are absent, and **OpenStreetMap Tile Servers** (`tile.openstreetmap.org`).
+- **Multi-Layer Offline Resilience**:
+  - Tracks consecutive gateway failures (`status === 0, 502, 503, 504`, or `404` on `/health`) in `ConnectivityService` (`ERROR_THRESHOLD = 2`) before displaying a non-blocking floating offline host banner.
+  - Bundles all **2,673** Nueva Ecija POIs in `Project/src/assets/data/osm_places.json` and curated venues in `offline-places.data.ts`.
+  - Caches API responses (`municipalities-api` 7d, `places-api` 3d) and up to `1,500` map tiles (`osm-tiles-nueva-ecija` 14d) via Angular Service Worker (`ngsw-config.json`).
+  - Persists guest itineraries in IndexedDB / LocalStorage via `@ionic/storage-angular` (`GuestStorageService`) and automatically migrates them to PostgreSQL upon login/registration via `GuestMigrationService`.
 
-### 2.2 Native Desktop Client (`desktop_client/`)
-- **Technology**: Python 3.14 / 3.11+, Python Flet >= 1.1.2 (Material 3 Flutter Engine), httpx, Pydantic v2.
-- **Role**: Provides a dedicated desktop workstation client mirroring the web client's Figma tokens, workflows, and consumer travel aesthetics.
-- **Data Boundary**: Communicates with the FastAPI backend via asynchronous `httpx.AsyncClient` REST calls with automatic Bearer token injection and refresh.
-- **Offline / Desktop Resilience**: Uses atomic file-based JSON persistence (`guest_storage.json`, `favorites.json`) and bundles canonical datasets (`osm_places.json`, `CANONICAL_OFFLINE_PLACES`) so discovery, wizard planning, and custom building function offline without a server.
+### 2.2 Native Windows Desktop Client (`desktop_client/`)
+- **Technology**: Python `3.12+`, Flet `>= 1.1.2` (Flutter desktop engine), `flet-map >= 0.1.0`, `httpx >= 0.28.1`, Pydantic v2, Pytest (`119` unit & regression tests across `10` modules, `TC-01`–`TC-40`).
+- **Visual & Workflow Parity with Web (`TC-35`–`TC-40`)**:
+  - **Full-Screen Splash Overlay (`splash_overlay.py`, `TC-39`)**: Pins `loading_screen.jpg` edge-to-edge (`left=0, top=0, right=0, bottom=0, width=float("inf"), height=float("inf"), fit=ft.BoxFit.COVER`) with a dark gradient scrim, centered `✈️ Trip mo, trip ko` branding, and bottom loading spinner + `"Click anywhere to enter"` pill.
+  - **Boxless Welcome & Auth Views (`welcome_view.py`, `guest_view.py`, `login_view.py`, `signup_view.py`, `TC-40`)**: Eliminates enclosed card boxes in favor of the Web App's clean full-screen canvas (`#f8fafc` light / `#0b0f19` dark) and anchors a seamless 3-tile horizontally mirrored widescreen cityscape (`welcome_hero_buildings_wide.png`, `1848 × 336`, `[Flip(T) | T | Flip(T)]`) flush across 100% of the bottom window edge on resize.
+  - **Responsive Forms & Modals (`TC-37`, `TC-38`)**: Centers `Edit Profile` inputs at full card width (`width=card_w`) and uses `expand=True` on paired `ft.Row` fields inside `Off-Grid Custom Venue` and `Edit Stop` modals to prevent horizontal overflow.
+  - **Custom Slippy Map & In-App Navigation (`slippy_map_canvas.py`, `TC-35`, `TC-36`)**: 1,618-line tile canvas supporting pan/zoom, pre-seeded zoom 9–13 Nueva Ecija tiles (`assets/tiles/`), spatial marker clustering, OSRM / quadratic Bézier geodesic spline polylines, and direct in-app turn-by-turn route handoff (`_launch_in_app_nav()`) from `TripDetailView` into `PlacesView`.
+- **Writable `%LOCALAPPDATA%` Storage & Tile Cache Fallback (`PKG-REV-01` / `TC-35`)**:
+  - Resolves bundled read-only assets via `get_settings().assets_dir` (supporting PyInstaller `sys._MEIPASS`).
+  - Performs a startup `.write_probe` check on `storage_dir` and `tiles_cache`; when installed under a read-only path (such as `C:\Program Files\NuevaEcijaTravel`), automatically relocates runtime JSON persistence (`session.json`, `guest_storage.json`, `favorites.json`, `profile_extra.json`) and cached map tiles to `%LOCALAPPDATA%\NuevaEcijaTravel\storage`.
 
 ### 2.3 REST API Backend (`backend/`)
-- **Technology**: Python 3.14 / 3.11+, FastAPI, Pydantic v2, Uvicorn.
-- **Role**: Validates payloads, manages authentication, performs database transactions, executes search queries, runs the deterministic itinerary recommendation engine, and enforces Broken Object-Level Authorization (BOLA) security checks.
-- **Security**: Password hashing uses Argon2id (`pwdlib`), JWT token generation uses PyJWT with HMAC-SHA256, and Google ID tokens are verified cryptographically server-side.
+- **Technology**: Python `3.12`, FastAPI `>= 0.115.0`, Uvicorn `>= 0.30.0`, SQLAlchemy `>= 2.0.30`, Alembic `>= 1.13.2`, Pydantic v2, SlowAPI `>= 0.1.9`, `pwdlib[argon2]`, `PyJWT`, `google-auth`, `httpx`.
+- **Role**: Exposes 27 REST endpoints under `/api/v1` (`/health`, `/auth/*`, `/municipalities`, `/places/*`, `/itineraries/*`), enforces proxy-aware rate limiting (`120/min` global, `30/min` register/login, `10/min` refresh, `5/min` Google OAuth), validatesproduction JWT secrets (`Settings.validate_secrets()`), locks down `/docs` and `/redoc` when `APP_ENV != "development"`, and enforces strict BOLA checks (`Itinerary.user_id == current_user.id`).
 
-### 2.3 Relational Database Layer
-- **Production Mode**: Local PostgreSQL 15+ running on development host/container.
-- **Development / Test Mode**: In-memory SQLite or file-based SQLite database with cross-compatible portable types (`JsonType = JSON().with_variant(JSONB(), "postgresql")`).
-- **Isolation**: PostgreSQL port 5432 is strictly bound to `127.0.0.1` and never exposed over Wi-Fi or public interfaces.
+### 2.4 Relational Database Layer (`PostgreSQL 16` & `SQLite 3`)
+- **Primary DBMS**: PostgreSQL `16-alpine` (`docker-compose.yml` bound to `127.0.0.1:5432`; `docker-compose.prod.yml` for containerized production), connected via `psycopg` v3 (`postgresql+psycopg://...`).
+- **Automatic 2-Second SQLite Fallback**: On startup (`backend/app/core/database.py`), SQLAlchemy probes the configured PostgreSQL connection with `connect_timeout=2`. If PostgreSQL is offline or unreachable, it logs a warning and falls back to `sqlite:///<repo_root>/nueva_ecija_travel.db`.
+- **Complete 8-Table, 109-Column Schema (`backend/app/models/entities.py`)**:
+  1. `users` (15 columns — includes extended profile columns from migration `0004`)
+  2. `auth_identities` (6 columns — linked OAuth provider subjects)
+  3. `municipalities` (7 columns — Nueva Ecija cities & municipalities)
+  4. `places` (36 columns — OSM, curated, and Google Places v1 POIs across 16 categories)
+  5. `itineraries` (12 columns — saved user trips with `preferences` and `assumptions`)
+  6. `itinerary_days` (9 columns — calendar days with `day_overview_polyline` & `route_legs`)
+  7. `itinerary_items` (19 columns — chronological stops with per-leg distance, duration & polyline)
+  8. `geospatial_cache` (5 columns — TTL cache for Google Places/Details/Routes and OSRM responses, added in migration `0002`)
+- **Cross-Engine Portability**: Uses `JsonType = JSON().with_variant(JSONB(), "postgresql")` and `UUID(as_uuid=True)` so identical ORM queries run on PostgreSQL and SQLite.
 
-### 2.4 Offline Ingestion Pipeline (`scripts/`)
-- **`fetch_osm_places.py`**: Queries live Overpass API for all amenities, tourism, leisure, and shopping nodes/ways in Nueva Ecija (`15.15°N–16.15°N, 120.70°E–121.40°E`), saving raw JSON to `data/raw/nueva_ecija_osm.json`.
-- **`import_osm.py`**: Reads raw OpenStreetMap Overpass JSON exports, filters coordinates strictly within the Nueva Ecija bounding box, maps tags to 16 canonical categories, and idempotently upserts records (2,656 real-world places ingested).
-- **`seed_featured_places.py`**: Seeds the 12 core Nueva Ecija municipalities and 17 curated featured places with verified descriptions, opening hours, and honest cost ranges.
-- **`export_osm_to_client_asset.py`**: Exports all 2,673 places into a lean, pre-indexed client static asset (`Project/src/assets/data/osm_places.json`) ensuring 100% offline and standalone map availability.
-
-### 2.5 Real-Time OpenStreetMap Overpass Client Service
-- **`OsmOverpassService` (`Project/src/app/core/services/osm-overpass.service.ts`)**: Enables client-side real-time querying of OpenStreetMap's live Overpass API (`https://overpass-api.de/api/interpreter`) for current map viewport bounds on demand, merging live crowd-sourced findings into the active map state.
-
-### 2.6 Target Spatial & Routing Architecture (Proposal Blueprint)
-> Ref: [itinerary_app_map_and_routing_proposal.pdf](file:///c:/Users/Edward/Desktop/CaseStudy/itinerary_app_map_and_routing_proposal.pdf) & [MAP_AND_ROUTING_PROPOSAL.md](./MAP_AND_ROUTING_PROPOSAL.md)
-- **ESM-Safe Marker Clustering (`MAP-01`)**: Canonical Leaflet object unwrapping (`(L as any).default ?? L`) and top-level assignment to `(window as any).L` prior to plugin evaluation, paired with a runtime fallback to native `L.layerGroup()` if clustering fails, ensuring pins always render under modern Angular esbuild bundlers.
-- **Corridor-First Spatial Clustering (`ROUTE-02`)**: Restructures travel day presets into coherent geographic corridors (East/Bongabon 1.5 km, North/San Jose–Pantabangan 13.8 km, South/Cabanatuan–Gen. Tinio–Gapan 45.5 km) with 2-opt TSP sequencing, slashing cross-province transit distances by 66.3% (from 176.2 km to 59.4 km).
-- **Reusable Route Map & Multi-Stop Waypoints (`ROUTE-01`)**: A unified `ItineraryRouteMapComponent` rendering numbered pins, OSRM road polylines with offline Catmull-Rom geodesic spline fallback, and universal multi-waypoint Google Maps URLs (`&origin=...&destination=...&waypoints=...`).
-- **Leg-Aware Provincial Commute Engine (`ROUTE-05`)**: Leg-level commute intelligence comparing consecutive stops to provide contextual recommendations: walking/tricycles ($\le 1.2$ km, ₱15–₱25), local tricycles ($> 1.2$ km), and direct inter-municipality highway corridor transfers across all 32 municipalities without routing through Cabanatuan City.
-
-### 2.7 Trip Lifecycle & Presentation Architecture (Flagship Alignment)
-> Ref: [itinerary_app_ui_ux_evaluation_report.pdf](file:///c:/Users/Edward/Desktop/CaseStudy/itinerary_app_ui_ux_evaluation_report.pdf) & [UI_UX_EVALUATION_REPORT.md](./UI_UX_EVALUATION_REPORT.md)
-- **Visual Flagship Parity (`UIUX-01`, `UIUX-03`, `UIUX-09`)**: Eliminates post-save visual downgrade by preserving 68×68px stop photo thumbnails, full start-end time ranges (`12:00 PM - 2:00 PM (2 hrs)`), and segmented sticky day switcher tabs across `/itinerary/:id`.
-- **Zero-Fabricated-Cost Accounting (`UIUX-02`)**: Enforces strict adherence to ADR-001 by removing synthetic `?? 200` cost fallbacks in `itinerary-detail.page.ts`, showing truthful *Fee not listed* labels on unpriced venues, and synchronizing bottom activity expenses with top `budgetSummary` ledgers.
-- **One-Tap Multi-Waypoint Navigation (`UIUX-08`)**: Implements client-side `buildGoogleMapsDayRouteUrl()` generating universal cross-platform Google Maps URLs chaining the day's entire stop sequence (`&origin=...&destination=...&waypoints=...`), reducing navigation friction from 8 taps to 1 tap.
+### 2.5 Offline Ingestion, Operations & Packaging Pipeline (`scripts/`)
+- **`fetch_osm_places.py` & `import_osm.py`**: Queries Overpass API (`15.15°N–16.15°N, 120.70°E–121.40°E`) and idempotently upserts **2,656** OpenStreetMap POIs across 16 canonical categories.
+- **`seed_featured_places.py`**: Idempotently seeds **12** core Nueva Ecija municipalities and **18** curated featured destinations with verified descriptions, opening hours, and honest cost ranges.
+- **`export_osm_to_client_asset.py`**: Exports all **2,673** active database places into `Project/src/assets/data/osm_places.json` (mirrored to `desktop_client/assets/data/osm_places.json`).
+- **`db_query.py` & `db_backup_restore.py`**: Dual-engine (SQLite & PostgreSQL) interactive/one-shot SQL query CLI (`--tables`, `--postgres`, `--limit`) and automated `pg_dump` / SQLite backup & restore tool.
+- **`build_standalone_exe.py` & `build_desktop_installer.ps1`**: Stages PyInstaller builds in `build_temp/dist_stage/NuevaEcijaTravel` (bundling `flet/controls/material/icons.json`, `cupertino_icons.json`, `certifi`, `tzdata`, and `desktop_client/assets/`), overlays `dist/NuevaEcijaTravel` with an NTFS `.old` rename hot-swap fallback, compiles `dist_installer/NuevaEcijaTravel_Setup_v1.0.0.exe` (`156.58 MB`) via Inno Setup 6 (`installer/NuevaEcijaTravel.iss`), and archives `dist_installer/NuevaEcijaTravel_Portable_Installer_v1.0.0.zip` (`232.64 MB`).
+- **`build_android_apk.ps1`**: Runs `npx ng build --configuration production --no-service-worker`, syncs Capacitor 8.6.0, and compiles `dist_apk/TripMoTripKo-debug.apk` (`30.88 MB`) and RSA-2048 signed `dist_apk/TripMoTripKo-release.apk` (`29.72 MB`) using JDK 21 and Gradle 8.13 (`android.builder.sdkDownload=true`).
 
 ---
 
 ## 3. Data Flow Diagrams
 
-### 3.1 Authentication & Session Flow
+### 3.1 Authentication, Concurrent 401 Refresh Queue & Guest Migration Flow
 ```mermaid
 sequenceDiagram
-    participant Traveler as Mobile Client
-    participant API as FastAPI Backend
-    participant DB as Database (PostgreSQL/SQLite)
+    autonumber
+    participant Traveler as Web / Android / Desktop Client
+    participant Storage as SecureTokenStorage / GuestStorage / session.json
+    participant API as FastAPI Backend (/api/v1)
+    participant DB as PostgreSQL 16 / SQLite 3
 
-    Note over Traveler,DB: Email/Password Registration
-    Traveler->>API: POST /api/v1/auth/register (name, email, username, password)
-    API->>API: Normalize email & username, Hash password (Argon2id)
-    API->>DB: INSERT INTO users
-    DB-->>API: User record (UUID)
-    API->>API: Generate Access Token (30m) & Refresh Token (7d)
-    API-->>Traveler: 201 Created (TokenOut + UserOut)
-    Traveler->>Traveler: Store tokens in localStorage
+    Note over Traveler,Storage: 1. Offline-Capable Guest Mode
+    Traveler->>Storage: Plan trip in Guest Mode (stored locally in IndexedDB / guest_storage.json)
 
-    Note over Traveler,DB: Guest Mode Transition
-    Traveler->>Traveler: Continue as Guest
-    Traveler->>Traveler: Set isGuestMode = true
-    Traveler->>Traveler: Store itineraries in @ionic/storage-angular (Local Device Only)
+    Note over Traveler,DB: 2. Registration / Login & Automatic Guest Migration
+    Traveler->>API: POST /api/v1/auth/register or /login (30/min SlowAPI limit)
+    API->>API: Normalize email/username, verify or hash password (Argon2id)
+    API->>DB: SELECT / INSERT User
+    API-->>Traveler: 200/201 TokenOut (30m access_token + 7d refresh_token)
+    Traveler->>Storage: Save tokens (Android Keystore / localStorage / session.json)
+    loop For each local guest itinerary (GuestMigrationService)
+        Traveler->>API: POST /api/v1/itineraries (Bearer access_token)
+        API->>DB: Persist Itinerary, Days & Items (user_id = current_user.id)
+        API-->>Traveler: 201 Created
+        Traveler->>Storage: Remove migrated guest trip from local storage
+    end
+
+    Note over Traveler,DB: 3. Concurrent 401 Token Refresh Queue (BehaviorSubject / asyncio.Lock)
+    Traveler->>API: Parallel API requests with expired 30m access_token
+    API-->>Traveler: 401 Unauthorized
+    Traveler->>Traveler: Queue concurrent requests behind single refresh gate
+    Traveler->>API: POST /api/v1/auth/refresh ({refresh_token}, 10/min limit)
+    API->>DB: Verify type=="refresh" & user.is_active
+    API-->>Traveler: 200 TokenOut (Fresh access_token + refresh_token)
+    Traveler->>API: Replay queued requests with new access_token
 ```
 
-### 3.2 Place Search Flow (Zero Nominatim Calls)
+### 3.2 Place Discovery Flow (Bundled Offline Catalog + Backend + Live Overpass)
 ```mermaid
 sequenceDiagram
-    participant Traveler as User / Search Input
-    participant Client as Angular Home Component
-    participant API as FastAPI Backend
-    participant DB as Database
+    autonumber
+    participant Traveler as User / Search & Map Viewport
+    participant Client as PlaceService / MapPage / PlacesView
+    participant Local as Bundled osm_places.json (2,673 POIs)
+    participant API as FastAPI Backend (/api/v1/places)
+    participant Overpass as OSM Overpass Mirrors (Optional Live Map Fetch)
 
-    Traveler->>Client: Types "Bongabon"
-    Client->>Client: RxJS debounceTime(300ms) + distinctUntilChanged()
-    Client->>API: GET /api/v1/places?q=Bongabon&limit=20
-    API->>DB: SELECT * FROM places WHERE name ILIKE '%Bongabon%' OR address_text ILIKE '%Bongabon%'
-    DB-->>API: Matching Place rows
-    API-->>Client: 200 OK (PaginatedPlacesOut)
-    Client->>Traveler: Render search results cards
+    Traveler->>Client: Search or Filter (16 categories, 32 municipalities, price tier, BBox)
+    Client->>Local: Instant in-memory search & category normalisation
+    Client->>API: GET /api/v1/places?q=...&categories=...&limit=...
+    alt Backend Online (or 24h Cloudflare KV Edge Cache Hit)
+        API-->>Client: 200 OK (PaginatedPlacesOut with escaped ILIKE & BBox index)
+        Client->>Client: Merge & deduplicate API places into active catalog
+    else Backend Offline
+        Client->>Client: Serve seamlessly from bundled 2,673-POI cache + show non-blocking OfflineBanner
+    end
+    opt User Taps "Fetch Live OSM" on Map Viewport
+        Client->>Overpass: Overpass QL query (12s timeout across mirror endpoints)
+        Overpass-->>Client: Merge live crowd-sourced nodes/ways into map clusters
+    end
 ```
 
 ---
@@ -136,139 +180,122 @@ sequenceDiagram
 ## 4. Security & Compliance Boundaries
 
 1. **Broken Object-Level Authorization (BOLA / IDOR)**:
-   - On every itinerary mutation (view, edit, delete, reorder), the backend verifies `itinerary.user_id == current_user.id`. A traveler guessing another user's UUID receives an immediate `404 Not Found`.
-2. **OpenStreetMap Compliance**:
-   - Tile layer requests standard OSM raster tiles with full attribution (`© OpenStreetMap contributors`).
-   - Nominatim is strictly excluded from client-side search to respect OSM usage policies.
-   - Overpass queries are run exclusively offline during data preparation.
-3. **External Navigation Hand-Off**:
-   - The app does not embed Google routing engines or incur API costs. It opens directions via standard browser URL schemes: `https://www.google.com/maps/dir/?api=1&destination={latitude},{longitude}`.
-4. **Token Storage & Refresh Architecture (SEC-02 Roadmap)**:
-   - *Current Implementation (Pilot Phase)*: The pilot SPA hosted on GitHub Pages authenticates against decoupled backend tunnel environments. JWT access tokens (30m expiry) and refresh tokens (7d expiry, rotated on consumption) are managed via `AuthService` in client memory and synced to `window.localStorage` to maintain sessions across page refreshes.
-   - *Web Production Target (Custom Domain)*: Once frontend and backend are unified under a shared parent domain (e.g., `app.tripmo.ph` and `api.tripmo.ph`), refresh tokens will transition to `HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth/refresh` cookies, completely shielding refresh tokens from browser script execution and rendering XSS token exfiltration impossible. Access tokens will be retained purely in-memory within Angular reactive service state (`BehaviorSubject`).
-   - *Mobile Native Target (Capacitor)*: In Android and iOS binary builds, tokens will be persisted into hardware-backed keystores via `@capacitor-community/secure-storage-plugin` (Android Keystore with AES-GCM and iOS Keychain with kSecAttrAccessibleAfterFirstUnlock), providing hardware enclave protection at rest.
+   - Every itinerary read, update, delete, reorder, and persistent route endpoint in [`backend/app/api/v1/itineraries.py`](../backend/app/api/v1/itineraries.py) filters by `where(Itinerary.id == itinerary_id, Itinerary.user_id == current_user.id)`, returning `404 Not Found` on mismatch so unauthorized users cannot infer resource existence.
+2. **Proxy-Aware Rate Limiting (`SlowAPI`)**:
+   - [`backend/app/core/limiter.py`](../backend/app/core/limiter.py) enforces `120/min` global, `30/min` on `/auth/register` and `/auth/login`, `10/min` on `/auth/refresh`, and `5/min` on `/auth/oauth/google`. `get_client_ip()` trusts `CF-Connecting-IP` and `X-Forwarded-For` **only** when the direct socket peer is loopback (`127.0.0.1`, `localhost`, `::1`, `testclient`), preventing header spoofing on direct connections.
+3. **Production Secret & OpenAPI Lockdown**:
+   - [`backend/app/core/config.py`](../backend/app/core/config.py) aborts backend startup if `APP_ENV != "development"` and `JWT_SECRET_KEY` is blank, `< 32` characters, or matches default placeholders. Swagger (`/docs`) and ReDoc (`/redoc`) are disabled (`None`) outside `development`.
+4. **Cross-Platform Token Storage (`SecureTokenStorageService` & `SessionManager`)**:
+   - **Native Android APK**: Persists tokens in hardware-backed Android Keystore via `capacitor-secure-storage-plugin` ([`secure-token-storage.service.ts`](../Project/src/app/core/services/secure-token-storage.service.ts)).
+   - **Web / PWA**: Uses an in-memory synchronous cache backed by `localStorage` (`rememberMe = true`) or `sessionStorage` (`rememberMe = false`), with `authInterceptor` scoping `Authorization: Bearer` headers strictly to trusted API base URLs (`isTrustedApiHostname()`).
+   - **Windows Desktop**: Persists session state in `storage/session.json` (or `%LOCALAPPDATA%\NuevaEcijaTravel\storage\session.json` when installed in a read-only folder).
+5. **Zero Google API Key Leakage**:
+   - `GOOGLE_MAPS_API_KEY` remains strictly server-side. Place photos are streamed through `GET /api/v1/places/photos/{photo_name:path}` with `Cache-Control: public, max-age=86400` (24 hours) and a 1×1 transparent SVG fallback.
 
 ---
 
-## 5. Live Tunnel & Cloudflare Worker Reverse Proxy Architecture (Option 2)
+## 5. Live Tunnel & Cloudflare Worker Reverse Proxy Architecture
 
-To bridge the static GitHub Pages application (`https://edselrenz.github.io/Itinerary-App/`) with the developer's laptop backend without being subject to residential ISP DNS blocks (PLDT, Converge, Globe, Smart) or home router NXDOMAIN caching, the system supports an automated Cloudflare Worker Reverse Proxy.
-
-### 5.1 Architecture Data Flow
+To connect the static GitHub Pages PWA (`https://edselrenz.github.io/Itinerary-App/`), Android APK, and remote Desktop clients to a host machine running the FastAPI backend without residential ISP DNS issues or manual URL changes, the system uses [`cloudflare-worker/worker.js`](../cloudflare-worker/worker.js) + Cloudflare KV (`TUNNEL_KV`).
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant Laptop as Host Laptop (start_server.ps1)
-    participant CF_Tunnel as Cloudflare Quick Tunnel (*.trycloudflare.com)
+    participant Host as Host Machine (start_server.ps1 / run_daemon.py)
     participant Worker as Cloudflare Worker Proxy (*.workers.dev)
     participant KV as Cloudflare KV (TUNNEL_KV)
-    participant GH_Pages as GitHub Pages (User Browser)
+    participant CF as Cloudflare Quick Tunnel (*.trycloudflare.com)
+    participant Ngrok as ngrok Fallback Tunnel (*.ngrok-free.dev)
+    participant Client as Web / Android / Desktop Client
 
-    Note over Laptop,CF_Tunnel: Server Startup
-    Laptop->>Laptop: Start FastAPI (port 8000) & ngrok
-    Laptop->>CF_Tunnel: Start cloudflared quick tunnel
-    CF_Tunnel-->>Laptop: Generated random tunnel URL ($cfUrl)
-    Laptop->>Worker: POST /__sync_tunnel (with X-Admin-Sync-Key, $cfUrl, $ngrokUrl)
-    Worker->>KV: Persist ACTIVE_TUNNELS JSON
+    Note over Host,KV: 1. Automated Dual-Tunnel Boot & KV Registration
+    Host->>Host: Start PostgreSQL/SQLite, Uvicorn (:8000), cloudflared & ngrok
+    Host->>Worker: POST /__sync_tunnel (X-Admin-Sync-Key, {cfUrl, ngrokUrl})
+    Worker->>KV: PUT ACTIVE_TUNNELS JSON
 
-    Note over GH_Pages,Worker: User Accesses GitHub Pages
-    GH_Pages->>GH_Pages: Load app bundle from edselrenz.github.io
-    GH_Pages->>Worker: GET /api/v1/health (Fixed *.workers.dev domain)
-    Worker->>KV: Fetch ACTIVE_TUNNELS
-    Worker->>CF_Tunnel: Proxy request via Cloudflare Internal Edge
-    CF_Tunnel->>Laptop: Forward to http://127.0.0.1:8000
-    Laptop-->>CF_Tunnel: 200 OK (Province Scope: Nueva Ecija)
-    CF_Tunnel-->>Worker: 200 OK
-    Worker-->>GH_Pages: 200 OK with dynamic CORS headers
-    GH_Pages->>GH_Pages: Cloud sync active (Offline Mode disabled)
+    Note over Client,Host: 2. Request Routing, Failover & 24h Offline Edge Cache
+    Client->>Worker: HTTPS Request to fixed *.workers.dev/api/v1/...
+    Worker->>KV: Read ACTIVE_TUNNELS
+    Worker->>CF: Attempt Primary Cloudflare Tunnel (cfUrl)
+    alt Primary Tunnel Healthy (HTTP < 500)
+        CF->>Host: Forward to 127.0.0.1:8000
+        Host-->>Worker: 200 OK JSON
+        opt Cacheable Read/Route (GET /places* or POST */compute-day-route)
+            Worker->>KV: PUT EDGE_CACHE_<key> (expirationTtl: 86400s / 24h)
+        end
+        Worker-->>Client: 200 OK (X-Proxy-Source: cloudflare)
+    else Primary Tunnel Down or 5xx
+        Worker->>Ngrok: Instant Failover to ngrokUrl (ngrok-skip-browser-warning: true)
+        alt ngrok Tunnel Healthy
+            Ngrok->>Host: Forward to 127.0.0.1:8000
+            Host-->>Worker: 200 OK JSON
+            Worker-->>Client: 200 OK (X-Proxy-Source: ngrok)
+        else Both Tunnels Offline
+            Worker->>KV: GET EDGE_CACHE_<key>
+            alt 24h Edge Cache Hit
+                KV-->>Worker: Cached JSON
+                Worker-->>Client: 200 OK (X-Edge-Cache: HIT)
+            else Cache Miss
+                Worker-->>Client: 502 Bad Gateway (Client activates local osm_places.json fallback)
+            end
+        end
+    end
 ```
-
-### 5.2 Key Architectural Benefits
-1. **Zero Client-Side DNS Configuration**: End users connect exclusively to standard `*.workers.dev` domains, which resolve reliably across all telecommunications providers.
-2. **Zero Manual Copy-Paste**: `scripts/start_server.ps1` publishes the newly generated ephemeral Cloudflare Tunnel URL automatically within 2 seconds of startup.
-3. **Multi-Tunnel Failover**: The Worker attempts the active Cloudflare Tunnel first; if the connection fails or returns >= 502, it instantly fails over to the permanent ngrok tunnel.
-4. **SEC-01 Compliance**: Frontend hostname allowlist explicitly validates `*.workers.dev` alongside `*.trycloudflare.com` and `*.ngrok-free.dev`.
 
 ---
 
-## 6. GIS Upgrade, Live Google Places Discovery & Turn-by-Turn Route Tracking (Phase 25)
+## 6. GIS Discovery, Deterministic Itinerary Engine & Multi-Tier Routing
 
-Phase 25 introduces enterprise GIS and real-time turn-by-turn route tracking while preserving strict multi-engine database portability (PostgreSQL in production, SQLite in test harnesses) and offline resilience.
-
-### 6.1 Topology & Secret Protection Architecture
+### 6.1 Topology & Multi-Tier Fallback Sequence
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant Mobile as Ionic Angular Client
-    participant API as FastAPI Backend (Proxy)
+    participant Client as Web / Android / Desktop Client
+    participant API as FastAPI Backend (/api/v1)
     participant Cache as DB GeospatialCache (PostgreSQL/SQLite)
-    participant Google as Google Places & Routes APIs
-    participant OSRM as OSRM Public Routing (Fallback)
+    participant Google as Google Places (New) & Routes API v2
+    participant OSRM as OSRM Public Router (router.project-osrm.org)
 
-    Note over Mobile,API: Live POI Discovery & Photo Proxying
-    Mobile->>API: POST /api/v1/places/discover (query, lat, lng, radius_meters)
-    API->>Cache: Check cached search (hash key, 7-day TTL)
+    Note over Client,Google: 1. Live POI Discovery & Photo Proxy
+    Client->>API: POST /api/v1/places/discover
+    API->>Cache: Lookup places_search / places_nearby (TTL: 168h / 7 days)
     alt Cache Hit
-        Cache-->>API: Return cached JSON payload
-    else Cache Miss
-        API->>Google: Places API (New) TextSearch with FieldMask
-        Google-->>API: Google Places entities (normalized)
-        API->>Cache: Store result in geospatial_cache
+        Cache-->>API: Cached normalized PlaceOut[] (source: "cache")
+    else Cache Miss & GOOGLE_MAPS_API_KEY Set
+        API->>Google: Places API v1 Text/Nearby Search (DISCOVERY_FIELD_MASK)
+        Google-->>API: Normalized places upserted to DB & cached 168h (source: "google_live")
+    else No API Key or Outage
+        API->>API: Query local places table (source: "local_db")
     end
-    API-->>Mobile: 200 OK (PlaceOut[]) with photo references
+    API-->>Client: 200 OK (LivePlaceSearchResponse)
 
-    Note over Mobile,API: Photo Proxying (Zero API Key Leakage)
-    Mobile->>API: GET /api/v1/places/photos/{photo_name}
-    API->>Google: Fetch photo media using server-side GOOGLE_MAPS_API_KEY
-    Google-->>API: Image binary (JPEG/WebP)
-    API-->>Mobile: Binary Image Stream (Cache-Control: 30 days)
-
-    Note over Mobile,API: Road-Network Route Computation
-    Mobile->>API: POST /api/v1/itineraries/{id}/days/{day_id}/compute-route
-    API->>Cache: Check cached route polyline & legs (7-day TTL)
-    alt Cache Miss & Google Key Present
-        API->>Google: Routes API v2 (computeRoutes with encoded polyline)
-        Google-->>API: Encoded polyline & turn leg durations
-    else Fallback Mode (Key absent or quota exhausted)
-        API->>OSRM: OSRM driving route API (/route/v1/driving/)
-        alt OSRM Success
-            OSRM-->>API: OSRM geometry polyline & durations
-        else Offline Fallback
-            API->>API: Geodesic Haversine calculation + 35 km/h provincial speed estimate
-        end
+    Note over Client,OSRM: 2. Multi-Tier Turn-by-Turn Route Computation
+    Client->>API: POST /api/v1/itineraries/compute-day-route (or /{id}/days/{day_id}/compute-route)
+    API->>Cache: Lookup route cache key (TTL: 336h / 14 days)
+    alt Cache Hit
+        Cache-->>API: Cached RouteComputeResponse (source: "cache")
+    else Tier 1: Google Routes API v2 (If Key Configured)
+        API->>Google: computeRoutes (TRAFFIC_AWARE, ROUTES_FIELD_MASK)
+        Google-->>API: Encoded polyline & legs cached 336h (source: "google_routes")
+    else Tier 2: Public OSRM Router (3.0s timeout)
+        API->>OSRM: GET /route/v1/driving/{coords}
+        OSRM-->>API: OSRM geometry polyline & legs cached 336h (source: "osrm")
+    else Tier 3: Offline Haversine Direct + Client Quadratic Bézier Geodesic Spline
+        API->>API: Straight-line Haversine legs at 40 km/h drive (11.11 m/s) or 4.5 km/h walk (source: "haversine_direct")
     end
-    API->>API: Persist day_overview_polyline & leg durations on ItineraryDay/Item
-    API-->>Mobile: 200 OK (ItineraryDayOut with routing metadata)
+    API-->>Client: 200 OK (RouteComputeResponse / Updated ItineraryOut)
 ```
 
-### 6.2 Key Architectural Subsystems
-
-1. **Strict Secret Protection**:
-   - `GOOGLE_MAPS_API_KEY` is strictly confined to the backend environment and never exposed in client bundles, network requests, or query strings.
-   - All Google Places searches, place details lookups, photo media downloads, and road routing calculations are proxied through FastAPI.
-2. **Multi-Engine Database Portability**:
-   - The `geospatial_cache` table uses portable `JsonType` (`JSON().with_variant(JSONB(), "postgresql")`) and `sa.Uuid()`, executing flawlessly on both PostgreSQL 15+ in production and SQLite in memory for lightning-fast CI test runs.
-3. **Google Terms of Service Compliance Caching**:
-   - Search query results are cached up to 7 days.
-   - Rich place details and photo assets are refreshed within 30 days.
-   - Cached records store hashes of query parameters and place identifiers.
-4. **Resilient Multi-Tier Routing Fallback**:
-   - Primary: Google Routes API v2 with traffic-aware road distance and turn-by-turn polyline.
-   - Secondary: Public OpenStreetMap OSRM routing (`http://router.project-osrm.org/`).
-   - Tertiary: Offline Haversine calculations with provincial road factor (1.3×) and realistic travel speeds (35 km/h drive, 4.5 km/h walk).
-5. **Algorithmic Itinerary Recommendation Engine**:
-   - **Bayesian Quality Scoring**: Prevents low-review anomalies from outranking established landmarks.
-   - **Operating Hours Gate**: Parses structured `regularOpeningHours` and OSM `opening_hours`, applying a -50 point penalty for closed venues.
-   - **2-Opt TSP Permutations**: Computes factorial ordering of daily travel stops to eliminate backtracking.
-   - **Dynamic Road-Paced Scheduling**: Arrival and departure times are calculated dynamically from road distance legs rather than arbitrary time blocks.
-6. **Mobile Geolocation Tracking (`RouteTrackingService`)**:
-   - Uses `@capacitor/geolocation` with `enableHighAccuracy: true`.
-   - **10m Movement Throttle**: Filters stationary GPS jitter.
-   - **Polyline Segment Snapping**: Calculates orthogonal distance to active polyline.
-   - **100m Off-Route Detection**: Dispatches `rerouteNeeded$` event for route recalculation.
-   - **50m Stop Arrival Detection**: Automatically marks stops visited and advances to next waypoint.
-7. **Unified Presentation (`PlaceDetailSheetComponent`)**:
-   - Standalone Angular component consolidating POI details across Map, Itinerary Detail, and Wizard previews.
-   - Displays photo carousel/thumbnails, ratings, open/closed status badges, weekly operating schedule accordion, review snippets, and direct itinerary actions.
+### 6.2 Verified Caching TTLs & Pacing Constants
+1. **`geospatial_cache` Database TTLs ([`backend/app/core/config.py`](../backend/app/core/config.py))**:
+   - `google_places_cache_ttl_hours = 168` (**7 days** for Text & Nearby discovery searches).
+   - `google_details_cache_ttl_hours = 24` (**24 hours** for rich Place Details).
+   - `google_routes_cache_ttl_hours = 336` (**14 days** for computed driving/walking routes).
+   - Photo Proxy (`GET /api/v1/places/photos/{photo_name:path}`): `Cache-Control: public, max-age=86400` (**24 hours**).
+2. **Deterministic Suggested Itinerary Generator ([`backend/app/algorithms/itinerary_generator.py`](../backend/app/algorithms/itinerary_generator.py))**:
+   - **SQL Bounding-Box Pre-Filter**: Queries active POIs within `25.0 km` (`default_dest_radius_km`) + `10.0 km` buffer around the resolved geographic anchor.
+   - **Cross-Day Fuzzy Deduplication (`is_place_duplicate`)**: Rejects duplicate UUIDs, normalized venue names (`normalize_venue_name()`), or coordinates within `0.2 km` (`200m`).
+   - **Multi-Factor Scoring (`score_place`)**: Evaluates 3 daily slots (`09:00` Morning Activity, `12:00` Lunch Dining, `14:30` Afternoon Activity) using slot fit (`+10..+80`), preference match (`+40` category / `+15` tag), featured boost (`+20`), Bayesian rating ($\frac{\frac{v}{v+15}R + \frac{15}{v+15}(3.8)}{5.0} \times 20.0$, up to `+20`), Haversine proximity decay (`+30` down to negative), opening-hours gate (`-50` if closed), category diversity (`-25`), cumulative budget fit (`+10` / `-30`), mountain peak guard (`-60`), and overnight lodging guard (`-100` to `+20`).
+   - **2-Opt TSP Ordering & Dynamic Pacing**: Evaluates all stop permutations (`itertools.permutations`) keeping Day 1's anchor at Stop 1 and overnight lodging at the end of the day; computes inter-stop road routes (or falls back to `straight_km * 1.28` road winding factor at `32.0 km/h` rounded to 5-minute increments).
+   - **Honest Cost Accounting**: Tracks `unverified_cost_count` separately without fabricating `₱0` fees, appending explicit pricing and transit disclosures to `itinerary.assumptions`.

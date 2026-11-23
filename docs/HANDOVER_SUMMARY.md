@@ -388,8 +388,8 @@ Phase 61.1 resolves all 4 findings from the post-Phase 61 architectural code rev
 Phase 62 executes the full release packaging pipeline across Windows Desktop and Android Mobile, aligns build scripts, and adds interactive database inspection tooling:
 
 1. **Compiled Release Deliverables (Excluded from Git Tracking via `.gitignore`)**:
-   - **Windows Single-File Installer**: `dist_installer\NuevaEcijaTravel_Setup_v1.0.0.exe` (`161.10 MB` / `168,926,363` bytes, SHA-256: `892138704B07C9F175332ECECFE187EF80817D531E994E4BE5A9A33E233F7B72`).
-   - **Windows Portable Zero-Admin Archive**: `dist_installer\NuevaEcijaTravel_Portable_Installer_v1.0.0.zip` (`236.91 MB` / `248,413,381` bytes, SHA-256: `D865E6D7311DE80D2BCBE2DFB7F68094F70194180B2FBE3AE75DBEF14AAEA2E8`).
+   - **Windows Single-File Installer**: `dist_installer\NuevaEcijaTravel_Setup_v1.0.0.exe` (`156.58 MB` / `164,181,396` bytes, SHA-256: `3D08D6BAE3EB3926C0AFEA4FEB211D8BAF2FA9F36D1B0FA241F9EDE50CDFF410`).
+   - **Windows Portable Zero-Admin Archive**: `dist_installer\NuevaEcijaTravel_Portable_Installer_v1.0.0.zip` (`232.64 MB` / `243,942,337` bytes, SHA-256: `3ED786E2FB9F0EE6E65373C0DBD56C3EF9E8B3C819D6227E36068FE936917708`).
    - **Android Debug APK**: `dist_apk\TripMoTripKo-debug.apk` (`30.88 MB` / `32,378,996` bytes, SHA-256: `C611658A662C68967B8174E1963C69AE74AA6D0945D3B4106AB7701DF03AB4EB`).
    - **Android Signed Release APK**: `dist_apk\TripMoTripKo-release.apk` (`29.72 MB` / `31,162,864` bytes, SHA-256: `0C5CED791D824CD81DF294198481C9F99E9175DC1AA336123B5B1E32BE1E80C6`).
 2. **Build Pipeline & Gradle Wrapper Alignment**:

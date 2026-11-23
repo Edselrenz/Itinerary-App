@@ -1,7 +1,5 @@
 """Rate limiting configuration using SlowAPI for the Nueva Ecija Travel Itinerary API."""
 
-"""Rate limiting configuration using SlowAPI for the Nueva Ecija Travel Itinerary API."""
-
 from starlette.requests import Request
 from slowapi import Limiter
 

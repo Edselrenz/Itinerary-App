@@ -12,12 +12,12 @@ This document serves as the primary handoff reference for developers and coding 
 - **Active Database Infrastructure**: **PostgreSQL 16 in Docker** (`ne_postgres` on port 5432) and local SQLite (`nueva_ecija_travel.db`) fully synchronized with all 21 user accounts, 2,673 places, 12 municipalities, and 10 itineraries.
 - **Last Verified Working State**:
   - **Release Pipeline & Test Gate**: 100% verified across all suites:
-    - **Desktop Client Test Suite**: 115/115 passed in 8.46s (`100% PASS`), covering `test_cycle2_regressions.py` (`TC-31` through `TC-36`), `test_auth_service.py`, `test_itinerary_service.py`, `test_place_service.py`, and all UI consistency/storage suites.
+    - **Desktop Client Test Suite**: 119/119 passed (`100% PASS`), covering `test_cycle2_regressions.py` (`TC-31` through `TC-40`), `test_auth_service.py`, `test_itinerary_service.py`, `test_place_service.py`, and all UI consistency/storage suites.
     - **Backend Test Suite**: 21/21 passed in 33.18s (`100% PASS`), covering auth rate limiting, places, trips, and database migrations.
     - **Ionic Angular Production Bundle**: Compiled cleanly with `--no-service-worker` (0 errors) and synchronized with native Capacitor Android assets.
   - **Verified Release Deliverables**:
-    - **Windows Setup Installer**: `dist_installer\NuevaEcijaTravel_Setup_v1.0.0.exe` (161.10 MB, SHA256: `892138704B07C9F175332ECECFE187EF80817D531E994E4BE5A9A33E233F7B72`).
-    - **Windows Portable Installer**: `dist_installer\NuevaEcijaTravel_Portable_Installer_v1.0.0.zip` (236.91 MB, SHA256: `D865E6D7311DE80D2BCBE2DFB7F68094F70194180B2FBE3AE75DBEF14AAEA2E8`).
+    - **Windows Setup Installer**: `dist_installer\NuevaEcijaTravel_Setup_v1.0.0.exe` (156.58 MB, SHA256: `3D08D6BAE3EB3926C0AFEA4FEB211D8BAF2FA9F36D1B0FA241F9EDE50CDFF410`).
+    - **Windows Portable Installer**: `dist_installer\NuevaEcijaTravel_Portable_Installer_v1.0.0.zip` (232.64 MB, SHA256: `3ED786E2FB9F0EE6E65373C0DBD56C3EF9E8B3C819D6227E36068FE936917708`).
     - **Android Debug APK**: `dist_apk\TripMoTripKo-debug.apk` (30.88 MB, SHA256: `C611658A662C68967B8174E1963C69AE74AA6D0945D3B4106AB7701DF03AB4EB`).
     - **Android Signed Release APK**: `dist_apk\TripMoTripKo-release.apk` (29.72 MB, SHA256: `0C5CED791D824CD81DF294198481C9F99E9175DC1AA336123B5B1E32BE1E80C6`).
   - **Live Service Daemons**: Pilot backend (`127.0.0.1:8000`), ngrok public tunnel, and Cloudflare Worker proxy (`ne-itinerary-api.edselrenz0.workers.dev`) active and verified.
@@ -331,8 +331,8 @@ An enterprise full-system QA audit report (`full_website_qa_audit_and_proposal.p
 
 | Platform | Deliverable Package | Size (MB) | Size (Bytes) | SHA-256 Checksum | Target Device & Installation Instructions |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Windows Desktop** | `dist_installer\NuevaEcijaTravel_Setup_v1.0.0.exe` | **161.10 MB** | 168,926,363 | `892138704B07C9F175332ECECFE187EF80817D531E994E4BE5A9A33E233F7B72` | **Standard PC**: Copy to any 64-bit Windows machine and double-click to run Inno Setup wizard. Automatically installs desktop & Start Menu shortcuts. |
-| **Windows Desktop** | `dist_installer\NuevaEcijaTravel_Portable_Installer_v1.0.0.zip` | **236.91 MB** | 248,413,381 | `D865E6D7311DE80D2BCBE2DFB7F68094F70194180B2FBE3AE75DBEF14AAEA2E8` | **Flash Drive / No-Admin PC**: Extract zip anywhere (e.g. USB flash drive) and double-click `Install_And_Launch.bat`. |
+| **Windows Desktop** | `dist_installer\NuevaEcijaTravel_Setup_v1.0.0.exe` | **156.58 MB** | 164,181,396 | `3D08D6BAE3EB3926C0AFEA4FEB211D8BAF2FA9F36D1B0FA241F9EDE50CDFF410` | **Standard PC**: Copy to any 64-bit Windows machine and double-click to run Inno Setup wizard. Automatically installs desktop & Start Menu shortcuts. |
+| **Windows Desktop** | `dist_installer\NuevaEcijaTravel_Portable_Installer_v1.0.0.zip` | **232.64 MB** | 243,942,337 | `3ED786E2FB9F0EE6E65373C0DBD56C3EF9E8B3C819D6227E36068FE936917708` | **Flash Drive / No-Admin PC**: Extract zip anywhere (e.g. USB flash drive) and double-click `Install_And_Launch.bat`. |
 | **Android Mobile** | `dist_apk\TripMoTripKo-debug.apk` | **30.88 MB** | 32,378,996 | `C611658A662C68967B8174E1963C69AE74AA6D0945D3B4106AB7701DF03AB4EB` | **Android Testing**: Transfer via USB or WhatsApp/Telegram/Drive, tap to install (enable "Install unknown apps"). |
 | **Android Mobile** | `dist_apk\TripMoTripKo-release.apk` | **29.72 MB** | 31,162,864 | `0C5CED791D824CD81DF294198481C9F99E9175DC1AA336123B5B1E32BE1E80C6` | **Production Android**: Signed with 2048-bit RSA release keystore (`nueva-ecija-travel-release.jks`). Ready for direct sideloading or internal distribution. |
 

@@ -1,5 +1,6 @@
 """REST endpoints for Nueva Ecija municipalities and POI search/filtering."""
 
+import re
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy import and_, func, or_, select
@@ -272,9 +273,15 @@ def get_google_place_detail(
     return PlaceOut.model_validate(data)
 
 
+_PHOTO_NAME_RE = re.compile(r"^places/[A-Za-z0-9_-]+/photos/[A-Za-z0-9_-]+$")
+
+
 @router.get("/places/photos/{photo_name:path}")
 def get_place_photo(photo_name: str) -> Response:
     """Proxies Google Places photo media to protect Google Maps API key from frontend leakage."""
+    if not _PHOTO_NAME_RE.match(photo_name):
+        raise HTTPException(status_code=400, detail="Invalid Google photo resource name")
+
     api_key = settings.google_maps_api_key
     if not api_key:
         return Response(

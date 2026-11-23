@@ -195,12 +195,12 @@ powershell -ExecutionPolicy Bypass -File .\scripts\build_desktop_installer.ps1
 
 ### Generated Deliverables (`dist_installer/`)
 1. **Standard Windows Setup Wizard (`dist_installer\NuevaEcijaTravel_Setup_v1.0.0.exe`)**:
-   - **Size**: `161.10 MB` (`168,926,363` bytes, LZMA2/ultra64 compression)
-   - **SHA-256**: `892138704B07C9F175332ECECFE187EF80817D531E994E4BE5A9A33E233F7B72`
+   - **Size**: `156.58 MB` (`164,181,396` bytes, LZMA2/ultra64 compression)
+   - **SHA-256**: `3D08D6BAE3EB3926C0AFEA4FEB211D8BAF2FA9F36D1B0FA241F9EDE50CDFF410`
    - **Features**: Installs to `C:\Program Files\NuevaEcijaTravel` (with automatic `%LOCALAPPDATA%\NuevaEcijaTravel\storage` write-probe fallback for user storage and map tile caching), creates Desktop and Start Menu shortcuts, and registers a clean Windows uninstaller.
 2. **Zero-Admin Portable Package (`dist_installer\NuevaEcijaTravel_Portable_Installer_v1.0.0.zip`)**:
-   - **Size**: `236.91 MB` (`248,413,381` bytes)
-   - **SHA-256**: `D865E6D7311DE80D2BCBE2DFB7F68094F70194180B2FBE3AE75DBEF14AAEA2E8`
+   - **Size**: `232.64 MB` (`243,942,337` bytes)
+   - **SHA-256**: `3ED786E2FB9F0EE6E65373C0DBD56C3EF9E8B3C819D6227E36068FE936917708`
    - **Features**: Extractable to any folder or USB flash drive; includes `Install_And_Launch.bat` which copies the application into `%LOCALAPPDATA%\Programs\NuevaEcijaTravel`, creates Desktop and Start Menu shortcuts without administrator elevation, and launches the client.
 
 > [!IMPORTANT]

@@ -815,7 +815,6 @@ def compute_and_save_day_route(
             item.route_polyline_from_prev = legs[idx].get("polyline")
 
     from datetime import datetime, timezone
-    day.updated_at = datetime.now(timezone.utc)
     itinerary.updated_at = datetime.now(timezone.utc)
 
     db.commit()
