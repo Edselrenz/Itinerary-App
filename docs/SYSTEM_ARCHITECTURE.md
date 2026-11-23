@@ -6,56 +6,147 @@
 
 ## 1. High-Level Component Topology
 
-The system is a **decoupled, multi-client, offline-resilient full-stack application** organized as a monorepo with four runtime tiers (`Project/`, `desktop_client/`, `cloudflare-worker/`, and `backend/`), an offline data & operational pipeline (`scripts/`), and a dual-engine relational database layer (PostgreSQL 16 with automatic 2-second fallback to local SQLite 3):
+The system is a **decoupled, multi-client, offline-resilient full-stack application** organized across seven architectural subgraphs (`Mobile Client`, `Web Application`, `Desktop Client`, `Edge Gateway & Tunnel Daemon`, `Backend API`, `Persistence and Discovery`, and `External Mapping & Routing Services`).
 
-```text
-┌─────────────────────────────────────────────┐   ┌──────────────────────────────────────────────────┐
-│  Ionic Angular 22 Web/PWA & Android APK     │   │  Python Flet 1.1.2+ Desktop Client               │
-│  (Project/ — Angular 22.2.3 + Capacitor 8.6)│   │  (desktop_client/ — PyInstaller + Inno Setup 6)  │
-│  ├── Full-Screen Splash + Boxless Welcome   │   │  ├── Full-Screen Splash (Positioned.fill, TC-39) │
-│  ├── Home, Map (Leaflet + Cluster), Saved   │   │  ├── Boxless Welcome + Mirrored Skyline (TC-40)  │
-│  ├── Profile, Suggested Wizard, Builder     │   │  ├── SlippyMapCanvas + Offline Tiles (TC-35/36)  │
-│  ├── NGSW Service Worker + 2,673 OSM POIs   │   │  ├── Suggested Wizard, Custom Builder, Detail    │
-│  └── Storage: IndexedDB / Android Keystore  │   │  └── Storage: %LOCALAPPDATA% .write_probe JSON   │
-└──────────────────────┬──────────────────────┘   └────────────────────────┬─────────────────────────┘
-                       │ HTTPS REST / JSON                                 │ HTTPS / Local HTTP JSON
-                       └─────────────────────────┬─────────────────────────┘
-                                                 ▼
-┌────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│                    Cloudflare Worker Edge Reverse Proxy (cloudflare-worker/worker.js)              │
-│  ├── Fixed HTTPS Gateway (https://ne-itinerary-api.edselrenz0.workers.dev/api/v1)                  │
-│  ├── Cloudflare KV (TUNNEL_KV): Dynamic ACTIVE_TUNNELS registry (/ __sync_tunnel + /__status)      │
-│  ├── Multi-Tunnel Failover: Primary Cloudflare Quick Tunnel (*.trycloudflare.com) -> ngrok         │
-│  └── 24-Hour KV Edge Cache (EDGE_CACHE_*): Serves GET /places* & POST */compute-day-route offline  │
-└────────────────────────────────────────────────┬───────────────────────────────────────────────────┘
-                                                 │ Encrypted Outbound Tunnel (cloudflared / ngrok)
-                                                 ▼
-┌────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│                           FastAPI REST Backend (backend/ — Uvicorn :8000)                          │
-│  ├── Middleware: SlowAPI Rate Limiter (120/m global, 30/m auth, 10/m refresh) + CORSMiddleware     │
-│  ├── /api/v1/health: Liveness & Nueva Ecija province scope check                                   │
-│  ├── /api/v1/auth (7 routes): Argon2id (pwdlib), HS256 JWT (30m/7d), Google OAuth2 verify          │
-│  ├── /api/v1/municipalities & /places (6 routes): 16 categories, BBox search, Google photo proxy   │
-│  ├── /api/v1/itineraries (13 routes): Strict BOLA CRUD, stop reorder, stateless & saved routing    │
-│  └── algorithms/itinerary_generator.py: Haversine BBox + Bayesian score + Hours gate + 2-Opt TSP   │
-└────────────────────────────────────────────────┬───────────────────────────────────────────────────┘
-                                                 │ SQLAlchemy 2.0 ORM (Portable JsonType)
-                                                 ▼
-┌────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│                Relational Database Layer (PostgreSQL 16 Primary / SQLite 3 Fallback)               │
-│  ├── 8 Tables (109 Columns): users, auth_identities, municipalities, places, itineraries,          │
-│  │                           itinerary_days, itinerary_items, geospatial_cache                     │
-│  ├── Alembic Migrations: 0001_initial -> 0002_google_gis -> 0003_phone -> 0004_profile -> 0005_idx  │
-│  └── Automatic Failover: Probes PostgreSQL (:5432, connect_timeout=2s) -> nueva_ecija_travel.db    │
-└────────────────────────────────────────────────▲───────────────────────────────────────────────────┘
-                                                 │ ETL, Seeding, Backup & Query CLI Scripts
-┌────────────────────────────────────────────────┴───────────────────────────────────────────────────┐
-│                          Data, Operations & Packaging Pipeline (scripts/)                          │
-│  ├── fetch_osm_places.py -> import_osm.py (2,656 OSM POIs) + seed_featured_places.py (18 featured) │
-│  ├── export_osm_to_client_asset.py -> 2,673 active POIs exported to Web & Desktop osm_places.json  │
-│  ├── db_query.py (Dual-engine SQLite/PostgreSQL CLI REPL) & db_backup_restore.py (pg_dump/SQLite)  │
-│  └── build_standalone_exe.py (Staged PyInstaller), build_desktop_installer.ps1, build_android_apk  │
-└────────────────────────────────────────────────────────────────────────────────────────────────────┘
+> **Interactive Diagram**: An interactive pan/zoom/inspectable SVG version of this exact diagram is available at [`system_discussion/trip_mo_trip_ko_full_stack_repository_architecture_diagram.html`](../system_discussion/trip_mo_trip_ko_full_stack_repository_architecture_diagram.html).
+
+```mermaid
+flowchart TB
+    Traveler((Traveler))
+
+    subgraph MobileClient["Mobile Client (Android Capacitor APK)"]
+        MobEntry["Android App<br/>[capacitor.config.ts]"]
+        MobBridge["Capacitor WebView<br/>[https://localhost]"]
+        MobGradle["Gradle & Signing<br/>[build.gradle / build_android_apk.ps1]"]
+        MobNative["Native Plugins<br/>[GPS / Keystore / BackBtn]"]
+        MobBundle["Synced Web Assets<br/>[npx cap sync android]"]
+        MobGate["Native Platform Gate<br/>[Capacitor.isNativePlatform()]"]
+        MobApk["APK Distribution<br/>[TripMoTripKo-debug/release.apk]"]
+    end
+
+    subgraph WebClient["Web Application (Angular 22 / Ionic 9 SPA & PWA)"]
+        WebMain["Web App<br/>[main.ts]"]
+        WebRoutes["App Routes & Shell<br/>[app.routes.ts]"]
+        WebPwa["PWA Service Worker<br/>[ngsw-config.json]"]
+        WebTabs["Travel & Map Tabs<br/>[tabs.routes.ts / map.page.ts]"]
+        WebAuthUi["Auth & Guest Screens<br/>[welcome / login / signup]"]
+        WebBuilder["Itinerary Builder<br/>[suggested / custom-builder]"]
+        WebServices["Angular Core Services<br/>[place / itinerary / auth.service.ts]"]
+        WebHttp["HTTP Interceptor<br/>[auth.interceptor.ts]"]
+        WebModels["TS Models & Commute<br/>[place.models / commute-guide.ts]"]
+        WebOverpass["Route Map & Overpass<br/>[osm-overpass.service.ts]"]
+    end
+
+    subgraph DesktopClient["Desktop Client (Python Flet 1.1.2)"]
+        DeskMain["Desktop App<br/>[main.py]"]
+        DeskBuilder["Trip Builder<br/>[custom_builder_view.py]"]
+        DeskWizard["Suggested Wizard<br/>[suggested_wizard_view.py]"]
+        DeskPlaces["Places View<br/>[places_view.py]"]
+        DeskTrips["Home, Auth & Trips<br/>[11 Views / welcome_view.py]"]
+        DeskCanvas["Slippy Map Canvas<br/>[slippy_map_canvas.py]"]
+        DeskPkg["EXE & Inno Setup<br/>[NuevaEcijaTravel.iss]"]
+        DeskServices["Client Services<br/>[place / itinerary / auth_service.py]"]
+        DeskHttp["HTTP Client<br/>[api_client.py]"]
+        DeskItMod["Trip Models<br/>[itinerary.py]"]
+        DeskPlMod["Place Models<br/>[place.py]"]
+    end
+
+    subgraph EdgeGateway["Edge Gateway & Tunnel Daemon"]
+        EdgeWorker["Cloudflare Worker<br/>[cloudflare-worker/worker.js]"]
+        EdgeDaemon["Host Server Daemon<br/>[scripts/run_daemon.py]"]
+        EdgeTunnel["Quick Tunnel & Ngrok<br/>[trycloudflare / ngrok.exe]"]
+        EdgeKv[("Cloudflare KV Store<br/>[TUNNEL_KV / EDGE_CACHE]")]
+    end
+
+    subgraph BackendAPI["Backend API (FastAPI + SQLAlchemy 2.0)"]
+        ApiMain["FastAPI Service<br/>[backend/app/main.py]"]
+        ApiAuth["Auth Routes<br/>[auth.py]"]
+        ApiItin["Itinerary Routes<br/>[itineraries.py]"]
+        ApiPlace["Place Routes<br/>[places.py]"]
+        ApiAuthSvc["Auth Service<br/>[auth_service.py]"]
+        ApiGen["Itinerary Generator<br/>[itinerary_generator.py]"]
+        ApiGmaps["Google & OSRM Service<br/>[google_maps_service.py]"]
+    end
+
+    subgraph Persistence["Persistence and Discovery"]
+        DbWebLocal[("Web & Mobile Storage<br/>[IonicStorage / osm_places.json]")]
+        DbDeskPlaces[("Offline Places & Tiles<br/>[offline_data.py / tiles_cache]")]
+        DbDeskGuest[("Guest & User Storage<br/>[storage.py / %LOCALAPPDATA%]")]
+        DbPostgres[("Database<br/>[database.py / PostgreSQL 16]")]
+        DbOsmSeed["OSM Seed & DB CLI<br/>[import_osm / seed_featured_places.py]"]
+    end
+
+    subgraph ExternalServices["External Mapping & Routing Services"]
+        ExtGmaps["Google Maps Platform<br/>[Places / Directions API]"]
+        ExtOsm["OSRM & Overpass API<br/>[Road Polylines / Live POIs]"]
+    end
+
+    Traveler -->|uses mobile APK| MobEntry
+    Traveler -->|uses web PWA| WebMain
+    Traveler -->|uses desktop app| DeskMain
+
+    MobEntry -->|hosts WebView| MobBridge
+    MobEntry -->|compiles via| MobGradle
+    MobBridge -->|registers| MobNative
+    MobGradle -->|bundles| MobBundle
+    MobNative -->|hooks| MobGate
+    MobBundle -->|boots inside| MobGate
+    MobGate -->|packaged as| MobApk
+    MobBundle -->|embeds Angular build| WebMain
+
+    WebMain -->|loads routes| WebRoutes
+    WebMain -->|registers SW| WebPwa
+    WebRoutes -->|loads tabs| WebTabs
+    WebRoutes -->|routes to| WebAuthUi
+    WebRoutes -->|routes to| WebBuilder
+    WebTabs -->|uses services| WebServices
+    WebAuthUi -->|uses services| WebServices
+    WebBuilder -->|uses services| WebServices
+    WebServices -->|sends requests| WebHttp
+    WebServices -->|uses models| WebModels
+    WebServices -->|queries & renders| WebOverpass
+
+    DeskMain -->|loads view| DeskBuilder
+    DeskMain -->|loads view| DeskWizard
+    DeskMain -->|loads view| DeskPlaces
+    DeskMain -->|loads view| DeskTrips
+    DeskPlaces -->|embeds 60fps map| DeskCanvas
+    DeskTrips -->|bundled into| DeskPkg
+    DeskBuilder -->|uses services| DeskServices
+    DeskWizard -->|uses services| DeskServices
+    DeskPlaces -->|uses services| DeskServices
+    DeskServices -->|sends requests| DeskHttp
+    DeskServices -->|uses models| DeskItMod
+    DeskServices -->|uses models| DeskPlMod
+
+    WebHttp -->|HTTPS REST / CORS| EdgeWorker
+    DeskHttp -->|remote proxy fallback| EdgeWorker
+    DeskHttp -->|calls REST API| ApiMain
+
+    EdgeDaemon -->|syncs /__sync_tunnel| EdgeWorker
+    EdgeWorker -->|proxies traffic| EdgeTunnel
+    EdgeWorker -->|reads/writes cache| EdgeKv
+    EdgeTunnel -->|forwards to :8000| ApiMain
+
+    ApiMain -->|registers routes| ApiAuth
+    ApiMain -->|registers routes| ApiItin
+    ApiMain -->|registers routes| ApiPlace
+    ApiAuth -->|calls| ApiAuthSvc
+    ApiItin -->|runs clustering & TSP| ApiGen
+    ApiGen -->|day routes| ApiGmaps
+    ApiPlace -->|enriches & routes| ApiGmaps
+
+    WebServices -->|falls back & persists guest trips| DbWebLocal
+    DeskServices -->|falls back to| DbDeskPlaces
+    DeskServices -->|persists guest trips| DbDeskGuest
+    ApiAuthSvc -->|uses sessions| DbPostgres
+    ApiGen -->|queries & saves trips| DbPostgres
+    ApiGmaps -->|geospatial_cache & POIs| DbPostgres
+    DbOsmSeed -->|upserts 2,673 POIs| DbPostgres
+    ApiGmaps -.->|may use mapping| ExtGmaps
+    ApiGmaps -.->|computes polylines| ExtOsm
+    WebOverpass -.->|live Overpass / OSRM| ExtOsm
+    DeskCanvas -.->|OSM tiles & OSRM| ExtOsm
 ```
 
 ---
