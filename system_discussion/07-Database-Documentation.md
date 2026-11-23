@@ -216,6 +216,8 @@ TTL cache for external Google Places Search, Place Details, and Google Routes / 
 
 Every table and column below matches Section 2 and `backend/app/models/entities.py` **1-to-1**.
 
+> **Dedicated ERD Guide**: For a complete entity-by-entity and relationship-by-relationship walkthrough of this ERD (including Crow's Foot notation, why each table is structured this way, and why specific relationships use `ON DELETE CASCADE` vs. `ON DELETE SET NULL`), see **[17 — ERD Explanation and Discussion](./17-ERD-Explanation-and-Discussion.md)**.
+
 ```mermaid
 erDiagram
     USERS ||--o{ AUTH_IDENTITIES : "has linked OAuth (CASCADE)"

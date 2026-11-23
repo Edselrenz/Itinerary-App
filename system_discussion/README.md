@@ -49,6 +49,7 @@ This documentation was produced through a complete source-code audit of the repo
 14. **[14 — Deployment Guide](./14-Deployment-Guide.md)** — GitHub Pages CI/CD, GitHub Releases, verified Phase 62 deliverable sizes & SHA-256 checksums (`Setup.exe`, Portable `.zip`, Release & Debug `.apk`), Docker Compose production stack, and Cloudflare Worker deployment.
 15. **[15 — Developer Guide](./15-Developer-Guide.md)** — Codebase navigation matrix, coding conventions, and end-to-end feature addition walkthrough.
 16. **[16 — Technical Debt and Roadmap](./16-Technical-Debt-and-Roadmap.md)** — Prioritized (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`) architectural and code-level remediation roadmap and resolved Phase 61–62 milestones.
+17. **[17 — ERD Explanation and Discussion](./17-ERD-Explanation-and-Discussion.md)** — Deep-dive technical and layman-friendly guide to the 8-table, 109-column Entity-Relationship Diagram (Crow's Foot notation, entity-by-entity rationale, all 6 `CASCADE` vs. `SET NULL` relationships, and real-world data walkthroughs).
 
 ---
 
